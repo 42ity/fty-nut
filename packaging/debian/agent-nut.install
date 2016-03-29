@@ -1,0 +1,2 @@
+usr/bin/bios-agent-nut
+usr/lib/systemd/system/bios-agent-nut*.service

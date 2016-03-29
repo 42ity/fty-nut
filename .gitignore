@@ -1,4 +1,5 @@
 save.xml
+stderr.txt
 # Object files
 *.o
 *.so

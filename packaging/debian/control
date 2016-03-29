@@ -1,0 +1,72 @@
+#
+#    agent-nut - NUT (Network UPS Tools) daemon wrapper/proxy
+#
+#    Copyright (C) 2014 - 2015 Eaton                                        
+#                                                                           
+#    This program is free software; you can redistribute it and/or modify   
+#    it under the terms of the GNU General Public License as published by   
+#    the Free Software Foundation; either version 2 of the License, or      
+#    (at your option) any later version.                                    
+#                                                                           
+#    This program is distributed in the hope that it will be useful,        
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of         
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          
+#    GNU General Public License for more details.                           
+#                                                                           
+#    You should have received a copy of the GNU General Public License along
+#    with this program; if not, write to the Free Software Foundation, Inc.,
+#    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.            
+
+Source:         agent-nut
+Section:        net
+Priority:       optional
+Maintainer:     agent-nut Developers <bios@eaton.com>
+Standards-Version: 3.9.7
+Build-Depends: debhelper (>= 9),
+    pkg-config,
+    dh-autoreconf,
+    libzmq5-dev,
+    libczmq-dev,
+    libmlm-dev,
+    libbiosproto-dev,
+    libcxxtools-dev,
+    libnutclient-dev,
+    dh-autoreconf,
+    systemd
+
+Package: libagent-nut0
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: agent-nut
+ This package contains shared library for agent-nut: nut (network ups tools) daemon wrapper/proxy
+
+Package: libagent-nut-dev
+Architecture: any
+Section: libdevel
+Depends:
+    libzmq5-dev,
+    libczmq-dev,
+    libmlm-dev,
+    libbiosproto-dev,
+    libcxxtools-dev,
+    libnutclient-dev,
+    libagent-nut0 (= ${binary:Version})
+Description: development files for agent-nut
+ This package contains development files for agent-nut: nut (network ups tools) daemon wrapper/proxy
+
+Package: agent-nut
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: nut (network ups tools) daemon wrapper/proxy
+ Main package for agent-nut: nut (network ups tools) daemon wrapper/proxy
+
+Package: agent-nut-dbg
+Architecture: any
+Section: debug
+Priority: extra
+Depends:
+    agent-nut (= ${binary:Version}),
+    ${misc:Depends}
+Description: debugging symbols for agent-nut
+ This package contains the debugging symbols for agent-nut : nut (network ups tools) daemon wrapper/proxy.
+
