@@ -31,54 +31,83 @@
 
 #include <dirent.h>
 #include <string.h>
+#include <errno.h>
 
 namespace shared {
 
-const char *path_separator() {
-    static const char * sep = "/";
+const char *
+path_separator () {
+    static const char *sep = "/";
     return sep;
 }
 
-mode_t file_mode( const char *path ) {
+mode_t
+file_mode (const std::string& path) {
     struct stat st;
 
-    if( stat( path, &st ) == -1 ) return 0;
+    if (stat (path.c_str (), &st) == -1) {
+        log_error ("function `stat (pathname = '%s')` failed: %s", path.c_str (), strerror (errno));
+        return 0;
+    }
     return st.st_mode;
 }
 
-bool is_file( const char  *path ) {
-    return S_ISREG(file_mode( path ));
+bool
+is_file (const std::string& path) {
+    return S_ISREG (file_mode (path));
 }
 
-bool is_dir( const char  *path ) {
-    return S_ISDIR( file_mode( path ) );
+bool
+is_dir (const std::string& path) {
+    return S_ISDIR (file_mode (path));
 }
 
-std::vector<std::string> items_in_directory( const char *path ) {
-    std::vector<std::string> result;
-    
-    DIR * dir = opendir( path );
-    if(dir) {
-        struct dirent* entry;
-        while( ( entry = readdir(dir) ) != NULL ) {
-            result.push_back(entry->d_name);
+bool
+items_in_directory (
+        const std::string& path,
+        std::vector <std::string>& items
+        ) {
+
+    DIR *dir = opendir (path.c_str ());
+    if (!dir) {
+        log_error ("function `opendir (name = '%s')` failed: %s", path.c_str (), strerror (errno));
+        return false;
+    }
+
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (streq (entry->d_name, ".") ||
+            streq (entry->d_name, "..")) {
+            continue;
         }
-        closedir(dir);
+        items.push_back (entry->d_name);
     }
-    return result;
+    closedir (dir);
+    return true;
 }
 
-std::vector<std::string> files_in_directory( const char *path ) {
-    std::vector<std::string> result;
-    std::string spath = path; spath += path_separator();
+bool
+files_in_directory (
+        const std::string& path,
+        std::vector <std::string>& files
+        ) {
+    std::string spath = path;
+    spath += path_separator();
+
+    std::vector <std::string> items;    
+    if (items_in_directory (spath, items) == false) {
+        return false;
+    } 
     
-    for( auto it : items_in_directory( path ) ) {
-        if( is_file( (spath + it).c_str() ) ) result.push_back(it);
+    for (const auto& item : items) {
+        if (is_file (spath + item))
+            files.push_back (item);
     }
-    return result;
+    return true;
 }
 
-bool mkdir_if_needed(const char *path, mode_t mode, bool create_parent ) {
+bool
+mkdir_if_needed (const char *path, mode_t mode, bool create_parent ) {
     if( ! path || strlen(path) == 0 ) return false;
     if( is_dir( path ) ) return true;
 
@@ -115,6 +144,40 @@ fsutils_test (bool verbose)
     printf (" * fsutils: ");
 
     //  @selftest
+
+    // path_separator 
+    const char *separator = shared::path_separator ();
+    assert (separator);
+    assert (strcmp (separator, "/") == 0);
+
+    // file_mode
+    mode_t mode = shared::file_mode ("mapping.conf");
+    assert ((mode & S_IFMT) == S_IFREG);
+    struct stat sb;
+    stat ("mapping.conf", &sb);
+    assert (sb.st_mode == mode);
+
+    // is_file
+    assert (shared::is_file ("mapping.conf") == true);
+    assert (shared::is_file ("src/mapping.conf") == false);
+    assert (shared::is_file ("src/fsutils.cc") == true);
+
+    // is_dir
+    assert (shared::is_dir ("src") == true);
+    assert (shared::is_dir ("include") == true);
+    assert (shared::is_dir ("karci") == false);
+
+    // items_in_directory
+    std::vector <std::string> items;
+    assert (shared::items_in_directory ("doc", items) == true);
+    assert (items.size () == 6);
+
+    items.clear ();
+    assert (shared::items_in_directory ("non-existing-dir", items) == false);
+    assert (items.size () == 0);
+
+    // TODO: the rest 
+
     //  @end
-    printf ("Empty test - OK\n");
+    printf ("OK\n");
 }

@@ -37,23 +37,29 @@ AGENT_NUT_EXPORT const char*
 
 // get the file mode
 AGENT_NUT_EXPORT mode_t
-   file_mode (const char *path);
+   file_mode (const std::string& path);
 
 // return true if path exists and it is a regular file
 AGENT_NUT_EXPORT bool
-    is_file (const char *path);
+    is_file (const std::string& path);
 
 // return true if path exists and it is a directory
 AGENT_NUT_EXPORT bool
-    is_dir (const char *path);
+    is_dir (const std::string& path);
 
 // get list of all items in directory
-AGENT_NUT_EXPORT std::vector<std::string>
-    items_in_directory (const char *path);
+AGENT_NUT_EXPORT bool
+    items_in_directory (
+            const std::string& path,
+            std::vector <std::string>& items
+            );
 
 // get list of all regular files in directory
-AGENT_NUT_EXPORT std::vector<std::string>
-    files_in_directory (const char *path);
+AGENT_NUT_EXPORT bool
+    files_in_directory (
+            const std::string& path,
+            std::vector <std::string>& files
+            );
 
 /**
  * \brief create directory (if not exists
