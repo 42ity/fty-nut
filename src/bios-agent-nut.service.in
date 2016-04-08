@@ -1,11 +1,19 @@
 [Unit]
 Description=bios-agent-nut service
-After=network.target
+Requires=network.target malamute.service
+After=network.target malamute.service
+Before=bios-agent-asset.service
+PartOf=bios.target
 
 [Service]
 Type=simple
+User=bios
+EnvironmentFile=-/usr/share/bios/etc/default/bios
+EnvironmentFile=-/usr/share/bios/etc/default/bios__%n.conf
+EnvironmentFile=-/etc/default/bios
+EnvironmentFile=-/etc/default/bios__%n.conf
 Environment="prefix=@prefix@"
 ExecStart=@prefix@/bin/bios-agent-nut @sysconfdir@/@PACKAGE@/bios-agent-nut.cfg
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=bios.target
