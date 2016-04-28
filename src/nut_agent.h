@@ -37,7 +37,7 @@ class NUTAgent {
     std::string physicalQuantityToUnits (const std::string& quantity);
     void advertisePhysics ();
     void advertiseInventory ();
-    void send (const std::string& subject, zmsg_t **message_p);
+    int send (const std::string& subject, zmsg_t **message_p);
 
     drivers::nut::NUTDeviceList _deviceList;
     uint64_t _inventoryTimestamp = 0;
