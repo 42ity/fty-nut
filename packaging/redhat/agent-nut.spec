@@ -37,7 +37,7 @@ BuildRequires:  czmq-devel
 BuildRequires:  malamute-devel
 BuildRequires:  biosproto-devel
 BuildRequires:  cxxtools-devel
-BuildRequires:  libnutclient-devel
+BuildRequires:  nut-devel
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
@@ -68,7 +68,7 @@ Requires:       czmq-devel
 Requires:       malamute-devel
 Requires:       biosproto-devel
 Requires:       cxxtools-devel
-Requires:       libnutclient-devel
+Requires:       nut-devel
 
 %description devel
 agent-nut nut (network ups tools) daemon wrapper/proxy.
