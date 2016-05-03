@@ -258,7 +258,7 @@ actor_commands_test (bool verbose)
     message = zmsg_new ();
     assert (message);
     zmsg_addstr (message, "CONFIGURE");
-    zmsg_addstr (message, "mapping.conf");
+    zmsg_addstr (message, "src/mapping.conf.in");
     rv = actor_commands (client, &message, actor_verbose, nut_agent);
     assert (rv == 0);
     assert (message == NULL);

@@ -85,7 +85,7 @@ This package contains development files.
 
 %build
 sh autogen.sh
-%{configure} --with-systemd
+%{configure} --with-systemd-units
 make %{_smp_mflags}
 
 %install
@@ -99,6 +99,7 @@ find %{buildroot} -name '*.la' | xargs rm -f
 %defattr(-,root,root)
 %{_bindir}/bios-agent-nut
 %{_prefix}/lib/systemd/system/bios-agent-nut*.service
+%{_prefix}/agent-nut/mapping.cfg
 
 
 %changelog
