@@ -585,6 +585,7 @@ AC_CONFIG_FILES([Makefile
                  doc/Makefile
                  src/libagent_nut.pc
                  src/bios-agent-nut.cfg
+				 src/mapping.conf
                  ])
 
 AM_COND_IF([WITH_SYSTEMD_UNITS],

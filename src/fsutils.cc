@@ -151,15 +151,15 @@ fsutils_test (bool verbose)
     assert (strcmp (separator, "/") == 0);
 
     // file_mode
-    mode_t mode = shared::file_mode ("mapping.conf");
+    mode_t mode = shared::file_mode ("src/mapping.conf.in");
     assert ((mode & S_IFMT) == S_IFREG);
     struct stat sb;
-    stat ("mapping.conf", &sb);
+    stat ("src/mapping.conf.in", &sb);
     assert (sb.st_mode == mode);
 
     // is_file
-    assert (shared::is_file ("mapping.conf") == true);
-    assert (shared::is_file ("src/mapping.conf") == false);
+    assert (shared::is_file ("src/mapping.conf.in") == true);
+    assert (shared::is_file ("mapping.conf") == false);
     assert (shared::is_file ("src/fsutils.cc") == true);
 
     // is_dir

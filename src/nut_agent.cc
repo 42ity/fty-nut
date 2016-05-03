@@ -77,13 +77,14 @@ void NUTAgent::onPoll ()
     advertiseInventory ();
 }
 
-void NUTAgent::send (const std::string& subject, zmsg_t **message_p)
+int NUTAgent::send (const std::string& subject, zmsg_t **message_p)
 {
     int rv = mlm_client_send (_client, subject.c_str (), message_p);
     if (rv == -1) {
         log_error ("mlm_client_send (subject = '%s') failed", subject.c_str ());
     }
-    zmsg_destroy (message_p);    
+    zmsg_destroy (message_p);
+    return rv;
 }
 
 std::string NUTAgent::physicalQuantityShortName (const std::string& longName)
@@ -133,7 +134,8 @@ void NUTAgent::advertisePhysics () {
                     log_debug ("sending new measurement for element_src = '%s', type = '%s', value = '%s', units = '%s'",
                               device.second.name ().c_str (), measurement.first.c_str (), buffer, units.c_str ());
 
-                    send (topic.c_str (), &msg);
+                    int r = send(topic.c_str(), &msg);
+                    if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
                     zmsg_destroy (&msg);
                     device.second.setChanged (measurement.first, false);
                 }
@@ -164,7 +166,8 @@ void NUTAgent::advertisePhysics () {
                 if (msg) {
                     log_debug ("sending new status for element_src = '%s', value = '%s' (%s)",
                             device.second.name().c_str (), std::to_string (status_i).c_str (), status_s.c_str ());
-                    send (topic.c_str (), &msg);
+                    int r = send (topic.c_str (), &msg);
+                    if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
                     zmsg_destroy (&msg);
                     device.second.setChanged ("status.ups", false);
                 }
@@ -201,7 +204,8 @@ void NUTAgent::advertisePhysics () {
                                 device.second.name().c_str(),
                                 status_i,
                                 status_s.c_str());
-                        send (topic.c_str(), &msg);
+                        int r = send (topic.c_str(), &msg);
+                        if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
                         zmsg_destroy (&msg);
                         device.second.setChanged (property, false);
                 }

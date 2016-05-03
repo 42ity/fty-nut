@@ -59,6 +59,8 @@ if WITH_SYSTEMD_UNITS
 src_bios_agent_nut_servicedir = @prefix@/lib/systemd/system
 src_bios_agent_nut_service_DATA = src/bios-agent-nut.service
 endif #WITH_SYSTEMD_UNITS
+src_bios_agent_nut_datadir = $(datadir)/agent-nut/
+src_bios_agent_nut_data_DATA = src/mapping.conf
 endif #ENABLE_BIOS_AGENT_NUT
 
 if ENABLE_AGENT_NUT_SELFTEST

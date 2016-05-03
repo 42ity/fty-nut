@@ -37,7 +37,7 @@ BuildRequires:  czmq-devel
 BuildRequires:  malamute-devel
 BuildRequires:  biosproto-devel
 BuildRequires:  cxxtools-devel
-BuildRequires:  libnutclient-devel
+BuildRequires:  nut-devel
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
@@ -68,7 +68,7 @@ Requires:       czmq-devel
 Requires:       malamute-devel
 Requires:       biosproto-devel
 Requires:       cxxtools-devel
-Requires:       libnutclient-devel
+Requires:       nut-devel
 
 %description devel
 agent-nut nut (network ups tools) daemon wrapper/proxy.
@@ -85,7 +85,7 @@ This package contains development files.
 
 %build
 sh autogen.sh
-%{configure} --with-systemd
+%{configure} --with-systemd-units
 make %{_smp_mflags}
 
 %install
@@ -99,6 +99,7 @@ find %{buildroot} -name '*.la' | xargs rm -f
 %defattr(-,root,root)
 %{_bindir}/bios-agent-nut
 %{_prefix}/lib/systemd/system/bios-agent-nut*.service
+%{_prefix}/agent-nut/mapping.conf
 
 
 %changelog

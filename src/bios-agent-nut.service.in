@@ -13,7 +13,7 @@ EnvironmentFile=-/usr/share/bios/etc/default/bios__%n.conf
 EnvironmentFile=-/etc/default/bios
 EnvironmentFile=-/etc/default/bios__%n.conf
 Environment="prefix=@prefix@"
-ExecStart=@prefix@/bin/bios-agent-nut @sysconfdir@/@PACKAGE@/bios-agent-nut.cfg
+ExecStart=@prefix@/bin/bios-agent-nut --mapping-file @datadir@/@PACKAGE@/mapping.cfg
 Restart=always
 
 [Install]
