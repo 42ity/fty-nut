@@ -28,11 +28,13 @@
     <class name = "ups status"      private = "1">ups status converting functions</class>
     <class name = "nut device"      private = "1">classes for communicating with NUT daemon</class>
     <class name = "nut agent"       private = "1">NUT daemon wrapper - logic of what is being done with data from NUT daemon</class>
-    
+    <class name = "nut configurator" private = "1">NUT configurator class</class>
 
     <class name = "bios-nut-server" state = "stable">bios nut actor</class>
+    <class name = "bios-nut-configurator-server" state = "stable">bios nut configurator actor</class>
 
     <main name = "bios-agent-nut" service = "1" no_config = "1" />
+    <main name = "bios-agent-nut-configurator" service = "1" no_config = "1" />
 
 </project>
 

@@ -98,6 +98,7 @@ find %{buildroot} -name '*.la' | xargs rm -f
 %files
 %defattr(-,root,root)
 %{_bindir}/bios-agent-nut
+%{_bindir}/bios-agent-nut-configurator
 %{_prefix}/lib/systemd/system/bios-agent-nut*.service
 %{_datadir}/agent-nut/mapping.conf
 
