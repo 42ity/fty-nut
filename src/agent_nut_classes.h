@@ -40,9 +40,9 @@
 #include "nut_device.h"
 #include "nut_agent.h"
 #include "nut_configurator.h"
-#include "nutscan.h"
-#include "cidr.h"
 #include "subprocess.h"
+#include "cidr.h"
+#include "nutscan.h"
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.

@@ -31,6 +31,7 @@ Build-Depends: debhelper (>= 9),
     libbiosproto-dev,
     libcxxtools-dev,
     libnutclient-dev,
+    libcidr-dev,
     dh-autoreconf,
     systemd,
     dh-systemd
@@ -51,6 +52,7 @@ Depends:
     libbiosproto-dev,
     libcxxtools-dev,
     libnutclient-dev,
+    libcidr-dev,
     libagent-nut0 (= ${binary:Version})
 Description: development files for agent-nut
  This package contains development files for agent-nut: nut (network ups tools) daemon wrapper/proxy

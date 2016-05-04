@@ -344,6 +344,51 @@ if test "x$was_libnutclient_check_lib_detected" = "xno"; then
     LIBS="${libnutclient_LIBS} ${LIBS}"
 fi
 
+was_libcidr_check_lib_detected=no
+
+PKG_CHECK_MODULES([libcidr], [libcidr >= 0.0.0],
+    [
+    ],
+    [
+        AC_ARG_WITH([libcidr],
+            [
+                AS_HELP_STRING([--with-libcidr],
+                [Specify libcidr prefix])
+            ],
+            [search_libcidr="yes"],
+            [])
+
+        libcidr_synthetic_cflags=""
+        libcidr_synthetic_libs="-lcidr"
+
+        if test "x$search_libcidr" = "xyes"; then
+            if test -r "${with_libcidr}/include/libcidr.h"; then
+                libcidr_synthetic_cflags="-I${with_libcidr}/include"
+                libcidr_synthetic_libs="-L${with_libcidr}/lib -lcidr"
+            else
+                AC_MSG_ERROR([${with_libcidr}/include/libcidr.h not found. Please check libcidr prefix])
+            fi
+        fi
+
+
+        AC_CHECK_LIB([libcidr], [nut::TcpClient::TcpClient],
+            [
+                CFLAGS="${libcidr_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${libcidr_synthetic_libs} ${LDFLAGS}"
+                LIBS="${libcidr_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([libcidr_CFLAGS],[${libcidr_synthetic_cflags}])
+                AC_SUBST([libcidr_LIBS],[${libcidr_synthetic_libs}])
+                was_libcidr_check_lib_detected=yes
+            ],
+            [AC_MSG_ERROR([cannot link with -lcidr, install libcidr])])
+    ])
+
+if test "x$was_libcidr_check_lib_detected" = "xno"; then
+    CFLAGS="${libcidr_CFLAGS} ${CFLAGS}"
+    LIBS="${libcidr_LIBS} ${LIBS}"
+fi
+
 CFLAGS="${PREVIOUS_CFLAGS}"
 LIBS="${PREVIOUS_LIBS}"
 
