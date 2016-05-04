@@ -38,6 +38,7 @@ BuildRequires:  malamute-devel
 BuildRequires:  biosproto-devel
 BuildRequires:  cxxtools-devel
 BuildRequires:  nut-devel
+BuildRequires:  libcidr-devel
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description

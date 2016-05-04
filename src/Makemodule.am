@@ -26,6 +26,9 @@ src_libagent_nut_la_SOURCES = \
     src/nut_device.cc \
     src/nut_agent.cc \
     src/nut_configurator.cc \
+    src/nutscan.cc \
+    src/cidr.cc \
+    src/subprocess.cc \
     src/bios_nut_server.cc \
     src/bios_nut_configurator_server.cc \
     src/platform.h
