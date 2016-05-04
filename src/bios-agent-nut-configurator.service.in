@@ -1,0 +1,11 @@
+[Unit]
+Description=bios-agent-nut-configurator service
+After=network.target
+
+[Service]
+Type=simple
+Environment="prefix=@prefix@"
+ExecStart=@prefix@/bin/bios-agent-nut-configurator @sysconfdir@/@PACKAGE@/bios-agent-nut-configurator.cfg
+
+[Install]
+WantedBy=multi-user.target
