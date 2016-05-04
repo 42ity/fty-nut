@@ -519,6 +519,16 @@ AC_ARG_ENABLE([bios-agent-nut],
 AM_CONDITIONAL([ENABLE_BIOS_AGENT_NUT], [test x$enable_bios_agent_nut != xno])
 AM_COND_IF([ENABLE_BIOS_AGENT_NUT], [AC_MSG_NOTICE([ENABLE_BIOS_AGENT_NUT defined])])
 
+# Check for bios-agent-nut-configurator intent
+AC_ARG_ENABLE([bios-agent-nut-configurator],
+    AS_HELP_STRING([--enable-bios-agent-nut-configurator],
+        [Compile and install 'bios-agent-nut-configurator' [default=yes]]),
+    [enable_bios_agent_nut_configurator=$enableval],
+    [enable_bios_agent_nut_configurator=yes])
+
+AM_CONDITIONAL([ENABLE_BIOS_AGENT_NUT_CONFIGURATOR], [test x$enable_bios_agent_nut_configurator != xno])
+AM_COND_IF([ENABLE_BIOS_AGENT_NUT_CONFIGURATOR], [AC_MSG_NOTICE([ENABLE_BIOS_AGENT_NUT_CONFIGURATOR defined])])
+
 # Check for agent_nut_selftest intent
 AC_ARG_ENABLE([agent_nut_selftest],
     AS_HELP_STRING([--enable-agent_nut_selftest],
@@ -585,12 +595,14 @@ AC_CONFIG_FILES([Makefile
                  doc/Makefile
                  src/libagent_nut.pc
                  src/bios-agent-nut.cfg
-				 src/mapping.conf
+                 src/bios-agent-nut-configurator.cfg
+                 src/mapping.conf
                  ])
 
 AM_COND_IF([WITH_SYSTEMD_UNITS],
     [AC_CONFIG_FILES([
                  src/bios-agent-nut.service
+                 src/bios-agent-nut-configurator.service
     ])],
     [])
 

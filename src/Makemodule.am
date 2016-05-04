@@ -15,6 +15,7 @@ pkgconfig_DATA = src/libagent_nut.pc
 include_HEADERS = \
     include/agent_nut.h \
     include/bios_nut_server.h \
+    include/bios_nut_configurator_server.h \
     include/agent_nut_library.h
 
 src_libagent_nut_la_SOURCES = \
@@ -24,7 +25,9 @@ src_libagent_nut_la_SOURCES = \
     src/ups_status.cc \
     src/nut_device.cc \
     src/nut_agent.cc \
+    src/nut_configurator.cc \
     src/bios_nut_server.cc \
+    src/bios_nut_configurator_server.cc \
     src/platform.h
 
 src_libagent_nut_la_CPPFLAGS = ${AM_CPPFLAGS}
@@ -63,6 +66,19 @@ src_bios_agent_nut_datadir = $(datadir)/agent-nut/
 src_bios_agent_nut_data_DATA = src/mapping.conf
 endif #ENABLE_BIOS_AGENT_NUT
 
+if ENABLE_BIOS_AGENT_NUT_CONFIGURATOR
+bin_PROGRAMS += src/bios-agent-nut-configurator
+src_bios_agent_nut_configurator_CPPFLAGS = ${AM_CPPFLAGS}
+src_bios_agent_nut_configurator_LDADD = ${program_libs}
+src_bios_agent_nut_configurator_SOURCES = src/bios_agent_nut_configurator.cc
+src_bios_agent_nut_configurator_config_DATA = src/bios-agent-nut-configurator.cfg
+src_bios_agent_nut_configurator_configdir = $(sysconfdir)/agent-nut
+if WITH_SYSTEMD_UNITS
+src_bios_agent_nut_configurator_servicedir = @prefix@/lib/systemd/system
+src_bios_agent_nut_configurator_service_DATA = src/bios-agent-nut-configurator.service
+endif #WITH_SYSTEMD_UNITS
+endif #ENABLE_BIOS_AGENT_NUT_CONFIGURATOR
+
 if ENABLE_AGENT_NUT_SELFTEST
 check_PROGRAMS += src/agent_nut_selftest
 noinst_PROGRAMS += src/agent_nut_selftest
@@ -74,6 +90,7 @@ endif #ENABLE_AGENT_NUT_SELFTEST
 # define custom target for all products of /src
 src:
 	src/bios-agent-nut \
+	src/bios-agent-nut-configurator \
 	src/agent_nut_selftest \
 	src/libagent_nut.la
 

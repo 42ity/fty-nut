@@ -42,7 +42,9 @@ all_tests [] = {
     { "ups_status", ups_status_test },
     { "nut_device", nut_device_test },
     { "nut_agent", nut_agent_test },
+    { "nut_configurator", nut_configurator_test },
     { "bios_nut_server", bios_nut_server_test },
+    { "bios_nut_configurator_server", bios_nut_configurator_server_test },
     {0, 0}          //  Sentinel
 };
 
@@ -100,7 +102,7 @@ main (int argc, char **argv)
         else
         if (streq (argv [argn], "--number")
         ||  streq (argv [argn], "-n")) {
-            puts ("7");
+            puts ("9");
             return 0;
         }
         else
@@ -113,7 +115,9 @@ main (int argc, char **argv)
             puts ("    ups_status");
             puts ("    nut_device");
             puts ("    nut_agent");
+            puts ("    nut_configurator");
             puts ("    bios_nut_server");
+            puts ("    bios_nut_configurator_server");
             return 0;
         }
         else

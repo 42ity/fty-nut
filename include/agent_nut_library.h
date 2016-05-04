@@ -59,10 +59,13 @@
 //  These classes are stable or legacy and built in all releases
 typedef struct _bios_nut_server_t bios_nut_server_t;
 #define BIOS_NUT_SERVER_T_DEFINED
+typedef struct _bios_nut_configurator_server_t bios_nut_configurator_server_t;
+#define BIOS_NUT_CONFIGURATOR_SERVER_T_DEFINED
 
 
 //  Public classes, each with its own header file
 #include "bios_nut_server.h"
+#include "bios_nut_configurator_server.h"
 
 #endif
 /*
