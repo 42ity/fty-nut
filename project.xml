@@ -29,6 +29,9 @@
     <class name = "nut device"      private = "1">classes for communicating with NUT daemon</class>
     <class name = "nut agent"       private = "1">NUT daemon wrapper - logic of what is being done with data from NUT daemon</class>
     <class name = "nut configurator" private = "1">NUT configurator class</class>
+    <class name = "nutscan" private = "1">Wrapper around nut-scanner tool</class>
+    <class name = "cidr" private = "1">C++ Wrapper around libcidr</class>
+    <class name = "subprocess" private = "1">C++ Wrapper around cxxtools::Fork</class>
 
     <class name = "bios-nut-server" state = "stable">bios nut actor</class>
     <class name = "bios-nut-configurator-server" state = "stable">bios nut configurator actor</class>

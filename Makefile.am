@@ -41,6 +41,9 @@ EXTRA_DIST = \
     src/nut_device.h \
     src/nut_agent.h \
     src/nut_configurator.h \
+    src/nutscan.h \
+    src/cidr.h \
+    src/subprocess.h \
     src/agent_nut_classes.h
 
 include $(srcdir)/src/Makemodule.am
