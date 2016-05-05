@@ -57,7 +57,6 @@ This package contains shared library.
 
 %files -n libagent_nut0
 %defattr(-,root,root)
-%doc COPYING
 %{_libdir}/libagent_nut.so.*
 
 %package devel
@@ -69,8 +68,8 @@ Requires:       czmq-devel
 Requires:       malamute-devel
 Requires:       biosproto-devel
 Requires:       cxxtools-devel
-Requires:       libnutclient-devel
-Requires:       libcidr-devel
+Requires:       nut-devel
+Requires:       cidr-devel
 
 %description devel
 agent-nut nut (network ups tools) daemon wrapper/proxy.
@@ -104,6 +103,8 @@ find %{buildroot} -name '*.la' | xargs rm -f
 %{_bindir}/bios-nutconfig
 %{_prefix}/lib/systemd/system/bios-agent-nut*.service
 %{_prefix}/lib/systemd/system/bios-agent-nut-configurator*.service
+%{_datadir}/agent-nut/mapping.conf
+
 
 
 %changelog
