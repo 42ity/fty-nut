@@ -57,7 +57,6 @@ This package contains shared library.
 
 %files -n libagent_nut0
 %defattr(-,root,root)
-%doc COPYING
 %{_libdir}/libagent_nut.so.*
 
 %package devel
