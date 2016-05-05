@@ -88,6 +88,11 @@ src_agent_nut_selftest_LDADD = ${program_libs}
 src_agent_nut_selftest_SOURCES = src/agent_nut_selftest.cc
 endif #ENABLE_AGENT_NUT_SELFTEST
 
+# Install data into /usr/local/bin
+agent_nutdir = @bindir@
+agent_nut_SCRIPTS = \
+    bios-nutconfig
+
 # define custom target for all products of /src
 src:
 	src/bios-agent-nut \
