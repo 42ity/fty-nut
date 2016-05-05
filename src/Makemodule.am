@@ -59,7 +59,6 @@ bin_PROGRAMS += src/bios-agent-nut
 src_bios_agent_nut_CPPFLAGS = ${AM_CPPFLAGS}
 src_bios_agent_nut_LDADD = ${program_libs}
 src_bios_agent_nut_SOURCES = src/bios_agent_nut.cc
-src_bios_agent_nut_config_DATA = src/bios-agent-nut.cfg
 src_bios_agent_nut_configdir = $(sysconfdir)/agent-nut
 if WITH_SYSTEMD_UNITS
 src_bios_agent_nut_servicedir = @prefix@/lib/systemd/system
@@ -74,7 +73,6 @@ bin_PROGRAMS += src/bios-agent-nut-configurator
 src_bios_agent_nut_configurator_CPPFLAGS = ${AM_CPPFLAGS}
 src_bios_agent_nut_configurator_LDADD = ${program_libs}
 src_bios_agent_nut_configurator_SOURCES = src/bios_agent_nut_configurator.cc
-src_bios_agent_nut_configurator_config_DATA = src/bios-agent-nut-configurator.cfg
 src_bios_agent_nut_configurator_configdir = $(sysconfdir)/agent-nut
 if WITH_SYSTEMD_UNITS
 src_bios_agent_nut_configurator_servicedir = @prefix@/lib/systemd/system
