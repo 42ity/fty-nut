@@ -19,9 +19,9 @@
         test = "bios_proto_test">
         <use project = "malamute" />
     </use>
+    <use project = "libcidr" test = "cidr_alloc" />
     <use project = "cxxtools" test="cxxtools::Utf8Codec::Utf8Codec"/>
     <use project = "libnutclient" test = "nut::TcpClient::TcpClient" />
-    <use project = "libcidr" test = "cidr_alloc" />
 
     <class name = "logger"          private = "1">logging api</class>
     <class name = "fsutils"         private = "1">filesystem utils</class>
@@ -29,6 +29,7 @@
     <class name = "ups status"      private = "1">ups status converting functions</class>
     <class name = "nut device"      private = "1">classes for communicating with NUT daemon</class>
     <class name = "nut agent"       private = "1">NUT daemon wrapper - logic of what is being done with data from NUT daemon</class>
+    <class name = "nut configurator" private = "1">NUT configurator class</class>
     <class name = "nutscan" private = "1">Wrapper around nut-scanner tool</class>
     <class name = "cidr" private = "1">C++ Wrapper around libcidr</class>
     <class name = "subprocess" private = "1">C++ Wrapper around cxxtools::Fork</class>
@@ -38,6 +39,7 @@
 
     <main name = "bios-agent-nut" service = "1" no_config = "1" />
     <main name = "bios-agent-nut-configurator" service = "1" no_config = "1" />
+    <bin name = "bios-nutconfig" />
 
 </project>
 

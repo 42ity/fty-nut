@@ -33,6 +33,7 @@
 #include "../include/agent_nut.h"
 
 //  Internal API
+#include "cidr.h"
 #include "logger.h"
 #include "fsutils.h"
 #include "actor_commands.h"
@@ -40,9 +41,8 @@
 #include "nut_device.h"
 #include "nut_agent.h"
 #include "nut_configurator.h"
-#include "subprocess.h"
-#include "cidr.h"
 #include "nutscan.h"
+#include "subprocess.h"
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.

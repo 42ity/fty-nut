@@ -12,7 +12,7 @@ Name: libagent_nut
 Description: NUT (Network UPS Tools) daemon wrapper/proxy
 Version: @VERSION@
 
-Requires:libzmq libczmq libmlm libbiosproto cxxtools libnutclient
+Requires:libzmq libczmq libmlm libbiosproto cxxtools libnutclient libcidr
 
 Libs: -L${libdir} -lagent_nut
 Cflags: -I${includedir} @pkg_config_defines@

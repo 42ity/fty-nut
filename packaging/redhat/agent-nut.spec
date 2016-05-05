@@ -69,6 +69,7 @@ Requires:       malamute-devel
 Requires:       biosproto-devel
 Requires:       cxxtools-devel
 Requires:       nut-devel
+Requires:       cidr-devel
 
 %description devel
 agent-nut nut (network ups tools) daemon wrapper/proxy.
@@ -99,8 +100,11 @@ find %{buildroot} -name '*.la' | xargs rm -f
 %defattr(-,root,root)
 %{_bindir}/bios-agent-nut
 %{_bindir}/bios-agent-nut-configurator
+%{_bindir}/bios-nutconfig
 %{_prefix}/lib/systemd/system/bios-agent-nut*.service
+%{_prefix}/lib/systemd/system/bios-agent-nut-configurator*.service
 %{_datadir}/agent-nut/mapping.conf
+
 
 
 %changelog

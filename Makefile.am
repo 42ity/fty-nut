@@ -19,7 +19,7 @@ AM_CPPFLAGS = \
     ${biosproto_CFLAGS} \
     ${cxxtools_CFLAGS} \
     ${libnutclient_CFLAGS} \
-	${libcidr_CFLAGS} \
+    ${libcidr_CFLAGS} \
     -D__STDC_FORMAT_MACROS \
     -I$(srcdir)/include
 
