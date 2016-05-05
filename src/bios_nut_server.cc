@@ -84,6 +84,13 @@ bios_nut_server (zsock_t *pipe, void *args)
         return;
     }
 
+    mlm_client_t *iclient = mlm_client_new ();
+    if (!client) {
+        log_critical ("mlm_client_new () failed");
+        return;
+    }
+    mlm_client_set_producer (iclient, BIOS_PROTO_STREAM_ASSETS);
+
     zpoller_t *poller = zpoller_new (pipe, mlm_client_msgpipe (client), NULL);
     if (!poller) {
         log_critical ("zpoller_new () failed");
@@ -94,6 +101,7 @@ bios_nut_server (zsock_t *pipe, void *args)
     zsock_signal (pipe, 0);
 
     NUTAgent nut_agent;
+    nut_agent.setiClient (iclient);
 
     uint64_t timestamp = static_cast<uint64_t> (zclock_mono ());
     uint64_t timeout = NUT_POLLING_INTERVAL;
@@ -164,6 +172,7 @@ bios_nut_server (zsock_t *pipe, void *args)
 
     zpoller_destroy (&poller);
     mlm_client_destroy (&client);
+    mlm_client_destroy (&iclient);
 }
 
 

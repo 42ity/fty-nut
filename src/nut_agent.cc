@@ -63,6 +63,12 @@ void NUTAgent::setClient (mlm_client_t *client)
        _client = client;
     } 
 }
+void NUTAgent::setiClient (mlm_client_t *client)
+{
+    if (!_iclient) {
+       _iclient = client;
+    } 
+}
 
 bool NUTAgent::isClientSet ()
 {
@@ -80,6 +86,17 @@ void NUTAgent::onPoll ()
 int NUTAgent::send (const std::string& subject, zmsg_t **message_p)
 {
     int rv = mlm_client_send (_client, subject.c_str (), message_p);
+    if (rv == -1) {
+        log_error ("mlm_client_send (subject = '%s') failed", subject.c_str ());
+    }
+    zmsg_destroy (message_p);
+    return rv;
+}
+
+//MVY: a hack for inventory messages
+int NUTAgent::isend (const std::string& subject, zmsg_t **message_p)
+{
+    int rv = mlm_client_send (_iclient, subject.c_str (), message_p);
     if (rv == -1) {
         log_error ("mlm_client_send (subject = '%s') failed", subject.c_str ());
     }
@@ -247,7 +264,8 @@ void NUTAgent::advertiseInventory() {
 
             if (message) {
                 log_debug( "new inventory message %s: %s", topic.c_str(), log.c_str() );
-                send (topic.c_str (), &message);
+                int r = isend (topic.c_str (), &message);
+                if( r != 0 ) log_error("failed to send inventory %s result %" PRIi32, topic.c_str(), r);
                 zmsg_destroy (&message);
             }
         }
