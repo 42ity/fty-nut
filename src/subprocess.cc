@@ -287,9 +287,11 @@ int output2(const Argv& args, std::string& o, uint64_t timeout, size_t timestep)
 int output(const Argv& args, std::string& o, std::string& e, const std::string& i, uint64_t timeout, size_t timestep) {
     SubProcess p(args, SubProcess::STDOUT_PIPE | SubProcess::STDERR_PIPE| SubProcess::STDIN_PIPE);
     p.run();
-    ::write(p.getStdin(), i.c_str(), i.size());
+    int r = ::write(p.getStdin(), i.c_str(), i.size());
     ::fsync(p.getStdin());
     ::close(p.getStdin());
+    if (r == -1)
+        return r;
     return s_output (p, o, e, timeout, timestep);
 }
 
@@ -407,10 +409,10 @@ s_handler (zloop_t *loop, zmq_pollitem_t *item, void *arg)
     //     because s_handler won't return - so lets read only PIPE_BUF and exit
     char buf[PIPE_BUF+1];
     memset(buf, '\0', PIPE_BUF+1);
-    ::read(item->fd, buf, PIPE_BUF);
+    int r = ::read(item->fd, buf, PIPE_BUF);
     i->buff << buf;
 
-    return 0;
+    return r;
 }
 
 // ping the process
