@@ -1,11 +1,11 @@
 [Unit]
 Description=bios-agent-nut-configurator service
-After=network.target
+After=malamute.target
 
 [Service]
 Type=simple
 Environment="prefix=@prefix@"
-ExecStart=@prefix@/bin/bios-agent-nut-configurator @sysconfdir@/@PACKAGE@/bios-agent-nut-configurator.cfg
+ExecStart=@prefix@/bin/bios-agent-nut-configurator
 
 [Install]
 WantedBy=multi-user.target

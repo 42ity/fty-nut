@@ -120,7 +120,7 @@ s_is_ups_or_epdu (bios_proto_t *bmsg)
     if (!streq (bios_proto_aux_string (bmsg, "type", ""), "device"))
         return false;
 
-    if ((!streq (bios_proto_aux_string (bmsg, "subtype", ""), "ups")) ||
+    if ((!streq (bios_proto_aux_string (bmsg, "subtype", ""), "ups")) &&
         (!streq (bios_proto_aux_string (bmsg, "subtype", ""), "epdu")))
         return false;
 
