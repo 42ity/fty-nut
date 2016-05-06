@@ -52,6 +52,7 @@ AGENT_NUT_EXPORT int
             mlm_client_t *client,
             zmsg_t **message_p,
             bool& verbose,
+            uint64_t& timeout,
             NUTAgent& nut_agent);
 
 //  Self test of this class

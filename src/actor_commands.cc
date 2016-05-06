@@ -33,6 +33,7 @@ actor_commands (
         mlm_client_t *client,
         zmsg_t **message_p, 
         bool& verbose,
+        uint64_t& timeout,
         NUTAgent& nut_agent) {
 
     assert (message_p && *message_p);
@@ -141,8 +142,8 @@ actor_commands (
         char *mapping = zmsg_popstr (message);
         if (!mapping) {
             log_error (
-                    "Expected multipart string format: PRODUCER/stream. "
-                    "Received PRODUCER/nullptr");
+                    "Expected multipart string format: CONFIGURE/filename. "
+                    "Received CONFIGURE/nullptr");
             zstr_free (&mapping);
             zmsg_destroy (message_p);
             return 0;
@@ -151,7 +152,25 @@ actor_commands (
         if (rv == false) {
             log_error ("NUTAgent::loadMapping (mapping = '%s') failed", mapping);
         }
-        zstr_free (&mapping); 
+        zstr_free (&mapping);
+    }
+    else
+    if (streq (cmd, "POLLING")) {
+        char *polling = zmsg_popstr (message);
+        if (!polling) {
+            log_error (
+                "Expected multipart string format: POLLING/value. "
+                "Received POLLING/nullptr");
+            zmsg_destroy (message_p);
+            return 0;
+        }
+        timeout = atoi(polling) * 1000;
+        if (timeout == 0) {
+            log_error ("invalid POLLING value '%s', using default instead", polling);
+            timeout = 30000;
+        }            
+        nut_agent.TTL (timeout * 2 / 1000);
+        zstr_free (&polling);
     }
     else {
         log_warning ("Command '%s' is unknown or not implemented", cmd);
@@ -202,13 +221,14 @@ actor_commands_test (bool verbose)
     bool actor_verbose = false;
 
     NUTAgent nut_agent;
-
+    uint64_t actor_polling;
+    
     // --------------------------------------------------------------
     FILE *fp = freopen ("stderr.txt", "w+", stderr);
     // empty message - expected fail
     message = zmsg_new ();
     assert (message);
-    int rv = actor_commands (client, &message, actor_verbose, nut_agent);
+    int rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
     assert (rv == 0);
     assert (message == NULL);
 
@@ -220,7 +240,7 @@ actor_commands_test (bool verbose)
     message = zmsg_new ();
     assert (message);
     zmsg_addstr (message, "");   
-    rv = actor_commands (client, &message, actor_verbose, nut_agent);
+    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
     assert (rv == 0);
     assert (message == NULL);  
 
@@ -232,7 +252,7 @@ actor_commands_test (bool verbose)
     message = zmsg_new ();
     assert (message);
     zmsg_addstr (message, "MAGIC!");   
-    rv = actor_commands (client, &message, actor_verbose, nut_agent);
+    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
     assert (rv == 0);
     assert (message == NULL);  
 
@@ -245,7 +265,7 @@ actor_commands_test (bool verbose)
     assert (message);
     zmsg_addstr (message, "CONFIGURE");
     // missing mapping here
-    rv = actor_commands (client, &message, actor_verbose, nut_agent);
+    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
     assert (rv == 0);
     assert (message == NULL);
     assert (nut_agent.isMappingLoaded () == false);
@@ -259,7 +279,7 @@ actor_commands_test (bool verbose)
     assert (message);
     zmsg_addstr (message, "CONFIGURE");
     zmsg_addstr (message, "src/mapping.conf.in");
-    rv = actor_commands (client, &message, actor_verbose, nut_agent);
+    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
     assert (rv == 0);
     assert (message == NULL);
     assert (nut_agent.isMappingLoaded () == true);
@@ -274,7 +294,7 @@ actor_commands_test (bool verbose)
     zmsg_addstr (message, "CONNECT");   
     zmsg_addstr (message, endpoint);
     // missing name here
-    rv = actor_commands (client, &message, actor_verbose, nut_agent);
+    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
     assert (rv == 0);
     assert (message == NULL);
     assert (nut_agent.isClientSet () == false);
@@ -289,7 +309,7 @@ actor_commands_test (bool verbose)
     zmsg_addstr (message, "CONNECT");   
     // missing endpoint here
     // missing name here
-    rv = actor_commands (client, &message, actor_verbose, nut_agent);
+    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
     assert (rv == 0);
     assert (message == NULL);  
     assert (nut_agent.isClientSet () == false);
@@ -304,7 +324,7 @@ actor_commands_test (bool verbose)
     zmsg_addstr (message, "CONNECT");   
     zmsg_addstr (message, "ipc://bios-smtp-server-BAD");
     zmsg_addstr (message, "test-agent");
-    rv = actor_commands (client, &message, actor_verbose, nut_agent);
+    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
     assert (rv == 0);
     assert (message == NULL);  
     assert (nut_agent.isClientSet () == false);
@@ -324,7 +344,7 @@ actor_commands_test (bool verbose)
     message = zmsg_new ();
     assert (message);
     zmsg_addstr (message, "VERBOSE");
-    rv = actor_commands (client, &message, actor_verbose, nut_agent);
+    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
     assert (rv == 0);
     assert (message == NULL);
     assert (actor_verbose == true);
@@ -333,7 +353,7 @@ actor_commands_test (bool verbose)
     message = zmsg_new ();
     assert (message);
     zmsg_addstr (message, "$TERM");   
-    rv = actor_commands (client, &message, actor_verbose, nut_agent);
+    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
     assert (rv == 1);
     assert (message == NULL);
 
@@ -343,7 +363,7 @@ actor_commands_test (bool verbose)
     zmsg_addstr (message, "CONNECT");   
     zmsg_addstr (message, endpoint);
     zmsg_addstr (message, "test-agent");   
-    rv = actor_commands (client, &message, actor_verbose, nut_agent);
+    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
     assert (rv == 0);
     assert (message == NULL);
     assert (nut_agent.isClientSet () == true);
@@ -354,7 +374,7 @@ actor_commands_test (bool verbose)
     zmsg_addstr (message, "CONSUMER");
     zmsg_addstr (message, "some-stream");   
     zmsg_addstr (message, ".+@.+");   
-    rv = actor_commands (client, &message, actor_verbose, nut_agent);
+    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
     assert (rv == 0);
     assert (message == NULL);
 
@@ -363,7 +383,16 @@ actor_commands_test (bool verbose)
     assert (message);
     zmsg_addstr (message, "PRODUCER");
     zmsg_addstr (message, "some-stream");   
-    rv = actor_commands (client, &message, actor_verbose, nut_agent);
+    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
+    assert (rv == 0);
+    assert (message == NULL);
+
+    // POLLING
+    message = zmsg_new ();
+    assert (message);
+    zmsg_addstr (message, "POLLING");
+    zmsg_addstr (message, "150");   
+    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
     assert (rv == 0);
     assert (message == NULL);
 
@@ -377,7 +406,7 @@ actor_commands_test (bool verbose)
     zmsg_addstr (message, "CONSUMER");
     zmsg_addstr (message, "some-stream");   
     // missing pattern here
-    rv = actor_commands (client, &message, actor_verbose, nut_agent);
+    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
     assert (rv == 0);
     assert (message == NULL);
 
@@ -391,7 +420,7 @@ actor_commands_test (bool verbose)
     zmsg_addstr (message, "CONSUMER");
     // missing stream here
     // missing pattern here
-    rv = actor_commands (client, &message, actor_verbose, nut_agent);
+    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
     assert (rv == 0);
     assert (message == NULL);
 
@@ -404,7 +433,7 @@ actor_commands_test (bool verbose)
     assert (message);
     zmsg_addstr (message, "PRODUCER");
     // missing stream here
-    rv = actor_commands (client, &message, actor_verbose, nut_agent);
+    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
     assert (rv == 0);
     assert (message == NULL);
 

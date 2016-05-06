@@ -41,6 +41,7 @@ void usage () {
           "  --log-level / -l       bios log level\n"
           "                         overrides setting in env. variable BIOS_LOG_LEVEL\n"
           "  --mapping-file / -m    NUT-to-BIOS mapping file\n"
+          "  --polling / -p         polling interval in seconds [30]\n"
           "  --verbose / -v         verbose test output\n"
           "  --help / -h            this information\n"
           );
@@ -75,6 +76,7 @@ int main (int argc, char *argv [])
     int verbose = 0;
     int log_level = -1;
     std::string mapping_file;
+    const char* polling = "30";
 
     while (true) {
         static struct option long_options[] =
@@ -83,11 +85,12 @@ int main (int argc, char *argv [])
             {"verbose",         no_argument,        0,  1},
             {"log-level",       required_argument,  0,  'l'},
             {"mapping-file",    required_argument,  0,  'm'},
+            {"polling",         required_argument,  0,  'p'},
             {0,                 0,                  0,  0}
         };
 
         int option_index = 0;
-        int c = getopt_long (argc, argv, "hvl:m:", long_options, &option_index);
+        int c = getopt_long (argc, argv, "hvl:m:p:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -104,6 +107,15 @@ int main (int argc, char *argv [])
             case 'v':
             {
                 verbose = 1;
+                break;
+            }
+            case 'p':
+            {
+                if (!optarg) {
+                    printf("invalid polling interval '%s'\n", optarg);
+                    return EXIT_FAILURE;
+                }
+                polling = optarg;
                 break;
             }
             case 'h':
@@ -149,6 +161,7 @@ int main (int argc, char *argv [])
         zstr_sendx (nut_server, "VERBOSE", NULL);
     }
     zstr_sendx (nut_server, "CONFIGURE", mapping_file.c_str (), NULL);
+    zstr_sendx (nut_server, "POLLING", polling, NULL);
     zstr_sendx (nut_server, "CONNECT", ENDPOINT, AGENT_NAME, NULL);
     zstr_sendx (nut_server, "PRODUCER", BIOS_PROTO_STREAM_METRICS, NULL);
 
