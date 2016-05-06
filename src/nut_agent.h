@@ -30,6 +30,7 @@ class NUTAgent {
     bool isMappingLoaded ();
 
     void setClient (mlm_client_t *client);
+    void setiClient (mlm_client_t *client);
     bool isClientSet ();
 
     void onPoll ();
@@ -41,6 +42,7 @@ class NUTAgent {
     void advertisePhysics ();
     void advertiseInventory ();
     int send (const std::string& subject, zmsg_t **message_p);
+    int isend (const std::string& subject, zmsg_t **message_p);
 
     int _ttl = 60;
         
@@ -51,6 +53,7 @@ class NUTAgent {
 
     std::string _conf;
     mlm_client_t *_client = NULL;
+    mlm_client_t *_iclient = NULL;
 };
 
 //  Self test of this class
