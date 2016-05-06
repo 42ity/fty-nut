@@ -124,20 +124,8 @@ void NUTDevice::setChanged(const std::string& name,const bool status){
     setChanged(name.c_str(),status);
 }
 
-int NUTDevice::getThreshold(const std::string& varName) const {
-    // TODO: read different threshold for different variables from config
-    // for now it is 5%
-    if(varName.empty()) {} // silence the warning
-    return _threshold;
-}
-
-void NUTDevice::setDefaultThreshold(int threshold) {
-    _threshold = threshold;
-}
-
-void NUTDevice::updatePhysics(const std::string& varName, const float newValue, int threshold) {
+void NUTDevice::updatePhysics(const std::string& varName, const float newValue) {
     long int newValueInt = round(newValue * 100.0);
-    if( threshold == NUT_USE_DEFAULT_THRESHOLD ) threshold = this->getThreshold(varName);
     if( newValueInt > INT32_MAX  || newValueInt < INT32_MIN ) {
         // value is out of range (like gigawats), the measurement is invalid
         log_error("%s value exceeded the range on %s", varName.c_str(), _name.c_str() );
@@ -152,33 +140,19 @@ void NUTDevice::updatePhysics(const std::string& varName, const float newValue, 
         pvalue.candidate = newValueInt;
         _physics[ varName ] = pvalue;
     } else {
-        long int oldValue = _physics[ varName ].value;
-        _physics[ varName ].candidate = _physics[ varName ].value;
-        if( oldValue == newValueInt ) return ;
-        try {
-            // log_debug("old %li, new %li, change %li >= threshold %i ?\n",oldValue,newValueInt, abs( (oldValue - newValueInt ) * 100 / oldValue ), threshold );
-            if( (oldValue == 0.0 ) || ( abs( (oldValue - newValueInt ) * 100 / oldValue ) >= threshold ) ) {
-                // significant change
-                _physics[ varName ].candidate = newValueInt;
-            }
-        } catch(...) {
-            // probably division by 0
-            struct NUTPhysicalValue pvalue;
-            pvalue.changed = true;
-            pvalue.value = 0;
-            pvalue.candidate = newValueInt;
-            _physics[ varName ] = pvalue;
+        if (_physics[ varName ].value != newValueInt) {
+            _physics[ varName ].candidate = newValueInt;
         }
     }
 }
 
-void NUTDevice::updatePhysics(const std::string& varName, std::vector<std::string>& values, int threshold ) {
+void NUTDevice::updatePhysics(const std::string& varName, std::vector<std::string>& values) {
     if( values.size() == 1 ) {
         // don't know how to handle multiple values
         // multiple values would be probably nonsence
         try {
             float value = std::stof(values[0]);
-            updatePhysics(varName,value,threshold);
+            updatePhysics(varName,value);
         } catch (...) {}
     }
 }
@@ -233,7 +207,7 @@ void NUTDevice::update (std::map <std::string, std::vector <std::string>> vars,
         if (vars.find (item.first) != vars.end ()) {
             // variable found in received data
             std::vector<std::string> values = vars[item.first];
-            updatePhysics (item.second, values, (forceUpdate ? 0 : NUT_USE_DEFAULT_THRESHOLD));
+            updatePhysics (item.second, values);
         }
         else {
             // iterating numbered items in physics
@@ -254,7 +228,7 @@ void NUTDevice::update (std::map <std::string, std::vector <std::string>> vars,
                     if( vars.count(nutname) == 0 ) break; // variable out of scope
                     // variable found
                     std::vector<std::string> values = vars[nutname];
-                    updatePhysics(biosname, values, (forceUpdate ? 0 : NUT_USE_DEFAULT_THRESHOLD) );
+                    updatePhysics (biosname, values);
                     ++i;
                 }
             }

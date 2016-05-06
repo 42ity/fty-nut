@@ -25,8 +25,6 @@
 // Taken from 'core' repo, src/agents/nut/nut-driver.(h|c)
 // Original authors: Tomas Halman, Karol Hrdina, Alena Chernikava
 
-#define NUT_USE_DEFAULT_THRESHOLD -1
-
 #include <map>
 #include <vector>
 #include <functional>
@@ -80,12 +78,6 @@ class NUTDevice {
     // Set status of particular property
     void setChanged(const char *name, const bool status);
     void setChanged(const std::string& name,const bool status);
-
-    // Get advertising threshold for particular property
-    int getThreshold(const std::string& varName) const;
-
-    // Set default advertising threshold for this device
-    void setDefaultThreshold(int threshold);
 
     /**
      * \brief Produces a std::string with device status in JSON format.
@@ -174,7 +166,7 @@ class NUTDevice {
      * Updates the value if new value is significantly differen (> threshold%). Flag _change is
      * set if new value is saved.
      */
-    void updatePhysics(const std::string& varName, const float newValue, int threshold = NUT_USE_DEFAULT_THRESHOLD);
+    void updatePhysics(const std::string& varName, const float newValue);
 
     /**
      * \brief Updates physical or measurement value from vector.
@@ -182,7 +174,7 @@ class NUTDevice {
      * Calculates the value with first value from vector (NUT returns vectors of
      * values).
      */
-    void updatePhysics(const std::string& varName, std::vector<std::string>& values, int threshold = NUT_USE_DEFAULT_THRESHOLD);
+    void updatePhysics(const std::string& varName, std::vector<std::string>& values);
 
     /**
      * \brief Updates inventory value.
@@ -221,8 +213,6 @@ class NUTDevice {
     std::map<std::string, NUTInventoryValue> _inventory;
     //! \brief device name
     std::string _name;
-    //! \brief default threshold for physical value significant change
-    int _threshold = 5;
     //! \brief Transformation of our integer (x100) back
     std::string itof(const long int) const;
     //! \brief NUT values transformation function
