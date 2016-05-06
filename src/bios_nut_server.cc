@@ -28,12 +28,6 @@
 
 #include "agent_nut_classes.h"
 
-#define NUT_POLLING_INTERVAL            5000    // (check with upsd ever 5s)
-
-//#define NUT_INVENTORY_REPEAT_AFTER      3600    // (every hour now (3600s))
-
-//#define AGENT_NUT_REPEAT_INTERVAL_SEC       NUT_MEASUREMENT_REPEAT_AFTER     //
-
 static void
 s_handle_poll (NUTAgent& nut_agent)
 {
@@ -73,6 +67,14 @@ s_handle_stream (mlm_client_t *client, zmsg_t **message_p)
     zmsg_destroy (message_p);
 }
 
+uint64_t
+polling_timeout(uint64_t last_poll, uint64_t polling_timeout)
+{
+    uint64_t now = static_cast<uint64_t> (zclock_mono ());
+    if (last_poll + polling_timeout < now) return 0;
+    return last_poll + polling_timeout - now;
+}
+
 void
 bios_nut_server (zsock_t *pipe, void *args)
 {
@@ -96,10 +98,10 @@ bios_nut_server (zsock_t *pipe, void *args)
     NUTAgent nut_agent;
 
     uint64_t timestamp = static_cast<uint64_t> (zclock_mono ());
-    uint64_t timeout = NUT_POLLING_INTERVAL;
+    uint64_t timeout = 30000;
 
     while (!zsys_interrupted) {
-        void *which = zpoller_wait (poller, timeout);
+        void *which = zpoller_wait (poller, polling_timeout (timestamp, timeout));
 
         if (which == NULL) {
             if (zpoller_terminated (poller) || zsys_interrupted) {
@@ -107,16 +109,10 @@ bios_nut_server (zsock_t *pipe, void *args)
                 break;
             }
             if (zpoller_expired (poller)) {
+                timestamp = static_cast<uint64_t> (zclock_mono ());
                 s_handle_poll (nut_agent);
             }
-            timestamp = static_cast<uint64_t> (zclock_mono ());
             continue;
-        }
-
-        uint64_t now = static_cast<uint64_t> (zclock_mono ());
-        if (now - timestamp >= timeout) {
-            s_handle_poll (nut_agent);
-            timestamp = static_cast<uint64_t> (zclock_mono ());
         }
 
         if (which == pipe) {
@@ -125,7 +121,7 @@ bios_nut_server (zsock_t *pipe, void *args)
                 log_error ("Given `which == pipe`, function `zmsg_recv (pipe)` returned NULL");
                 continue;
             }
-            if (actor_commands (client, &message, verbose, nut_agent) == 1) {
+            if (actor_commands (client, &message, verbose, timeout, nut_agent) == 1) {
                 break;
             }
             continue;

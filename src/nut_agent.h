@@ -22,6 +22,8 @@
 #ifndef NUT_AGENT_H_INCLUDED
 #define NUT_AGENT_H_INCLUDED
 
+#define NUT_INVENTORY_REPEAT_AFTER      3600000
+
 class NUTAgent {
  public:
     bool loadMapping (const char *path_to_file);
@@ -31,7 +33,8 @@ class NUTAgent {
     bool isClientSet ();
 
     void onPoll ();
-
+    void TTL (int ttl) { _ttl = ttl; };
+    int TTL () { return _ttl; };
  protected:
     std::string physicalQuantityShortName (const std::string& longName);
     std::string physicalQuantityToUnits (const std::string& quantity);
@@ -39,6 +42,8 @@ class NUTAgent {
     void advertiseInventory ();
     int send (const std::string& subject, zmsg_t **message_p);
 
+    int _ttl = 60;
+        
     drivers::nut::NUTDeviceList _deviceList;
     uint64_t _inventoryTimestamp = 0;
 

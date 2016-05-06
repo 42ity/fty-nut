@@ -29,9 +29,6 @@
 
 #include "agent_nut_classes.h"
 
-#define NUT_INVENTORY_REPEAT_AFTER      3600000    // (every hour now (3600s))
-#define TTL 35000   // temporary
-
 const std::map<std::string, std::string> NUTAgent::_units =
 {
     { "temperature", "C" },
@@ -109,107 +106,84 @@ void NUTAgent::advertisePhysics () {
     _deviceList.update (true);
     for (auto& device : _deviceList) {
         std::string topic;
-        if (device.second.changed ()) {
-            for (auto& measurement : device.second.physics (false)) {
-                topic = "measurement." + measurement.first + "@" + device.second.name ();
-                std::string type = physicalQuantityShortName (measurement.first);
-                std::string units = physicalQuantityToUnits (type);
-                if (units.empty ()) {
-                    log_error ("undefined physical quantity '%s'", type.c_str ());
-                    continue;
-                }
-
-                double d_value = measurement.second * std::pow (10, -2);
-                char buffer [50];
-                sprintf (buffer, "%lf", d_value);
-
-                zmsg_t *msg = bios_proto_encode_metric (
-                        NULL,
-                        measurement.first.c_str (),
-                        device.second.name ().c_str (),
-                        buffer,
-                        units.c_str (),
-                        TTL);
-                if (msg) {
-                    log_debug ("sending new measurement for element_src = '%s', type = '%s', value = '%s', units = '%s'",
-                              device.second.name ().c_str (), measurement.first.c_str (), buffer, units.c_str ());
-
-                    int r = send(topic.c_str(), &msg);
-                    if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
-                    zmsg_destroy (&msg);
-                    device.second.setChanged (measurement.first, false);
-                }
+        for (auto& measurement : device.second.physics (false)) {
+            topic = "measurement." + measurement.first + "@" + device.second.name ();
+            std::string type = physicalQuantityShortName (measurement.first);
+            std::string units = physicalQuantityToUnits (type);
+            if (units.empty ()) {
+                log_error ("undefined physical quantity '%s'", type.c_str ());
+                continue;
             }
-            // send also status as bitmap
-            if (device.second.hasProperty ("status.ups") && (device.second.changed ("status.ups"))) {
-                topic = "measurement.status@" + device.second.name ();
+            
+            double d_value = measurement.second * std::pow (10, -2);
+            char buffer [50];
+            sprintf (buffer, "%lf", d_value);
+            
+            zmsg_t *msg = bios_proto_encode_metric (
+                NULL,
+                measurement.first.c_str (),
+                device.second.name ().c_str (),
+                buffer,
+                units.c_str (),
+                _ttl);
+            if (msg) {
+                log_debug ("sending new measurement for element_src = '%s', type = '%s', value = '%s', units = '%s'",
+                           device.second.name ().c_str (), measurement.first.c_str (), buffer, units.c_str ());
 
-                std::string status_s = device.second.property ("status.ups");
-
-                uint16_t    status_i = upsstatus_to_int (status_s);
-
-                zmsg_t *msg = bios_proto_encode_metric (
-                        NULL,
-                        "status.ups",
-                        device.second.name ().c_str (),
-                        std::to_string (status_i).c_str (),
-                        "",
-                        TTL);
-/* NOTE: Left deliberately until verified to work
-                _scoped_ymsg_t *msg = bios_measurement_encode (
-                    device.second.name().c_str(),
-                    "status.ups",
-                    "",
-                    status_i, 0, std::time(0));
-*/                    
-
-                if (msg) {
-                    log_debug ("sending new status for element_src = '%s', value = '%s' (%s)",
-                            device.second.name().c_str (), std::to_string (status_i).c_str (), status_s.c_str ());
-                    int r = send (topic.c_str (), &msg);
-                    if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
-                    zmsg_destroy (&msg);
-                    device.second.setChanged ("status.ups", false);
-                }
+                int r = send(topic.c_str(), &msg);
+                if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
+                zmsg_destroy (&msg);
+                device.second.setChanged (measurement.first, false);
             }
-            //MVY: send also epdu status as bitmap
-            for (int i = 1; i != 100; i++) {
-                std::string property = "status.outlet." + std::to_string (i);
-                // assumption, if outlet.10 does not exists, outlet.11 does not as well
-                if (!device.second.hasProperty (property))
-                    break;
-                if (device.second.hasProperty (property) && (device.second.changed (property))) {
-                    topic = "measurement.status.outlet." + std::to_string (i) + "@" + device.second.name ();
-                    std::string status_s = device.second.property (property);
-                    uint16_t    status_i = status_s == "on" ? 42 : 0;
-
-                    zmsg_t *msg = bios_proto_encode_metric (
-                            NULL,
-                            property.c_str (),
-                            device.second.name ().c_str (),
-                            std::to_string (status_i).c_str (),
-                            "",
-                            TTL);
-/* NOTE: Left deliberately until verified to work
-                    _scoped_ymsg_t *msg = bios_measurement_encode(
-                        device.second.name().c_str(),
-                        property.c_str(),
-                        "",
-                        status_i, 0, std::time(0));
-*/
-
-                    if (msg) {
-                        log_debug ("sending new status for %s %s, value %i (%s)",
-                                property.c_str (),
-                                device.second.name().c_str(),
-                                status_i,
-                                status_s.c_str());
-                        int r = send (topic.c_str(), &msg);
-                        if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
-                        zmsg_destroy (&msg);
-                        device.second.setChanged (property, false);
-                }
+        }
+        // send also status as bitmap
+        if (device.second.hasProperty ("status.ups")) {
+            topic = "measurement.status@" + device.second.name ();
+            std::string status_s = device.second.property ("status.ups");
+            uint16_t    status_i = upsstatus_to_int (status_s);
+            zmsg_t *msg = bios_proto_encode_metric (
+                NULL,
+                "status.ups",
+                device.second.name ().c_str (),
+                std::to_string (status_i).c_str (),
+                "",
+                _ttl);
+            if (msg) {
+                log_debug ("sending new status for element_src = '%s', value = '%s' (%s)",
+                           device.second.name().c_str (), std::to_string (status_i).c_str (), status_s.c_str ());
+                int r = send (topic.c_str (), &msg);
+                if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
+                zmsg_destroy (&msg);
+                device.second.setChanged ("status.ups", false);
             }
+        }
+        //MVY: send also epdu status as bitmap
+        for (int i = 1; i != 100; i++) {
+            std::string property = "status.outlet." + std::to_string (i);
+            // assumption, if outlet.10 does not exists, outlet.11 does not as well
+            if (!device.second.hasProperty (property))
+                break;
+            topic = "measurement.status.outlet." + std::to_string (i) + "@" + device.second.name ();
+            std::string status_s = device.second.property (property);
+            uint16_t    status_i = status_s == "on" ? 42 : 0;
+                
+            zmsg_t *msg = bios_proto_encode_metric (
+                NULL,
+                property.c_str (),
+                device.second.name ().c_str (),
+                std::to_string (status_i).c_str (),
+                "",
+                _ttl);
+            if (msg) {
+                log_debug ("sending new status for %s %s, value %i (%s)",
+                           property.c_str (),
+                           device.second.name().c_str(),
+                           status_i,
+                           status_s.c_str());
+                int r = send (topic.c_str(), &msg);
+                if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
+                zmsg_destroy (&msg);
+                device.second.setChanged (property, false);
             }
         }
     }
