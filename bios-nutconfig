@@ -48,6 +48,8 @@ chown -R bios:bios-infra "${BIOSCONFDIR}"
 TMPFILE=$(mktemp -p "${TMPDIR}" nutconfig.XXXXXXXXXX)
 if cat "${BIOSCONFDIR}"/* 2> /dev/null > "${TMPFILE}"; then
     mv "${TMPFILE}" "$NUTCONFIG"
+    chmod 0640 "${NUTCONFIG}"
+    chown root:nut "${NUTCONFIG}"
     exit 0
 else
     rm "${TMPFILE}" >/dev/null 2>&1
