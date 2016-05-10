@@ -98,6 +98,7 @@ actor_commands (
                     "Expected multipart string format: PRODUCER/stream. "
                     "Received PRODUCER/nullptr");
             zstr_free (&stream);
+            zstr_free (&cmd);
             zmsg_destroy (message_p);
             return 0;
         }
@@ -145,6 +146,7 @@ actor_commands (
                     "Expected multipart string format: CONFIGURE/filename. "
                     "Received CONFIGURE/nullptr");
             zstr_free (&mapping);
+            zstr_free (&cmd);
             zmsg_destroy (message_p);
             return 0;
         }
@@ -168,7 +170,7 @@ actor_commands (
         if (timeout == 0) {
             log_error ("invalid POLLING value '%s', using default instead", polling);
             timeout = 30000;
-        }            
+        }
         nut_agent.TTL (timeout * 2 / 1000);
         zstr_free (&polling);
     }
