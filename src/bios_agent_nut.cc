@@ -156,6 +156,12 @@ int main (int argc, char *argv [])
         log_critical ("zactor_new (task = 'bios_nut_server', args = 'NULL') failed");
         return -1;
     }
+
+    zactor_t *nut_device_alert = zactor_new (alert_actor, (void *) NULL);
+    if (!nut_device_alert) {
+        log_critical ("zactor_new (task = 'nut_device_server', args = 'NULL') failed");
+        return -1;
+    }
     
     if (verbose) {
         zstr_sendx (nut_server, "VERBOSE", NULL);
@@ -165,18 +171,25 @@ int main (int argc, char *argv [])
     zstr_sendx (nut_server, "CONNECT", ENDPOINT, AGENT_NAME, NULL);
     zstr_sendx (nut_server, "PRODUCER", BIOS_PROTO_STREAM_METRICS, NULL);
 
+    zpoller_t *poller = zpoller_new(nut_server, nut_device_alert, NULL);
+    assert(poller);
+    
     while (true) {
-        char *message = zstr_recv (nut_server);
-        if (message) {
-            puts (message);
-            zstr_free (&message);
-        }
-        else {
+        void *which = zpoller_wait(poller, -1);
+        if( which && ! zsys_interrupted) {
+            char *message = zstr_recv (which);
+            if (message) {
+                puts (message);
+                zstr_free (&message);
+            }
+        } else {
             puts ("interrupted");
             break;
         }
     }
 
+    zpoller_destroy (&poller);
     zactor_destroy (&nut_server);
+    zactor_destroy (&nut_device_alert);
     return 0;
 }

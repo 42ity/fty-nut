@@ -1,5 +1,5 @@
 /*  =========================================================================
-    nutscan - Wrapper around nut-scanner tool
+    alert_actor - actor handling device alerts and thresholds
 
     Copyright (C) 2014 - 2015 Eaton                                        
                                                                            
@@ -19,38 +19,24 @@
     =========================================================================
 */
 
-#ifndef NUTSCAN_H_INCLUDED
-#define NUTSCAN_H_INCLUDED
+#ifndef ALERT_ACTOR_H_INCLUDED
+#define ALERT_ACTOR_H_INCLUDED
 
-#include "cidr.h"
-#include "src/agent_nut_classes.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-/**
- * \brief call nut scan over SNMP
- *
- * \param[in] name asset name of device
- * \param[in] ip_address ip address of device
- * \param[out] out resulted string with NUT config snippets
- * \return 0 if success, -1 otherwise
- */
-int
-nut_scan_snmp(
-        const std::string& name,
-        const CIDRAddress& ip_address,
-        std::vector<std::string>& out);
 
-/**
- * \brief call nut scan over XML HTTP
- *
- * \param[in] name asset name of device
- * \param[in] ip_address ip address of device
- * \param[out] out resulted string with NUT config snippets
- * \return 0 if success, -1 otherwise
- */
-int
-nut_scan_xml_http(
-        const std::string& name,
-        const CIDRAddress& ip_address,
-        std::vector<std::string>& out);
+#include "malamute.h"
+
+AGENT_NUT_EXPORT void
+alert_actor (zsock_t *pipe, void *args);
+
+AGENT_NUT_EXPORT void
+alert_actor_test (bool verbose);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

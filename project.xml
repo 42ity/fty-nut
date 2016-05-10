@@ -33,9 +33,11 @@
     <class name = "nutscan" private = "1">Wrapper around nut-scanner tool</class>
     <class name = "cidr" private = "1">C++ Wrapper around libcidr</class>
     <class name = "subprocess" private = "1">C++ Wrapper around cxxtools::Fork</class>
+    <class name = "alert device list" private = "1">collection of alerts</class>
 
     <class name = "bios-nut-server" state = "stable">bios nut actor</class>
     <class name = "bios-nut-configurator-server" state = "stable">bios nut configurator actor</class>
+    <class name = "alert actor" state = "stable">actor handling device alerts and thresholds</class>
 
     <main name = "bios-agent-nut" service = "1" no_config = "1" />
     <main name = "bios-agent-nut-configurator" service = "1" no_config = "1" />
