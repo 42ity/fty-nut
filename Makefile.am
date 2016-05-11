@@ -42,8 +42,8 @@ EXTRA_DIST = \
     src/nut_device.h \
     src/nut_agent.h \
     src/nut_configurator.h \
-    src/nutscan.h \
     src/cidr.h \
+    src/nutscan.h \
     src/subprocess.h \
     src/alert_device_list.h \
     src/agent_nut_classes.h

@@ -22,7 +22,6 @@
 #ifndef NUTSCAN_H_INCLUDED
 #define NUTSCAN_H_INCLUDED
 
-#include "cidr.h"
 #include "src/agent_nut_classes.h"
 
 /**
