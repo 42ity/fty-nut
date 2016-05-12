@@ -43,8 +43,8 @@ all_tests [] = {
     { "nut_device", nut_device_test },
     { "nut_agent", nut_agent_test },
     { "nut_configurator", nut_configurator_test },
-    { "nutscan", nutscan_test },
     { "cidr", cidr_test },
+    { "nutscan", nutscan_test },
     { "subprocess", subprocess_test },
     { "alert_device_list", alert_device_list_test },
     { "bios_nut_server", bios_nut_server_test },
@@ -121,8 +121,8 @@ main (int argc, char **argv)
             puts ("    nut_device");
             puts ("    nut_agent");
             puts ("    nut_configurator");
-            puts ("    nutscan");
             puts ("    cidr");
+            puts ("    nutscan");
             puts ("    subprocess");
             puts ("    alert_device_list");
             puts ("    bios_nut_server");

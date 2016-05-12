@@ -40,13 +40,10 @@
 #include "nut_device.h"
 #include "nut_agent.h"
 #include "nut_configurator.h"
-#include "nutscan.h"
 #include "cidr.h"
+#include "nutscan.h"
 #include "subprocess.h"
 #include "alert_device_list.h"
-
-//  *** To avoid double-definitions, only define if building without draft ***
-// #ifndef AGENT_NUT_BUILD_DRAFT_API
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
@@ -86,12 +83,12 @@ AGENT_NUT_EXPORT void
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
 AGENT_NUT_EXPORT void
-    nutscan_test (bool verbose);
+    cidr_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
 AGENT_NUT_EXPORT void
-    cidr_test (bool verbose);
+    nutscan_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
@@ -102,7 +99,5 @@ AGENT_NUT_EXPORT void
 //  Self test of this class.
 AGENT_NUT_EXPORT void
     alert_device_list_test (bool verbose);
-
-// #endif // AGENT_NUT_BUILD_DRAFT_API
 
 #endif
