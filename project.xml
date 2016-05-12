@@ -33,6 +33,7 @@
     <class name = "cidr" private = "1">C++ Wrapper around libcidr</class>
     <class name = "nutscan" private = "1">Wrapper around nut-scanner tool</class>
     <class name = "subprocess" private = "1">C++ Wrapper around cxxtools::Fork</class>
+    <class name = "alert device" private = "1">device producing alerts</class>
     <class name = "alert device list" private = "1">collection of alerts</class>
 
     <class name = "bios-nut-server" state = "stable">bios nut actor</class>

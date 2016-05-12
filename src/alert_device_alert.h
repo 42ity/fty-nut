@@ -9,7 +9,7 @@ typedef struct DeviceAlert {
     std::string highWarning;
     std::string lowCritical;
     std::string highCritical;
-    std::string value;
+    std::string status;
 } device_alert_t;
 
 #endif // __ALERT_DEVICE_ALERT

@@ -43,6 +43,7 @@
 #include "cidr.h"
 #include "nutscan.h"
 #include "subprocess.h"
+#include "alert_device.h"
 #include "alert_device_list.h"
 
 //  *** Draft method, defined for internal use only ***
@@ -94,6 +95,11 @@ AGENT_NUT_EXPORT void
 //  Self test of this class.
 AGENT_NUT_EXPORT void
     subprocess_test (bool verbose);
+
+//  *** Draft method, defined for internal use only ***
+//  Self test of this class.
+AGENT_NUT_EXPORT void
+    alert_device_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
