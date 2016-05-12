@@ -43,6 +43,13 @@ class NUTAgent;
 //  CONFIGURE/mapping
 //      configure actor, where
 //      mapping - full path to mapping file
+//
+//  POLLING/value
+//      change polling interval, where
+//      value - new polling interval in seconds 
+
+
+
 
 // Performs the actor commands logic
 // Destroys the message
