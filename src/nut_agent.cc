@@ -82,6 +82,11 @@ void NUTAgent::onPoll ()
 
 int NUTAgent::send (const std::string& subject, zmsg_t **message_p)
 {
+    bios_proto_t *m_decoded = bios_proto_decode(message_p);
+    zmsg_destroy(message_p);
+    bios_proto_aux_insert(m_decoded, "time", "%+" PRId64, zclock_mono());
+    *message_p = bios_proto_encode(&m_decoded);
+    
     int rv = mlm_client_send (_client, subject.c_str (), message_p);
     if (rv == -1) {
         log_error ("mlm_client_send (subject = '%s') failed", subject.c_str ());
@@ -93,6 +98,11 @@ int NUTAgent::send (const std::string& subject, zmsg_t **message_p)
 //MVY: a hack for inventory messages
 int NUTAgent::isend (const std::string& subject, zmsg_t **message_p)
 {
+    bios_proto_t *m_decoded = bios_proto_decode(message_p);
+    zmsg_destroy(message_p);
+    bios_proto_aux_insert(m_decoded, "time", "%+" PRId64, zclock_mono());
+    *message_p = bios_proto_encode(&m_decoded);
+    
     int rv = mlm_client_send (_iclient, subject.c_str (), message_p);
     if (rv == -1) {
         log_error ("mlm_client_send (subject = '%s') failed", subject.c_str ());
