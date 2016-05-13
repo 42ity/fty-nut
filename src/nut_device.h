@@ -215,6 +215,8 @@ class NUTDevice {
     std::string _name;
     //! \brief Transformation of our integer (x100) back
     std::string itof(const long int) const;
+    //! \brief calculate ups.realpower from output.Lx.realpower if not present
+    void NUTRealpowerFromOutput( std::map< std::string,std::vector<std::string> > &vars );
     //! \brief NUT values transformation function
     void NUTValuesTransformation( std::map< std::string,std::vector<std::string> > &vars );
     //! \brief last succesfull communication timestamp
