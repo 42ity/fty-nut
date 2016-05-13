@@ -393,6 +393,73 @@ void NUTDevice::NUTSetIfNotPresent( std::map< std::string,std::vector<std::strin
     }
 }
 
+void NUTDevice::NUTRealpowerFromOutput( std::map< std::string,std::vector<std::string> > &vars ) {
+    
+    if (vars.find ("ups.realpower") != vars.end()) { return; }
+    
+    // use outlet.realpower if exists
+    if (vars.find ("outlet.realpower") != vars.end()) {
+        NUTSetIfNotPresent (vars, "ups.realpower", "outlet.realpower");
+        log_debug("realpower of %s taken from outlet.realpower", _name.c_str ());
+        return;
+    }
+    // sum the output.Lx.realpower
+    if( vars.find( "output.L1.realpower" ) != vars.end() ) {
+        int phases = 1;
+        if( vars.find( "output.phases" ) != vars.end() ) {
+            try {
+                phases = std::stoi (vars ["output.phases"][0]);
+            } catch(...) { }
+        }
+        double sum = 0.0;
+        for (int i=1; i<= phases; i++) {
+            auto it = vars.find ("output.L" + std::to_string(i) + ".realpower");
+            if (it  == vars.end ()) {
+                // even output is missing, can't compute
+                break;
+            }
+            try {
+                sum += std::stod (it->second[0]);
+            } catch(...) {
+                break;
+            }
+        }
+        // we have sum
+        log_debug("realpower of %s calculated as sum of output.Lx.realpower", _name.c_str ());
+        std::vector<std::string> value;
+        value.push_back (itof (round (sum * 100)));
+        vars["ups.realpower"] = value;
+        return;
+    }
+    
+    // if we have outlets, sum them
+    if (vars.find ("outlet.1.realpower") != vars.end()) {
+        double sum = 0.0;
+        int count = 100;
+        auto cntit = vars.find ("outlet.count");
+        if (cntit != vars.end()) {
+            try {
+                count = std::stoi(cntit->second[0]);
+            } catch(...) {}
+        }
+        for (int outlet = 1; outlet <= count; outlet++) {
+            auto it = vars.find ("outlet." + std::to_string(outlet) + ".realpower");
+            if (it  == vars.end ()) {
+                // end of outlets
+                break;
+            }
+            try {
+                sum += std::stod (it->second[0]);
+            } catch(...) {}
+        }
+        log_debug("realpower of %s calculated as sum of outlet.X.realpower", _name.c_str ());
+        std::vector<std::string> value;
+        value.push_back (itof (round (sum * 100)));
+        vars["ups.realpower"] = value;
+        return;
+    }    
+}
+
 void NUTDevice::NUTValuesTransformation( std::map< std::string,std::vector<std::string> > &vars ) {
     if( vars.empty() ) return ;
 
@@ -412,9 +479,10 @@ void NUTDevice::NUTValuesTransformation( std::map< std::string,std::vector<std::
             if( ! it->second.empty() && it->second[0] == "pdu" ) it->second[0] = "epdu";
         }
     }
+    // sum the realpower from output information
+    NUTRealpowerFromOutput (vars);
     // variables, that differs from ups to ups
     NUTSetIfNotPresent (vars, "ups.realpower", "input.realpower");
-    NUTSetIfNotPresent (vars, "ups.realpower", "outlet.realpower");
     NUTSetIfNotPresent (vars, "input.L1.realpower", "input.realpower");
     NUTSetIfNotPresent (vars, "input.L1.realpower", "ups.realpower");
     NUTSetIfNotPresent (vars, "output.L1.realpower", "output.realpower");
@@ -426,7 +494,10 @@ void NUTDevice::NUTValuesTransformation( std::map< std::string,std::vector<std::
         NUTSetIfNotPresent (vars, outvar, invar);
         NUTSetIfNotPresent (vars, invar, outvar);
     }
-
+    // sum the realpower again if still not present
+    // hope that missing output values have been filled
+    // from input values
+    NUTRealpowerFromOutput (vars);
 }
 
 void NUTDevice::clear() {
