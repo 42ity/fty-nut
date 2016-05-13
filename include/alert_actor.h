@@ -29,6 +29,14 @@ extern "C" {
 
 #include "malamute.h"
 
+AGENT_NUT_EXPORT int
+alert_actor_commands (
+    mlm_client_t *client,
+    zmsg_t **message,
+    bool& verbose,
+    uint64_t& timeout
+);
+
 AGENT_NUT_EXPORT void
 alert_actor (zsock_t *pipe, void *args);
 
