@@ -30,6 +30,7 @@ src_libagent_nut_la_SOURCES = \
     src/cidr.cc \
     src/nutscan.cc \
     src/subprocess.cc \
+    src/alert_device.cc \
     src/alert_device_list.cc \
     src/bios_nut_server.cc \
     src/bios_nut_configurator_server.cc \

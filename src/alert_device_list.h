@@ -7,5 +7,8 @@ class Devices {
     void publishRules (mlm_client_t *client); 
  private:
     std::map <std::string, Device>  _devices;
+
+    void updateDeviceList(nut::TcpClient& nutClient);
+    void updateDevices(nut::TcpClient& nutClient);
 };
     

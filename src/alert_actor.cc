@@ -34,6 +34,7 @@ alert_actor (zsock_t *pipe, void *args)
             zmsg_t *msg = zmsg_recv (pipe);
             if (msg) {
                 char *cmd = zmsg_popstr (msg);
+                log_debug ("aa: got message %s", cmd ? cmd : "NULL");
                 if (streq (cmd, "$TERM")) {
                     zstr_free (&cmd);
                     zmsg_destroy (&msg);

@@ -46,6 +46,7 @@ all_tests [] = {
     { "cidr", cidr_test },
     { "nutscan", nutscan_test },
     { "subprocess", subprocess_test },
+    { "alert_device", alert_device_test },
     { "alert_device_list", alert_device_list_test },
     { "bios_nut_server", bios_nut_server_test },
     { "bios_nut_configurator_server", bios_nut_configurator_server_test },
@@ -107,7 +108,7 @@ main (int argc, char **argv)
         else
         if (streq (argv [argn], "--number")
         ||  streq (argv [argn], "-n")) {
-            puts ("14");
+            puts ("15");
             return 0;
         }
         else
@@ -124,6 +125,7 @@ main (int argc, char **argv)
             puts ("    cidr");
             puts ("    nutscan");
             puts ("    subprocess");
+            puts ("    alert_device");
             puts ("    alert_device_list");
             puts ("    bios_nut_server");
             puts ("    bios_nut_configurator_server");
