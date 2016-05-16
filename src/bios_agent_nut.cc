@@ -31,7 +31,8 @@
 
 #define str(x) #x
 
-static const char *AGENT_NAME = "agent-nut";
+static const char *ACTOR_NUT_NAME = "agent-nut";
+static const char *ACTOR_ALERT_NAME = "agent-nut-alert";
 static const char *ENDPOINT = "ipc://@/malamute";
 
 #define DEFAULT_LOG_LEVEL LOG_WARNING
@@ -165,11 +166,16 @@ int main (int argc, char *argv [])
     
     if (verbose) {
         zstr_sendx (nut_server, "VERBOSE", NULL);
+        zstr_sendx (nut_device_alert, "VERBOSE", NULL);
     }
     zstr_sendx (nut_server, "CONFIGURE", mapping_file.c_str (), NULL);
     zstr_sendx (nut_server, "POLLING", polling, NULL);
-    zstr_sendx (nut_server, "CONNECT", ENDPOINT, AGENT_NAME, NULL);
+    zstr_sendx (nut_server, "CONNECT", ENDPOINT, ACTOR_NUT_NAME, NULL);
     zstr_sendx (nut_server, "PRODUCER", BIOS_PROTO_STREAM_METRICS, NULL);
+
+    zstr_sendx (nut_device_alert, "POLLING", polling, NULL);
+    zstr_sendx (nut_device_alert, "CONNECT", ENDPOINT, ACTOR_ALERT_NAME, NULL);
+    zstr_sendx (nut_device_alert, "PRODUCER", BIOS_PROTO_STREAM_ALERTS, NULL);
 
     zpoller_t *poller = zpoller_new(nut_server, nut_device_alert, NULL);
     assert(poller);
