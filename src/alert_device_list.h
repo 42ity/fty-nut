@@ -1,4 +1,8 @@
+#ifndef __ALERT_DEVICE_LIST
+#define __ALERT_DEVICE_LIST
+
 #include "alert_device.h"
+
 
 class Devices {
  public:
@@ -12,3 +16,4 @@ class Devices {
     void updateDevices(nut::TcpClient& nutClient);
 };
     
+#endif // __ALERT_DEVICE_LIST
