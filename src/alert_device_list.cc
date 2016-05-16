@@ -1,16 +1,21 @@
 #include <malamute.h>
 #include <nutclient.h>
+#include <exception>
+
 #include "alert_device_list.h"
 #include "agent_nut_library.h"
 #include "logger.h"
 
 void Devices::update()
 {
-    nut::TcpClient nutClient;
-    nutClient.connect ("localhost", 3493);
-
-    updateDeviceList(nutClient);
-    updateDevices(nutClient);
+    try {
+        nut::TcpClient nutClient;
+        nutClient.connect ("localhost", 3493);
+        updateDeviceList (nutClient);
+        updateDevices (nutClient);
+    } catch (std::exception& e) {
+        log_error ("reading data from NUT: %s", e.what ());
+    }
 }
 
 void Devices::updateDevices(nut::TcpClient& nutClient)
