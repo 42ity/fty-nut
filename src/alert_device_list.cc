@@ -61,12 +61,18 @@ void Devices::updateDeviceList(nut::TcpClient& nutClient)
 
 void Devices::publishAlerts (mlm_client_t *client)
 {
-
+    if (!client) return;
+    for (auto &device : _devices) {
+        device.second.publishAlerts (client);
+    }
 }
 
 void Devices::publishRules (mlm_client_t *client)
 {
-
+    if (!client) return;
+    for (auto &device : _devices) {
+        device.second.publishRules (client);
+    }
 }
 
 

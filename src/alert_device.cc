@@ -6,7 +6,7 @@ void
 Device::addAlert(const std::string& quantity, const std::map<std::string,std::vector<std::string> >& variables)
 {
     log_debug ("aa: device %s provides %s alert", _name.c_str(), quantity.c_str());
-    device_alert_t alert;
+    DeviceAlert alert;
     alert.name = quantity;
 
     // some devices provides ambient.temperature.(high|low)
@@ -100,6 +100,96 @@ Device::scanCapabilities (nut::TcpClient& conn)
 }
 
 void
+Device::publishAlerts (mlm_client_t *client) {
+    if (!client) return;
+    log_debug("aa: publishing %lu alerts", _alerts.size ());
+    for (auto& it: _alerts) {
+        publishAlert (client, it.second);
+    }
+}
+
+void
+Device::publishAlert (mlm_client_t *client, DeviceAlert& alert)
+{
+    if (!client) return;
+    const char *state = "ACTIVE", *severity = NULL;
+
+    if (alert.status == "good") {
+        state = "RESOLVED";
+        severity = "ok";
+    }
+    else if (alert.status == "warning-low") {
+        severity = "WARNING";
+    }
+    else if (alert.status == "critical-low") {
+        severity = "CRITICAL";
+    }
+    else if (alert.status == "warning-high") {
+        severity = "WARNING";
+    }
+    else if (alert.status == "critical-high") {
+        severity = "CRITICAL";
+    }
+
+    std::string rule = alert.name + "@" + _name;
+    log_debug("aa: publishing alert %s", rule.c_str ());
+    zmsg_t *message = bios_proto_encode_alert(
+        NULL,               // aux
+        rule.c_str (),      // rule
+        _name.c_str (),     // element
+        state,              // state
+        severity,           // severity
+        "hey",               // description
+        alert.timestamp / 1000, // timestamp
+        ""                  // action ?email
+    );
+    if (message) {
+        mlm_client_send (client, rule.c_str (), &message);
+    };
+    zmsg_destroy (&message);
+}
+
+void
+Device::publishRules (mlm_client_t *client) {
+    if (!client) return;
+    
+    for (auto& it: _alerts) {
+        publishRule (client, it.second);
+    }
+}
+
+void
+Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
+{
+    if (!client || alert.rulePublished) return;
+
+    zmsg_t *message = zmsg_new();
+    assert (message);
+
+    std::string description = alert.name + " exceeded the limit.";
+    std::string ruleName = alert.name + "@" + _name;
+    std::string rule =
+        "{ \"threshold\" : {"
+        "  \"rule_name\":   \"" + ruleName + "\","
+        "  \"rule_source\"   : \"NUT\","
+        "  \"target\"   :   \"" + ruleName + "\","
+        "  \"element\"       :   \"" + _name + "\","
+        "  \"results\"       :   ["
+        "    { \"low_critical\" : { \"action\" : [\"EMAIL\"], \"description\" : \"" + description + "\" }},"
+        "    { \"low_warning\"  : { \"action\" : [\"EMAIL\"], \"description\" : \"" + description + "\"}},"
+        "    {\"high_warning\"  : { \"action\" : [\"EMAIL\"], \"description\" : \"" + description + "\" }},"
+        "    {\"high_critical\" : { \"action\" : [\"EMAIL\"], \"description\" : \"" + description + "\" } }"
+        "  ] } }";
+    log_debug("aa: publishing rule %s", ruleName.c_str ());
+    zmsg_pushstr (message, "ADD");
+    zmsg_pushstr (message, rule.c_str ());
+    if (mlm_client_sendto (client, "alert-agent", "rfc-evaluator-rules", NULL, 1000, &message) == 0) {
+        alert.rulePublished = true;
+    };
+    zmsg_destroy (&message);
+}
+
+void
 Device::update (nut::TcpClient& conn)
 {
     auto nutDevice = conn.getDevice(_name);
@@ -107,8 +197,12 @@ Device::update (nut::TcpClient& conn)
         try {
             auto value = nutDevice.getVariableValue (it.first + ".status");
             if (value.size ()) {
-                log_debug ("aa: %s on %s is %s", it.first.c_str (), _name.c_str (), value[0].c_str());
-                it.second.status = value[0];
+                std::string newStatus =  value[0];
+                log_debug ("aa: %s on %s is %s", it.first.c_str (), _name.c_str (), newStatus.c_str());
+                if (it.second.status != newStatus) {
+                    it.second.timestamp = zclock_mono();
+                    it.second.status = newStatus;
+                }
             }
         } catch (...) {}
     }
