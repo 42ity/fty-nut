@@ -1,0 +1,3 @@
+
+agent_nut_mappingdir = @prefix@/share/agent-nut/
+agent_nut_mapping_DATA = src/mapping.conf
