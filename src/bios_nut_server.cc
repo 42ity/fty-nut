@@ -91,7 +91,14 @@ bios_nut_server (zsock_t *pipe, void *args)
         log_critical ("mlm_client_new () failed");
         return;
     }
-    mlm_client_set_producer (iclient, BIOS_PROTO_STREAM_ASSETS);
+    int r = mlm_client_connect (iclient, "ipc://@/malamute", 5000, "bios-agent-nut-inventory");
+    if (r == -1) {
+        log_error ("connect of iclient failed");
+    }
+    r = mlm_client_set_producer (iclient, BIOS_PROTO_STREAM_ASSETS);
+    if (r == -1) {
+        log_error ("iclient set_producer failed");
+    }
 
     zpoller_t *poller = zpoller_new (pipe, mlm_client_msgpipe (client), NULL);
     if (!poller) {
