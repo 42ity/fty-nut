@@ -170,19 +170,20 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
     std::string ruleName = alert.name + "@" + _name;
     std::string rule =
         "{ \"threshold\" : {"
-        "  \"rule_name\":   \"" + ruleName + "\","
+        "  \"rule_name\"     : \"" + ruleName + "\","
         "  \"rule_source\"   : \"NUT\","
-        "  \"target\"   :   \"" + ruleName + "\","
-        "  \"element\"       :   \"" + _name + "\","
-        "  \"results\"       :   ["
+        "  \"target\"        : \"" + ruleName + "\","
+        "  \"element\"       : \"" + _name + "\","
+        "  \"values\"        : [],"
+        "  \"results\"       : ["
         "    { \"low_critical\" : { \"action\" : [\"EMAIL\"], \"description\" : \"" + description + "\" }},"
         "    { \"low_warning\"  : { \"action\" : [\"EMAIL\"], \"description\" : \"" + description + "\"}},"
         "    {\"high_warning\"  : { \"action\" : [\"EMAIL\"], \"description\" : \"" + description + "\" }},"
         "    {\"high_critical\" : { \"action\" : [\"EMAIL\"], \"description\" : \"" + description + "\" } }"
         "  ] } }";
     log_debug("aa: publishing rule %s", ruleName.c_str ());
-    zmsg_pushstr (message, "ADD");
-    zmsg_pushstr (message, rule.c_str ());
+    zmsg_addstr (message, "ADD");
+    zmsg_addstr (message, rule.c_str ());
     if (mlm_client_sendto (client, "alert-agent", "rfc-evaluator-rules", NULL, 1000, &message) == 0) {
         alert.rulePublished = true;
     };
