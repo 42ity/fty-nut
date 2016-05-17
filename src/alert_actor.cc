@@ -147,6 +147,11 @@ alert_actor (zsock_t *pipe, void *args)
                 if (quit) break;
             }
         }
+        else {
+            // we can get some messages, but not interested
+            zmsg_t *msg = zmsg_recv (which);
+            zmsg_destroy (&msg);
+        }
     }
     zpoller_destroy (&poller);
     mlm_client_destroy (&client);
