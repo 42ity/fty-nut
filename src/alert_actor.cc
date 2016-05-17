@@ -136,6 +136,8 @@ alert_actor (zsock_t *pipe, void *args)
         if (which == NULL) {
             log_debug ("alert update");
             devices.update();
+            devices.publishRules (client);
+            devices.publishAlerts (client);
         }
         else if (which == pipe) {
             zmsg_t *msg = zmsg_recv (pipe);

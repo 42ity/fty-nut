@@ -33,6 +33,7 @@
 
 static const char *ACTOR_NUT_NAME = "agent-nut";
 static const char *ACTOR_ALERT_NAME = "agent-nut-alert";
+static const char *BIOS_PROTO_STREAM_ALERTS_SYS = "_ALERTS_SYS";
 static const char *ENDPOINT = "ipc://@/malamute";
 
 #define DEFAULT_LOG_LEVEL LOG_WARNING
@@ -175,7 +176,7 @@ int main (int argc, char *argv [])
 
     zstr_sendx (nut_device_alert, "POLLING", polling, NULL);
     zstr_sendx (nut_device_alert, "CONNECT", ENDPOINT, ACTOR_ALERT_NAME, NULL);
-    zstr_sendx (nut_device_alert, "PRODUCER", BIOS_PROTO_STREAM_ALERTS, NULL);
+    zstr_sendx (nut_device_alert, "PRODUCER", BIOS_PROTO_STREAM_ALERTS_SYS, NULL);
 
     zpoller_t *poller = zpoller_new(nut_server, nut_device_alert, NULL);
     assert(poller);
