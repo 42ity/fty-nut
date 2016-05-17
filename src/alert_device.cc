@@ -132,6 +132,8 @@ Device::publishAlert (mlm_client_t *client, DeviceAlert& alert)
     }
 
     std::string rule = alert.name + "@" + _name;
+    std::string description = alert.name + " exceeded the limit.";
+
     log_debug("aa: publishing alert %s", rule.c_str ());
     zmsg_t *message = bios_proto_encode_alert(
         NULL,               // aux
@@ -139,7 +141,7 @@ Device::publishAlert (mlm_client_t *client, DeviceAlert& alert)
         _name.c_str (),     // element
         state,              // state
         severity,           // severity
-        "hey",               // description
+        description.c_str (),   // description
         alert.timestamp / 1000, // timestamp
         ""                  // action ?email
     );
