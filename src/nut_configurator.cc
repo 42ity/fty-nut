@@ -1,7 +1,7 @@
 /*  =========================================================================
     nut_configurator - NUT configurator class
 
-    Copyright (C) 2014 - 2015 Eaton                                        
+    Copyright (C) 2014 - 2016 Eaton                                        
                                                                            
     This program is free software; you can redistribute it and/or modify   
     it under the terms of the GNU General Public License as published by   
@@ -39,7 +39,7 @@ using namespace shared;
 #define NUT_PART_STORE "/var/lib/bios/nut/devices"
 
 static const char * NUTConfigXMLPattern = "[[:blank:]]driver[[:blank:]]+=[[:blank:]]+\"netxml-ups\"";
-static const char * NUTConfigEpduPattern = "[[:blank:]](mibs[[:blank:]]+=[[:blank:]]+\"(eaton_epdu|aphel_genesisII)\"|"
+static const char * NUTConfigEpduPattern = "[[:blank:]](mibs[[:blank:]]+=[[:blank:]]+\"(eaton_epdu|aphel_genesisII|aphel_revelation|pulizzi_switched1|pulizzi_switched2)\"|"
                                            "desc[[:blank:]]+=[[:blank:]]+\"[^\"]+ epdu [^\"]+\")";
 static const char * NUTConfigCanSnmpPattern = "[[:blank:]]driver[[:blank:]]+=[[:blank:]]+\"snmp-ups\"";
 
