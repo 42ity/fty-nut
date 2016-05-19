@@ -199,11 +199,11 @@ Device::update (nut::TcpClient& conn)
     for (auto &it: _alerts) {
         try {
             auto value = nutDevice.getVariableValue (it.first + ".status");
-            if (value.size ()) {
+            if (!value.empty ()) {
                 std::string newStatus =  value[0];
                 log_debug ("aa: %s on %s is %s", it.first.c_str (), _name.c_str (), newStatus.c_str());
                 if (it.second.status != newStatus) {
-                    it.second.timestamp = zclock_mono();
+                    it.second.timestamp = ::time(NULL);
                     it.second.status = newStatus;
                 }
             }
@@ -219,8 +219,35 @@ void
 alert_device_test (bool verbose)
 {
     printf (" * alert device: ");
-    
     //  @selftest
+    Device dev;
+    std::map<std::string,std::vector<std::string> > nothing = {
+        { "nothing", {"h1", "h2"} }
+    };
+    dev.addAlert("ambient.temperature", nothing);
+    printf(".");
+    assert(dev._alerts.empty());
+
+    std::map<std::string,std::vector<std::string> > alerts = {
+        { "ambient.temperature.status", {"good", "", ""} },
+        { "ambient.temperature.high.warning", {"80", "", ""} },
+        { "ambient.temperature.high.critical", {"100", "", ""} },
+        { "ambient.temperature.low.warning", {"10", "", ""} },
+        { "ambient.temperature.low.critical", {"5", "", ""} },
+        
+        { "ambient.humidity.status", {"good", "", ""} },
+        { "ambient.humidity.high", {"100", "", ""} },
+        { "ambient.humidity.low", {"10", "", ""} },
+    };
+    dev.addAlert("ambient.temperature", alerts);
+    dev.addAlert("ambient.humidity", alerts);
+    assert(dev._alerts.size() == 2);
+    assert(dev._alerts["ambient.humidity"].lowWarning == "10");
+    assert(dev._alerts["ambient.humidity"].lowCritical == "10");
+    assert(dev._alerts["ambient.temperature"].lowWarning == "10");
+    assert(dev._alerts["ambient.temperature"].lowCritical == "5");
+    assert(dev._alerts["ambient.temperature"].highWarning == "80");
+    assert(dev._alerts["ambient.temperature"].highCritical == "100");
     //  @end
-    printf ("Empty test - OK\n");
+    printf (" OK\n");
 }

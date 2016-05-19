@@ -6,6 +6,7 @@
 #include <nutclient.h>
 #include <malamute.h>
 
+#include "agent_nut_library.h"
 #include "alert_device_alert.h"
 
 class Device {
@@ -20,6 +21,10 @@ class Device {
     int scanCapabilities (nut::TcpClient &conn);
     void publishAlerts (mlm_client_t *client);
     void publishRules (mlm_client_t *client);
+
+    // friend functions for unit-testing
+    friend void alert_device_test (bool verbose);
+    friend void alert_actor_test (bool verbose);
  private:
     std::string _name;
     std::map <std::string, DeviceAlert> _alerts;
