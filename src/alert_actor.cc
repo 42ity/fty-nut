@@ -160,12 +160,135 @@ alert_actor (zsock_t *pipe, void *args)
 //  --------------------------------------------------------------------------
 //  Self test of this class
 
+#define verbose_printf if (verbose) printf
+
 void
 alert_actor_test (bool verbose)
 {
     printf (" * alert_actor: ");
-
     //  @selftest
+    static const char* endpoint = "ipc://bios-alert-actor";
+    static const char* alertstream = "_ALERTS_SYS";
+
+    // malamute broker
+    zactor_t *malamute = zactor_new (mlm_server, (void*) "Malamute");
+    assert (malamute);
+    if (verbose)
+        zstr_send (malamute, "VERBOSE");
+    zstr_sendx (malamute, "BIND", endpoint, NULL);
+    
+    Device dev("mydevice");
+    std::map<std::string,std::vector<std::string> > alerts = {
+        { "ambient.temperature.status", {"critical-high", "", ""} },
+        { "ambient.temperature.high.warning", {"80", "", ""} },
+        { "ambient.temperature.high.critical", {"100", "", ""} },
+        { "ambient.temperature.low.warning", {"10", "", ""} },
+        { "ambient.temperature.low.critical", {"5", "", ""} },
+    };
+    dev.addAlert("ambient.temperature", alerts);
+    dev._alerts["ambient.temperature"].status = "critical-high";
+    Devices devs;
+    devs._devices["mydevice"] = dev;
+    
+    mlm_client_t *client = mlm_client_new ();
+    assert (client);
+    mlm_client_connect (client, endpoint, 1000, "agent-nut-alert");
+    mlm_client_set_producer (client, alertstream);
+    
+    mlm_client_t *rfc_evaluator = mlm_client_new ();
+    assert (rfc_evaluator);
+    mlm_client_connect (rfc_evaluator, endpoint, 1000, "alert-agent");
+    // mlm_client_set_consumer (rfc_evaluator, alertstream, "only mailbox"); // ? TODO: delete
+
+    mlm_client_t *alert_list = mlm_client_new ();
+    assert (alert_list);
+    mlm_client_connect (alert_list, endpoint, 1000, "alert-list");
+    mlm_client_set_consumer (alert_list, alertstream, ".*");
+
+    zpoller_t *poller = zpoller_new (
+        mlm_client_msgpipe (client),
+        mlm_client_msgpipe (rfc_evaluator),
+        mlm_client_msgpipe (alert_list),
+        NULL);
+    assert (poller);
+
+    devs.publishRules (client);
+    devs.publishAlerts (client);
+
+    // check rule message
+    {
+        verbose_printf ("\n    recvrule\n");
+        void *which = zpoller_wait (poller, 1000);
+        assert (which);
+        zmsg_t *msg = mlm_client_recv (rfc_evaluator);
+        assert (msg);
+        assert (streq (mlm_client_subject (rfc_evaluator), "rfc-evaluator-rules")); 
+
+        verbose_printf ("    rule command\n");
+        char *item = zmsg_popstr (msg);
+        assert (item);
+        assert (streq (item, "ADD"));
+        zstr_free (&item);
+        
+        verbose_printf ("    rule json\n");
+        item = zmsg_popstr (msg);
+        assert (item);
+        assert (item[0] == '{');
+        zstr_free (&item);
+
+        zmsg_destroy (&msg);
+    }
+    // check alert message
+    {
+        verbose_printf ("    receive alert\n");
+        void *which = zpoller_wait (poller, 1000);
+        assert (which);
+        zmsg_t *msg = mlm_client_recv (alert_list);
+        assert (msg);
+        assert (is_bios_proto(msg));
+        bios_proto_t *bp = bios_proto_decode (&msg);
+        assert (bp);
+
+        verbose_printf ("    is alert\n");
+        assert (streq (bios_proto_command (bp), "ALERT"));
+        
+        verbose_printf ("    is active\n");
+        assert (streq (bios_proto_state (bp), "ACTIVE"));
+
+        verbose_printf ("    severity\n");
+        assert (streq (bios_proto_severity (bp), "CRITICAL"));
+
+        verbose_printf ("    element\n");
+        assert (streq (bios_proto_element_src (bp), "mydevice"));
+
+        bios_proto_destroy (&bp);
+        zmsg_destroy (&msg);
+    }
+    devs._devices["mydevice"]._alerts["ambient.temperature"].status = "good";
+    devs.publishAlerts (client);
+    // check alert message
+    {
+        verbose_printf ("    receive resolved\n");
+        void *which = zpoller_wait (poller, 1000);
+        assert (which);
+        zmsg_t *msg = mlm_client_recv (alert_list);
+        assert (msg);
+        assert (is_bios_proto(msg));
+        bios_proto_t *bp = bios_proto_decode (&msg);
+        assert (bp);
+        assert (streq (bios_proto_command (bp), "ALERT"));
+        
+        verbose_printf ("    is resolved\n");
+        assert (streq (bios_proto_state (bp), "RESOLVED"));
+        
+        bios_proto_destroy (&bp);
+        zmsg_destroy (&msg);
+    }
+
+    mlm_client_destroy(&client);
+    mlm_client_destroy(&alert_list);
+    mlm_client_destroy(&rfc_evaluator);
+    zactor_destroy (&malamute);
     //  @end
-    printf ("Empty test - OK\n");
+    printf (" OK\n");
 }
