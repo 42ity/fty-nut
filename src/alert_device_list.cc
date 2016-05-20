@@ -31,16 +31,18 @@ void Devices::updateDeviceList(nut::TcpClient& nutClient)
         if (!nutClient.isConnected ()) return;
         std::set<std::string> devs = nutClient.getDeviceNames ();
         // add newly appeared devices
-        for (const auto &it : devs) {
-            if (_devices.find (it) == _devices.end ()) {
-                auto device = Device (it);
-                if (device.scanCapabilities (nutClient)) {
-                    log_debug ("aa: adding device %s", it.c_str ());
-                    _devices[it] = device;
+        for (const auto& name : devs) {
+            auto device = _devices.find (name);
+            if (device == _devices.end ()) {
+                auto newDevice = Device (name);
+                if (newDevice.scanCapabilities (nutClient)) {
+                    log_debug ("aa: adding device %s", name.c_str ());
+                    _devices[name] = newDevice;
                 } else {
-                    log_debug ("aa: not adding device %s", it.c_str ());
+                    log_debug ("aa: not adding device %s", name.c_str ());
                 }
-                // TODO: create rules
+            } else {
+                device->second.scanCapabilities (nutClient);
             }
         }
         // remove missing devices

@@ -70,8 +70,17 @@ s_handle_stream (mlm_client_t *client, zmsg_t **message_p)
 uint64_t
 polling_timeout(uint64_t last_poll, uint64_t polling_timeout)
 {
+    static uint32_t too_short_poll_count = 0;
+
     uint64_t now = static_cast<uint64_t> (zclock_mono ());
-    if (last_poll + polling_timeout < now) return 0;
+    if (last_poll + polling_timeout < now) {
+        too_short_poll_count++;
+        if (too_short_poll_count > 10) {
+            log_error("Can't handle so many devices in so short polling interval");
+        }
+        return 0;
+    }
+    too_short_poll_count = 0;
     return last_poll + polling_timeout - now;
 }
 

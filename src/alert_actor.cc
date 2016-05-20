@@ -168,7 +168,6 @@ alert_actor_test (bool verbose)
     printf (" * alert_actor: ");
     //  @selftest
     static const char* endpoint = "ipc://bios-alert-actor";
-    static const char* alertstream = "_ALERTS_SYS";
 
     // malamute broker
     zactor_t *malamute = zactor_new (mlm_server, (void*) "Malamute");
@@ -193,17 +192,16 @@ alert_actor_test (bool verbose)
     mlm_client_t *client = mlm_client_new ();
     assert (client);
     mlm_client_connect (client, endpoint, 1000, "agent-nut-alert");
-    mlm_client_set_producer (client, alertstream);
+    mlm_client_set_producer (client, BIOS_PROTO_STREAM_ALERTS_SYS);
     
     mlm_client_t *rfc_evaluator = mlm_client_new ();
     assert (rfc_evaluator);
     mlm_client_connect (rfc_evaluator, endpoint, 1000, "alert-agent");
-    // mlm_client_set_consumer (rfc_evaluator, alertstream, "only mailbox"); // ? TODO: delete
 
     mlm_client_t *alert_list = mlm_client_new ();
     assert (alert_list);
     mlm_client_connect (alert_list, endpoint, 1000, "alert-list");
-    mlm_client_set_consumer (alert_list, alertstream, ".*");
+    mlm_client_set_consumer (alert_list, BIOS_PROTO_STREAM_ALERTS_SYS, ".*");
 
     zpoller_t *poller = zpoller_new (
         mlm_client_msgpipe (client),

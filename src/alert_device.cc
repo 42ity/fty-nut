@@ -9,6 +9,11 @@ Device::addAlert(const std::string& quantity, const std::map<std::string,std::ve
     DeviceAlert alert;
     alert.name = quantity;
 
+    if (_alerts.find (quantity) != _alerts.end()) {
+        log_debug ("aa: device %s, alert %s already known", _name.c_str(), quantity.c_str());
+        return;
+    }
+
     // some devices provides ambient.temperature.(high|low)
     {
         const auto& it = variables.find(quantity + ".high");
@@ -93,7 +98,7 @@ Device::scanCapabilities (nut::TcpClient& conn)
             }
         }
     } catch ( std::exception &e ) {
-        log_error("Communication problem with %s (%s)", _name.c_str(), e.what() );
+        log_error("aa: Communication problem with %s (%s)", _name.c_str(), e.what() );
         return 0;
     }
     return 1;
@@ -130,9 +135,13 @@ Device::publishAlert (mlm_client_t *client, DeviceAlert& alert)
     else if (alert.status == "critical-high") {
         severity = "CRITICAL";
     }
-
     std::string rule = alert.name + "@" + _name;
     std::string description = alert.name + " exceeded the limit.";
+
+    if (!severity) {
+        log_error ("aa: alert %s has unknown severity value %s. Set to WARNING.", rule.c_str (), alert.status.c_str ());
+        severity = "WARNING";
+    }
 
     log_debug("aa: publishing alert %s", rule.c_str ());
     zmsg_t *message = bios_proto_encode_alert(
