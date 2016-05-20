@@ -150,8 +150,8 @@ Device::publishAlert (mlm_client_t *client, DeviceAlert& alert)
         _name.c_str (),     // element
         state,              // state
         severity,           // severity
-        description.c_str (),   // description
-        alert.timestamp / 1000, // timestamp
+        description.c_str (), // description
+        alert.timestamp,    // timestamp
         ""                  // action ?email
     );
     if (message) {
