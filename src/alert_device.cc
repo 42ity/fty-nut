@@ -183,6 +183,7 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
         "{ \"threshold\" : {"
         "  \"rule_name\"     : \"" + ruleName + "\","
         "  \"rule_source\"   : \"NUT\","
+        "  \"rule_class\"    : \"Device internal\","
         "  \"target\"        : \"" + ruleName + "\","
         "  \"element\"       : \"" + _name + "\","
         "  \"values\"        : [],"
