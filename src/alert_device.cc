@@ -136,7 +136,7 @@ Device::publishAlert (mlm_client_t *client, DeviceAlert& alert)
         severity = "CRITICAL";
     }
     std::string rule = alert.name + "@" + _name;
-    std::string description = alert.name + " exceeded the limit.";
+    std::string description = alert.name + " exceeded the limit";
 
     if (!severity) {
         log_error ("aa: alert %s has unknown severity value %s. Set to WARNING.", rule.c_str (), alert.status.c_str ());
@@ -150,8 +150,8 @@ Device::publishAlert (mlm_client_t *client, DeviceAlert& alert)
         _name.c_str (),     // element
         state,              // state
         severity,           // severity
-        description.c_str (),   // description
-        alert.timestamp / 1000, // timestamp
+        description.c_str (), // description
+        alert.timestamp,    // timestamp
         ""                  // action ?email
     );
     if (message) {
@@ -187,10 +187,10 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
         "  \"element\"       : \"" + _name + "\","
         "  \"values\"        : [],"
         "  \"results\"       : ["
-        "    { \"low_critical\" : { \"action\" : [\"EMAIL\"], \"description\" : \"" + description + "\" }},"
-        "    { \"low_warning\"  : { \"action\" : [\"EMAIL\"], \"description\" : \"" + description + "\"}},"
-        "    {\"high_warning\"  : { \"action\" : [\"EMAIL\"], \"description\" : \"" + description + "\" }},"
-        "    {\"high_critical\" : { \"action\" : [\"EMAIL\"], \"description\" : \"" + description + "\" } }"
+        "    { \"low_critical\" : { \"action\" : [], \"description\" : \"" + description + "\" }},"
+        "    { \"low_warning\"  : { \"action\" : [], \"description\" : \"" + description + "\"}},"
+        "    {\"high_warning\"  : { \"action\" : [], \"description\" : \"" + description + "\" }},"
+        "    {\"high_critical\" : { \"action\" : [], \"description\" : \"" + description + "\" } }"
         "  ] } }";
     log_debug("aa: publishing rule %s", ruleName.c_str ());
     zmsg_addstr (message, "ADD");
