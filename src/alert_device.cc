@@ -14,6 +14,14 @@ Device::addAlert(const std::string& quantity, const std::map<std::string,std::ve
         return;
     }
 
+    // does the device evaluation?
+    {
+        const auto& it = variables.find(quantity + ".status");
+        if (it == variables.cend ()) {
+            log_debug ("aa: device %s doesn't support %s.status", _name.c_str(), quantity.c_str());
+            return;
+        }
+    }
     // some devices provides ambient.temperature.(high|low)
     {
         const auto& it = variables.find(quantity + ".high");
