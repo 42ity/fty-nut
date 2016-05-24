@@ -85,17 +85,18 @@ Device::scanCapabilities (nut::TcpClient& conn)
             }
         }
         for (int a=1; a<=1000; a++) {
-            std::string q = "oulet.group." + std::to_string(a) + ".current";
+            int found = 0;
+            std::string q = "outlet.group." + std::to_string(a) + ".current";
             if (vars.find (q) != vars.cend()) {
                 addAlert (q, vars);
-            } else {
-                // assume end of outlet groups if value is missing
-                break;
+                ++found;
             }
             q = "outlet.group." + std::to_string(a) + ".voltage";
             if (vars.find (q) != vars.cend()) {
                 addAlert (q, vars);
+                ++found;
             }
+            if (!found) break;
         }
     } catch ( std::exception &e ) {
         log_error("aa: Communication problem with %s (%s)", _name.c_str(), e.what() );
