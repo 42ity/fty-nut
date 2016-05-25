@@ -186,7 +186,7 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
     zmsg_t *message = zmsg_new();
     assert (message);
 
-    std::string description = alert.name + " exceeded the limit.";
+    std::string description = alert.name + " exceeded the limit";
     std::string ruleName = alert.name + "@" + _name;
     std::string rule =
         "{ \"threshold\" : {"
@@ -195,7 +195,12 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
         "  \"rule_class\"    : \"Device internal\","
         "  \"target\"        : \"" + ruleName + "\","
         "  \"element\"       : \"" + _name + "\","
-        "  \"values\"        : [],"
+        "  \"values\"        : ["
+        "    { \"low_warning\"  : \"" + alert.lowWarning + "\"},"
+        "    { \"low_critical\" : \"" + alert.lowCritical + "\"},"
+        "    { \"high_warning\"  : \"" + alert.highWarning + "\"},"
+        "    { \"high_critical\" : \"" + alert.highCritical + "\"}"
+        "    ],"
         "  \"results\"       : ["
         "    { \"low_critical\" : { \"action\" : [], \"description\" : \"" + description + "\" }},"
         "    { \"low_warning\"  : { \"action\" : [], \"description\" : \"" + description + "\"}},"
