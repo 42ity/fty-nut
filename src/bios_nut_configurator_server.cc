@@ -181,6 +181,13 @@ void Autoconfig::onSend( zmsg_t **message )
     device_name = bios_proto_name (bmsg);
     // MVY: 6 is device, for subtype see core.git/src/shared/asset_types.h
     subtype = streq (bios_proto_aux_string (bmsg, "subtype", ""), "ups") ? 1 : 3;
+
+    // daisy_chain pdu support - only devices with daisy_chain == 1 or no such ext attribute will be configured via nut-scanner
+    if (bios_proto_ext_number (bmsg, "daisy_chain", 0) > 1) {
+        bios_proto_destroy (&bmsg);
+        return;
+    }
+
     addDeviceIfNeeded( device_name, 6, subtype );
     _configurableDevices[device_name].configured = false;
     _configurableDevices[device_name].attributes.clear();
