@@ -208,8 +208,9 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
                 // this is not performance critical code anyway
                 std::vector <std::string> foo = {s};
                 if (isEpdu (foo) && canSnmp (foo)) {
-                    log_debug ("add synchronous = yes");
+                    log_debug ("add synchronous = yes and nowait");
                     cfgFile << "\tsynchronous = yes\n";
+                    cfgFile << "\tnowait\n";
                 }
             }
             cfgFile.close();
