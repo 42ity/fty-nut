@@ -283,6 +283,7 @@ alert_actor_test (bool verbose)
         zmsg_destroy (&msg);
     }
 
+    zpoller_destroy (&poller);
     mlm_client_destroy(&client);
     mlm_client_destroy(&alert_list);
     mlm_client_destroy(&rfc_evaluator);
