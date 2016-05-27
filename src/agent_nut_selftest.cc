@@ -38,16 +38,18 @@ static test_item_t
 all_tests [] = {
     { "logger", logger_test },
     { "fsutils", fsutils_test },
+    { "cidr", cidr_test },
+    { "nutscan", nutscan_test },
+    { "subprocess", subprocess_test },
     { "actor_commands", actor_commands_test },
     { "ups_status", ups_status_test },
     { "nut_device", nut_device_test },
     { "nut_agent", nut_agent_test },
     { "nut_configurator", nut_configurator_test },
-    { "cidr", cidr_test },
-    { "nutscan", nutscan_test },
-    { "subprocess", subprocess_test },
     { "alert_device", alert_device_test },
     { "alert_device_list", alert_device_list_test },
+    { "nut", nut_test },
+    { "stream", stream_test },
     { "bios_nut_server", bios_nut_server_test },
     { "bios_nut_configurator_server", bios_nut_configurator_server_test },
     { "alert_actor", alert_actor_test },
@@ -108,7 +110,7 @@ main (int argc, char **argv)
         else
         if (streq (argv [argn], "--number")
         ||  streq (argv [argn], "-n")) {
-            puts ("15");
+            puts ("17");
             return 0;
         }
         else
@@ -117,16 +119,18 @@ main (int argc, char **argv)
             puts ("Available tests:");
             puts ("    logger");
             puts ("    fsutils");
+            puts ("    cidr");
+            puts ("    nutscan");
+            puts ("    subprocess");
             puts ("    actor_commands");
             puts ("    ups_status");
             puts ("    nut_device");
             puts ("    nut_agent");
             puts ("    nut_configurator");
-            puts ("    cidr");
-            puts ("    nutscan");
-            puts ("    subprocess");
             puts ("    alert_device");
             puts ("    alert_device_list");
+            puts ("    nut");
+            puts ("    stream");
             puts ("    bios_nut_server");
             puts ("    bios_nut_configurator_server");
             puts ("    alert_actor");

@@ -35,16 +35,18 @@
 //  Internal API
 #include "logger.h"
 #include "fsutils.h"
+#include "cidr.h"
+#include "nutscan.h"
+#include "subprocess.h"
 #include "actor_commands.h"
 #include "ups_status.h"
 #include "nut_device.h"
 #include "nut_agent.h"
 #include "nut_configurator.h"
-#include "cidr.h"
-#include "nutscan.h"
-#include "subprocess.h"
 #include "alert_device.h"
 #include "alert_device_list.h"
+#include "nut.h"
+#include "stream.h"
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
@@ -55,6 +57,21 @@ AGENT_NUT_EXPORT void
 //  Self test of this class.
 AGENT_NUT_EXPORT void
     fsutils_test (bool verbose);
+
+//  *** Draft method, defined for internal use only ***
+//  Self test of this class.
+AGENT_NUT_EXPORT void
+    cidr_test (bool verbose);
+
+//  *** Draft method, defined for internal use only ***
+//  Self test of this class.
+AGENT_NUT_EXPORT void
+    nutscan_test (bool verbose);
+
+//  *** Draft method, defined for internal use only ***
+//  Self test of this class.
+AGENT_NUT_EXPORT void
+    subprocess_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
@@ -84,26 +101,21 @@ AGENT_NUT_EXPORT void
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
 AGENT_NUT_EXPORT void
-    cidr_test (bool verbose);
-
-//  *** Draft method, defined for internal use only ***
-//  Self test of this class.
-AGENT_NUT_EXPORT void
-    nutscan_test (bool verbose);
-
-//  *** Draft method, defined for internal use only ***
-//  Self test of this class.
-AGENT_NUT_EXPORT void
-    subprocess_test (bool verbose);
-
-//  *** Draft method, defined for internal use only ***
-//  Self test of this class.
-AGENT_NUT_EXPORT void
     alert_device_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
 AGENT_NUT_EXPORT void
     alert_device_list_test (bool verbose);
+
+//  *** Draft method, defined for internal use only ***
+//  Self test of this class.
+AGENT_NUT_EXPORT void
+    nut_test (bool verbose);
+
+//  *** Draft method, defined for internal use only ***
+//  Self test of this class.
+AGENT_NUT_EXPORT void
+    stream_test (bool verbose);
 
 #endif
