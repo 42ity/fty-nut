@@ -36,9 +36,9 @@ BuildRequires:  zeromq-devel
 BuildRequires:  czmq-devel
 BuildRequires:  malamute-devel
 BuildRequires:  biosproto-devel
-BuildRequires:  libcidr-devel
 BuildRequires:  cxxtools-devel
-BuildRequires:  libnutclient-devel
+BuildRequires:  nut-devel
+BuildRequires:  libcidr-devel
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
@@ -67,9 +67,9 @@ Requires:       zeromq-devel
 Requires:       czmq-devel
 Requires:       malamute-devel
 Requires:       biosproto-devel
-Requires:       libcidr-devel
 Requires:       cxxtools-devel
-Requires:       libnutclient-devel
+Requires:       nut-devel
+Requires:       cidr-devel
 
 %description devel
 agent-nut nut (network ups tools) daemon wrapper/proxy.
@@ -103,6 +103,7 @@ find %{buildroot} -name '*.la' | xargs rm -f
 %{_bindir}/bios-nutconfig
 %{_prefix}/lib/systemd/system/bios-agent-nut*.service
 %{_prefix}/lib/systemd/system/bios-agent-nut-configurator*.service
+
 
 
 %changelog
