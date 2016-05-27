@@ -524,7 +524,6 @@ subprocess_test (bool verbose)
     printf (" * subprocess: ");
 
     //  @selftest
-    //  Simple create/destroy test
     //  @end
-    printf ("OK\n");
+    printf ("Empty test - OK\n");
 }

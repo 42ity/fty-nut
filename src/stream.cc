@@ -33,8 +33,33 @@
 //  Handle stream deliver command
 
 void
-stream_deliver_handle (void)
+stream_deliver_handle (
+        mlm_client_t *client,
+        NUTAgent& nut_agent,
+        zmsg_t **message_p)
 {
+    assert (client);
+    assert (message_p && *message_p);
+    
+    if (!is_bios_proto (*message_p)) {
+        log_warning (
+                "Message received is not bios_proto; sender = '%s', subject = '%s'",
+                mlm_client_sender (client), mlm_client_subject (client));
+        zmsg_destroy (message_p);
+        return;
+    }
+
+    bios_proto_t *proto = bios_proto_decode (message_p);
+    if (!proto) {
+        log_critical ("bios_proto_decode () failed.");
+        zmsg_destroy (message_p);
+        return;
+    }
+    
+    // WIP
+    log_debug ("STREAM (ASSETS) message received");
+    bios_proto_print (proto);
+    bios_proto_destroy (&proto);
 }
 
 //  --------------------------------------------------------------------------

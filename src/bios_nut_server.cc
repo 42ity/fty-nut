@@ -57,14 +57,12 @@ s_handle_mailbox (mlm_client_t *client, zmsg_t **message_p)
 }
 
 static void
-s_handle_stream (mlm_client_t *client, zmsg_t **message_p) 
+s_handle_stream (mlm_client_t *client, NUTAgent& nut_agent, zmsg_t **message_p) 
 {
     assert (client);
     assert (message_p && *message_p);
 
-    log_error ("Stream command is not implemented.");
-
-    zmsg_destroy (message_p);
+    stream_deliver_handle (client, nut_agent, message_p);
 }
 
 uint64_t
@@ -153,7 +151,9 @@ bios_nut_server (zsock_t *pipe, void *args)
 
         // paranoid non-destructive assertion of a twisted mind 
         if (which != mlm_client_msgpipe (client)) {
-            log_critical ("... TODO ...");
+            log_critical (
+                    "zpoller_wait () returned address that is different from "
+                    "`pipe`, `mlm_client_msgpipe (client)`, NULL.");
             continue;
         }
         
@@ -165,7 +165,7 @@ bios_nut_server (zsock_t *pipe, void *args)
 
         const char *command = mlm_client_command (client);
         if (streq (command, "STREAM DELIVER")) {
-            s_handle_stream (client, &message);
+            s_handle_stream (client, nut_agent, &message);
         }
         else
         if (streq (command, "MAILBOX DELIVER")) {

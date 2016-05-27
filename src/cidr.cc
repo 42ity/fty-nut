@@ -689,7 +689,6 @@ cidr_test (bool verbose)
     printf (" * cidr: ");
 
     //  @selftest
-    //  Simple create/destroy test
     //  @end
-    printf ("OK\n");
+    printf ("Empty test - OK\n");
 }
