@@ -3,3 +3,4 @@ usr/bin/bios-agent-nut-configurator
 usr/bin/bios-nutconfig
 usr/lib/systemd/system/bios-agent-nut*.service
 usr/lib/systemd/system/bios-agent-nut-configurator*.service
+usr/share/agent-nut/mapping.conf
