@@ -46,7 +46,7 @@ Package: libagent-nut-dev
 Architecture: any
 Section: libdevel
 Depends:
-    libzmq5-dev,
+    libzmq4-dev,
     libczmq-dev,
     libmlm-dev,
     libbiosproto-dev,
