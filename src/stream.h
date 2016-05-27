@@ -29,7 +29,10 @@ extern "C" {
 //  @interface
 //  Handle stream deliver command
 AGENT_NUT_EXPORT void
-    stream_deliver_handle (void);
+    stream_deliver_handle (
+            mlm_client_t *client,
+            NUTAgent& nut_agent,
+            zmsg_t **message_p);
 
 //  Self test of this class
 AGENT_NUT_EXPORT void
