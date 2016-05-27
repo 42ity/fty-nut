@@ -25,13 +25,13 @@ Standards-Version: 3.9.7
 Build-Depends: debhelper (>= 9),
     pkg-config,
     dh-autoreconf,
-    libzmq4-dev,
+    libzmq5-dev,
     libczmq-dev,
     libmlm-dev,
     libbiosproto-dev,
+    libcidr-dev,
     libcxxtools-dev,
     libnutclient-dev,
-    libcidr0-dev,
     dh-autoreconf,
     systemd,
     dh-systemd
@@ -46,13 +46,13 @@ Package: libagent-nut-dev
 Architecture: any
 Section: libdevel
 Depends:
-    libzmq4-dev,
+    libzmq5-dev,
     libczmq-dev,
     libmlm-dev,
     libbiosproto-dev,
+    libcidr-dev,
     libcxxtools-dev,
     libnutclient-dev,
-    libcidr-dev,
     libagent-nut0 (= ${binary:Version})
 Description: development files for agent-nut
  This package contains development files for agent-nut: nut (network ups tools) daemon wrapper/proxy
