@@ -648,6 +648,7 @@ AM_COND_IF([WITH_SYSTEMD_UNITS],
     [AC_CONFIG_FILES([
                  src/bios-agent-nut.service
                  src/bios-agent-nut-configurator.service
+                 src/bios-agent-nut.conf
     ])],
     [])
 
