@@ -134,7 +134,7 @@ void NUTAgent::advertisePhysics () {
     for (auto& device : _deviceList) {
         std::string subject;
         for (auto& measurement : device.second.physics (false)) {
-            subject = measurement.first + "@" + device.second.name ();
+            subject = measurement.first + "@" + device.second.assetName ();
             std::string type = physicalQuantityShortName (measurement.first);
             std::string units = physicalQuantityToUnits (type);
             if (units.empty ()) {
@@ -149,13 +149,13 @@ void NUTAgent::advertisePhysics () {
             zmsg_t *msg = bios_proto_encode_metric (
                 NULL,
                 measurement.first.c_str (),
-                device.second.name ().c_str (),
+                device.second.assetName ().c_str (),
                 buffer,
                 units.c_str (),
                 _ttl);
             if (msg) {
                 log_debug ("sending new measurement for element_src = '%s', type = '%s', value = '%s', units = '%s'",
-                           device.second.name ().c_str (), measurement.first.c_str (), buffer, units.c_str ());
+                           device.second.assetName ().c_str (), measurement.first.c_str (), buffer, units.c_str ());
 
                 int r = send(subject.c_str(), &msg);
                 if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, subject.c_str(), r);
@@ -165,19 +165,19 @@ void NUTAgent::advertisePhysics () {
         }
         // send also status as bitmap
         if (device.second.hasProperty ("status.ups")) {
-            subject = "status@" + device.second.name ();
+            subject = "status@" + device.second.assetName ();
             std::string status_s = device.second.property ("status.ups");
             uint16_t    status_i = upsstatus_to_int (status_s);
             zmsg_t *msg = bios_proto_encode_metric (
                 NULL,
                 "status.ups",
-                device.second.name ().c_str (),
+                device.second.assetName ().c_str (),
                 std::to_string (status_i).c_str (),
                 "",
                 _ttl);
             if (msg) {
                 log_debug ("sending new status for element_src = '%s', value = '%s' (%s)",
-                           device.second.name().c_str (), std::to_string (status_i).c_str (), status_s.c_str ());
+                           device.second.assetName().c_str (), std::to_string (status_i).c_str (), status_s.c_str ());
                 int r = send (subject.c_str (), &msg);
                 if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, subject.c_str(), r);
                 zmsg_destroy (&msg);
@@ -190,21 +190,21 @@ void NUTAgent::advertisePhysics () {
             // assumption, if outlet.10 does not exists, outlet.11 does not as well
             if (!device.second.hasProperty (property))
                 break;
-            subject = "status.outlet." + std::to_string (i) + "@" + device.second.name ();
+            subject = "status.outlet." + std::to_string (i) + "@" + device.second.assetName ();
             std::string status_s = device.second.property (property);
             uint16_t    status_i = status_s == "on" ? 42 : 0;
                 
             zmsg_t *msg = bios_proto_encode_metric (
                 NULL,
                 property.c_str (),
-                device.second.name ().c_str (),
+                device.second.assetName ().c_str (),
                 std::to_string (status_i).c_str (),
                 "",
                 _ttl);
             if (msg) {
                 log_debug ("sending new status for %s %s, value %i (%s)",
                            property.c_str (),
-                           device.second.name().c_str(),
+                           device.second.assetName().c_str(),
                            status_i,
                            status_s.c_str());
                 int r = send (subject.c_str(), &msg);
@@ -223,7 +223,7 @@ void NUTAgent::advertiseInventory() {
         _inventoryTimestamp = static_cast<uint64_t> (zclock_mono ());
     }
     for (auto& device : _deviceList) {
-        std::string topic = "inventory@" + device.second.name ();
+        std::string topic = "inventory@" + device.second.assetName ();
         std::string log;
         zhash_t *inventory = zhash_new ();
         for (auto& item : device.second.inventory (!advertise) ) {
@@ -236,7 +236,7 @@ void NUTAgent::advertiseInventory() {
         if (zhash_size (inventory) > 0) {
             zmsg_t *message = bios_proto_encode_asset (
                     NULL,
-                    device.second.name ().c_str (),
+                    device.second.assetName ().c_str (),
                     "inventory",
                     inventory);
             /* NOTE: Left deliberately until verified to work 
