@@ -45,23 +45,68 @@ namespace drivers
 namespace nut
 {
 
-NUTDevice::NUTDevice(): _name("") {
+NUTDevice::NUTDevice() :
+    _daisyChainIndex (0)
+{
 }
 
-NUTDevice::NUTDevice(const char *aName) {
-    name(aName);
+NUTDevice::NUTDevice(const char *name) :
+    _assetName (name),
+    _nutName (name),
+    _daisyChainIndex (0)
+{
 }
 
-NUTDevice::NUTDevice(const std::string& aName) {
-    name(aName);
+NUTDevice::NUTDevice(const std::string& name) :
+    _assetName (name),
+    _nutName (name),
+    _daisyChainIndex (0)
+{
 }
 
-void NUTDevice::name(const std::string& aName) {
-    _name = aName;
+NUTDevice::NUTDevice(const char *asset_name, const char* nut_name, int daisy_chain_index) :
+    _assetName (asset_name),
+    _nutName (nut_name),
+    _daisyChainIndex (daisy_chain_index)
+{
 }
 
-std::string NUTDevice::name() const {
-    return _name;
+NUTDevice::NUTDevice(const std::string& asset_name, const std::string& nut_name, int daisy_chain_index):
+    _assetName (asset_name),
+    _nutName (nut_name),
+    _daisyChainIndex (daisy_chain_index)
+{
+}
+
+void NUTDevice::nutName(const std::string& name) {
+    _nutName = name;
+}
+
+std::string NUTDevice::nutName() const {
+    return _nutName;
+}
+
+void NUTDevice::assetName(const std::string& name) {
+    _assetName = name;
+}
+
+std::string NUTDevice::assetName() const {
+    return _assetName;
+}
+
+void NUTDevice::daisyChainIndex (int index) {
+    _daisyChainIndex = index;
+}
+
+int NUTDevice::daisyChainIndex () const {
+    return _daisyChainIndex;
+}
+
+std::string NUTDevice::daisyPrefix() {
+    if (_daisyChainIndex) {
+        return "device." + std::to_string (_daisyChainIndex) + ".";
+    }
+    return "";
 }
 
 /**
@@ -128,7 +173,7 @@ void NUTDevice::updatePhysics(const std::string& varName, const float newValue) 
     long int newValueInt = round(newValue * 100.0);
     if( newValueInt > INT32_MAX  || newValueInt < INT32_MIN ) {
         // value is out of range (like gigawats), the measurement is invalid
-        log_error("%s value exceeded the range on %s", varName.c_str(), _name.c_str() );
+        log_error("%s value exceeded the range on %s", varName.c_str(), _assetName.c_str() );
         _physics.erase( varName );
         return;
     }
@@ -197,16 +242,16 @@ void NUTDevice::update (std::map <std::string, std::vector <std::string>> vars,
 
     if( vars.empty() ) return;
     _lastUpdate = time(NULL);
-    // use transformation table first
-    NUTValuesTransformation( vars );
+    std::string prefix = daisyPrefix();
 
-    
+    // use transformation table first
+    NUTValuesTransformation (prefix, vars);
 
     // walk trough physics
     for (const auto& item : mapping ("physicsMapping")) {
-        if (vars.find (item.first) != vars.end ()) {
+        if (vars.find (prefix + item.first) != vars.end ()) {
             // variable found in received data
-            std::vector<std::string> values = vars[item.first];
+            std::vector<std::string> values = vars[prefix + item.first];
             updatePhysics (item.second, values);
         }
         else {
@@ -225,9 +270,9 @@ void NUTDevice::update (std::map <std::string, std::vector <std::string>> vars,
                 while(true) {
                     nutname = nutprefix + std::to_string(i) + nutsuffix;
                     biosname = biosprefix + std::to_string(i) + biossuffix;
-                    if( vars.count(nutname) == 0 ) break; // variable out of scope
+                    if( vars.count(prefix + nutname) == 0 ) break; // variable out of scope
                     // variable found
-                    std::vector<std::string> values = vars[nutname];
+                    std::vector<std::string> values = vars[prefix + nutname];
                     updatePhysics (biosname, values);
                     ++i;
                 }
@@ -238,9 +283,9 @@ void NUTDevice::update (std::map <std::string, std::vector <std::string>> vars,
     // walk trough inventory
     //for(size_t i = 0; i < inventoryMapping.size(); ++i) {
     for (const auto& item : mapping ("inventoryMapping")) {
-        if( vars.find (item.first) != vars.end() ) {
+        if( vars.find (prefix + item.first) != vars.end() ) {
             // variable found in received data
-            std::vector<std::string> values = vars[item.first];
+            std::vector<std::string> values = vars[prefix + item.first];
             updateInventory (item.second, values);
         } else {
             // iterating numbered items in physics
@@ -258,9 +303,9 @@ void NUTDevice::update (std::map <std::string, std::vector <std::string>> vars,
                 while(true) {
                     nutname = nutprefix + std::to_string(i) + nutsuffix;
                     biosname = biosprefix + std::to_string(i) + biossuffix;
-                    if( vars.count(nutname) == 0 ) break; // variable out of scope
+                    if( vars.count(prefix + nutname) == 0 ) break; // variable out of scope
                     // variable found
-                    std::vector<std::string> values = vars[nutname];
+                    std::vector<std::string> values = vars[prefix + nutname];
                     updateInventory(biosname, values);
                     ++i;
                 }
@@ -386,34 +431,35 @@ std::string NUTDevice::property(const std::string& name) const {
     return property(name.c_str());
 }
 
-void NUTDevice::NUTSetIfNotPresent( std::map< std::string,std::vector<std::string> > &vars, const std::string &dst, const std::string &src ) {
-    if (vars.find(dst) == vars.cend()) {
-        const auto &it = vars.find(src);
-        if (it != vars.cend()) vars[dst] = it->second;
+void NUTDevice::NUTSetIfNotPresent (const std::string& prefix, std::map< std::string,std::vector<std::string> > &vars, const std::string &dst, const std::string &src)
+{
+    if (vars.find(prefix + dst) == vars.cend()) {
+        const auto &it = vars.find(prefix + src);
+        if (it != vars.cend()) vars[prefix + dst] = it->second;
     }
 }
 
-void NUTDevice::NUTRealpowerFromOutput( std::map< std::string,std::vector<std::string> > &vars ) {
+void NUTDevice::NUTRealpowerFromOutput (const std::string& prefix, std::map< std::string,std::vector<std::string> > &vars) {
     
-    if (vars.find ("ups.realpower") != vars.end()) { return; }
+    if (vars.find (prefix + "ups.realpower") != vars.end()) { return; }
     
     // use outlet.realpower if exists
-    if (vars.find ("outlet.realpower") != vars.end()) {
-        NUTSetIfNotPresent (vars, "ups.realpower", "outlet.realpower");
-        log_debug("realpower of %s taken from outlet.realpower", _name.c_str ());
+    if (vars.find (prefix + "outlet.realpower") != vars.end()) {
+        NUTSetIfNotPresent (prefix, vars, "ups.realpower", "outlet.realpower");
+        log_debug("realpower of %s taken from outlet.realpower", _assetName.c_str ());
         return;
     }
     // sum the output.Lx.realpower
-    if( vars.find( "output.L1.realpower" ) != vars.end() ) {
+    if (vars.find (prefix + "output.L1.realpower") != vars.end ()) {
         int phases = 1;
-        if( vars.find( "output.phases" ) != vars.end() ) {
+        if (vars.find (prefix + "output.phases") != vars.end ()) {
             try {
-                phases = std::stoi (vars ["output.phases"][0]);
+                phases = std::stoi (vars [prefix + "output.phases"][0]);
             } catch(...) { }
         }
         double sum = 0.0;
         for (int i=1; i<= phases; i++) {
-            auto it = vars.find ("output.L" + std::to_string(i) + ".realpower");
+            auto it = vars.find (prefix + "output.L" + std::to_string(i) + ".realpower");
             if (it  == vars.end ()) {
                 // even output is missing, can't compute
                 break;
@@ -425,25 +471,25 @@ void NUTDevice::NUTRealpowerFromOutput( std::map< std::string,std::vector<std::s
             }
         }
         // we have sum
-        log_debug("realpower of %s calculated as sum of output.Lx.realpower", _name.c_str ());
+        log_debug("realpower of %s calculated as sum of output.Lx.realpower", _assetName.c_str ());
         std::vector<std::string> value;
         value.push_back (itof (round (sum * 100)));
-        vars["ups.realpower"] = value;
+        vars[prefix + "ups.realpower"] = value;
         return;
     }
     
     // if we have outlets, sum them
-    if (vars.find ("outlet.1.realpower") != vars.end()) {
+    if (vars.find (prefix + "outlet.1.realpower") != vars.end()) {
         double sum = 0.0;
         int count = 100;
-        auto cntit = vars.find ("outlet.count");
+        auto cntit = vars.find (prefix + "outlet.count");
         if (cntit != vars.end()) {
             try {
                 count = std::stoi(cntit->second[0]);
             } catch(...) {}
         }
         for (int outlet = 1; outlet <= count; outlet++) {
-            auto it = vars.find ("outlet." + std::to_string(outlet) + ".realpower");
+            auto it = vars.find (prefix + "outlet." + std::to_string(outlet) + ".realpower");
             if (it  == vars.end ()) {
                 // end of outlets
                 break;
@@ -452,59 +498,59 @@ void NUTDevice::NUTRealpowerFromOutput( std::map< std::string,std::vector<std::s
                 sum += std::stod (it->second[0]);
             } catch(...) {}
         }
-        log_debug("realpower of %s calculated as sum of outlet.X.realpower", _name.c_str ());
+        log_debug("realpower of %s calculated as sum of outlet.X.realpower", _assetName.c_str ());
         std::vector<std::string> value;
         value.push_back (itof (round (sum * 100)));
-        vars["ups.realpower"] = value;
+        vars[prefix + "ups.realpower"] = value;
         return;
-    }    
+    }
 }
 
-void NUTDevice::NUTValuesTransformation( std::map< std::string,std::vector<std::string> > &vars ) {
+void NUTDevice::NUTValuesTransformation (const std::string &prefix, std::map< std::string,std::vector<std::string> > &vars ) {
     if( vars.empty() ) return ;
 
     // number of input phases
-    if( vars.find( "input.phases" ) == vars.end() ) {
-        vars["input.phases"] = { "1" };
+    if (vars.find (prefix + "input.phases") == vars.end ()) {
+        vars [prefix + "input.phases"] = { "1" };
     }
 
     // number of output phases
-    if( vars.find( "output.phases" ) == vars.end() ) {
-        vars["output.phases"] = { "1" };
+    if (vars.find (prefix + "output.phases") == vars.end ()) {
+        vars [prefix + "output.phases"] = { "1" };
     }
     {
         // pdu replace with epdu
-        auto it = vars.find("device.type");
+        auto it = vars.find (prefix + "device.type");
         if( it != vars.end() ) {
             if( ! it->second.empty() && it->second[0] == "pdu" ) it->second[0] = "epdu";
         }
     }
     // sum the realpower from output information
-    NUTRealpowerFromOutput (vars);
+    NUTRealpowerFromOutput (prefix, vars);
     // variables, that differs from ups to ups
-    NUTSetIfNotPresent (vars, "ups.realpower", "input.realpower");
-    NUTSetIfNotPresent (vars, "input.L1.realpower", "input.realpower");
-    NUTSetIfNotPresent (vars, "input.L1.realpower", "ups.realpower");
-    NUTSetIfNotPresent (vars, "output.L1.realpower", "output.realpower");
+    NUTSetIfNotPresent (prefix, vars, "ups.realpower", "input.realpower");
+    NUTSetIfNotPresent (prefix, vars, "input.L1.realpower", "input.realpower");
+    NUTSetIfNotPresent (prefix, vars, "input.L1.realpower", "ups.realpower");
+    NUTSetIfNotPresent (prefix, vars, "output.L1.realpower", "output.realpower");
     // take input realpower and present it as output if output is not present
     // and also the opposite way
     for( const auto &variable: {"realpower", "L1.realpower", "L2.realpower", "L3.realpower"} ) {
         std::string outvar = "output."; outvar.append (variable);
         std::string invar = "input."; invar.append(variable);
-        NUTSetIfNotPresent (vars, outvar, invar);
-        NUTSetIfNotPresent (vars, invar, outvar);
+        NUTSetIfNotPresent (prefix, vars, outvar, invar);
+        NUTSetIfNotPresent (prefix, vars, invar, outvar);
     }
     // sum the realpower again if still not present
     // hope that missing output values have been filled
     // from input values
-    NUTRealpowerFromOutput (vars);
+    NUTRealpowerFromOutput (prefix, vars);
 }
 
 void NUTDevice::clear() {
     if( ! _inventory.empty() || ! _physics.empty() ) {
         _inventory.clear();
         _physics.clear();
-        log_error("Dropping all measurement/inventory data for %s", _name.c_str() );
+        log_error("Dropping all measurement/inventory data for %s", _assetName.c_str() );
     }
 }
 

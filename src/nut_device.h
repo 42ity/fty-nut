@@ -58,11 +58,10 @@ class NUTDevice {
 
     // Creates new NUTDevice with empty set of values with name (name
     // corresponds with NUTs /etc/ups/ups.conf)
-    NUTDevice(const char *name);
+    NUTDevice(const char* name);
     NUTDevice(const std::string& name);
-
-    // Obtain device's name.
-    std::string name() const;
+    NUTDevice(const char *asset_name, const char* nut_name, int daisy_chain_index);
+    NUTDevice(const std::string& asset_name, const std::string& nut_name, int daisy_chain_index);
 
     // Returns true if there are some changes in device since last
     // statusMessage has been called.
@@ -152,13 +151,27 @@ class NUTDevice {
      * \brief Return the timestamp of last succesfull update (i. e. response from device)
      */
     time_t lastUpdate() { return _lastUpdate; }
+
+    /**
+     * \brief get/set the device name like it is in assets
+     */
+    void assetName (const std::string& name);
+    std::string assetName () const;
+    /**
+     * \brief get/set the device name like it is in nut
+     */
+    void nutName (const std::string& name);
+    std::string nutName () const ;
+    /**
+     * \brief get/set the daisy-chain index
+     */
+    void daisyChainIndex(int index);
+    int daisyChainIndex() const;
+
     ~NUTDevice();
  private:
 
-    /**
-     * \brief sets the device name
-     */
-    void name(const std::string& name);
+
 
     /**
      * \brief Updates physical or measurement value (like current or load) from float.
@@ -197,12 +210,20 @@ class NUTDevice {
      *
      * This method is used to normalize the NUT output from different drivers/devices.
      */
-    void NUTSetIfNotPresent( std::map< std::string,std::vector<std::string> > &vars, const std::string &dst, const std::string &src );
+    void NUTSetIfNotPresent (const std::string& prefix, std::map< std::string,std::vector<std::string> > &vars, const std::string &dst, const std::string &src);
 
     /**
      * \brief Commit chages for changed calculated by updatePhysics.
      */
     void commitChanges();
+
+    /**
+     * \brief prefix of device in daisy chain
+     *
+     * \return std::string result is "" or device.X. where X if index in chain
+     */
+    std::string daisyPrefix();
+
     /**
      * \brief map of physical values.
      *
@@ -211,14 +232,20 @@ class NUTDevice {
     std::map<std::string, NUTPhysicalValue> _physics;
     //! \brief map of inventory values
     std::map<std::string, NUTInventoryValue> _inventory;
-    //! \brief device name
-    std::string _name;
+
+    //! \brief device name from assets
+    std::string _assetName;
+    //! \brief device name in nut
+    std::string _nutName;
+    //! \brief daisy-chain index
+    int _daisyChainIndex;
+
     //! \brief Transformation of our integer (x100) back
     std::string itof(const long int) const;
     //! \brief calculate ups.realpower from output.Lx.realpower if not present
-    void NUTRealpowerFromOutput( std::map< std::string,std::vector<std::string> > &vars );
+    void NUTRealpowerFromOutput (const std::string& prefix,  std::map< std::string,std::vector<std::string> > &vars);
     //! \brief NUT values transformation function
-    void NUTValuesTransformation( std::map< std::string,std::vector<std::string> > &vars );
+    void NUTValuesTransformation (const std::string& prefix, std::map< std::string,std::vector<std::string> > &vars);
     //! \brief last succesfull communication timestamp
     time_t _lastUpdate = 0;
 };
