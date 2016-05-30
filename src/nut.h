@@ -37,6 +37,30 @@ AGENT_NUT_EXPORT nut_t *
 AGENT_NUT_EXPORT void
     nut_destroy (nut_t **self_p);
 
+//  Store bios_proto_t message transfering ownership
+AGENT_NUT_EXPORT void
+    nut_put (nut_t *self, bios_proto_t **message_p);
+
+//  Get list of asset names
+AGENT_NUT_EXPORT zlistx_t *
+    nut_get_assets (nut_t *self);
+
+// Returns ip address (well-known extended attribute 'ip.1') of given asset
+// or NULL when asset_name does not exist
+// or "" (empty string) when given asset does not have ip address specified
+AGENT_NUT_EXPORT const char *
+    nut_asset_ip (nut_t *self, const char *asset_name);
+
+// Returns daisychain number (well-known extended attribute '...') of give asset
+// or NULL when asset_name does not exist
+// or "" (empty string) when given 
+AGENT_NUT_EXPORT const char *
+    nut_asset_daisychain (nut_t *self, const char *asset_name);
+
+//  Print the nut
+AGENT_NUT_EXPORT void
+    nut_print (nut_t *self);
+
 //  Self test of this class
 AGENT_NUT_EXPORT void
     nut_test (bool verbose);

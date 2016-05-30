@@ -36,9 +36,11 @@ void
 stream_deliver_handle (
         mlm_client_t *client,
         NUTAgent& nut_agent,
+        nut_t *data,
         zmsg_t **message_p)
 {
     assert (client);
+    assert (data);
     assert (message_p && *message_p);
     
     if (!is_bios_proto (*message_p)) {
@@ -48,18 +50,13 @@ stream_deliver_handle (
         zmsg_destroy (message_p);
         return;
     }
-
     bios_proto_t *proto = bios_proto_decode (message_p);
     if (!proto) {
         log_critical ("bios_proto_decode () failed.");
         zmsg_destroy (message_p);
         return;
     }
-    
-    // WIP
-    log_debug ("STREAM (ASSETS) message received");
-    bios_proto_print (proto);
-    bios_proto_destroy (&proto);
+    nut_put (data, &proto);
 }
 
 //  --------------------------------------------------------------------------
