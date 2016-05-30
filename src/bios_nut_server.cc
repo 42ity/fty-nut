@@ -57,12 +57,13 @@ s_handle_mailbox (mlm_client_t *client, zmsg_t **message_p)
 }
 
 static void
-s_handle_stream (mlm_client_t *client, NUTAgent& nut_agent, zmsg_t **message_p) 
+s_handle_stream (mlm_client_t *client, NUTAgent& nut_agent, nut_t *data, zmsg_t **message_p) 
 {
     assert (client);
+    assert (data);
     assert (message_p && *message_p);
 
-    stream_deliver_handle (client, nut_agent, message_p);
+    stream_deliver_handle (client, nut_agent, data, message_p);
 }
 
 uint64_t
@@ -117,6 +118,7 @@ bios_nut_server (zsock_t *pipe, void *args)
     zsock_signal (pipe, 0);
 
     NUTAgent nut_agent;
+    nut_t *data = nut_new ();
     nut_agent.setiClient (iclient);
 
     uint64_t timestamp = static_cast<uint64_t> (zclock_mono ());
@@ -165,7 +167,7 @@ bios_nut_server (zsock_t *pipe, void *args)
 
         const char *command = mlm_client_command (client);
         if (streq (command, "STREAM DELIVER")) {
-            s_handle_stream (client, nut_agent, &message);
+            s_handle_stream (client, nut_agent, data, &message);
         }
         else
         if (streq (command, "MAILBOX DELIVER")) {
@@ -181,7 +183,8 @@ bios_nut_server (zsock_t *pipe, void *args)
 
         zmsg_destroy (&message);
     } // while (!zsys_interrupted)
-
+    
+    nut_destroy (&data);
     zpoller_destroy (&poller);
     mlm_client_destroy (&client);
     mlm_client_destroy (&iclient);
