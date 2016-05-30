@@ -29,6 +29,7 @@
 #include <vector>
 #include <functional>
 #include <nutclient.h>
+#include <nut.h>
 
 namespace nutclient = nut;
 
@@ -297,6 +298,9 @@ class NUTDeviceList {
     std::map<std::string, NUTDevice>::iterator begin();
     std::map<std::string, NUTDevice>::iterator end();
 
+    //! \brief update list of NUT devices
+    void updateDeviceList(nut_t * deviceState);
+
     ~NUTDeviceList();
 
  private:
@@ -315,9 +319,6 @@ class NUTDeviceList {
 
     //! \brief disconnect from NUT daemon
     void disconnect();
-
-    //! \brief update list of NUT devices
-    void updateDeviceList();
 
     //! \brief update status of NUT devices
     void updateDeviceStatus( bool forceUpdate = false );
