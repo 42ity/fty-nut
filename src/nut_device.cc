@@ -562,34 +562,72 @@ NUTDeviceList::NUTDeviceList() {
 
 }
 
-void NUTDeviceList::updateDeviceList() {
+void NUTDeviceList::updateDeviceList(nut_t * deviceState) {
     try {
-        std::set<std::string> devs = nutClient.getDeviceNames();
-        // add newly appeared devices
-        for(auto &it : devs ) {
-            // cout << *it << endl;
-            if( _devices.count( it ) == 0 ) {
-                _devices[it] = NUTDevice(it);
+        if (!deviceState) return;
+        zlistx_t *devices = nut_get_assets (deviceState);
+        if (!devices) return;
+
+        _devices.clear();
+        std::map<std::string, std::string> ip2master;
+        {
+            // make ip->master map
+            const char *name = (char *)zlistx_first(devices);
+            while (name) {
+                const char* ip = nut_asset_ip (deviceState, name);
+                const char* chain = nut_asset_daisychain (deviceState, name);
+                if (ip == NULL || chain == NULL || streq (ip, "") ) {
+                    // this is strange. No IP?
+                    name = (char *)zlistx_next(devices);
+                    continue;
+                }
+                if (streq (chain,"") || streq (chain,"1")) {
+                    // this is master
+                    ip2master[ip] = name;
+                }
+                name = (char *)zlistx_next(devices);
             }
         }
-        // remove missing devices
-        auto it = _devices.begin();
-        while( it != _devices.end() ) {
-            if( devs.count(it->first) == 0 ){
-                auto toBeDeleted = it;
-                ++it;
-                _devices.erase(toBeDeleted);
-            } else {
-                ++it;
+        {        
+            const char *name = (char *)zlistx_first(devices);
+            while (name) {
+                const char* ip = nut_asset_ip (deviceState, name);
+                if (!ip || streq (ip, "")) {
+                    // this is strange. No IP?
+                    name = (char *)zlistx_next(devices);
+                    continue;
+                }
+                const char* chain_str = nut_asset_daisychain (deviceState, name);
+                int chain = 0;
+                if (chain_str) chain = std::stoi (chain_str);
+                switch(chain) {
+                case 0:
+                    _devices[name] = NUTDevice(name);
+                    break;
+                case 1:
+                    _devices[name] = NUTDevice(name, name, 1);
+                    break;
+                default:
+                    const auto master_it = ip2master.find (ip);
+                    if (master_it == ip2master.cend()) {
+                        log_error ("Daisychain master for %s not found", name);
+                    } else {
+                        _devices[name] = NUTDevice(name, master_it->second.c_str (), chain);
+                    }
+                    break;
+                }
+                name = (char *)zlistx_next(devices);
             }
         }
+        zlistx_destroy (&devices);        
     } catch (...) {}
 }
+
 
 void NUTDeviceList::updateDeviceStatus( bool forceUpdate ) {
     for(auto &device : _devices ) {
         try {
-            nutclient::Device nutDevice = nutClient.getDevice(device.first);
+            nutclient::Device nutDevice = nutClient.getDevice(device.second.nutName());
             std::function <const std::map <std::string, std::string>&(const char *)> x = std::bind (&NUTDeviceList::get_mapping, this, std::placeholders::_1);
             device.second.update( nutDevice.getVariableValues(), x, forceUpdate );
         } catch ( std::exception &e ) {
@@ -617,7 +655,6 @@ void NUTDeviceList::disconnect() {
 
 void NUTDeviceList::update( bool forceUpdate ) {
     if( connect() ) {
-        updateDeviceList();
         updateDeviceStatus(forceUpdate);
         disconnect();
     }
