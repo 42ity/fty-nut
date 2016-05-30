@@ -80,6 +80,10 @@ void NUTAgent::onPoll ()
     advertiseInventory ();
 }
 
+void NUTAgent::updateDeviceList (nut_t *deviceState) {
+    _deviceList.update (deviceState);
+}
+
 int NUTAgent::send (const std::string& subject, zmsg_t **message_p)
 {
     bios_proto_t *m_decoded = bios_proto_decode(message_p);

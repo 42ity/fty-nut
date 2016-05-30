@@ -21,6 +21,7 @@
 
 #ifndef NUT_AGENT_H_INCLUDED
 #define NUT_AGENT_H_INCLUDED
+#include "nut.h"
 
 #define NUT_INVENTORY_REPEAT_AFTER      3600000
 
@@ -34,6 +35,8 @@ class NUTAgent {
     bool isClientSet ();
 
     void onPoll ();
+    void updateDeviceList (nut_t *state);
+    
     void TTL (int ttl) { _ttl = ttl; };
     int TTL () { return _ttl; };
  protected:
