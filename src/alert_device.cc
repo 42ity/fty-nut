@@ -76,31 +76,31 @@ Device::scanCapabilities (nut::TcpClient& conn)
     try {
         auto nutDevice = conn.getDevice(_name);
         auto vars = nutDevice.getVariableValues();
-        if (vars.find ("ambient.temperature") != vars.cend()) {
+        if (vars.find ("ambient.temperature.status") != vars.cend()) {
             addAlert ("ambient.temperature", vars);
         }
-        if (vars.find ("ambient.humidity") != vars.cend()) {
+        if (vars.find ("ambient.humidity.status") != vars.cend()) {
             addAlert ("ambient.humidity", vars);
         }
         for (int a=1; a<=3; a++) {
             std::string q = "input.L" + std::to_string(a) + ".current";
-            if (vars.find (q) != vars.cend()) {
+            if (vars.find (q + ".status") != vars.cend()) {
                 addAlert (q, vars);
             }
             q = "input.L" + std::to_string(a) + ".voltage";
-            if (vars.find (q) != vars.cend()) {
+            if (vars.find (q + ".status") != vars.cend()) {
                 addAlert (q, vars);
             }
         }
         for (int a=1; a<=1000; a++) {
             int found = 0;
             std::string q = "outlet.group." + std::to_string(a) + ".current";
-            if (vars.find (q) != vars.cend()) {
+            if (vars.find (q + ".status") != vars.cend()) {
                 addAlert (q, vars);
                 ++found;
             }
             q = "outlet.group." + std::to_string(a) + ".voltage";
-            if (vars.find (q) != vars.cend()) {
+            if (vars.find (q + ".status") != vars.cend()) {
                 addAlert (q, vars);
                 ++found;
             }
