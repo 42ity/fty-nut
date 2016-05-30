@@ -57,6 +57,7 @@ stream_deliver_handle (
         return;
     }
     nut_put (data, &proto);
+    nut_agent.updateDeviceList (data);
 }
 
 //  --------------------------------------------------------------------------
