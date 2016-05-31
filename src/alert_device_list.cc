@@ -6,13 +6,11 @@
 #include "agent_nut_library.h"
 #include "logger.h"
 
-void Devices::update (nut_t *config)
+void Devices::updateFromNUT ()
 {
     try {
         nut::TcpClient nutClient;
         nutClient.connect ("localhost", 3493);
-        updateDeviceList (config);
-        updateDeviceCapabilities (nutClient);
         updateDevices (nutClient);
     } catch (std::exception& e) {
         log_error ("reading data from NUT: %s", e.what ());
