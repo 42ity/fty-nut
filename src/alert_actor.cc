@@ -82,6 +82,26 @@ alert_actor_commands (
         zstr_free (&stream);
     }
     else
+    if (streq (cmd, "CONSUMER")) {
+        char *stream = zmsg_popstr (message);
+        char *pattern = zmsg_popstr (message);
+        if (!stream || pattern) {
+            log_error (
+                    "aa: Expected multipart string format: CONSUMER/stream/pattern. "
+                    "Received PRODUCER/%s/%s", stream ? stream : "nullptr", pattern ? pattern : "nullptr");
+            zstr_free (&stream);
+            zstr_free (&pattern);
+            zstr_free (&cmd);
+            zmsg_destroy (message_p);
+            return 0;
+        }
+        int rv = mlm_client_set_consumer (client, stream, pattern);
+        if (rv == -1) {
+            log_error ("mlm_client_set_consumer (stream = '%s', pattern = '%s') failed", stream, pattern);
+        }
+        zstr_free (&stream);
+    }
+    else
     if (streq (cmd, "POLLING")) {
         char *polling = zmsg_popstr (message);
         if (!polling) {
@@ -130,6 +150,12 @@ alert_actor (zsock_t *pipe, void *args)
     }
     zsock_signal (pipe, 0);
     log_debug ("alert actor started");
+
+    nut_t *data = nut_new ();
+    int rv = nut_load (data, "/var/lib/bios/nut/state_file");
+    if (rv != 0) {
+        log_warning ("Could not load state file '%s'.", "/var/lib/bios/nut/state_file");
+    }
     
     while (!zsys_interrupted) {
         void *which = zpoller_wait (poller, polling);
