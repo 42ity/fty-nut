@@ -68,7 +68,7 @@ void Devices::updateDeviceList(nut_t *config)
             }
             const char* chain_str = nut_asset_daisychain (config, name);
             int chain = 0;
-            if (chain_str) chain = std::stoi (chain_str);
+            if (chain_str) try { chain = std::stoi (chain_str); } catch(...) { };
             switch(chain) {
             case 0:
                 _devices[name] = Device(name);
@@ -88,7 +88,7 @@ void Devices::updateDeviceList(nut_t *config)
             name = (char *)zlistx_next(devices);
         }
     }
-    zlistx_destroy (&devices);        
+    zlistx_destroy (&devices);
 }
 
 void Devices::publishAlerts (mlm_client_t *client)

@@ -599,7 +599,7 @@ void NUTDeviceList::updateDeviceList(nut_t * deviceState) {
                 }
                 const char* chain_str = nut_asset_daisychain (deviceState, name);
                 int chain = 0;
-                if (chain_str) chain = std::stoi (chain_str);
+                if (chain_str) try { chain = std::stoi (chain_str); } catch(...) {};
                 switch(chain) {
                 case 0:
                     _devices[name] = NUTDevice(name);
@@ -619,8 +619,10 @@ void NUTDeviceList::updateDeviceList(nut_t * deviceState) {
                 name = (char *)zlistx_next(devices);
             }
         }
-        zlistx_destroy (&devices);        
-    } catch (...) {}
+        zlistx_destroy (&devices);
+    } catch (const std::exception& e) {
+        log_error ("exception while configuring device: %s", e.what ());
+    }
 }
 
 
