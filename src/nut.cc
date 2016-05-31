@@ -206,7 +206,7 @@ nut_asset_ip (nut_t *self, const char *asset_name)
 const char *
 nut_asset_daisychain (nut_t *self, const char *asset_name)
 {
-    return nut_asset_get_string (self, asset_name, "daisychain");
+    return nut_asset_get_string (self, asset_name, "daisy_chain");
 }
 
 //  --------------------------------------------------------------------------
