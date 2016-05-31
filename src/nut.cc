@@ -73,6 +73,21 @@ nut_destroy (nut_t **self_p)
 //  --------------------------------------------------------------------------
 //  Store bios_proto_t message transfering ownership
 
+// 0 - OK, 1 - throw it away
+static int 
+filter_message (bios_proto_t *message)
+{
+    assert (message);
+    const char *type = bios_proto_aux_string (message, "type", NULL);
+    const char *subtype = bios_proto_aux_string (message, "subtype", NULL);
+    if (!type || !subtype)
+        return 1;
+    if (streq (type, "device") &&
+        (streq (subtype, "epdu") || streq (subtype, "ups")))
+        return 0;
+    return 1;
+}
+
 static void
 zhash_merge (zhash_t *source, zhash_t *target)
 {
@@ -97,7 +112,13 @@ nut_put (nut_t *self, bios_proto_t **message_p)
 
     if (!message)
         return;
-     
+
+    if (filter_message (message)) {
+        bios_proto_destroy (message_p);
+        return;
+    }
+    
+
     bios_proto_t *asset = (bios_proto_t *) zhashx_lookup (self->assets, bios_proto_name (message));
     if (!asset) {
         int rv = zhashx_insert (self->assets, bios_proto_name (message), message);
@@ -399,23 +420,34 @@ nut_test (bool verbose)
     self = nut_new ();
 
     bios_proto_t *asset =  test_asset_new ("ups", BIOS_PROTO_ASSET_OP_CREATE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "ups");
     bios_proto_ext_insert (asset, "abc.d", "%s", " ups string 1");
     nut_put (self, &asset);
 
     asset =  test_asset_new ("epdu", BIOS_PROTO_ASSET_OP_CREATE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
     nut_put (self, &asset);
 
     asset =  test_asset_new ("ROZ.UPS33", BIOS_PROTO_ASSET_OP_CREATE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "ups");
     bios_proto_ext_insert (asset, "d.ef", "%s", "roz.ups33 string 1");
     nut_put (self, &asset);
 
     asset =  test_asset_new ("MBT.EPDU4", BIOS_PROTO_ASSET_OP_CREATE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
     bios_proto_ext_insert (asset, "hhh", "%s", "mbt.epdu4 string 1");
     bios_proto_ext_insert (asset, "ip.1", "%s", "4.3.2.1");
     bios_proto_ext_insert (asset, "daisychain", "%s", "3");
     nut_put (self, &asset);
 
+    asset =  test_asset_new ("MBT.EPDU5", BIOS_PROTO_ASSET_OP_CREATE);
+    nut_put (self, &asset);
 
+    zsys_debug ("TRACE 1");
     // nut_get_assets
     {
         zlistx_t *list = nut_get_assets (self);
@@ -442,6 +474,7 @@ nut_test (bool verbose)
         zlistx_destroy (&list);
     }
 
+    zsys_debug ("TRACE 2");
     // nut_asset_daisychain, nut_asset_ip
     {
         assert (nut_asset_ip (self, "non-existing-asset") == NULL);
@@ -461,28 +494,37 @@ nut_test (bool verbose)
     }
 
     asset = test_asset_new ("epdu", BIOS_PROTO_ASSET_OP_UPDATE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
     bios_proto_ext_insert (asset, "xxx", "%s", "epdu string 1");
     bios_proto_ext_insert (asset, "ip.1", "%s", "121.120.199.198");
     bios_proto_ext_insert (asset, "daisychain", "%s", "14");
     nut_put (self, &asset);
 
     asset =  test_asset_new ("ROZ.UPS33", BIOS_PROTO_ASSET_OP_UPDATE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "ups");
     bios_proto_ext_insert (asset, "d.ef", "%s", "roz.ups33 string 1");
     bios_proto_ext_insert (asset, "ip.1", "%s", "1.1.2.3");
     bios_proto_ext_insert (asset, "daisychain", "%s", "5");
     nut_put (self, &asset);
 
     asset =  test_asset_new ("ups", BIOS_PROTO_ASSET_OP_RETIRE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "ups");
     bios_proto_ext_insert (asset, "d.ef", "%s", "roz.ups33 string 1");
     bios_proto_ext_insert (asset, "ip.1", "%s", "127.0.0.1");
     bios_proto_ext_insert (asset, "daisychain", "%s", "16");
     nut_put (self, &asset);
 
     asset =  test_asset_new ("MBT.EPDU4", BIOS_PROTO_ASSET_OP_UPDATE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
     bios_proto_ext_insert (asset, "ip.1", "%s", "10.130.38.52");
     bios_proto_ext_insert (asset, "daisychain", "%s", "44");
     nut_put (self, &asset);
 
+    zsys_debug ("TRACE 3");
     // nut_get_assets
     {
         zlistx_t *list = nut_get_assets (self);
@@ -524,9 +566,12 @@ nut_test (bool verbose)
     }
 
     asset =  test_asset_new ("MBT.EPDU4", BIOS_PROTO_ASSET_OP_UPDATE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
     bios_proto_ext_insert (asset, "ip.1", "%s", "50.50.50.50");
     nut_put (self, &asset);
 
+    zsys_debug ("TRACE 3");
     // nut_asset_daisychain, nut_asset_ip
     {
         assert (nut_asset_ip (self, "non-existing-asset") == NULL);
@@ -546,6 +591,8 @@ nut_test (bool verbose)
     }
 
     asset =  test_asset_new ("MBT.EPDU4", BIOS_PROTO_ASSET_OP_UPDATE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
     bios_proto_ext_insert (asset, "daisychain", "%s", "77");
     nut_put (self, &asset);
 
@@ -568,6 +615,8 @@ nut_test (bool verbose)
     }
 
     asset =  test_asset_new ("MBT.EPDU4", BIOS_PROTO_ASSET_OP_CREATE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
     bios_proto_ext_insert (asset, "daisychain", "%s", "43");
     nut_put (self, &asset);
 
@@ -590,9 +639,13 @@ nut_test (bool verbose)
     }
 
     asset =  test_asset_new ("ROZ.UPS33", BIOS_PROTO_ASSET_OP_DELETE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "ups");
     nut_put (self, &asset);
 
     asset =  test_asset_new ("epdu", BIOS_PROTO_ASSET_OP_DELETE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
     nut_put (self, &asset);
 
     // nut_get_assets
