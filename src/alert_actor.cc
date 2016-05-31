@@ -1,3 +1,4 @@
+#include "agent_nut_classes.h"
 #include "agent_nut_library.h"
 #include "alert_actor.h"
 #include "alert_device_list.h"
@@ -82,6 +83,27 @@ alert_actor_commands (
         zstr_free (&stream);
     }
     else
+    if (streq (cmd, "CONSUMER")) {
+        char *stream = zmsg_popstr (message);
+        char *pattern = zmsg_popstr (message);
+        if (!stream || !pattern) {
+            log_error (
+                    "aa: Expected multipart string format: CONSUMER/stream/pattern. "
+                    "Received PRODUCER/%s/%s", stream ? stream : "nullptr", pattern ? pattern : "nullptr");
+            zstr_free (&stream);
+            zstr_free (&pattern);
+            zstr_free (&cmd);
+            zmsg_destroy (message_p);
+            return 0;
+        }
+        int rv = mlm_client_set_consumer (client, stream, pattern);
+        if (rv == -1) {
+            log_error ("mlm_client_set_consumer (stream = '%s', pattern = '%s') failed", stream, pattern);
+        }
+        zstr_free (&stream);
+        zstr_free (&pattern);
+    }
+    else
     if (streq (cmd, "POLLING")) {
         char *polling = zmsg_popstr (message);
         if (!polling) {
@@ -108,6 +130,26 @@ alert_actor_commands (
     return ret;
 }
 
+int
+handle_asset_message (mlm_client_t *client, nut_t *data, zmsg_t **message_p) {
+    if (!client || !data || !message_p || !*message_p) return 0;
+    if (!is_bios_proto (*message_p)) {
+        log_warning (
+            "Message received is not bios_proto; sender = '%s', subject = '%s'",
+            mlm_client_sender (client), mlm_client_subject (client));
+        zmsg_destroy (message_p);
+        return 0;
+    }
+    bios_proto_t *proto = bios_proto_decode (message_p);
+    if (!proto) {
+        log_critical ("bios_proto_decode () failed.");
+        zmsg_destroy (message_p);
+        return 0;
+    }
+    nut_put (data, &proto);
+    return 1;
+}
+
 void
 alert_actor (zsock_t *pipe, void *args)
 {
@@ -130,12 +172,18 @@ alert_actor (zsock_t *pipe, void *args)
     }
     zsock_signal (pipe, 0);
     log_debug ("alert actor started");
-    
+
+    nut_t *stateData = nut_new ();
+    int rv = nut_load (stateData, "/var/lib/bios/nut/state_file");
+    if (rv != 0) {
+        log_warning ("Could not load state file '%s'.", "/var/lib/bios/nut/state_file");
+    }
+    devices.updateDeviceList (stateData);
     while (!zsys_interrupted) {
         void *which = zpoller_wait (poller, polling);
         if (which == NULL) {
-            log_debug ("alert update");
-            devices.update();
+            log_debug ("aa: alert update");
+            devices.updateFromNUT ();           
             devices.publishRules (client);
             devices.publishAlerts (client);
         }
@@ -147,8 +195,15 @@ alert_actor (zsock_t *pipe, void *args)
                 if (quit) break;
             }
         }
+        else if (which == mlm_client_msgpipe (client)) {
+            // should be asset message
+            zmsg_t *msg = mlm_client_recv (client);
+            if (handle_asset_message (client, stateData, &msg)) {
+                devices.updateDeviceList (stateData);
+            }
+            zmsg_destroy (&msg);
+        }
         else {
-            // we can get some messages, but not interested
             zmsg_t *msg = zmsg_recv (which);
             zmsg_destroy (&msg);
         }

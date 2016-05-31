@@ -5,33 +5,34 @@
 void
 Device::addAlert(const std::string& quantity, const std::map<std::string,std::vector<std::string> >& variables)
 {
-    log_debug ("aa: device %s provides %s alert", _name.c_str(), quantity.c_str());
+    log_debug ("aa: device %s provides %s alert", _assetName.c_str(), quantity.c_str());
+    std::string prefix = daisychainPrefix() + quantity;
     DeviceAlert alert;
     alert.name = quantity;
 
     if (_alerts.find (quantity) != _alerts.end()) {
-        log_debug ("aa: device %s, alert %s already known", _name.c_str(), quantity.c_str());
+        log_debug ("aa: device %s, alert %s already known", _assetName.c_str(), quantity.c_str());
         return;
     }
 
     // does the device evaluation?
     {
-        const auto& it = variables.find(quantity + ".status");
+        const auto& it = variables.find(prefix + ".status");
         if (it == variables.cend ()) {
-            log_debug ("aa: device %s doesn't support %s.status", _name.c_str(), quantity.c_str());
+            log_debug ("aa: device %s doesn't support %s.status", _assetName.c_str(), quantity.c_str());
             return;
         }
     }
     // some devices provides ambient.temperature.(high|low)
     {
-        const auto& it = variables.find(quantity + ".high");
+        const auto& it = variables.find(prefix + ".high");
         if (it != variables.cend ()) {
             alert.highWarning = it->second[0];
             alert.highCritical = it->second[0];
         }
     }
     {
-        const auto& it = variables.find (quantity + ".low");
+        const auto& it = variables.find (prefix + ".low");
         if (it != variables.cend()) {
             alert.lowWarning = it->second[0];
             alert.lowCritical = it->second[0];
@@ -39,19 +40,19 @@ Device::addAlert(const std::string& quantity, const std::map<std::string,std::ve
     }
     // some devices provides ambient.temperature.(high|low).(warning|critical)
     {
-        const auto& it = variables.find(quantity + ".high.warning");
+        const auto& it = variables.find(prefix + ".high.warning");
         if (it != variables.cend()) alert.highWarning = it->second[0];
     }
     {
-        const auto& it = variables.find(quantity + ".high.critical");
+        const auto& it = variables.find(prefix + ".high.critical");
         if (it != variables.cend()) alert.highCritical = it->second[0];
     }
     {
-        const auto& it = variables.find(quantity + ".low.warning");
+        const auto& it = variables.find(prefix + ".low.warning");
         if (it != variables.cend()) alert.lowWarning = it->second[0];
     }
     {
-        const auto& it = variables.find(quantity + ".low.critical");
+        const auto& it = variables.find(prefix + ".low.critical");
         if (it != variables.cend()) alert.lowCritical = it->second[0];
     }
     if (
@@ -60,7 +61,7 @@ Device::addAlert(const std::string& quantity, const std::map<std::string,std::ve
         alert.highWarning.empty() ||
         alert.highCritical.empty()
     ) {
-        log_error("aa: thresholds for %s are not present in %s", quantity.c_str (), _name.c_str ());
+        log_error("aa: thresholds for %s are not present in %s", quantity.c_str (), _assetName.c_str ());
     } else {
         _alerts[quantity] = alert;
     }
@@ -69,45 +70,46 @@ Device::addAlert(const std::string& quantity, const std::map<std::string,std::ve
 int
 Device::scanCapabilities (nut::TcpClient& conn)
 {
-    log_debug ("aa: scanning capabilities for %s", _name.c_str());
+    log_debug ("aa: scanning capabilities for %s", _assetName.c_str());
     if (!conn.isConnected ()) return 0;
-    
+    std::string prefix = daisychainPrefix();
+
     _alerts.clear();
     try {
-        auto nutDevice = conn.getDevice(_name);
+        auto nutDevice = conn.getDevice(_nutName);
         auto vars = nutDevice.getVariableValues();
-        if (vars.find ("ambient.temperature.status") != vars.cend()) {
+        if (vars.find (prefix + "ambient.temperature.status") != vars.cend()) {
             addAlert ("ambient.temperature", vars);
         }
-        if (vars.find ("ambient.humidity.status") != vars.cend()) {
+        if (vars.find (prefix + "ambient.humidity.status") != vars.cend()) {
             addAlert ("ambient.humidity", vars);
         }
         for (int a=1; a<=3; a++) {
             std::string q = "input.L" + std::to_string(a) + ".current";
-            if (vars.find (q + ".status") != vars.cend()) {
+            if (vars.find (prefix + q + ".status") != vars.cend()) {
                 addAlert (q, vars);
             }
             q = "input.L" + std::to_string(a) + ".voltage";
-            if (vars.find (q + ".status") != vars.cend()) {
+            if (vars.find (prefix + q + ".status") != vars.cend()) {
                 addAlert (q, vars);
             }
         }
         for (int a=1; a<=1000; a++) {
             int found = 0;
             std::string q = "outlet.group." + std::to_string(a) + ".current";
-            if (vars.find (q + ".status") != vars.cend()) {
+            if (vars.find (prefix + q + ".status") != vars.cend()) {
                 addAlert (q, vars);
                 ++found;
             }
             q = "outlet.group." + std::to_string(a) + ".voltage";
-            if (vars.find (q + ".status") != vars.cend()) {
+            if (vars.find (prefix + q + ".status") != vars.cend()) {
                 addAlert (q, vars);
                 ++found;
             }
             if (!found) break;
         }
     } catch ( std::exception &e ) {
-        log_error("aa: Communication problem with %s (%s)", _name.c_str(), e.what() );
+        log_error("aa: Communication problem with %s (%s)", _assetName.c_str(), e.what() );
         return 0;
     }
     return 1;
@@ -144,7 +146,7 @@ Device::publishAlert (mlm_client_t *client, DeviceAlert& alert)
     else if (alert.status == "critical-high") {
         severity = "CRITICAL";
     }
-    std::string rule = alert.name + "@" + _name;
+    std::string rule = alert.name + "@" + _assetName;
     std::string description = alert.name + " exceeded the limit";
 
     if (!severity) {
@@ -156,7 +158,7 @@ Device::publishAlert (mlm_client_t *client, DeviceAlert& alert)
     zmsg_t *message = bios_proto_encode_alert(
         NULL,               // aux
         rule.c_str (),      // rule
-        _name.c_str (),     // element
+        _assetName.c_str (),     // element
         state,              // state
         severity,           // severity
         description.c_str (), // description
@@ -187,14 +189,14 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
     assert (message);
 
     std::string description = alert.name + " exceeded the limit";
-    std::string ruleName = alert.name + "@" + _name;
+    std::string ruleName = alert.name + "@" + _assetName;
     std::string rule =
         "{ \"threshold\" : {"
         "  \"rule_name\"     : \"" + ruleName + "\","
         "  \"rule_source\"   : \"NUT\","
         "  \"rule_class\"    : \"Device internal\","
         "  \"target\"        : \"" + ruleName + "\","
-        "  \"element\"       : \"" + _name + "\","
+        "  \"element\"       : \"" + _assetName + "\","
         "  \"values\"        : ["
         "    { \"low_warning\"  : \"" + alert.lowWarning + "\"},"
         "    { \"low_critical\" : \"" + alert.lowCritical + "\"},"
@@ -219,13 +221,13 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
 void
 Device::update (nut::TcpClient& conn)
 {
-    auto nutDevice = conn.getDevice(_name);
+    auto nutDevice = conn.getDevice(_nutName);
     for (auto &it: _alerts) {
         try {
             auto value = nutDevice.getVariableValue (it.first + ".status");
             if (!value.empty ()) {
                 std::string newStatus =  value[0];
-                log_debug ("aa: %s on %s is %s", it.first.c_str (), _name.c_str (), newStatus.c_str());
+                log_debug ("aa: %s on %s is %s", it.first.c_str (), _assetName.c_str (), newStatus.c_str());
                 if (it.second.status != newStatus) {
                     it.second.timestamp = ::time(NULL);
                     it.second.status = newStatus;
@@ -233,6 +235,12 @@ Device::update (nut::TcpClient& conn)
             }
         } catch (...) {}
     }
+}
+
+std::string Device::daisychainPrefix() const
+{
+    if (_chain == 0) return "";
+    return "device." + std::to_string(_chain) + ".";
 }
 
 
