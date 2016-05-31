@@ -11,11 +11,24 @@
 
 class Device {
  public:
-    Device () { };
-    Device (const std::string& name) { _name = name; };
-
-    void name (const std::string& aName) { _name = aName; };
-    std::string name () { return _name; }
+    Device () : _chain(0) { };
+    Device (const std::string& name) :
+        _nutName(name),
+        _assetName(name),
+        _chain(0)
+    { };
+    Device (const std::string& asset, const std::string& nut, int chain) :
+        _nutName(nut),
+        _assetName(asset),
+        _chain(chain)
+    { };
+    
+    void nutName (const std::string& aName) { _nutName = aName; };
+    std::string nutName () { return _nutName; }
+    void assetName (const std::string& aName) { _assetName = aName; };
+    std::string assetName () { return _assetName; }
+    void chain (int index) { _chain = index; };
+    int chain () { return _chain; }
     
     void update (nut::TcpClient &conn);
     int scanCapabilities (nut::TcpClient &conn);
@@ -26,7 +39,9 @@ class Device {
     friend void alert_device_test (bool verbose);
     friend void alert_actor_test (bool verbose);
  private:
-    std::string _name;
+    std::string _nutName;
+    std::string _assetName;
+    int _chain;
     std::map <std::string, DeviceAlert> _alerts;
 
     void addAlert (
@@ -35,6 +50,7 @@ class Device {
     );
     void publishAlert (mlm_client_t *client, DeviceAlert& alert);
     void publishRule (mlm_client_t *client, DeviceAlert& alert);
+    std::string daisychainPrefix() const;
 };
 
 #endif // __ALERT_DEVICE

@@ -135,7 +135,8 @@ alert_actor (zsock_t *pipe, void *args)
         void *which = zpoller_wait (poller, polling);
         if (which == NULL) {
             log_debug ("alert update");
-            devices.update();
+            // TODO: use nut_t
+            devices.update (NULL);
             devices.publishRules (client);
             devices.publishAlerts (client);
         }
