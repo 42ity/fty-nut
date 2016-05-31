@@ -119,6 +119,11 @@ bios_nut_server (zsock_t *pipe, void *args)
 
     NUTAgent nut_agent;
     nut_t *data = nut_new ();
+    r = nut_load (data, "/var/lib/bios/nut/state_file");
+    if (r != 0) {
+        log_warning ("Could not load state file '%s'.", "/var/lib/bios/nut/state_file");
+    }
+    nut_agent.updateDeviceList (data);
     nut_agent.setiClient (iclient);
 
     uint64_t timestamp = static_cast<uint64_t> (zclock_mono ());
@@ -183,7 +188,12 @@ bios_nut_server (zsock_t *pipe, void *args)
 
         zmsg_destroy (&message);
     } // while (!zsys_interrupted)
-    
+   
+    r = nut_save (data, "/var/lib/bios/nut/state_file");
+    if (r != 0) {
+        log_warning ("Could not save state file '%s'.", "/var/lib/bios/nut/state_file");
+    }
+
     nut_destroy (&data);
     zpoller_destroy (&poller);
     mlm_client_destroy (&client);
