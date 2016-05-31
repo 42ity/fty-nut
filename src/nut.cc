@@ -582,9 +582,6 @@ nut_test (bool verbose)
     rv = nut_load (self, "./test_state_file");
     assert (rv == 0);
 
-        
-
-    zsys_debug ("TRACE 1");
     // nut_get_assets
     {
         zlistx_t *list = nut_get_assets (self);
@@ -612,7 +609,6 @@ nut_test (bool verbose)
         zlistx_destroy (&list);
     }
 
-    zsys_debug ("TRACE 2");
     // nut_asset_daisychain, nut_asset_ip
     {
         assert (nut_asset_ip (self, "non-existing-asset") == NULL);
@@ -662,7 +658,6 @@ nut_test (bool verbose)
     bios_proto_ext_insert (asset, "daisychain", "%s", "44");
     nut_put (self, &asset);
 
-    zsys_debug ("TRACE 3");
     // nut_get_assets
     {
         zlistx_t *list = nut_get_assets (self);
@@ -709,7 +704,6 @@ nut_test (bool verbose)
     bios_proto_ext_insert (asset, "ip.1", "%s", "50.50.50.50");
     nut_put (self, &asset);
 
-    zsys_debug ("TRACE 3");
     // nut_asset_daisychain, nut_asset_ip
     {
         assert (nut_asset_ip (self, "non-existing-asset") == NULL);
