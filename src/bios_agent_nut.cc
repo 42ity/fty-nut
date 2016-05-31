@@ -177,6 +177,7 @@ int main (int argc, char *argv [])
     zstr_sendx (nut_device_alert, "POLLING", polling, NULL);
     zstr_sendx (nut_device_alert, "CONNECT", ENDPOINT, ACTOR_ALERT_NAME, NULL);
     zstr_sendx (nut_device_alert, "PRODUCER", BIOS_PROTO_STREAM_ALERTS_SYS, NULL);
+    zstr_sendx (nut_device_alert, "CONSUMER", BIOS_PROTO_STREAM_ASSETS, ".*", NULL);
 
     zpoller_t *poller = zpoller_new(nut_server, nut_device_alert, NULL);
     assert(poller);

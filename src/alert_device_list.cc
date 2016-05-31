@@ -6,12 +6,11 @@
 #include "agent_nut_library.h"
 #include "logger.h"
 
-void Devices::update()
+void Devices::updateFromNUT ()
 {
     try {
         nut::TcpClient nutClient;
         nutClient.connect ("localhost", 3493);
-        updateDeviceList (nutClient);
         updateDevices (nutClient);
     } catch (std::exception& e) {
         log_error ("reading data from NUT: %s", e.what ());
@@ -25,40 +24,71 @@ void Devices::updateDevices(nut::TcpClient& nutClient)
     }
 }
 
-void Devices::updateDeviceList(nut::TcpClient& nutClient)
+void Devices::updateDeviceCapabilities (nut::TcpClient& nutClient)
 {
-    try {
-        if (!nutClient.isConnected ()) return;
-        std::set<std::string> devs = nutClient.getDeviceNames ();
-        // add newly appeared devices
-        for (const auto& name : devs) {
-            auto device = _devices.find (name);
-            if (device == _devices.end ()) {
-                auto newDevice = Device (name);
-                if (newDevice.scanCapabilities (nutClient)) {
-                    log_debug ("aa: adding device %s", name.c_str ());
-                    _devices[name] = newDevice;
+    for (auto& it : _devices) {
+        it.second.scanCapabilities (nutClient);
+    }
+}
+
+void Devices::updateDeviceList(nut_t *config)
+{
+    if (!config) return;
+    zlistx_t *devices = nut_get_assets (config);
+    if (!devices) return;
+
+    _devices.clear ();
+    std::map<std::string, std::string> ip2master;
+    {
+        // make ip->master map
+        const char *name = (char *)zlistx_first(devices);
+        while (name) {
+            const char* ip = nut_asset_ip (config, name);
+            const char* chain = nut_asset_daisychain (config, name);
+            if (ip == NULL || chain == NULL || streq (ip, "") ) {
+                // this is strange. No IP?
+                name = (char *)zlistx_next(devices);
+                continue;
+            }
+            if (streq (chain,"") || streq (chain,"1")) {
+                // this is master
+                ip2master[ip] = name;
+            }
+            name = (char *)zlistx_next(devices);
+        }
+    }
+    {        
+        const char *name = (char *)zlistx_first(devices);
+        while (name) {
+            const char* ip = nut_asset_ip (config, name);
+            if (!ip || streq (ip, "")) {
+                // this is strange. No IP?
+                name = (char *)zlistx_next(devices);
+                continue;
+            }
+            const char* chain_str = nut_asset_daisychain (config, name);
+            int chain = 0;
+            if (chain_str) chain = std::stoi (chain_str);
+            switch(chain) {
+            case 0:
+                _devices[name] = Device(name);
+                break;
+            case 1:
+                _devices[name] = Device(name, name, 1);
+                break;
+            default:
+                const auto master_it = ip2master.find (ip);
+                if (master_it == ip2master.cend()) {
+                    log_error ("Daisychain master for %s not found", name);
                 } else {
-                    log_debug ("aa: not adding device %s", name.c_str ());
+                    _devices[name] = Device(name, master_it->second, chain);
                 }
-            } else {
-                device->second.scanCapabilities (nutClient);
+                break;
             }
+            name = (char *)zlistx_next(devices);
         }
-        // remove missing devices
-        auto it = _devices.begin ();
-        while( it != _devices.end () ) {
-            if( devs.count (it->first) == 0 ){
-                auto toBeDeleted = it;
-                ++it;
-                log_debug ("aa: removing device %s", it->first.c_str ());
-                // TODO: remove rules?
-                _devices.erase (toBeDeleted);
-            } else {
-                ++it;
-            }
-        }
-    } catch (...) {}
+    }
+    zlistx_destroy (&devices);        
 }
 
 void Devices::publishAlerts (mlm_client_t *client)
