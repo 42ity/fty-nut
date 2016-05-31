@@ -86,7 +86,7 @@ alert_actor_commands (
     if (streq (cmd, "CONSUMER")) {
         char *stream = zmsg_popstr (message);
         char *pattern = zmsg_popstr (message);
-        if (!stream || pattern) {
+        if (!stream || !pattern) {
             log_error (
                     "aa: Expected multipart string format: CONSUMER/stream/pattern. "
                     "Received PRODUCER/%s/%s", stream ? stream : "nullptr", pattern ? pattern : "nullptr");
@@ -101,6 +101,7 @@ alert_actor_commands (
             log_error ("mlm_client_set_consumer (stream = '%s', pattern = '%s') failed", stream, pattern);
         }
         zstr_free (&stream);
+        zstr_free (&pattern);
     }
     else
     if (streq (cmd, "POLLING")) {
