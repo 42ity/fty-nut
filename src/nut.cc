@@ -73,6 +73,21 @@ nut_destroy (nut_t **self_p)
 //  --------------------------------------------------------------------------
 //  Store bios_proto_t message transfering ownership
 
+// 0 - OK, 1 - throw it away
+static int 
+filter_message (bios_proto_t *message)
+{
+    assert (message);
+    const char *type = bios_proto_aux_string (message, "type", NULL);
+    const char *subtype = bios_proto_aux_string (message, "subtype", NULL);
+    if (!type || !subtype)
+        return 1;
+    if (streq (type, "device") &&
+        (streq (subtype, "epdu") || streq (subtype, "ups")))
+        return 0;
+    return 1;
+}
+
 static void
 zhash_merge (zhash_t *source, zhash_t *target)
 {
@@ -97,7 +112,13 @@ nut_put (nut_t *self, bios_proto_t **message_p)
 
     if (!message)
         return;
-     
+
+    if (filter_message (message)) {
+        bios_proto_destroy (message_p);
+        return;
+    }
+    
+
     bios_proto_t *asset = (bios_proto_t *) zhashx_lookup (self->assets, bios_proto_name (message));
     if (!asset) {
         int rv = zhashx_insert (self->assets, bios_proto_name (message), message);
@@ -188,6 +209,132 @@ nut_asset_daisychain (nut_t *self, const char *asset_name)
     return nut_asset_get_string (self, asset_name, "daisychain");
 }
 
+//  --------------------------------------------------------------------------
+//  Save nut to disk
+//  If 'fullpath' is NULL does nothing
+//  0 - success, -1 - error
+
+int
+nut_save (nut_t *self, const char *fullpath)
+{
+    assert (self);
+    if (!fullpath)
+        return 0;
+
+    zfile_t *file = zfile_new (NULL, fullpath);
+    if (!file) {
+        log_error ("zfile_new (path = NULL, file = '%s') failed.", fullpath);
+        return -1;
+    }
+
+    zfile_remove (file);
+
+    if (zfile_output (file) == -1) {
+        log_error ("zfile_output () failed; filename = '%s'", zfile_filename (file, NULL));
+        zfile_close (file);
+        zfile_destroy (&file);
+        return -1;
+    }
+
+    zchunk_t *chunk = zchunk_new (NULL, 0); // TODO: this can be tweaked to
+                                            // avoid a lot of allocs
+    assert (chunk);
+
+    bios_proto_t *asset = (bios_proto_t *) zhashx_first (self->assets);
+    while (asset) {
+        bios_proto_t *duplicate = bios_proto_dup (asset);
+        assert (duplicate);
+        zmsg_t *zmessage = bios_proto_encode (&duplicate); // duplicate destroyed here
+        assert (zmessage);
+
+        byte *buffer = NULL;
+        uint64_t size = zmsg_encode (zmessage, &buffer);
+        zmsg_destroy (&zmessage);
+
+        assert (buffer);
+        assert (size > 0);
+
+        // prefix
+        zchunk_extend (chunk, (const void *) &size, sizeof (uint64_t));
+        // data
+        zchunk_extend (chunk, (const void *) buffer, size);
+
+        free (buffer); buffer = NULL;
+
+        asset = (bios_proto_t *) zhashx_next (self->assets);
+    }
+
+    if (zchunk_write (chunk, zfile_handle (file)) == -1) {
+        log_error ("zchunk_write () failed.");
+    }
+
+    zchunk_destroy (&chunk);
+    zfile_close (file);
+    zfile_destroy (&file);
+    return 0;
+}
+
+//  --------------------------------------------------------------------------
+//  Load nut from disk
+//  If 'fullpath' is NULL does nothing
+//  0 - success, -1 - error
+
+int
+nut_load (nut_t *self, const char *fullpath)
+{
+    assert (self);
+    if (!fullpath)
+        return 0;
+
+    zfile_t *file = zfile_new (NULL, fullpath);
+    if (!file) {
+        log_error ("zfile_new (path = NULL, file = '%s') failed.", fullpath);
+        return -1;
+    }
+    if (!zfile_is_regular (file)) {
+        log_error ("zfile_is_regular () == false");
+        zfile_close (file);
+        zfile_destroy (&file);
+        return -1;
+    }
+    if (zfile_input (file) == -1) {
+        zfile_close (file);
+        zfile_destroy (&file);
+        log_error ("zfile_input () failed; filename = '%s'", zfile_filename (file, NULL));
+        return -1;
+    }
+
+    off_t cursize = zfile_cursize (file);
+    if (cursize == 0) {
+        log_debug ("state file '%s' is empty", zfile_filename (file, NULL));
+        zfile_close (file);
+        zfile_destroy (&file);
+        return 0;
+    }
+
+    zchunk_t *chunk = zchunk_read (zfile_handle (file), cursize);
+    assert (chunk);
+
+    zfile_close (file);
+    zfile_destroy (&file);
+
+    off_t offset = 0;
+
+    while (offset < cursize) {
+        byte *prefix = zchunk_data (chunk) + offset;
+        byte *data = zchunk_data (chunk) + offset + sizeof (uint64_t);
+        offset += (uint64_t) *prefix +  sizeof (uint64_t);
+
+        zmsg_t *zmessage = zmsg_decode (data, (size_t) *prefix);
+        assert (zmessage);
+        bios_proto_t *asset = bios_proto_decode (&zmessage); // zmessage destroyed
+        assert (asset);
+
+        nut_put (self, &asset);
+    }
+    zchunk_destroy (&chunk);
+    return 0;
+}
 
 //  --------------------------------------------------------------------------
 //  Print the nut
@@ -399,39 +546,59 @@ nut_test (bool verbose)
     self = nut_new ();
 
     bios_proto_t *asset =  test_asset_new ("ups", BIOS_PROTO_ASSET_OP_CREATE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "ups");
     bios_proto_ext_insert (asset, "abc.d", "%s", " ups string 1");
     nut_put (self, &asset);
 
     asset =  test_asset_new ("epdu", BIOS_PROTO_ASSET_OP_CREATE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
     nut_put (self, &asset);
 
     asset =  test_asset_new ("ROZ.UPS33", BIOS_PROTO_ASSET_OP_CREATE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "ups");
     bios_proto_ext_insert (asset, "d.ef", "%s", "roz.ups33 string 1");
     nut_put (self, &asset);
 
     asset =  test_asset_new ("MBT.EPDU4", BIOS_PROTO_ASSET_OP_CREATE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
     bios_proto_ext_insert (asset, "hhh", "%s", "mbt.epdu4 string 1");
     bios_proto_ext_insert (asset, "ip.1", "%s", "4.3.2.1");
     bios_proto_ext_insert (asset, "daisychain", "%s", "3");
     nut_put (self, &asset);
 
+    asset =  test_asset_new ("MBT.EPDU5", BIOS_PROTO_ASSET_OP_CREATE);
+    nut_put (self, &asset);
+
+    // save/load
+    
+    int rv = nut_save (self, "./test_state_file");
+    assert (rv == 0);
+    nut_destroy (&self);
+    self = nut_new ();
+    rv = nut_load (self, "./test_state_file");
+    assert (rv == 0);
 
     // nut_get_assets
     {
         zlistx_t *list = nut_get_assets (self);
         assert (list);
-
+        
         const char *asset_name = (const char *) zlistx_first (list);
         assert (asset_name);
         assert (streq (asset_name, "epdu"));
         
         asset_name = (const char *) zlistx_next (list);
-        assert (asset_name);
-        assert (streq (asset_name, "MBT.EPDU4"));
-     
-        asset_name = (const char *) zlistx_next (list);
+        printf ("%s\n", asset_name);
         assert (asset_name);
         assert (streq (asset_name, "ROZ.UPS33"));
+             
+        asset_name = (const char *) zlistx_next (list);
+        assert (asset_name);
+        assert (streq (asset_name, "MBT.EPDU4"));
 
         asset_name = (const char *) zlistx_next (list);
         assert (asset_name);
@@ -461,24 +628,32 @@ nut_test (bool verbose)
     }
 
     asset = test_asset_new ("epdu", BIOS_PROTO_ASSET_OP_UPDATE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
     bios_proto_ext_insert (asset, "xxx", "%s", "epdu string 1");
     bios_proto_ext_insert (asset, "ip.1", "%s", "121.120.199.198");
     bios_proto_ext_insert (asset, "daisychain", "%s", "14");
     nut_put (self, &asset);
 
     asset =  test_asset_new ("ROZ.UPS33", BIOS_PROTO_ASSET_OP_UPDATE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "ups");
     bios_proto_ext_insert (asset, "d.ef", "%s", "roz.ups33 string 1");
     bios_proto_ext_insert (asset, "ip.1", "%s", "1.1.2.3");
     bios_proto_ext_insert (asset, "daisychain", "%s", "5");
     nut_put (self, &asset);
 
     asset =  test_asset_new ("ups", BIOS_PROTO_ASSET_OP_RETIRE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "ups");
     bios_proto_ext_insert (asset, "d.ef", "%s", "roz.ups33 string 1");
     bios_proto_ext_insert (asset, "ip.1", "%s", "127.0.0.1");
     bios_proto_ext_insert (asset, "daisychain", "%s", "16");
     nut_put (self, &asset);
 
     asset =  test_asset_new ("MBT.EPDU4", BIOS_PROTO_ASSET_OP_UPDATE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
     bios_proto_ext_insert (asset, "ip.1", "%s", "10.130.38.52");
     bios_proto_ext_insert (asset, "daisychain", "%s", "44");
     nut_put (self, &asset);
@@ -494,11 +669,11 @@ nut_test (bool verbose)
         
         asset_name = (const char *) zlistx_next (list);
         assert (asset_name);
-        assert (streq (asset_name, "MBT.EPDU4"));
-     
+        assert (streq (asset_name, "ROZ.UPS33"));
+    
         asset_name = (const char *) zlistx_next (list);
         assert (asset_name);
-        assert (streq (asset_name, "ROZ.UPS33"));
+        assert (streq (asset_name, "MBT.EPDU4"));
 
         asset_name = (const char *) zlistx_next (list);
         assert (asset_name == NULL);
@@ -524,6 +699,8 @@ nut_test (bool verbose)
     }
 
     asset =  test_asset_new ("MBT.EPDU4", BIOS_PROTO_ASSET_OP_UPDATE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
     bios_proto_ext_insert (asset, "ip.1", "%s", "50.50.50.50");
     nut_put (self, &asset);
 
@@ -546,6 +723,8 @@ nut_test (bool verbose)
     }
 
     asset =  test_asset_new ("MBT.EPDU4", BIOS_PROTO_ASSET_OP_UPDATE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
     bios_proto_ext_insert (asset, "daisychain", "%s", "77");
     nut_put (self, &asset);
 
@@ -568,6 +747,8 @@ nut_test (bool verbose)
     }
 
     asset =  test_asset_new ("MBT.EPDU4", BIOS_PROTO_ASSET_OP_CREATE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
     bios_proto_ext_insert (asset, "daisychain", "%s", "43");
     nut_put (self, &asset);
 
@@ -590,9 +771,13 @@ nut_test (bool verbose)
     }
 
     asset =  test_asset_new ("ROZ.UPS33", BIOS_PROTO_ASSET_OP_DELETE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "ups");
     nut_put (self, &asset);
 
     asset =  test_asset_new ("epdu", BIOS_PROTO_ASSET_OP_DELETE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
     nut_put (self, &asset);
 
     // nut_get_assets
