@@ -57,6 +57,18 @@ AGENT_NUT_EXPORT const char *
 AGENT_NUT_EXPORT const char *
     nut_asset_daisychain (nut_t *self, const char *asset_name);
 
+//  Save nut to disk
+//  If 'fullpath' is NULL does nothing
+//  0 - success, -1 - error
+AGENT_NUT_EXPORT int
+    nut_save (nut_t *self, const char *fullpath);
+
+//  Load nut from disk
+//  If 'fullpath' is NULL does nothing
+//  0 - success, -1 - error
+AGENT_NUT_EXPORT int
+    nut_load (nut_t *self, const char *fullpath);
+
 //  Print the nut
 AGENT_NUT_EXPORT void
     nut_print (nut_t *self);
