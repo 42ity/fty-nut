@@ -1,3 +1,8 @@
 
 agent_nut_mappingdir = @prefix@/share/agent-nut/
 agent_nut_mapping_DATA = src/mapping.conf
+
+if WITH_SYSTEMD_UNITS
+agent_nut_tmpfilesdir = /usr/lib/tmpfiles.d/bios-agent-nut.conf
+agent_nut_tmpfiles_DATA = src/bios-agent-nut.conf
+endif #WITH_SYSTEMD_UNITS
