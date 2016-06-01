@@ -42,6 +42,7 @@ void usage () {
           "  --log-level / -l       bios log level\n"
           "                         overrides setting in env. variable BIOS_LOG_LEVEL\n"
           "  --mapping-file / -m    NUT-to-BIOS mapping file\n"
+          "  --state-file / -s      state file\n"
           "  --polling / -p         polling interval in seconds [30]\n"
           "  --verbose / -v         verbose test output\n"
           "  --help / -h            this information\n"
@@ -77,6 +78,7 @@ int main (int argc, char *argv [])
     int verbose = 0;
     int log_level = -1;
     std::string mapping_file;
+    std::string state_file;
     const char* polling = "30";
 
     while (true) {
@@ -86,6 +88,7 @@ int main (int argc, char *argv [])
             {"verbose",         no_argument,        0,  1},
             {"log-level",       required_argument,  0,  'l'},
             {"mapping-file",    required_argument,  0,  'm'},
+            {"state-file",      required_argument,  0,  's'},
             {"polling",         required_argument,  0,  'p'},
             {0,                 0,                  0,  0}
         };
@@ -103,6 +106,11 @@ int main (int argc, char *argv [])
             case 'm':
             {
                 mapping_file.assign (optarg);
+                break;
+            }
+            case 's':
+            {
+                state_file.assign (optarg);
                 break;
             }
             case 'v':
@@ -168,7 +176,7 @@ int main (int argc, char *argv [])
         zstr_sendx (nut_server, "VERBOSE", NULL);
         zstr_sendx (nut_device_alert, "VERBOSE", NULL);
     }
-    zstr_sendx (nut_server, "CONFIGURE", mapping_file.c_str (), NULL);
+    zstr_sendx (nut_server, "CONFIGURE", mapping_file.c_str (), state_file.c_str (), NULL);
     zstr_sendx (nut_server, "POLLING", polling, NULL);
     zstr_sendx (nut_server, "CONNECT", ENDPOINT, ACTOR_NUT_NAME, NULL);
     zstr_sendx (nut_server, "PRODUCER", BIOS_PROTO_STREAM_METRICS, NULL);
