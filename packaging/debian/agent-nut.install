@@ -5,3 +5,4 @@ usr/lib/systemd/system/bios-agent-nut*.service
 usr/lib/systemd/system/bios-agent-nut-configurator*.service
 usr/lib/tmpfiles.d/bios-agent-nut.conf
 usr/share/agent-nut/mapping.conf
+usr/lib/tmpfiles.d/*.conf
