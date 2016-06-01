@@ -118,7 +118,7 @@ Device::scanCapabilities (nut::TcpClient& conn)
 void
 Device::publishAlerts (mlm_client_t *client) {
     if (!client) return;
-    log_debug("aa: publishing %zu alerts", _alerts.size ());
+    log_debug("aa: publishing %zu alerts on %s", _alerts.size (), _assetName.c_str());
     for (auto& it: _alerts) {
         publishAlert (client, it.second);
     }

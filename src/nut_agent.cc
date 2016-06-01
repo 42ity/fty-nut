@@ -81,7 +81,7 @@ void NUTAgent::onPoll ()
 }
 
 void NUTAgent::updateDeviceList (nut_t *deviceState) {
-    _deviceList.update (deviceState);
+    _deviceList.updateDeviceList (deviceState);
 }
 
 int NUTAgent::send (const std::string& subject, zmsg_t **message_p)
