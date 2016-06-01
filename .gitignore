@@ -88,3 +88,6 @@ build/
 # Temporary files
 *.swp
 *~
+
+test_state_file
+src/bios-agent-nut.conf
