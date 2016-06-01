@@ -22,7 +22,9 @@
 #ifndef ACTOR_COMMANDS_H_INCLUDED
 #define ACTOR_COMMANDS_H_INCLUDED
 
+#include "nut.h"
 class NUTAgent;
+
 
 // Supported actor commands:
 //  $TERM
@@ -40,14 +42,15 @@ class NUTAgent;
 //  CONSUMER/stream/pattern
 //      consume messages from 'stream' with subjects matching 'pattern'
 //
-//  CONFIGURE/mapping
+//  CONFIGURE/mapping/state_file
 //      configure actor, where
-//      mapping - full path to mapping file
+//      mapping_file - full path to mapping file
+//      state_file - full pathname of state file
 //
 //  POLLING/value
 //      change polling interval, where
 //      value - new polling interval in seconds 
-
+//
 
 
 
@@ -60,7 +63,9 @@ AGENT_NUT_EXPORT int
             zmsg_t **message_p,
             bool& verbose,
             uint64_t& timeout,
-            NUTAgent& nut_agent);
+            NUTAgent& nut_agent,
+            nut_t *data,
+            std::string& state_fullpath);
 
 //  Self test of this class
 AGENT_NUT_EXPORT void
