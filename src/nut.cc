@@ -577,7 +577,7 @@ nut_test (bool verbose)
     bios_proto_aux_insert (asset, "type", "%s", "device");
     bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
     bios_proto_ext_insert (asset, "hhh", "%s", "mbt.epdu4 string 1");
-    bios_proto_ext_insert (asset, "ip.1", "%s", "4.3.2.1");
+    bios_proto_ext_insert (asset, "ip.1", "%s", "10.130.53.33");
     bios_proto_ext_insert (asset, "daisy_chain", "%s", "3");
     nut_put (self, &asset);
     zlistx_add_end (expected, (void *) "MBT.EPDU4");
@@ -611,7 +611,7 @@ nut_test (bool verbose)
     bios_proto_ext_insert (asset, "http_link.1" , "%s",  "http://epdu14.roz53.lab.etn.com/");
     bios_proto_ext_insert (asset, "model" , "%s",  "EPDU MA 0U (C14 10A 1P)16XC13");
     bios_proto_ext_insert (asset, "phases.input" , "%s",  "1");
-    bios_proto_ext_insert (asset, "ip.1" , "%s",  "10.130.53.13");
+    bios_proto_ext_insert (asset, "ip.1" , "%s",  "10.130.53.33");
     bios_proto_ext_insert (asset, "device.part" , "%s",  "EMAB03");
     bios_proto_ext_insert (asset, "manufacturer" , "%s",  "EATON");
     bios_proto_ext_insert (asset, "status.outlet.16" , "%s",  "on");
@@ -672,10 +672,10 @@ nut_test (bool verbose)
         assert (streq (nut_asset_ip (self, "ROZ.UPS33"), "10.130.53.33"));
         assert (streq (nut_asset_daisychain (self, "ROZ.UPS33"), ""));
 
-        assert (streq (nut_asset_ip (self, "MBT.EPDU4"), "4.3.2.1"));
+        assert (streq (nut_asset_ip (self, "MBT.EPDU4"), "10.130.53.33"));
         assert (streq (nut_asset_daisychain (self, "MBT.EPDU4"), "3"));
 
-        assert (streq (nut_asset_ip (self, "ROZ.ePDU14"), "10.130.53.13"));
+        assert (streq (nut_asset_ip (self, "ROZ.ePDU14"), "10.130.53.33"));
         assert (streq (nut_asset_daisychain (self, "ROZ.ePDU14"), "2"));
     }
 
@@ -728,7 +728,7 @@ nut_test (bool verbose)
         assert (streq (nut_asset_ip (self, "MBT.EPDU4"), "10.130.38.52"));
         assert (streq (nut_asset_daisychain (self, "MBT.EPDU4"), "3"));
 
-        assert (streq (nut_asset_ip (self, "ROZ.ePDU14"), "10.130.53.13"));
+        assert (streq (nut_asset_ip (self, "ROZ.ePDU14"), "10.130.53.33"));
         assert (streq (nut_asset_daisychain (self, "ROZ.ePDU14"), "2"));
     }
 
@@ -757,7 +757,7 @@ nut_test (bool verbose)
         assert (streq (nut_asset_ip (self, "MBT.EPDU4"), "10.130.38.52"));
         assert (streq (nut_asset_daisychain (self, "MBT.EPDU4"), "44"));
 
-        assert (streq (nut_asset_ip (self, "ROZ.ePDU14"), "10.130.53.13"));
+        assert (streq (nut_asset_ip (self, "ROZ.ePDU14"), "10.130.53.33"));
         assert (streq (nut_asset_daisychain (self, "ROZ.ePDU14"), "2"));
     }
 
@@ -787,7 +787,7 @@ nut_test (bool verbose)
         assert (streq (nut_asset_ip (self, "MBT.EPDU4"), "10.130.38.52"));
         assert (streq (nut_asset_daisychain (self, "MBT.EPDU4"), "44"));
 
-        assert (streq (nut_asset_ip (self, "ROZ.ePDU14"), "10.130.53.13"));
+        assert (streq (nut_asset_ip (self, "ROZ.ePDU14"), "10.130.53.33"));
         assert (streq (nut_asset_daisychain (self, "ROZ.ePDU14"), "2"));
     }
 
@@ -824,7 +824,7 @@ nut_test (bool verbose)
         assert (streq (nut_asset_ip (self, "MBT.EPDU4"), "10.130.38.52"));
         assert (streq (nut_asset_daisychain (self, "MBT.EPDU4"), "44"));
 
-        assert (streq (nut_asset_ip (self, "ROZ.ePDU14"), "10.130.53.13"));
+        assert (streq (nut_asset_ip (self, "ROZ.ePDU14"), "10.130.53.33"));
         assert (streq (nut_asset_daisychain (self, "ROZ.ePDU14"), "2"));
     }
 

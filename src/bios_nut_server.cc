@@ -114,16 +114,20 @@ bios_nut_server (zsock_t *pipe, void *args)
         mlm_client_destroy (&client);
         return;
     }
-
-    zsock_signal (pipe, 0);
-
+    
     NUTAgent nut_agent;
     nut_t *data = nut_new ();
+    std::string state_file;
+
+    zsock_signal (pipe, 0);
+/*
     r = nut_load (data, "/var/lib/bios/nut/state_file");
     if (r != 0) {
         log_warning ("Could not load state file '%s'.", "/var/lib/bios/nut/state_file");
     }
     nut_agent.updateDeviceList (data);
+*/
+
     nut_agent.setiClient (iclient);
 
     uint64_t timestamp = static_cast<uint64_t> (zclock_mono ());
@@ -150,7 +154,7 @@ bios_nut_server (zsock_t *pipe, void *args)
                 log_error ("Given `which == pipe`, function `zmsg_recv (pipe)` returned NULL");
                 continue;
             }
-            if (actor_commands (client, &message, verbose, timeout, nut_agent) == 1) {
+            if (actor_commands (client, &message, verbose, timeout, nut_agent, data, state_file) == 1) {
                 break;
             }
             continue;
@@ -189,9 +193,9 @@ bios_nut_server (zsock_t *pipe, void *args)
         zmsg_destroy (&message);
     } // while (!zsys_interrupted)
    
-    r = nut_save (data, "/var/lib/bios/nut/state_file");
+    r = nut_save (data, state_file.c_str ());
     if (r != 0) {
-        log_warning ("Could not save state file '%s'.", "/var/lib/bios/nut/state_file");
+        log_warning ("Could not save state file '%s'.", state_file.c_str ());
     }
 
     nut_destroy (&data);
