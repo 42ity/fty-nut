@@ -48,6 +48,7 @@ class NUTAgent {
     int isend (const std::string& subject, zmsg_t **message_p);
 
     int _ttl = 60;
+    uint64_t _lastUpdate = 0;
         
     drivers::nut::NUTDeviceList _deviceList;
     uint64_t _inventoryTimestamp = 0;

@@ -16,9 +16,12 @@ class Devices {
     friend void alert_actor_test (bool verbose);
  private:
     std::map <std::string, Device>  _devices;
-
+    bool _capabilitiesUpdated = false;
+    uint64_t _lastUpdate = 0; // TODO: remove when fixed in nut library
+    
     void updateDeviceCapabilities (nut::TcpClient& nutClient);
     void updateDevices (nut::TcpClient& nutClient);
+    int addIfNotPresent (Device dev);
 };
     
 #endif // __ALERT_DEVICE_LIST

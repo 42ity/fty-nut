@@ -76,11 +76,16 @@ void NUTAgent::onPoll ()
 {
     if (!_client)
        return;
+    // ugly hack to give NUT time to settle down
+    if (zclock_mono() - _lastUpdate < 30000) return; 
     advertisePhysics ();
     advertiseInventory ();
 }
 
 void NUTAgent::updateDeviceList (nut_t *deviceState) {
+    // ugly hack to give NUT time to settle down
+    _lastUpdate = zclock_mono();
+
     _deviceList.updateDeviceList (deviceState);
 }
 

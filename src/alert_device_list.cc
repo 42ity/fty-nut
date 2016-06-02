@@ -8,9 +8,12 @@
 
 void Devices::updateFromNUT ()
 {
+    // ugly hack - give nut 30s to settle down
+    if (zclock_mono() - _lastUpdate < 30000) return;
     try {
         nut::TcpClient nutClient;
         nutClient.connect ("localhost", 3493);
+        if (!_capabilitiesUpdated) updateDeviceCapabilities (nutClient);
         updateDevices (nutClient);
     } catch (std::exception& e) {
         log_error ("reading data from NUT: %s", e.what ());
@@ -26,9 +29,24 @@ void Devices::updateDevices(nut::TcpClient& nutClient)
 
 void Devices::updateDeviceCapabilities (nut::TcpClient& nutClient)
 {
+    _capabilitiesUpdated = true;
     for (auto& it : _devices) {
-        it.second.scanCapabilities (nutClient);
+        if (! it.second.scanCapabilities (nutClient)) _capabilitiesUpdated = false;
     }
+    log_debug ("aa: capabilities updated %i", _capabilitiesUpdated);
+}
+
+int Devices::addIfNotPresent (Device dev) {
+    auto it = _devices.find (dev.assetName ());
+    if (it == _devices.end ()) {
+        _devices[dev.assetName ()] = dev;
+        return 1;
+    }
+    if (dev.nutName () != it->second.nutName() || dev.chain() != it->second.chain()) {
+        _devices[dev.assetName ()] = dev;
+        return 1;        
+    }
+    return 0;
 }
 
 void Devices::updateDeviceList(nut_t *config)
@@ -36,8 +54,10 @@ void Devices::updateDeviceList(nut_t *config)
     if (!config) return;
     zlistx_t *devices = nut_get_assets (config);
     if (!devices) return;
+    int changes = 0;
 
-    _devices.clear ();
+    log_debug("aa: updating device list");
+    _lastUpdate = zclock_mono();
     std::map<std::string, std::string> ip2master;
     {
         // make ip->master map
@@ -57,7 +77,8 @@ void Devices::updateDeviceList(nut_t *config)
             name = (char *)zlistx_next(devices);
         }
     }
-    {        
+    {
+        // add new/changed devices
         const char *name = (char *)zlistx_first(devices);
         while (name) {
             const char* ip = nut_asset_ip (config, name);
@@ -71,24 +92,38 @@ void Devices::updateDeviceList(nut_t *config)
             if (chain_str) try { chain = std::stoi (chain_str); } catch(...) { };
             switch(chain) {
             case 0:
-                _devices[name] = Device(name);
+                changes += addIfNotPresent (Device (name));
                 break;
             case 1:
-                _devices[name] = Device(name, name, 1);
+                changes += addIfNotPresent (Device (name, name, 1));
                 break;
             default:
                 const auto master_it = ip2master.find (ip);
                 if (master_it == ip2master.cend()) {
                     log_error ("Daisychain master for %s not found", name);
                 } else {
-                    _devices[name] = Device(name, master_it->second, chain);
+                    changes += addIfNotPresent (Device (name, master_it->second, chain));
                 }
                 break;
             }
             name = (char *)zlistx_next(devices);
         }
     }
+    {
+        // remove devices
+        auto it = _devices.begin();
+        while ( it != _devices.end ()) {
+            if (nut_asset_ip(config, it->first.c_str ()) == NULL) {
+                auto tbd = it;
+                ++it;
+                _devices.erase (tbd);
+            } else {
+                ++it;
+            }
+        }
+    }
     zlistx_destroy (&devices);
+    _capabilitiesUpdated = (changes == 0);
 }
 
 void Devices::publishAlerts (mlm_client_t *client)
