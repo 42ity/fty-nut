@@ -78,6 +78,7 @@ Device::scanCapabilities (nut::TcpClient& conn)
     try {
         auto nutDevice = conn.getDevice(_nutName);
         auto vars = nutDevice.getVariableValues();
+        if (vars.empty ()) return 0;
         if (vars.find (prefix + "ambient.temperature.status") != vars.cend()) {
             addAlert ("ambient.temperature", vars);
         }
@@ -128,8 +129,11 @@ void
 Device::publishAlert (mlm_client_t *client, DeviceAlert& alert)
 {
     if (!client) return;
-    const char *state = "ACTIVE", *severity = NULL;
+    if (alert.status.empty()) return;
 
+    const char *state = "ACTIVE", *severity = NULL;
+    
+    log_debug ("aa: alert status '%s'", alert.status.c_str ());
     if (alert.status == "good") {
         state = "RESOLVED";
         severity = "ok";
@@ -158,15 +162,16 @@ Device::publishAlert (mlm_client_t *client, DeviceAlert& alert)
     zmsg_t *message = bios_proto_encode_alert(
         NULL,               // aux
         rule.c_str (),      // rule
-        _assetName.c_str (),     // element
+        _assetName.c_str (),// element
         state,              // state
         severity,           // severity
         description.c_str (), // description
         alert.timestamp,    // timestamp
         ""                  // action ?email
     );
+    std::string topic = rule + "/" + severity + "@" + _assetName;
     if (message) {
-        mlm_client_send (client, rule.c_str (), &message);
+        mlm_client_send (client, topic.c_str (), &message);
     };
     zmsg_destroy (&message);
 }
@@ -224,8 +229,11 @@ Device::update (nut::TcpClient& conn)
     auto nutDevice = conn.getDevice(_nutName);
     for (auto &it: _alerts) {
         try {
-            auto value = nutDevice.getVariableValue (it.first + ".status");
-            if (!value.empty ()) {
+            std::string prefix = daisychainPrefix();
+            auto value = nutDevice.getVariableValue (prefix + it.first + ".status");
+            if (value.empty ()) {
+                log_debug ("aa: %s on %s is not present", it.first.c_str (), _assetName.c_str ());
+            } else {
                 std::string newStatus =  value[0];
                 log_debug ("aa: %s on %s is %s", it.first.c_str (), _assetName.c_str (), newStatus.c_str());
                 if (it.second.status != newStatus) {
