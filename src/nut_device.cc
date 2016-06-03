@@ -630,6 +630,7 @@ void NUTDeviceList::updateDeviceStatus( bool forceUpdate ) {
     for(auto &device : _devices ) {
         try {
             nutclient::Device nutDevice = nutClient.getDevice(device.second.nutName());
+            if (! nutDevice.isOk()) { throw std::runtime_error ("device " + device.second.assetName() + " is not configured in NUT yet"); }
             std::function <const std::map <std::string, std::string>&(const char *)> x = std::bind (&NUTDeviceList::get_mapping, this, std::placeholders::_1);
             device.second.update( nutDevice.getVariableValues(), x, forceUpdate );
         } catch ( std::exception &e ) {

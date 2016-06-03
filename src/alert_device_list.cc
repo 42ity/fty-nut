@@ -8,8 +8,6 @@
 
 void Devices::updateFromNUT ()
 {
-    // ugly hack - give nut 30s to settle down
-    if (zclock_mono() - _lastUpdate < 30000) return;
     try {
         nut::TcpClient nutClient;
         nutClient.connect ("localhost", 3493);
@@ -57,7 +55,6 @@ void Devices::updateDeviceList(nut_t *config)
     int changes = 0;
 
     log_debug("aa: updating device list");
-    _lastUpdate = zclock_mono();
     std::map<std::string, std::string> ip2master;
     {
         // make ip->master map
