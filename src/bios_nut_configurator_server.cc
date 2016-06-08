@@ -34,6 +34,8 @@
 
 #define MLM_ENDPOINT "ipc://@/malamute"
 
+/* TODO: This state is shared with core::agent-autoconfig due to needed
+ * upgradability from Alpha. Should be cleaned up around/after release. */
 static const char* PATH = "/var/lib/bios/agent-autoconfig";
 static const char* STATE = "/var/lib/bios/agent-autoconfig/state";
 
