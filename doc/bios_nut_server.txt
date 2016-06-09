@@ -1,0 +1,25 @@
+Name(7)
+=======
+
+
+NAME
+----
+bios_nut_server - ...
+
+
+SYNOPSIS
+--------
+----
+#include <agent_nut.h>
+
+cc ['flags'] 'files' -lagent_nut ['libraries']
+----
+
+
+DESCRIPTION
+-----------
+
+Classes
+~~~~~~~
+
+Something.

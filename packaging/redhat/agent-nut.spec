@@ -104,6 +104,7 @@ find %{buildroot} -name '*.la' | xargs rm -f
 %{_prefix}/lib/systemd/system/bios-agent-nut*.service
 %{_prefix}/lib/systemd/system/bios-agent-nut-configurator*.service
 %{_datadir}/agent-nut/mapping.conf
+/usr/share/bios/examples/config/sudoers.d/bios_10_agent-nut
 /usr/lib/tmpfiles.d/*.conf
 
 
