@@ -223,7 +223,7 @@ class NUTDevice {
      *
      * \return std::string result is "" or device.X. where X if index in chain
      */
-    std::string daisyPrefix();
+    std::string daisyPrefix() const;
 
     /**
      * \brief map of physical values.
@@ -265,12 +265,12 @@ class NUTDeviceList {
      */
     void load_mapping (const char *path_to_file);
 
-    bool mappingLoaded ();
+    bool mappingLoaded () const;
 
     /**
      * \brief Returns requested mapping
      */
-    const std::map <std::string, std::string>& get_mapping (const char *mapping);
+    const std::map <std::string, std::string>& get_mapping (const char *mapping) const;
 
     /**
      * \brief Reads status information from NUT daemon.
