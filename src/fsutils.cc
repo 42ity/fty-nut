@@ -119,8 +119,9 @@ mkdir_if_needed (const char *path, mode_t mode, bool create_parent ) {
             mkdir_if_needed( parent.c_str(), mode, create_parent );
         }
     }
-    mkdir(path,mode);
-    return false;
+    if (mkdir(path,mode) < 0 )
+        return false;
+    return is_dir(path);
 }
 
 // basename from libgen.h does not play nice with const char*
