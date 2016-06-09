@@ -179,12 +179,22 @@ fsutils_test (bool verbose)
     assert (shared::items_in_directory ("packaging/debian", items) == true);
     log_warning ("NOTE: If you get assertion failure for items.size() here, make sure packaging/debian/ contains the expected amount of files");
     assert (items.size () == 8);
-    log_warning ("Never mind the assertion note above, check passed :)");
+    log_warning ("      Never mind the assertion note above, check passed :)");
 
     items.clear ();
     log_warning ("NOTE: We do expect the error for './non-existing-dir/' below...");
     assert (shared::items_in_directory ("non-existing-dir", items) == false);
     assert (items.size () == 0);
+
+    assert (shared::mkdir_if_needed(".testdir") == true);
+    log_warning ("NOTE: We do expect the error for './.testdir/missingsub/dir/' below...");
+    assert (shared::mkdir_if_needed(".testdir/missingsub/dir", 0700, false) == false);
+    log_warning ("NOTE: We do expect the errors for './.testdir/sub/dir/' and '.testdir/sub' below (if this is a first run of the test)...");
+    assert (shared::mkdir_if_needed(".testdir/sub/dir", 0711, true) == true);
+    log_warning ("NOTE: We do not expect errors re-ensuring that './.testdir/sub/dir/' exists below...");
+    assert (shared::mkdir_if_needed(".testdir/sub/dir") == true);
+    log_warning ("NOTE: We do foresee a possible error for mkdir of 'src/mapping.conf.in' below (but not an assertion fault), or maybe no error at all...");
+    assert (shared::mkdir_if_needed("src/mapping.conf.in") == false);
 
     // TODO: the rest
 
