@@ -1,21 +1,21 @@
 /*  =========================================================================
     nutdevice - classes for communicating with NUT daemon
 
-    Copyright (C) 2014 - 2015 Eaton                                        
-                                                                           
-    This program is free software; you can redistribute it and/or modify   
-    it under the terms of the GNU General Public License as published by   
-    the Free Software Foundation; either version 2 of the License, or      
-    (at your option) any later version.                                    
-                                                                           
-    This program is distributed in the hope that it will be useful,        
-    but WITHOUT ANY WARRANTY; without even the implied warranty of         
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          
-    GNU General Public License for more details.                           
-                                                                           
+    Copyright (C) 2014 - 2015 Eaton
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.            
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     =========================================================================
 */
 
@@ -49,7 +49,7 @@ struct NUTPhysicalValue {
     long int candidate;
 };
 
-// Class for keeping status information of one UPS/ePDU/... 
+// Class for keeping status information of one UPS/ePDU/...
 // Keeps inventory, status and measurement values of one device as it is presented by NUT.
 class NUTDevice {
     friend class NUTDeviceList;
@@ -94,7 +94,7 @@ class NUTDevice {
      */
     std::string toString() const;
 
-    // Returns true if this device reports particular property 
+    // Returns true if this device reports particular property
     // (i.e. property exists for this device)
     bool hasProperty(const char *name) const;
     bool hasProperty(const std::string& name) const;
@@ -228,7 +228,7 @@ class NUTDevice {
     /**
      * \brief map of physical values.
      *
-     * Values are multiplied by 100 and stored as integer 
+     * Values are multiplied by 100 and stored as integer
      */
     std::map<std::string, NUTPhysicalValue> _physics;
     //! \brief map of inventory values
@@ -259,7 +259,7 @@ class NUTDeviceList {
     NUTDeviceList();
 
     /**
-     * \brief Loads mapping from configuration file 'path_to_file' 
+     * \brief Loads mapping from configuration file 'path_to_file'
      *
      * Overwrites old values on successfull deserialization from json configuration file
      */
@@ -268,7 +268,7 @@ class NUTDeviceList {
     bool mappingLoaded ();
 
     /**
-     * \brief Returns requested mapping 
+     * \brief Returns requested mapping
      */
     const std::map <std::string, std::string>& get_mapping (const char *mapping);
 

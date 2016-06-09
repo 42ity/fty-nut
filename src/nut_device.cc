@@ -1,21 +1,21 @@
 /*  =========================================================================
     nutdevice - classes for communicating with NUT daemon
 
-    Copyright (C) 2014 - 2015 Eaton                                        
-                                                                           
-    This program is free software; you can redistribute it and/or modify   
-    it under the terms of the GNU General Public License as published by   
-    the Free Software Foundation; either version 2 of the License, or      
-    (at your option) any later version.                                    
-                                                                           
-    This program is distributed in the hope that it will be useful,        
-    but WITHOUT ANY WARRANTY; without even the implied warranty of         
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          
-    GNU General Public License for more details.                           
-                                                                           
+    Copyright (C) 2014 - 2015 Eaton
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.            
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     =========================================================================
 */
 
@@ -110,7 +110,7 @@ std::string NUTDevice::daisyPrefix() {
 }
 
 /**
- * change getters  
+ * change getters
  */
 bool NUTDevice::changed() const {
     for(auto &it : _physics ){
@@ -321,7 +321,7 @@ std::string NUTDevice::itof(const long int X) const {
 
     if( X < 0 ) {
         sig = "-";
-    } else {         
+    } else {
         sig = "";
     }
     AX = abs(X);
@@ -375,7 +375,7 @@ std::map<std::string,int32_t> NUTDevice::physics(bool onlyChanged) const {
 std::map<std::string,std::string> NUTDevice::inventory(bool onlyChanged) const {
     std::map<std::string,std::string> map;
     for(auto it : _inventory ){
-        if( ( ! onlyChanged ) || it.second.changed ) {        
+        if( ( ! onlyChanged ) || it.second.changed ) {
             map[ it.first ] = it.second.value;
         }
     }
@@ -412,7 +412,7 @@ bool NUTDevice::hasPhysics(const std::string& name) const {
 }
 
 
-    
+
 std::string NUTDevice::property(const char *name) const {
     auto iterP = _physics.find(name);
     if( iterP != _physics.end() ) {
@@ -440,9 +440,9 @@ void NUTDevice::NUTSetIfNotPresent (const std::string& prefix, std::map< std::st
 }
 
 void NUTDevice::NUTRealpowerFromOutput (const std::string& prefix, std::map< std::string,std::vector<std::string> > &vars) {
-    
+
     if (vars.find (prefix + "ups.realpower") != vars.end()) { return; }
-    
+
     // use outlet.realpower if exists
     if (vars.find (prefix + "outlet.realpower") != vars.end()) {
         NUTSetIfNotPresent (prefix, vars, "ups.realpower", "outlet.realpower");
@@ -477,7 +477,7 @@ void NUTDevice::NUTRealpowerFromOutput (const std::string& prefix, std::map< std
         vars[prefix + "ups.realpower"] = value;
         return;
     }
-    
+
     // if we have outlets, sum them
     if (vars.find (prefix + "outlet.1.realpower") != vars.end()) {
         double sum = 0.0;
@@ -588,7 +588,7 @@ void NUTDeviceList::updateDeviceList(nut_t * deviceState) {
                 name = (char *)zlistx_next(devices);
             }
         }
-        {        
+        {
             const char *name = (char *)zlistx_first(devices);
             while (name) {
                 const char* ip = nut_asset_ip (deviceState, name);
@@ -681,12 +681,12 @@ std::map<std::string, NUTDevice>::iterator NUTDeviceList::end() {
 
 bool NUTDeviceList::changed() const {
     for(auto  &it : _devices ) {
-        if(it.second.changed() ) return true; 
+        if(it.second.changed() ) return true;
     }
     return false;
 }
 
-static void 
+static void
 s_deserialize_to_map (cxxtools::SerializationInfo& si, std::map <std::string, std::string>& m) {
     for (const auto& i : si) {
         std::string temp;
@@ -703,7 +703,7 @@ s_deserialize_to_map (cxxtools::SerializationInfo& si, std::map <std::string, st
         }
         m.emplace (std::make_pair (i.name (), temp));
     }
-} 
+}
 
 void NUTDeviceList::load_mapping (const char *path_to_file)
 {
@@ -751,7 +751,7 @@ void NUTDeviceList::load_mapping (const char *path_to_file)
     _mappingLoaded = true;
 }
 
-bool NUTDeviceList::mappingLoaded () 
+bool NUTDeviceList::mappingLoaded ()
 {
     return _mappingLoaded;
 }

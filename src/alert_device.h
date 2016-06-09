@@ -22,14 +22,14 @@ class Device {
         _assetName(asset),
         _chain(chain)
     { };
-    
+
     void nutName (const std::string& aName) { _nutName = aName; };
     std::string nutName () { return _nutName; }
     void assetName (const std::string& aName) { _assetName = aName; };
     std::string assetName () { return _assetName; }
     void chain (int index) { _chain = index; };
     int chain () { return _chain; }
-    
+
     void update (nut::TcpClient &conn);
     int scanCapabilities (nut::TcpClient &conn);
     void publishAlerts (mlm_client_t *client);

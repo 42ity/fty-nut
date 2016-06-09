@@ -42,7 +42,7 @@ int Devices::addIfNotPresent (Device dev) {
     }
     if (dev.nutName () != it->second.nutName() || dev.chain() != it->second.chain()) {
         _devices[dev.assetName ()] = dev;
-        return 1;        
+        return 1;
     }
     return 0;
 }
@@ -147,7 +147,7 @@ void
 alert_device_list_test (bool verbose)
 {
     printf (" * alert device list: ");
-    
+
     //  @selftest
     //  @end
     printf ("Empty test - OK\n");

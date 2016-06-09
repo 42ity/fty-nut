@@ -133,7 +133,7 @@ Device::publishAlert (mlm_client_t *client, DeviceAlert& alert)
     if (alert.status.empty()) return;
 
     const char *state = "ACTIVE", *severity = NULL;
-    
+
     log_debug ("aa: alert status '%s'", alert.status.c_str ());
     if (alert.status == "good") {
         state = "RESOLVED";
@@ -180,7 +180,7 @@ Device::publishAlert (mlm_client_t *client, DeviceAlert& alert)
 void
 Device::publishRules (mlm_client_t *client) {
     if (!client) return;
-    
+
     for (auto& it: _alerts) {
         publishRule (client, it.second);
     }
@@ -276,7 +276,7 @@ alert_device_test (bool verbose)
         { "ambient.temperature.high.critical", {"100", "", ""} },
         { "ambient.temperature.low.warning", {"10", "", ""} },
         { "ambient.temperature.low.critical", {"5", "", ""} },
-        
+
         { "ambient.humidity.status", {"good", "", ""} },
         { "ambient.humidity.high", {"100", "", ""} },
         { "ambient.humidity.low", {"10", "", ""} },

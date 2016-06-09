@@ -1,21 +1,21 @@
 /*  =========================================================================
     nut - agent nut structure
 
-    Copyright (C) 2014 - 2015 Eaton                                        
-                                                                           
-    This program is free software; you can redistribute it and/or modify   
-    it under the terms of the GNU General Public License as published by   
-    the Free Software Foundation; either version 2 of the License, or      
-    (at your option) any later version.                                    
-                                                                           
-    This program is distributed in the hope that it will be useful,        
-    but WITHOUT ANY WARRANTY; without even the implied warranty of         
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          
-    GNU General Public License for more details.                           
-                                                                           
+    Copyright (C) 2014 - 2015 Eaton
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.            
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     =========================================================================
 */
 
@@ -62,7 +62,7 @@ nut_destroy (nut_t **self_p)
         nut_t *self = *self_p;
         //  Free class properties here
         //  Free object itself
-        
+
         zhashx_destroy (&self->assets);
 
         free (self);
@@ -74,7 +74,7 @@ nut_destroy (nut_t **self_p)
 
 //  Helper function
 //  0 - OK, 1 - throw it away
-static int 
+static int
 filter_message (bios_proto_t *message)
 {
     assert (message);
@@ -90,7 +90,7 @@ filter_message (bios_proto_t *message)
 
 //  Helper function
 //  Remove uninteresting entries from 'ext' field
-static void 
+static void
 clear_ext (zhash_t *hash)
 {
     if (!hash)
@@ -104,7 +104,7 @@ clear_ext (zhash_t *hash)
         if (!streq (zhash_cursor (hash), "ip.1") &&
             !streq (zhash_cursor (hash), "daisy_chain")) {
             zlistx_add_end (to_delete, (void *) zhash_cursor (hash));
-        } 
+        }
         item = (const char *) zhash_next (hash);
     }
 
@@ -143,7 +143,7 @@ nut_put (nut_t *self, bios_proto_t **message_p)
         zhash_destroy (&aux);
         int rv = zhashx_insert (self->assets, bios_proto_name (message), message);
         assert (rv == 0);
-        *message_p = NULL;    
+        *message_p = NULL;
         return;
     }
 
@@ -172,7 +172,7 @@ nut_put (nut_t *self, bios_proto_t **message_p)
                 bios_proto_operation (message) ? bios_proto_operation (message) : "(null)");
         bios_proto_destroy (message_p);
     }
-    *message_p = NULL;    
+    *message_p = NULL;
 }
 
 //  --------------------------------------------------------------------------
@@ -194,7 +194,7 @@ nut_asset_get_string (nut_t *self, const char *asset_name, const char *ext_key)
     assert (self);
     assert (asset_name);
     assert (ext_key);
-    
+
     bios_proto_t *asset = (bios_proto_t *) zhashx_lookup (self->assets, asset_name);
     if (!asset) {
         return NULL;
@@ -217,7 +217,7 @@ nut_asset_ip (nut_t *self, const char *asset_name)
 //  --------------------------------------------------------------------------
 // Returns daisychain number (well-known extended attribute '...') of give asset
 // or NULL when asset_name does not exist
-// or "" (empty string) when given 
+// or "" (empty string) when given
 
 const char *
 nut_asset_daisychain (nut_t *self, const char *asset_name)
@@ -376,7 +376,7 @@ nut_print (nut_t *self)
         if (ext) {
             const char *attribute = (const char *) zhash_first (ext);
             while (attribute) {
-                log_debug (                                        
+                log_debug (
                         "\t\t\"%s\" = \"%s\"",
                         zhash_cursor (ext), attribute);
                 attribute = (const char *) zhash_next (ext);
@@ -390,7 +390,7 @@ nut_print (nut_t *self)
         if (aux) {
             const char *attribute = (const char *) zhash_first (aux);
             while (attribute) {
-                log_debug (                                        
+                log_debug (
                         "\t\t\"%s\" = \"%s\"",
                         zhash_cursor (aux), attribute);
                 attribute = (const char *) zhash_next (aux);
@@ -419,7 +419,7 @@ nut_print_zsys (nut_t *self)
         if (ext) {
             const char *attribute = (const char *) zhash_first (ext);
             while (attribute) {
-                zsys_debug (                                        
+                zsys_debug (
                         "\t\t\"%s\" = \"%s\"",
                         zhash_cursor (ext), attribute);
                 attribute = (const char *) zhash_next (ext);
@@ -433,7 +433,7 @@ nut_print_zsys (nut_t *self)
         if (aux) {
             const char *attribute = (const char *) zhash_first (aux);
             while (attribute) {
-                zsys_debug (                                        
+                zsys_debug (
                         "\t\t\"%s\" = \"%s\"",
                         zhash_cursor (aux), attribute);
                 attribute = (const char *) zhash_next (aux);
@@ -464,7 +464,7 @@ test_asset_new (const char *name, const char *operation
 }
 
 //  Helper test function
-//  0 - same, 1 - different  
+//  0 - same, 1 - different
 static int
 test_zlistx_compare (zlistx_t *expected, zlistx_t **received_p, int print = 0)
 {
@@ -500,7 +500,7 @@ test_zlistx_compare (zlistx_t *expected, zlistx_t **received_p, int print = 0)
     if (zlistx_size (received) == 0)
         rv = 0;
     zlistx_destroy (received_p);
-    *received_p = NULL;    
+    *received_p = NULL;
     return rv;
 }
 
@@ -563,7 +563,7 @@ nut_test (bool verbose)
     bios_proto_ext_insert (asset, "ip.1" , "%s",  "10.130.53.33");
     bios_proto_ext_insert (asset, "ups.alarm" , "%s",  "Automatic bypass mode!");
     bios_proto_ext_insert (asset, "manufacturer" , "%s",  "EATON");
-    
+
     bios_proto_aux_insert (asset, "type", "%s", "device");
     bios_proto_aux_insert (asset, "subtype", "%s", "ups");
     bios_proto_aux_insert (asset, "parent", "%s", "4");
@@ -624,7 +624,7 @@ nut_test (bool verbose)
     bios_proto_aux_insert (asset, "parent", "%s", "4");
     bios_proto_aux_insert (asset, "status", "%s", "active");
     bios_proto_aux_insert (asset, "priority", "%s", "1");
-    
+
     nut_put (self, &asset);
     zlistx_add_end (expected, (void *) "ROZ.ePDU14");
 
@@ -644,7 +644,7 @@ nut_test (bool verbose)
 
     nut_print_zsys (self);
 
-    // save/load    
+    // save/load
     int rv = nut_save (self, "./test_state_file");
     assert (rv == 0);
     nut_destroy (&self);
@@ -652,7 +652,7 @@ nut_test (bool verbose)
     self = nut_new ();
     rv = nut_load (self, "./test_state_file");
     assert (rv == 0);
-    
+
     {
         zlistx_t *received = nut_get_assets (self);
         assert (received);
@@ -708,7 +708,7 @@ nut_test (bool verbose)
     bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
     bios_proto_ext_insert (asset, "ip.1", "%s", "10.130.38.52");
     nut_put (self, &asset);
-    
+
     {
         zlistx_t *received = nut_get_assets (self);
         assert (received);
@@ -804,7 +804,7 @@ nut_test (bool verbose)
     nut_put (self, &asset);
     handle = zlistx_find (expected, (void *) "epdu");
     zlistx_delete (expected, handle);
-    
+
     {
         zlistx_t *received = nut_get_assets (self);
         assert (received);
