@@ -151,7 +151,7 @@ class NUTDevice {
     /**
      * \brief Return the timestamp of last succesfull update (i. e. response from device)
      */
-    time_t lastUpdate() { return _lastUpdate; }
+    time_t lastUpdate() const { return _lastUpdate; }
 
     /**
      * \brief get/set the device name like it is in assets
