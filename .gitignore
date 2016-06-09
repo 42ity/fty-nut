@@ -23,6 +23,8 @@ stderr.txt
 src/agent-nut_selftest
 src/bios-nut-outage
 src/agent_nut_selftest
+src/bios-agent-nut
+src/bios-agent-nut-configurator
 *.exe
 *.out
 *.app
