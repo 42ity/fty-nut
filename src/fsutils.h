@@ -62,7 +62,7 @@ AGENT_NUT_EXPORT bool
             );
 
 /**
- * \brief create directory (if not exists
+ * \brief create directory (if not exists yet)
  * \param path to the newly created directory
  * \param mode (rights)
  * \param create parent directories if needed
@@ -72,7 +72,7 @@ AGENT_NUT_EXPORT bool
 AGENT_NUT_EXPORT bool
     mkdir_if_needed (
             const char *path,
-            mode_t mode = 0x755,
+            mode_t mode = 0755, /* OCTAL, not HEX! */
             bool create_parent=true);
 
 // return basename - the component of path following the final path_separator()
