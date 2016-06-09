@@ -211,7 +211,7 @@ void NUTAgent::advertisePhysics () {
                            device.second.assetName().c_str(),
                            status_i,
                            status_s.c_str());
-                int r = send (subject.c_str(), &msg);
+                int r = send (subject, &msg);
                 if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, subject.c_str(), r);
                 zmsg_destroy (&msg);
                 device.second.setChanged (property, false);
@@ -252,7 +252,7 @@ void NUTAgent::advertiseInventory() {
 
             if (message) {
                 log_debug( "new inventory message %s: %s", topic.c_str(), log.c_str() );
-                int r = isend (topic.c_str (), &message);
+                int r = isend (topic, &message);
                 if( r != 0 ) log_error("failed to send inventory %s result %" PRIi32, topic.c_str(), r);
                 zmsg_destroy (&message);
             }
