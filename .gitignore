@@ -90,4 +90,10 @@ build/
 *~
 
 test_state_file
+src/mapping.conf
 src/bios-agent-nut.conf
+src/bios_10_agent-nut
+src/bios-agent-nut.service
+src/bios-agent-nut.cfg
+src/bios-agent-nut-configurator.service
+src/bios-agent-nut-configurator.cfg
