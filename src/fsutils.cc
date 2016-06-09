@@ -159,24 +159,33 @@ fsutils_test (bool verbose)
 
     // is_file
     assert (shared::is_file ("src/mapping.conf.in") == true);
+    log_warning ("NOTE: We do expect the error for './mapping.conf' below...");
     assert (shared::is_file ("mapping.conf") == false);
     assert (shared::is_file ("src/fsutils.cc") == true);
 
     // is_dir
     assert (shared::is_dir ("src") == true);
     assert (shared::is_dir ("include") == true);
+    log_warning ("NOTE: We do expect the error for './karci/' below...");
     assert (shared::is_dir ("karci") == false);
 
     // items_in_directory
     std::vector <std::string> items;
-    assert (shared::items_in_directory ("doc", items) == true);
-    assert (items.size () == 6);
+    // NOTE: If we do a build, the amount of files under doc/ is volatile
+    //assert (shared::items_in_directory ("doc", items) == true);
+    //assert (items.size () == 11);
+    // This location is less subject to change over time...
+    assert (shared::items_in_directory ("packaging/debian", items) == true);
+    log_warning ("NOTE: If you get assertion failure for items.size() here, make sure packaging/debian/ contains the expected amount of files");
+    assert (items.size () == 8);
+    log_warning ("Never mind the assertion note above, check passed :)");
 
     items.clear ();
+    log_warning ("NOTE: We do expect the error for './non-existing-dir/' below...");
     assert (shared::items_in_directory ("non-existing-dir", items) == false);
     assert (items.size () == 0);
 
-    // TODO: the rest 
+    // TODO: the rest
 
     //  @end
     printf ("OK\n");
