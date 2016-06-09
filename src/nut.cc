@@ -585,6 +585,14 @@ nut_test (bool verbose)
     nut_put (self, &asset);
     zlistx_add_end (expected, (void *) "DUMMY.EPDU42");
 
+    asset =  test_asset_new ("DUMMY.UPS42", BIOS_PROTO_ASSET_OP_CREATE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "ups");
+    bios_proto_ext_insert (asset, "ip.1", "%s", "127.0.0.1");
+    bios_proto_ext_insert (asset, "upsconf_block", "%s", "driver=dummy-ups\nport=/tmp/DUMMY.UPS42.dev");
+    nut_put (self, &asset);
+    zlistx_add_end (expected, (void *) "DUMMY.UPS42");
+
     asset =  test_asset_new ("MBT.EPDU4", BIOS_PROTO_ASSET_OP_CREATE);
     bios_proto_aux_insert (asset, "type", "%s", "device");
     bios_proto_aux_insert (asset, "subtype", "%s", "epdu");

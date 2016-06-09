@@ -192,9 +192,15 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
             auto ubit = info.attributes.find("upsconf_block");
             if( ubit != info.attributes.end() ) {
                 std::string UB = ubit->second;
-                log_info("device %s is configured with explicit upsconf_block from its asset: \"%s\"",
-                    name.c_str(), UB.c_str());
-                configs = { UB };
+                if ( (UB.c_str())[0] == '[' ) {
+                    log_info("device %s is configured with complete explicit upsconf_block from its asset: \"%s\" including a NUT device-tag",
+                        name.c_str(), UB.c_str());
+                    configs = { UB + "\n" };
+                } else {
+                    log_info("device %s is configured with content-only explicit upsconf_block from its asset: \"%s\" (prepending asset name as NUT device-tag)",
+                        name.c_str(), UB.c_str());
+                    configs = { "[" + name + "]\n" + UB + "\n" };
+                }
             } else {
                 auto ipit = info.attributes.find("ip.1");
                 if( ipit == info.attributes.end() ) {
