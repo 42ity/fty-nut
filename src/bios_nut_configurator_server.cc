@@ -179,21 +179,20 @@ void Autoconfig::onSend( zmsg_t **message )
         return;
     }
 
-    // this is a device that we should configure, we need extended attributes (ip.1 particulary)
+    // this is a device that we should configure, we need extended attributes (ip.1 particularly)
     device_name = bios_proto_name (bmsg);
     // MVY: 6 is device, for subtype see core.git/src/shared/asset_types.h
     subtype = streq (bios_proto_aux_string (bmsg, "subtype", ""), "ups") ? 1 : 3;
 
-    // upsconf_block support - only devices without an explicit upsconf_block ext attribute will be configured via nut-scanner
-    if (bios_proto_ext_number (bmsg, "upsconf_block", 0) > 0) {
-        bios_proto_destroy (&bmsg);
-        return;
-    }
-
-    // daisy_chain pdu support - only devices with daisy_chain == 1 or no such ext attribute will be configured via nut-scanner
-    if (bios_proto_ext_number (bmsg, "daisy_chain", 0) > 1) {
-        bios_proto_destroy (&bmsg);
-        return;
+    // upsconf_block support - devices with an explicit "upsconf_block"
+    // ext-attribute will be always configured ([ab]using nut-scanner logic
+    // in nut_configurator.cc). Those without the block may differ...
+    if (bios_proto_ext_number (bmsg, "upsconf_block", 0) == 0) {
+        // daisy_chain pdu support - only devices with daisy_chain == 1 or no such ext attribute will be configured via nut-scanner
+        if (bios_proto_ext_number (bmsg, "daisy_chain", 0) > 1) {
+            bios_proto_destroy (&bmsg);
+            return;
+        }
     }
 
     addDeviceIfNeeded( device_name, 6, subtype );

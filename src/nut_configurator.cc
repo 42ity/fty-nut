@@ -185,20 +185,32 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
     case asset_operation::INSERT:
     case asset_operation::UPDATE:
         {
-            auto ipit = info.attributes.find("ip.1");
-            if( ipit == info.attributes.end() ) {
-                log_error("device %s has no IP address", name.c_str() );
-                return true;
-            }
-            std::string IP = ipit->second;
-
             std::vector<std::string> configs;
-            nut_scan_snmp( name, CIDRAddress(IP), configs );
-            nut_scan_xml_http( name, CIDRAddress(IP), configs );
+            std::string IP = "127.0.0.1"; // Fake value for local-media devices or dummy-upses, either passed with an upsconf_block
+                // TODO: (lib)nutscan supports local media like serial or USB,
+                // as well as other remote protocols like IPMI. Use them later.
+            auto ubit = info.attributes.find("upsconf_block");
+            if( ubit != info.attributes.end() ) {
+                std::string UB = ubit->second;
+                log_info("device %s is configured with explicit upsconf_block from its asset: \"%s\"",
+                    name.c_str(), UB.c_str());
+                configs = { UB };
+            } else {
+                auto ipit = info.attributes.find("ip.1");
+                if( ipit == info.attributes.end() ) {
+                    log_error("device %s has no IP address", name.c_str() );
+                    return true;
+                }
+                IP = ipit->second;
+
+                nut_scan_snmp( name, CIDRAddress(IP), configs );
+                nut_scan_xml_http( name, CIDRAddress(IP), configs );
+            }
 
             auto it = selectBest( configs );
             if( it == configs.end() ) {
-                log_error("nut-scanner failed for device \"%s\", no suitable configuration found", name.c_str() );
+                log_error("nut-scanner failed for device \"%s\" at IP address \"%s\", no suitable configuration found",
+                    name.c_str(), IP.c_str() );
                 return false; // try again later
             }
             std::string deviceDir = NUT_PART_STORE;
