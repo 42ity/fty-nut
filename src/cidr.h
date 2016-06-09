@@ -1,21 +1,21 @@
 /*  =========================================================================
     cidr - C++ Wrapper around libcidr
 
-    Copyright (C) 2014 - 2015 Eaton                                        
-                                                                           
-    This program is free software; you can redistribute it and/or modify   
-    it under the terms of the GNU General Public License as published by   
-    the Free Software Foundation; either version 2 of the License, or      
-    (at your option) any later version.                                    
-                                                                           
-    This program is distributed in the hope that it will be useful,        
-    but WITHOUT ANY WARRANTY; without even the implied warranty of         
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          
-    GNU General Public License for more details.                           
-                                                                           
+    Copyright (C) 2014 - 2015 Eaton
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.            
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     =========================================================================
 */
 
@@ -29,7 +29,7 @@ extern "C" {
 /**
  * \enum CIDROptions
  * \brief Formating options for CIDRAddress
- */   
+ */
 enum CIDROptions {
    CIDR_AUTO_PREFIX,
    CIDR_WITH_PREFIX,
@@ -77,7 +77,7 @@ public:
    * \param string network prefix
    *
    * The address is set to accorting the parameter. Paremeters can be
-   *   - "10.0.0.1","32" 
+   *   - "10.0.0.1","32"
    *   - "1.2.3.0/24","8"
    */
   CIDRAddress(const std::string &address, const std::string &prefix);
@@ -88,7 +88,7 @@ public:
    * \param unsigned int network prefix
    *
    * The address is set to accorting the parameter. Paremeters can be
-   *   - "10.0.0.1",32 
+   *   - "10.0.0.1",32
    *   - "1.2.3.0/24", 8
    *   - "::1",128
    */
@@ -365,7 +365,7 @@ public:
    * - +1 if *this is bigger
    * - -1 if *this is smaller
    * - 0 if *this is equal
-   * 
+   *
    * Please consider those special cases:
    * - when comparing IPv6 with IPv4, algorithm says that IPv6 is bigger (i. e. ::1 > 192.168.0.1).
    * - when comparing invalid address, valid > invalid, invalid == invalid
@@ -373,7 +373,7 @@ public:
   int compare(const CIDRAddress& a2) const;
   ~CIDRAddress();
 private:
-  // private pointer to libcidr structure 
+  // private pointer to libcidr structure
   CIDR *_cidr;
 
   /**

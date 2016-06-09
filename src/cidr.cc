@@ -1,21 +1,21 @@
 /*  =========================================================================
     cidr - C++ Wrapper around libcidr
 
-    Copyright (C) 2014 - 2015 Eaton                                        
-                                                                           
-    This program is free software; you can redistribute it and/or modify   
-    it under the terms of the GNU General Public License as published by   
-    the Free Software Foundation; either version 2 of the License, or      
-    (at your option) any later version.                                    
-                                                                           
-    This program is distributed in the hope that it will be useful,        
-    but WITHOUT ANY WARRANTY; without even the implied warranty of         
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          
-    GNU General Public License for more details.                           
-                                                                           
+    Copyright (C) 2014 - 2015 Eaton
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.            
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     =========================================================================
 */
 
@@ -85,14 +85,14 @@ CIDRAddress::CIDRAddress(CIDRAddress&& other) {
 }
 
 CIDRAddress& CIDRAddress::operator++() {
-  
+
   if( ! valid() ) return *this;
-  
+
   struct in_addr inaddr;
   struct in6_addr in6addr;
-  unsigned char *bytes; 
+  unsigned char *bytes;
   int i;
-  
+
   // do nothing for networks?
   if( cidr_get_proto(_cidr) == CIDR_IPV4 ) {
     cidr_to_inaddr(_cidr, &inaddr);
@@ -115,14 +115,14 @@ CIDRAddress& CIDRAddress::operator++() {
 }
 
 CIDRAddress& CIDRAddress::operator--() {
-  
+
   if( ! valid() ) return *this;
-  
+
   struct in_addr inaddr;
   struct in6_addr in6addr;
-  unsigned char *bytes; 
+  unsigned char *bytes;
   int i;
-  
+
   // do nothing for networks?
   if( cidr_get_proto(_cidr) == CIDR_IPV4 ) {
     cidr_to_inaddr(_cidr, &inaddr);
@@ -180,7 +180,7 @@ int CIDRAddress::prefix() const {
   if( valid() ) {
     return cidr_get_pflen(_cidr);
   } else {
-    return -1; 
+    return -1;
   }
 }
 
@@ -211,10 +211,10 @@ void CIDRAddress::invalidate() {
 
 bool CIDRAddress::valid() const {
   if( _cidr == NULL ) return false;
-  
+
   in_addr in_addr4;
   in6_addr in_addr6;
-  
+
   if( cidr_get_proto(_cidr) == CIDR_IPV4 ) {
     if( cidr_to_inaddr(_cidr,&in_addr4) ) {
       return (in_addr4.s_addr != 0); // 0.0.0.0 address
@@ -236,19 +236,19 @@ bool CIDRAddress::valid() const {
 }
 
 bool CIDRAddress::contains(const CIDRAddress& address) const {
-  if( ( ! valid() ) || ( ! address.valid() ) ) return false; 
+  if( ( ! valid() ) || ( ! address.valid() ) ) return false;
   return (cidr_contains(_cidr,address._cidr) == 0);
 }
 
 bool CIDRAddress::in(const CIDRAddress& address) const {
-  if( ( ! valid() ) || ( ! address.valid() ) ) return false; 
-  return (cidr_contains(address._cidr,_cidr) == 0);  
+  if( ( ! valid() ) || ( ! address.valid() ) ) return false;
+  return (cidr_contains(address._cidr,_cidr) == 0);
 }
 
 bool CIDRAddress::equals(const CIDRAddress& address) const {
-  if( ( ! valid() ) && ( ! address.valid() ) ) return true; 
-  if( ( ! valid() ) || ( ! address.valid() ) ) return false; 
-  return (cidr_equals(address._cidr,_cidr) == 0);  
+  if( ( ! valid() ) && ( ! address.valid() ) ) return true;
+  if( ( ! valid() ) || ( ! address.valid() ) ) return false;
+  return (cidr_equals(address._cidr,_cidr) == 0);
 }
 
 CIDRAddress CIDRAddress::hostMin() const {
@@ -268,13 +268,13 @@ CIDRAddress CIDRAddress::hostMax() const {
 }
 
 CIDRAddress CIDRAddress::host() const {
-  
+
   CIDRAddress result;
   if( ! valid() ) return result;
-  
+
   in_addr in_addr4;
   in6_addr in_addr6;
-  
+
   if( cidr_get_proto(_cidr) == CIDR_IPV4 ) {
     cidr_to_inaddr(_cidr,&in_addr4);
     result.setCidrPtr( cidr_from_inaddr(&in_addr4) );
@@ -288,7 +288,7 @@ CIDRAddress CIDRAddress::host() const {
 
 CIDRAddress CIDRAddress::network() const {
   CIDRAddress result;
-  
+
   if( ! valid() ) return result;
   result.setCidrPtr( cidr_addr_network(_cidr) );
   return result;
@@ -333,7 +333,7 @@ bool CIDRAddress::set(const struct sockaddr* address) {
     case AF_INET:
         return set( &( ((struct sockaddr_in *)address)->sin_addr ) );
     case AF_INET6:
-        return set( &( ((struct sockaddr_in6 *)address)->sin6_addr ) );            
+        return set( &( ((struct sockaddr_in6 *)address)->sin6_addr ) );
     }
     return false;
 }
@@ -346,7 +346,7 @@ std::string CIDRAddress::toString(CIDROptions opt) const {
   std::string addr = "";
   bool showprefix = true;
   char *cstr;
-  
+
   if( opt == CIDR_WITHOUT_PREFIX ) {
     showprefix = false;
   }
@@ -619,7 +619,7 @@ void CIDRList::_skipToExcludeEnd(CIDRAddress& address) const {
   CIDRAddress currentExclude = bestExcludeFor(address);
   CIDRAddress excludeEnd = currentExclude.broadcast();
   CIDRAddress selected = excludeEnd;
-  
+
   for(unsigned int i=0; i<_networks.size(); i++ ) {
     if( (_networks[i] > address) && (_networks[i] < excludeEnd) ) {
       if( selected.valid() ) {

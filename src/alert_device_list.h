@@ -9,7 +9,7 @@ class Devices {
  public:
     void updateFromNUT ();
     void updateDeviceList (nut_t *config);
-    void publishAlerts (mlm_client_t *client); 
+    void publishAlerts (mlm_client_t *client);
     void publishRules (mlm_client_t *client);
 
     // friend function for unit-testing
@@ -17,10 +17,10 @@ class Devices {
  private:
     std::map <std::string, Device>  _devices;
     bool _capabilitiesUpdated = false;
-    
+
     void updateDeviceCapabilities (nut::TcpClient& nutClient);
     void updateDevices (nut::TcpClient& nutClient);
     int addIfNotPresent (Device dev);
 };
-    
+
 #endif // __ALERT_DEVICE_LIST

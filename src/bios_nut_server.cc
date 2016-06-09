@@ -1,21 +1,21 @@
 /*  =========================================================================
     bios_nut_server - bios nut actor
 
-    Copyright (C) 2014 - 2015 Eaton                                        
-                                                                           
-    This program is free software; you can redistribute it and/or modify   
-    it under the terms of the GNU General Public License as published by   
-    the Free Software Foundation; either version 2 of the License, or      
-    (at your option) any later version.                                    
-                                                                           
-    This program is distributed in the hope that it will be useful,        
-    but WITHOUT ANY WARRANTY; without even the implied warranty of         
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          
-    GNU General Public License for more details.                           
-                                                                           
+    Copyright (C) 2014 - 2015 Eaton
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.            
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     =========================================================================
 */
 
@@ -48,7 +48,7 @@ s_handle_service (mlm_client_t *client, zmsg_t **message_p)
 static void
 s_handle_mailbox (mlm_client_t *client, zmsg_t **message_p)
 {
-   assert (client); 
+   assert (client);
    assert (message_p && *message_p);
 
    log_error ("Mailbox command is not implemented.");
@@ -57,7 +57,7 @@ s_handle_mailbox (mlm_client_t *client, zmsg_t **message_p)
 }
 
 static void
-s_handle_stream (mlm_client_t *client, NUTAgent& nut_agent, nut_t *data, zmsg_t **message_p) 
+s_handle_stream (mlm_client_t *client, NUTAgent& nut_agent, nut_t *data, zmsg_t **message_p)
 {
     assert (client);
     assert (data);
@@ -114,7 +114,7 @@ bios_nut_server (zsock_t *pipe, void *args)
         mlm_client_destroy (&client);
         return;
     }
-    
+
     NUTAgent nut_agent;
     nut_t *data = nut_new ();
     std::string state_file;
@@ -160,14 +160,14 @@ bios_nut_server (zsock_t *pipe, void *args)
             continue;
         }
 
-        // paranoid non-destructive assertion of a twisted mind 
+        // paranoid non-destructive assertion of a twisted mind
         if (which != mlm_client_msgpipe (client)) {
             log_critical (
                     "zpoller_wait () returned address that is different from "
                     "`pipe`, `mlm_client_msgpipe (client)`, NULL.");
             continue;
         }
-        
+
         zmsg_t *message = mlm_client_recv (client);
         if (!message) {
             log_error ("Given `which == mlm_client_msgpipe (client)`, function `mlm_client_recv ()` returned NULL");
@@ -192,7 +192,7 @@ bios_nut_server (zsock_t *pipe, void *args)
 
         zmsg_destroy (&message);
     } // while (!zsys_interrupted)
-   
+
     r = nut_save (data, state_file.c_str ());
     if (r != 0) {
         log_warning ("Could not save state file '%s'.", state_file.c_str ());

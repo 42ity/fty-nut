@@ -15,7 +15,7 @@ alert_actor_commands (
 {
     assert (message_p && *message_p);
     zmsg_t *message = *message_p;
-    
+
     char *cmd = zmsg_popstr (message);
     if (!cmd) {
         log_error (
@@ -156,14 +156,14 @@ alert_actor (zsock_t *pipe, void *args)
 
     uint64_t polling = 30000;
     bool verbose = false;
-    
+
     mlm_client_t *client = mlm_client_new ();
     if (!client) {
         log_critical ("mlm_client_new () failed");
         return;
     }
     Devices devices;
-    
+
     zpoller_t *poller = zpoller_new (pipe, mlm_client_msgpipe (client), NULL);
     if (!poller) {
         log_critical ("zpoller_new () failed");
@@ -183,7 +183,7 @@ alert_actor (zsock_t *pipe, void *args)
         void *which = zpoller_wait (poller, polling);
         if (which == NULL) {
             log_debug ("aa: alert update");
-            devices.updateFromNUT ();           
+            devices.updateFromNUT ();
             devices.publishRules (client);
             devices.publishAlerts (client);
         }
@@ -230,7 +230,7 @@ alert_actor_test (bool verbose)
     if (verbose)
         zstr_send (malamute, "VERBOSE");
     zstr_sendx (malamute, "BIND", endpoint, NULL);
-    
+
     Device dev("mydevice");
     std::map<std::string,std::vector<std::string> > alerts = {
         { "ambient.temperature.status", {"critical-high", "", ""} },
@@ -243,12 +243,12 @@ alert_actor_test (bool verbose)
     dev._alerts["ambient.temperature"].status = "critical-high";
     Devices devs;
     devs._devices["mydevice"] = dev;
-    
+
     mlm_client_t *client = mlm_client_new ();
     assert (client);
     mlm_client_connect (client, endpoint, 1000, "agent-nut-alert");
     mlm_client_set_producer (client, BIOS_PROTO_STREAM_ALERTS_SYS);
-    
+
     mlm_client_t *rfc_evaluator = mlm_client_new ();
     assert (rfc_evaluator);
     mlm_client_connect (rfc_evaluator, endpoint, 1000, "alert-agent");
@@ -275,14 +275,14 @@ alert_actor_test (bool verbose)
         assert (which);
         zmsg_t *msg = mlm_client_recv (rfc_evaluator);
         assert (msg);
-        assert (streq (mlm_client_subject (rfc_evaluator), "rfc-evaluator-rules")); 
+        assert (streq (mlm_client_subject (rfc_evaluator), "rfc-evaluator-rules"));
 
         verbose_printf ("    rule command\n");
         char *item = zmsg_popstr (msg);
         assert (item);
         assert (streq (item, "ADD"));
         zstr_free (&item);
-        
+
         verbose_printf ("    rule json\n");
         item = zmsg_popstr (msg);
         assert (item);
@@ -304,7 +304,7 @@ alert_actor_test (bool verbose)
 
         verbose_printf ("    is alert\n");
         assert (streq (bios_proto_command (bp), "ALERT"));
-        
+
         verbose_printf ("    is active\n");
         assert (streq (bios_proto_state (bp), "ACTIVE"));
 
@@ -330,10 +330,10 @@ alert_actor_test (bool verbose)
         bios_proto_t *bp = bios_proto_decode (&msg);
         assert (bp);
         assert (streq (bios_proto_command (bp), "ALERT"));
-        
+
         verbose_printf ("    is resolved\n");
         assert (streq (bios_proto_state (bp), "RESOLVED"));
-        
+
         bios_proto_destroy (&bp);
         zmsg_destroy (&msg);
     }

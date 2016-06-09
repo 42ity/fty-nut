@@ -1,21 +1,21 @@
 /*  =========================================================================
     nut_agent - NUT daemon wrapper
 
-    Copyright (C) 2014 - 2015 Eaton                                        
-                                                                           
-    This program is free software; you can redistribute it and/or modify   
-    it under the terms of the GNU General Public License as published by   
-    the Free Software Foundation; either version 2 of the License, or      
-    (at your option) any later version.                                    
-                                                                           
-    This program is distributed in the hope that it will be useful,        
-    but WITHOUT ANY WARRANTY; without even the implied warranty of         
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          
-    GNU General Public License for more details.                           
-                                                                           
+    Copyright (C) 2014 - 2015 Eaton
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.            
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     =========================================================================
 */
 
@@ -58,13 +58,13 @@ void NUTAgent::setClient (mlm_client_t *client)
 {
     if (!_client) {
        _client = client;
-    } 
+    }
 }
 void NUTAgent::setiClient (mlm_client_t *client)
 {
     if (!_iclient) {
        _iclient = client;
-    } 
+    }
 }
 
 bool NUTAgent::isClientSet ()
@@ -90,7 +90,7 @@ int NUTAgent::send (const std::string& subject, zmsg_t **message_p)
     zmsg_destroy(message_p);
     bios_proto_aux_insert(m_decoded, "time", "%" PRIi64, zclock_time () / 1000);
     *message_p = bios_proto_encode(&m_decoded);
-    
+
     int rv = mlm_client_send (_client, subject.c_str (), message_p);
     if (rv == -1) {
         log_error ("mlm_client_send (subject = '%s') failed", subject.c_str ());
@@ -106,7 +106,7 @@ int NUTAgent::isend (const std::string& subject, zmsg_t **message_p)
     zmsg_destroy(message_p);
     bios_proto_aux_insert(m_decoded, "time", "%" PRIi64, zclock_time () / 1000);
     *message_p = bios_proto_encode(&m_decoded);
-    
+
     int rv = mlm_client_send (_iclient, subject.c_str (), message_p);
     if (rv == -1) {
         log_error ("mlm_client_send (subject = '%s') failed", subject.c_str ());
@@ -145,11 +145,11 @@ void NUTAgent::advertisePhysics () {
                 log_error ("undefined physical quantity '%s'", type.c_str ());
                 continue;
             }
-            
+
             double d_value = measurement.second * std::pow (10, -2);
             char buffer [50];
             sprintf (buffer, "%lf", d_value);
-            
+
             zmsg_t *msg = bios_proto_encode_metric (
                 NULL,
                 measurement.first.c_str (),
@@ -197,7 +197,7 @@ void NUTAgent::advertisePhysics () {
             subject = "status.outlet." + std::to_string (i) + "@" + device.second.assetName ();
             std::string status_s = device.second.property (property);
             uint16_t    status_i = status_s == "on" ? 42 : 0;
-                
+
             zmsg_t *msg = bios_proto_encode_metric (
                 NULL,
                 property.c_str (),
@@ -231,7 +231,7 @@ void NUTAgent::advertiseInventory() {
         std::string log;
         zhash_t *inventory = zhash_new ();
         for (auto& item : device.second.inventory (!advertise) ) {
-            if (item.first != "status.ups") { 
+            if (item.first != "status.ups") {
                 zhash_insert (inventory, item.first.c_str (), (void *) item.second.c_str ()) ;
                 log += item.first + " = \"" + item.second + "\"; ";
                 device.second.setChanged (item.first, false);
@@ -243,7 +243,7 @@ void NUTAgent::advertiseInventory() {
                     device.second.assetName ().c_str (),
                     "inventory",
                     inventory);
-            /* NOTE: Left deliberately until verified to work 
+            /* NOTE: Left deliberately until verified to work
             _scoped_ymsg_t *message = bios_inventory_encode(
                 device.second.name().c_str(),
                 &inventory,

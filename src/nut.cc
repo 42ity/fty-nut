@@ -102,6 +102,7 @@ clear_ext (zhash_t *hash)
     const char *item = (const char *) zhash_first (hash);
     while (item) {
         if (!streq (zhash_cursor (hash), "ip.1") &&
+            !streq (zhash_cursor (hash), "upsconf_block") &&
             !streq (zhash_cursor (hash), "daisy_chain")) {
             zlistx_add_end (to_delete, (void *) zhash_cursor (hash));
         }
@@ -153,6 +154,9 @@ nut_put (nut_t *self, bios_proto_t **message_p)
         bios_proto_set_operation (asset, "%s", bios_proto_operation (message));
         if (bios_proto_ext_string (message, "ip.1", NULL)) {
             bios_proto_ext_insert (asset, "ip.1", "%s", bios_proto_ext_string (message, "ip.1", ""));
+        }
+        if (bios_proto_ext_string (message, "upsconf_block", NULL)) {
+            bios_proto_ext_insert (asset, "upsconf_block", "%s", bios_proto_ext_string (message, "upsconf_block", ""));
         }
         if (bios_proto_ext_string (message, "daisy_chain", NULL)) {
             bios_proto_ext_insert (asset, "daisy_chain", "%s", bios_proto_ext_string (message, "daisy_chain",""));
@@ -572,6 +576,14 @@ nut_test (bool verbose)
 
     nut_put (self, &asset);
     zlistx_add_end (expected, (void *) "ROZ.UPS33");
+
+    asset =  test_asset_new ("DUMMY.EPDU42", BIOS_PROTO_ASSET_OP_CREATE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
+    bios_proto_ext_insert (asset, "ip.1", "%s", "127.0.0.1");
+    bios_proto_ext_insert (asset, "upsconf_block", "%s", "[DUMMY.EPDU42]\n\tdriver=dummy-ups\n\tport=/tmp/DUMMY.EPDU42.dev\n\n");
+    nut_put (self, &asset);
+    zlistx_add_end (expected, (void *) "DUMMY.EPDU42");
 
     asset =  test_asset_new ("MBT.EPDU4", BIOS_PROTO_ASSET_OP_CREATE);
     bios_proto_aux_insert (asset, "type", "%s", "device");

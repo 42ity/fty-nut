@@ -1,27 +1,27 @@
 /*  =========================================================================
     bios_agent_nut - description
 
-    Copyright (C) 2014 - 2015 Eaton                                        
-                                                                           
-    This program is free software; you can redistribute it and/or modify   
-    it under the terms of the GNU General Public License as published by   
-    the Free Software Foundation; either version 2 of the License, or      
-    (at your option) any later version.                                    
-                                                                           
-    This program is distributed in the hope that it will be useful,        
-    but WITHOUT ANY WARRANTY; without even the implied warranty of         
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          
-    GNU General Public License for more details.                           
-                                                                           
+    Copyright (C) 2014 - 2015 Eaton
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.            
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     =========================================================================
 */
 
 /*
 @header
-    bios_agent_nut - 
+    bios_agent_nut -
 @discuss
 @end
 */
@@ -142,9 +142,9 @@ int main (int argc, char *argv [])
 
     // log_level cascade (priority ascending)
     //  1. default value
-    //  2. env. variable 
+    //  2. env. variable
     //  3. command line argument
-    //  4. actor message - NOT IMPLEMENTED SO FAR 
+    //  4. actor message - NOT IMPLEMENTED SO FAR
     if (log_level == -1) {
         char *env_log_level = getenv ("BIOS_LOG_LEVEL");
         if (env_log_level) {
@@ -159,7 +159,7 @@ int main (int argc, char *argv [])
     log_set_level (log_level);
 
     log_info ("bios_agent_nut - NUT (Network UPS Tools) wrapper/daemon");
-    
+
     zactor_t *nut_server = zactor_new (bios_nut_server, (void *) NULL);
     if (!nut_server) {
         log_critical ("zactor_new (task = 'bios_nut_server', args = 'NULL') failed");
@@ -171,7 +171,7 @@ int main (int argc, char *argv [])
         log_critical ("zactor_new (task = 'nut_device_server', args = 'NULL') failed");
         return -1;
     }
-    
+
     if (verbose) {
         zstr_sendx (nut_server, "VERBOSE", NULL);
         zstr_sendx (nut_device_alert, "VERBOSE", NULL);
@@ -189,7 +189,7 @@ int main (int argc, char *argv [])
 
     zpoller_t *poller = zpoller_new(nut_server, nut_device_alert, NULL);
     assert(poller);
-    
+
     while (true) {
         void *which = zpoller_wait(poller, -1);
         if( which && ! zsys_interrupted) {
