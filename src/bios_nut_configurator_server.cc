@@ -165,6 +165,7 @@ void Autoconfig::onSend( zmsg_t **message )
 
     const char *device_name = NULL;
     uint32_t subtype = 0;
+    uint64_t count_upsconf_block = 0; // 0 or 1 in practice
 
     bios_proto_t *bmsg = bios_proto_decode (message);
     if (!bmsg)
@@ -187,7 +188,8 @@ void Autoconfig::onSend( zmsg_t **message )
     // upsconf_block support - devices with an explicit "upsconf_block"
     // ext-attribute will be always configured ([ab]using nut-scanner logic
     // in nut_configurator.cc). Those without the block may differ...
-    if (bios_proto_ext_number (bmsg, "upsconf_block", 0) == 0) {
+    count_upsconf_block = bios_proto_ext_number (bmsg, "upsconf_block", 0);
+    if (count_upsconf_block == 0) {
         // daisy_chain pdu support - only devices with daisy_chain == 1 or no such ext attribute will be configured via nut-scanner
         if (bios_proto_ext_number (bmsg, "daisy_chain", 0) > 1) {
             bios_proto_destroy (&bmsg);
@@ -203,7 +205,7 @@ void Autoconfig::onSend( zmsg_t **message )
     bios_proto_destroy (&bmsg);
     saveState();
 
-    if (bios_proto_ext_number (bmsg, "upsconf_block", 0) == 0) {
+    if (count_upsconf_block == 0) {
         // For devices in non-verbatim mode, schedule discovery to be attempted
         setPollingInterval();
     } else {
