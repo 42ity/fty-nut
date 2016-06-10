@@ -202,7 +202,14 @@ void Autoconfig::onSend( zmsg_t **message )
     _configurableDevices[device_name].attributes = s_zhash_to_map(bios_proto_ext (bmsg));
     bios_proto_destroy (&bmsg);
     saveState();
-    setPollingInterval();
+
+    if (bios_proto_ext_number (bmsg, "upsconf_block", 0) == 0) {
+        // For devices in non-verbatim mode, schedule discovery to be attempted
+        setPollingInterval();
+    } else {
+        // For devices in verbatim mode, proceed to configuration even faster
+        _timeout = 100;
+    }
 }
 
 void Autoconfig::onPoll( )
