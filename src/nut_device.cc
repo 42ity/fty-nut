@@ -102,7 +102,7 @@ int NUTDevice::daisyChainIndex () const {
     return _daisyChainIndex;
 }
 
-std::string NUTDevice::daisyPrefix() {
+std::string NUTDevice::daisyPrefix() const {
     if (_daisyChainIndex) {
         return "device." + std::to_string (_daisyChainIndex) + ".";
     }
@@ -751,12 +751,12 @@ void NUTDeviceList::load_mapping (const char *path_to_file)
     _mappingLoaded = true;
 }
 
-bool NUTDeviceList::mappingLoaded ()
+bool NUTDeviceList::mappingLoaded () const
 {
     return _mappingLoaded;
 }
 
-const std::map <std::string, std::string>& NUTDeviceList::get_mapping (const char *mapping)
+const std::map <std::string, std::string>& NUTDeviceList::get_mapping (const char *mapping) const
 {
     if (!mapping)
         std::invalid_argument ("mapping is NULL");

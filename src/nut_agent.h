@@ -28,17 +28,17 @@
 class NUTAgent {
  public:
     bool loadMapping (const char *path_to_file);
-    bool isMappingLoaded ();
+    bool isMappingLoaded () const;
 
     void setClient (mlm_client_t *client);
     void setiClient (mlm_client_t *client);
-    bool isClientSet ();
+    bool isClientSet () const;
 
     void onPoll ();
     void updateDeviceList (nut_t *state);
 
     void TTL (int ttl) { _ttl = ttl; };
-    int TTL () { return _ttl; };
+    int TTL () const { return _ttl; };
  protected:
     std::string physicalQuantityShortName (const std::string& longName);
     std::string physicalQuantityToUnits (const std::string& quantity);

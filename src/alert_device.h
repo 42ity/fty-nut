@@ -24,11 +24,11 @@ class Device {
     { };
 
     void nutName (const std::string& aName) { _nutName = aName; };
-    std::string nutName () { return _nutName; }
+    std::string nutName () const { return _nutName; }
     void assetName (const std::string& aName) { _assetName = aName; };
-    std::string assetName () { return _assetName; }
+    std::string assetName () const { return _assetName; }
     void chain (int index) { _chain = index; };
-    int chain () { return _chain; }
+    int chain () const { return _chain; }
 
     void update (nut::TcpClient &conn);
     int scanCapabilities (nut::TcpClient &conn);
