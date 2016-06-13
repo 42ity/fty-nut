@@ -13,6 +13,7 @@ void Devices::updateFromNUT ()
         nutClient.connect ("localhost", 3493);
         if (!_capabilitiesUpdated) updateDeviceCapabilities (nutClient);
         updateDevices (nutClient);
+        nutClient.disconnect();
     } catch (std::exception& e) {
         log_error ("reading data from NUT: %s", e.what ());
     }
