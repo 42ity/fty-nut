@@ -32,6 +32,7 @@
 
 struct _nut_t {
     zhashx_t *assets;      // hash of messages ("device name", bios_proto_t*)
+    bool changed;
 };
 
 
@@ -46,6 +47,7 @@ nut_new (void)
     //  Initialize class properties here
     self->assets = zhashx_new ();
     zhashx_set_destructor (self->assets, (zhashx_destructor_fn *) bios_proto_destroy);
+    self->changed = false;
     return self;
 }
 
@@ -119,6 +121,26 @@ clear_ext (zhash_t *hash)
 }
 
 //  --------------------------------------------------------------------------
+//  Helper function
+//  compare 'ext' field in two messages
+int nut_ext_value_is_the_same (bios_proto_t *m1, bios_proto_t *m2, const char *attr)
+{
+    if (!m1 || !m2 || !attr) return 0;
+    
+    const char *a1 = bios_proto_ext_string (m1, attr, "");
+    const char *a2 = bios_proto_ext_string (m2, attr, "");
+    return streq (a1, a2);
+}
+
+//  --------------------------------------------------------------------------
+//  are there changes to be saved
+bool
+nut_changed(nut_t *self)
+{
+    return self->changed;
+}
+
+//  --------------------------------------------------------------------------
 //  Store bios_proto_t message transfering ownership
 
 void
@@ -145,6 +167,7 @@ nut_put (nut_t *self, bios_proto_t **message_p)
         int rv = zhashx_insert (self->assets, bios_proto_name (message), message);
         assert (rv == 0);
         *message_p = NULL;
+        self->changed = true;
         return;
     }
 
@@ -153,13 +176,22 @@ nut_put (nut_t *self, bios_proto_t **message_p)
 
         bios_proto_set_operation (asset, "%s", bios_proto_operation (message));
         if (bios_proto_ext_string (message, "ip.1", NULL)) {
-            bios_proto_ext_insert (asset, "ip.1", "%s", bios_proto_ext_string (message, "ip.1", ""));
+            if (!nut_ext_value_is_the_same (asset, message, "ip.1")) {
+                self->changed = true;
+                bios_proto_ext_insert (asset, "ip.1", "%s", bios_proto_ext_string (message, "ip.1", ""));
+            }
         }
         if (bios_proto_ext_string (message, "upsconf_block", NULL)) {
-            bios_proto_ext_insert (asset, "upsconf_block", "%s", bios_proto_ext_string (message, "upsconf_block", ""));
+            if (!nut_ext_value_is_the_same (asset, message, "upsconf_block")) {
+                self->changed = true;
+                bios_proto_ext_insert (asset, "upsconf_block", "%s", bios_proto_ext_string (message, "upsconf_block", ""));
+            }
         }
         if (bios_proto_ext_string (message, "daisy_chain", NULL)) {
-            bios_proto_ext_insert (asset, "daisy_chain", "%s", bios_proto_ext_string (message, "daisy_chain",""));
+            if (!nut_ext_value_is_the_same (asset, message, "daisy_chain")) {
+                self->changed = true;
+                bios_proto_ext_insert (asset, "daisy_chain", "%s", bios_proto_ext_string (message, "daisy_chain",""));
+            }
         }
         bios_proto_destroy (message_p);
     }
@@ -168,6 +200,7 @@ nut_put (nut_t *self, bios_proto_t **message_p)
         streq (bios_proto_operation (message), BIOS_PROTO_ASSET_OP_RETIRE)) {
 
         zhashx_delete (self->assets, bios_proto_name (message));
+        self->changed = true;
         bios_proto_destroy (message_p);
     }
     else {
@@ -291,6 +324,7 @@ nut_save (nut_t *self, const char *fullpath)
     zchunk_destroy (&chunk);
     zfile_close (file);
     zfile_destroy (&file);
+    self->changed = false;
     return 0;
 }
 
@@ -358,6 +392,7 @@ nut_load (nut_t *self, const char *fullpath)
     }
     zchunk_destroy (&chunk);
 //    zsys_debug ("---------------------");
+    self->changed = false;
     return 0;
 }
 
@@ -527,6 +562,7 @@ nut_test (bool verbose)
 
     //  Test nut_ methods
     self = nut_new ();
+    assert (nut_changed(self) == false);
     zlistx_t *expected = zlistx_new ();
     zlistx_set_destructor (expected, (czmq_destructor *) zstr_free);
     zlistx_set_duplicator (expected, (czmq_duplicator *) strdup);
@@ -537,6 +573,7 @@ nut_test (bool verbose)
     bios_proto_aux_insert (asset, "subtype", "%s", "ups");
     bios_proto_ext_insert (asset, "abc.d", "%s", " ups string 1");
     nut_put (self, &asset);
+    assert (nut_changed(self) == true);
     zlistx_add_end (expected, (void *) "ups");
 
     asset =  test_asset_new ("epdu", BIOS_PROTO_ASSET_OP_CREATE);
@@ -659,12 +696,13 @@ nut_test (bool verbose)
     // save/load
     int rv = nut_save (self, "./test_state_file");
     assert (rv == 0);
+    assert (nut_changed (self) == false);
     nut_destroy (&self);
 
     self = nut_new ();
     rv = nut_load (self, "./test_state_file");
     assert (rv == 0);
-
+    assert (nut_changed (self) == false);
     {
         zlistx_t *received = nut_get_assets (self);
         assert (received);
@@ -720,6 +758,8 @@ nut_test (bool verbose)
     bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
     bios_proto_ext_insert (asset, "ip.1", "%s", "10.130.38.52");
     nut_put (self, &asset);
+
+    assert (nut_changed (self) == true);
 
     {
         zlistx_t *received = nut_get_assets (self);

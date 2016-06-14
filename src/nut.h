@@ -37,6 +37,10 @@ AGENT_NUT_EXPORT nut_t *
 AGENT_NUT_EXPORT void
     nut_destroy (nut_t **self_p);
 
+// are there changes to be saved?
+AGENT_NUT_EXPORT bool
+    nut_changed(nut_t *self);
+
 //  Store bios_proto_t message transfering ownership
 AGENT_NUT_EXPORT void
     nut_put (nut_t *self, bios_proto_t **message_p);
