@@ -135,6 +135,7 @@ Device::scanCapabilities (nut::TcpClient& conn)
         log_error("aa: Communication problem with %s (%s)", _assetName.c_str(), e.what() );
         return 0;
     }
+    _scanned = true;
     return 1;
 }
 

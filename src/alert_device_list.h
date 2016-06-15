@@ -36,11 +36,10 @@ class Devices {
     friend void alert_actor_test (bool verbose);
  private:
     std::map <std::string, Device>  _devices;
-    bool _capabilitiesUpdated = false;
 
     void updateDeviceCapabilities (nut::TcpClient& nutClient);
     void updateDevices (nut::TcpClient& nutClient);
-    int addIfNotPresent (Device dev);
+    void addIfNotPresent (Device dev);
 };
 
 #endif // __ALERT_DEVICE_LIST

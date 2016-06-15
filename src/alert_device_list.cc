@@ -31,7 +31,7 @@ void Devices::updateFromNUT ()
     try {
         nut::TcpClient nutClient;
         nutClient.connect ("localhost", 3493);
-        if (!_capabilitiesUpdated) updateDeviceCapabilities (nutClient);
+        updateDeviceCapabilities (nutClient);
         updateDevices (nutClient);
         nutClient.disconnect();
     } catch (std::exception& e) {
@@ -48,24 +48,21 @@ void Devices::updateDevices(nut::TcpClient& nutClient)
 
 void Devices::updateDeviceCapabilities (nut::TcpClient& nutClient)
 {
-    _capabilitiesUpdated = true;
     for (auto& it : _devices) {
-        if (! it.second.scanCapabilities (nutClient)) _capabilitiesUpdated = false;
+        if (! it.second.scanned ()) it.second.scanCapabilities (nutClient);
     }
-    log_debug ("aa: capabilities updated %i", _capabilitiesUpdated);
 }
 
-int Devices::addIfNotPresent (Device dev) {
+void Devices::addIfNotPresent (Device dev) {
     auto it = _devices.find (dev.assetName ());
     if (it == _devices.end ()) {
         _devices[dev.assetName ()] = dev;
-        return 1;
+        return;
     }
     if (dev.nutName () != it->second.nutName() || dev.chain() != it->second.chain()) {
         _devices[dev.assetName ()] = dev;
-        return 1;
+        return;
     }
-    return 0;
 }
 
 void Devices::updateDeviceList(nut_t *config)
@@ -73,7 +70,6 @@ void Devices::updateDeviceList(nut_t *config)
     if (!config) return;
     zlistx_t *devices = nut_get_assets (config);
     if (!devices) return;
-    int changes = 0;
 
     log_debug("aa: updating device list");
     std::map<std::string, std::string> ip2master;
@@ -110,17 +106,17 @@ void Devices::updateDeviceList(nut_t *config)
             if (chain_str) try { chain = std::stoi (chain_str); } catch(...) { };
             switch(chain) {
             case 0:
-                changes += addIfNotPresent (Device (name));
+                addIfNotPresent (Device (name));
                 break;
             case 1:
-                changes += addIfNotPresent (Device (name, name, 1));
+                addIfNotPresent (Device (name, name, 1));
                 break;
             default:
                 const auto master_it = ip2master.find (ip);
                 if (master_it == ip2master.cend()) {
                     log_error ("Daisychain master for %s not found", name);
                 } else {
-                    changes += addIfNotPresent (Device (name, master_it->second, chain));
+                    addIfNotPresent (Device (name, master_it->second, chain));
                 }
                 break;
             }
@@ -141,7 +137,6 @@ void Devices::updateDeviceList(nut_t *config)
         }
     }
     zlistx_destroy (&devices);
-    _capabilitiesUpdated = (changes == 0);
 }
 
 void Devices::publishAlerts (mlm_client_t *client)
