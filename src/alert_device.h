@@ -32,16 +32,18 @@
 
 class Device {
  public:
-    Device () : _chain(0) { };
+    Device () : _chain(0), _scanned(false) { };
     Device (const std::string& name) :
         _nutName(name),
         _assetName(name),
-        _chain(0)
+        _chain(0),
+        _scanned(false)    
     { };
     Device (const std::string& asset, const std::string& nut, int chain) :
         _nutName(nut),
         _assetName(asset),
-        _chain(chain)
+        _chain(chain),
+        _scanned(false)
     { };
 
     void nutName (const std::string& aName) { _nutName = aName; };
@@ -50,6 +52,7 @@ class Device {
     std::string assetName () const { return _assetName; }
     void chain (int index) { _chain = index; };
     int chain () const { return _chain; }
+    int scanned () const { return _scanned; }
 
     void update (nut::TcpClient &conn);
     int scanCapabilities (nut::TcpClient &conn);
@@ -63,6 +66,8 @@ class Device {
     std::string _nutName;
     std::string _assetName;
     int _chain;
+    bool _scanned;
+    
     std::map <std::string, DeviceAlert> _alerts;
 
     void addAlert (
