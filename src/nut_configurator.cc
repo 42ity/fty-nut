@@ -185,20 +185,50 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
     case asset_operation::INSERT:
     case asset_operation::UPDATE:
         {
-            auto ipit = info.attributes.find("ip.1");
-            if( ipit == info.attributes.end() ) {
-                log_error("device %s has no IP address", name.c_str() );
-                return true;
-            }
-            std::string IP = ipit->second;
-
             std::vector<std::string> configs;
-            nut_scan_snmp( name, CIDRAddress(IP), configs );
-            nut_scan_xml_http( name, CIDRAddress(IP), configs );
+            std::string IP = "127.0.0.1"; // Fake value for local-media devices or dummy-upses, either passed with an upsconf_block
+                // TODO: (lib)nutscan supports local media like serial or USB,
+                // as well as other remote protocols like IPMI. Use them later.
+            auto ubit = info.attributes.find("upsconf_block");
+            if( ubit != info.attributes.end() ) {
+                // TODO: Refactor to optimize string manipulations
+                std::string UBA = ubit->second; // UpsconfBlockAsset - as stored in contents of the asset
+                char SEP = UBA.at(0);
+                if ( SEP == '\0' || UBA.at(1) == '\0' ) {
+                    log_info("device %s is configured with an empty explicit upsconf_block from its asset (adding asset name as NUT device-tag with no config)",
+                        name.c_str());
+                    configs = { "[" + name + "]\n\n" };
+                } else {
+                    // First character of the sufficiently long UB string
+                    // defines the user-selected line separator character
+                    std::string UBN = UBA.substr(1); //UpsconfBlockNut - with EOL chars, without leading SEP character
+                    std::replace( UBN.begin(), UBN.end(), SEP, '\n' );
+                    if ( UBN.at(0) == '[' ) {
+                        log_info("device %s is configured with a complete explicit upsconf_block from its asset: \"%s\" including a custom NUT device-tag",
+                            name.c_str(), UBN.c_str());
+                        configs = { UBN + "\n" };
+                    } else {
+                        log_info("device %s is configured with a content-only explicit upsconf_block from its asset: \"%s\" (prepending asset name as NUT device-tag)",
+                            name.c_str(), UBN.c_str());
+                        configs = { "[" + name + "]\n" + UBN + "\n" };
+                    }
+                }
+            } else {
+                auto ipit = info.attributes.find("ip.1");
+                if( ipit == info.attributes.end() ) {
+                    log_error("device %s has no IP address", name.c_str() );
+                    return true;
+                }
+                IP = ipit->second;
+
+                nut_scan_snmp( name, CIDRAddress(IP), configs );
+                nut_scan_xml_http( name, CIDRAddress(IP), configs );
+            }
 
             auto it = selectBest( configs );
             if( it == configs.end() ) {
-                log_error("nut-scanner failed for device \"%s\", no suitable configuration found", name.c_str() );
+                log_error("nut-scanner failed for device \"%s\" at IP address \"%s\", no suitable configuration found",
+                    name.c_str(), IP.c_str() );
                 return false; // try again later
             }
             std::string deviceDir = NUT_PART_STORE;
