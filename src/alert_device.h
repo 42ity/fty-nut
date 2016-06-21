@@ -76,6 +76,7 @@ class Device {
     );
     void publishAlert (mlm_client_t *client, DeviceAlert& alert);
     void publishRule (mlm_client_t *client, DeviceAlert& alert);
+    void fixAlertLimits (DeviceAlert& alert);
     std::string daisychainPrefix() const;
 };
 
