@@ -24,6 +24,24 @@
 #include "logger.h"
 
 void
+Device::fixAlertLimits (DeviceAlert& alert) {
+    // lower limit
+    if (alert.lowWarning.empty() && ! alert.lowCritical.empty()) {
+        alert.lowWarning = alert.lowCritical;
+    }
+    if (!alert.lowWarning.empty() && alert.lowCritical.empty()) {
+        alert.lowCritical = alert.lowWarning;
+    }
+    // upper limit
+    if (alert.highWarning.empty() && ! alert.highCritical.empty()) {
+        alert.highWarning = alert.highCritical;
+    }
+    if (!alert.highWarning.empty() && alert.highCritical.empty()) {
+        alert.highCritical = alert.highWarning;
+    }
+}
+
+void
 Device::addAlert(const std::string& quantity, const std::map<std::string,std::vector<std::string> >& variables)
 {
     log_debug ("aa: device %s provides %s alert", _assetName.c_str(), quantity.c_str());
@@ -76,6 +94,8 @@ Device::addAlert(const std::string& quantity, const std::map<std::string,std::ve
         const auto& it = variables.find(prefix + ".low.critical");
         if (it != variables.cend()) alert.lowCritical = it->second[0];
     }
+    // if some limits are missing, use those present
+    fixAlertLimits (alert);
     if (
         alert.lowWarning.empty() ||
         alert.lowCritical.empty() ||
@@ -216,7 +236,6 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
     zmsg_t *message = zmsg_new();
     assert (message);
 
-    std::string description = alert.name + " exceeded the limit";
     std::string ruleName = alert.name + "@" + _assetName;
     std::string rule =
         "{ \"threshold\" : {"
@@ -232,10 +251,10 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
         "    { \"high_critical\" : \"" + alert.highCritical + "\"}"
         "    ],"
         "  \"results\"       : ["
-        "    { \"low_critical\" : { \"action\" : [], \"description\" : \"" + description + "\" }},"
-        "    { \"low_warning\"  : { \"action\" : [], \"description\" : \"" + description + "\"}},"
-        "    {\"high_warning\"  : { \"action\" : [], \"description\" : \"" + description + "\" }},"
-        "    {\"high_critical\" : { \"action\" : [], \"description\" : \"" + description + "\" } }"
+        "    { \"low_critical\" : { \"action\" : [\"EMAIL\", \"SMS\"], \"description\" : \"" + alert.name + " is critically low\" }},"
+        "    { \"low_warning\"  : { \"action\" : [\"EMAIL\", \"SMS\"], \"description\" : \"" + alert.name + " is low\"}},"
+        "    {\"high_warning\"  : { \"action\" : [\"EMAIL\", \"SMS\"], \"description\" : \"" + alert.name + " is critically high\" }},"
+        "    {\"high_critical\" : { \"action\" : [\"EMAIL\", \"SMS\"], \"description\" : \"" + alert.name + " is high\" } }"
         "  ] } }";
     log_debug("aa: publishing rule %s", ruleName.c_str ());
     zmsg_addstr (message, "ADD");
