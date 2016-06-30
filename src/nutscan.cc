@@ -169,6 +169,19 @@ nut_scan_xml_http(
             out);
 }
 
+int
+nut_scan_snmp_and_xml_http(
+        const std::string& name,
+        const CIDRAddress& ip_address,
+        std::vector<std::string>& out)
+{
+    Argv args = {"nut-scanner", "-M", "-S", "-s", ip_address.toString()};
+    return s_run_nut_scaner(
+            args,
+            name,
+            out);
+}
+
 //  --------------------------------------------------------------------------
 //  Self test of this class
 

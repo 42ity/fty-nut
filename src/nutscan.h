@@ -52,4 +52,17 @@ nut_scan_xml_http(
         const CIDRAddress& ip_address,
         std::vector<std::string>& out);
 
+/**
+ * \brief call nut scan over XML HTTP and SNMP
+ *
+ * \param[in] name asset name of device
+ * \param[in] ip_address ip address of device
+ * \param[out] out resulted string with NUT config snippets
+ * \return 0 if success, -1 otherwise
+ */
+int
+nut_scan_snmp_and_xml_http(
+        const std::string& name,
+        const CIDRAddress& ip_address,
+        std::vector<std::string>& out);
 #endif
