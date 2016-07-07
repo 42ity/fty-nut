@@ -52,6 +52,7 @@ int main (int argc, char *argv [])
     //  Insert main code here
     if (verbose)
         zsys_info ("bios_agent_nut_configurator - ");
+
     zactor_t *server = zactor_new (bios_nut_configurator_server, NULL);
 
     // code from src/malamute.c, under MPL

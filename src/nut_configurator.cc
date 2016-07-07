@@ -220,7 +220,9 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
                     return true;
                 }
                 IP = ipit->second;
-                nut_scan_snmp_and_xml_http( name, CIDRAddress(IP), configs );
+
+                nut_scan_snmp( name, CIDRAddress(IP), configs );
+                nut_scan_xml_http( name, CIDRAddress(IP), configs );
             }
 
             auto it = selectBest( configs );
