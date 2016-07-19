@@ -306,7 +306,7 @@ nut_asset_daisychain (nut_t *self, const char *asset_name)
 // or "" (empty string) when given
 
 const char *
-nut_asset_port (nut_ *self, const char *asset_name)
+nut_asset_port (nut_t *self, const char *asset_name)
 {
     return nut_asset_get_string (self, asset_name, "port");
 }
@@ -317,7 +317,7 @@ nut_asset_port (nut_ *self, const char *asset_name)
 // or "" (empty string) when given
 
 const char *
-nut_asset_location (nut_ *self, const char *asset_name)
+nut_asset_location (nut_t *self, const char *asset_name)
 {
     return nut_asset_get_string (self, asset_name, "location");
 }
