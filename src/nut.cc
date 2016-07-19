@@ -193,6 +193,44 @@ nut_put (nut_t *self, bios_proto_t **message_p)
                 bios_proto_ext_insert (asset, "daisy_chain", "%s", bios_proto_ext_string (message, "daisy_chain",""));
             }
         }
+
+        if (bios_proto_ext_string (message, "type", NULL)) {
+            if (!nut_ext_value_is_the_same (asset, message, "type")) {
+                self->changed = true;
+                bios_proto_ext_insert (asset, "type", "%s", bios_proto_ext_string (message, "type",""));
+            }
+        }
+        
+        if (bios_proto_ext_string (message, "subtype", NULL)) {
+            if (!nut_ext_value_is_the_same (asset, message, "subtype")) {
+                self->changed = true;
+                bios_proto_ext_insert (asset, "subtype", "%s", bios_proto_ext_string (message, "subtype",""));
+            }
+        }
+
+        if (bios_proto_ext_string (message, "location", NULL)) {
+            if (!nut_ext_value_is_the_same (asset, message, "location")) {
+                self->changed = true;
+                bios_proto_ext_insert (asset, "location", "%s", bios_proto_ext_string (message, "location",""));
+            }
+        }
+
+
+       if (bios_proto_ext_string (message, "port", NULL)) {
+            if (!nut_ext_value_is_the_same (asset, message, "port")) {
+                self->changed = true;
+                bios_proto_ext_insert (asset, "port", "%s", bios_proto_ext_string (message, "port",""));
+            }
+        }
+
+       if (bios_proto_ext_stirng (message, "logical_asset", NULL)) {
+            if (!nut_ext_value_is_the_same (asset, message, "logical_asset")) {
+                self->changed = true;
+                bios_proto_ext_insert (asset, "logical_asset", "%s", bios_proto_ext_string (message, "logical_asset",""));
+            }
+        }
+     
+        
         bios_proto_destroy (message_p);
     }
     else
@@ -260,6 +298,28 @@ const char *
 nut_asset_daisychain (nut_t *self, const char *asset_name)
 {
     return nut_asset_get_string (self, asset_name, "daisy_chain");
+}
+
+// ---------------------------------------------------------------------------
+// return port number of sensor of given asset
+// or NULL when asset_name does not exist
+// or "" (empty string) when given
+
+const char *
+nut_asset_port (nut_ *self, const char *asset_name)
+{
+    return nut_asset_get_string (self, asset_name, "port");
+}
+
+// ---------------------------------------------------------------------------
+// return location number of sensor of given asset
+// or NULL when asset_name does not exist
+// or "" (empty string) when given
+
+const char *
+nut_asset_location (nut_ *self, const char *asset_name)
+{
+    return nut_asset_get_string (self, asset_name, "location");
 }
 
 //  --------------------------------------------------------------------------
@@ -576,6 +636,15 @@ nut_test (bool verbose)
     assert (nut_changed(self) == true);
     zlistx_add_end (expected, (void *) "ups");
 
+    asset =  test_asset_new ("sensor", BIOS_PROTO_ASSET_OP_CREATE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "sensor");
+    bios_proto_aux_insert (asset, "location", "%s", "ups01");
+    bios_proto_aux_insert (asset, "port", "%s", "port01");             
+    bios_proto_aux_insert (asset, "logical_asset", "%s", "room01");
+    nut_put (self, &asset);
+    zlistx_add_end (expected, (void *) "sensor");
+    
     asset =  test_asset_new ("epdu", BIOS_PROTO_ASSET_OP_CREATE);
     bios_proto_aux_insert (asset, "type", "%s", "device");
     bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
@@ -735,6 +804,10 @@ nut_test (bool verbose)
 
         assert (streq (nut_asset_ip (self, "ROZ.ePDU14"), "10.130.53.33"));
         assert (streq (nut_asset_daisychain (self, "ROZ.ePDU14"), "2"));
+        
+        assert (streq (nut_asset_port (self, "sensor"), "port01"));
+        assert (streq (nut_asset_location (self, "sensor"), "ups01"));
+        
     }
 
     asset = test_asset_new ("epdu", BIOS_PROTO_ASSET_OP_CREATE);
@@ -767,6 +840,12 @@ nut_test (bool verbose)
     bios_proto_ext_insert (asset, "ip.1", "%s", "10.130.38.52");
     nut_put (self, &asset);
 
+    asset =  test_asset_new ("sensor", BIOS_PROTO_ASSET_OP_UPDATE);
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "sensor");
+    bios_proto_ext_insert (asset, "port", "%s", "port00");
+    nut_put (self, &asset);
+    
     assert (nut_changed (self) == true);
 
     {
@@ -790,12 +869,21 @@ nut_test (bool verbose)
 
         assert (streq (nut_asset_ip (self, "ROZ.ePDU14"), "10.130.53.33"));
         assert (streq (nut_asset_daisychain (self, "ROZ.ePDU14"), "2"));
+
+        assert (streq (nut_asset_port (self, "sensor"), "port00"));
+        assert (streq (nut_asset_location (self, "sensor"), "ups01"));
+
     }
 
     asset =  test_asset_new ("MBT.EPDU4", BIOS_PROTO_ASSET_OP_UPDATE);
     bios_proto_aux_insert (asset, "type", "%s", "device");
     bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
     bios_proto_ext_insert (asset, "daisy_chain", "%s", "44");
+    nut_put (self, &asset);
+
+    asset =  test_asset_new ("sensor", BIOS_PROTO_ASSET_OP_DELETE;
+    bios_proto_aux_insert (asset, "type", "%s", "device");
+    bios_proto_aux_insert (asset, "subtype", "%s", "sensor");
     nut_put (self, &asset);
 
     {
@@ -819,6 +907,10 @@ nut_test (bool verbose)
 
         assert (streq (nut_asset_ip (self, "ROZ.ePDU14"), "10.130.53.33"));
         assert (streq (nut_asset_daisychain (self, "ROZ.ePDU14"), "2"));
+
+        assert (streq (nut_asset_port (self, "sensor") == NULL ));
+        assert (streq (nut_asset_location (self, "sensor") == NULL ));
+
     }
 
     asset =  test_asset_new ("MBT.EPDU4", BIOS_PROTO_ASSET_OP_CREATE);
