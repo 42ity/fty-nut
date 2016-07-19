@@ -12,7 +12,7 @@ AC_INIT([agent-nut],[0.1.0],[bios@eaton.com])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_MACRO_DIR(config)
 AC_CONFIG_HEADERS([src/platform.h])
-AM_INIT_AUTOMAKE([subdir-objects tar-ustar dist-zip foreign])
+AM_INIT_AUTOMAKE([subdir-objects tar-ustar foreign])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 # This defines PACKAGE_VERSION_... in src/platform.h
@@ -641,15 +641,12 @@ AC_CONFIG_FILES([Makefile
                  src/libagent_nut.pc
                  src/bios-agent-nut.cfg
                  src/bios-agent-nut-configurator.cfg
-                 src/mapping.conf
-                 src/bios_10_agent-nut
                  ])
 
 AM_COND_IF([WITH_SYSTEMD_UNITS],
     [AC_CONFIG_FILES([
                  src/bios-agent-nut.service
                  src/bios-agent-nut-configurator.service
-                 src/bios-agent-nut.conf
     ])],
     [])
 

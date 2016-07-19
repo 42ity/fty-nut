@@ -42,6 +42,7 @@
     <class name = "bios-nut-server" state = "stable">bios nut actor</class>
     <class name = "bios-nut-configurator-server" state = "stable">bios nut configurator actor</class>
     <class name = "alert actor" state = "stable">actor handling device alerts and thresholds</class>
+    <class name = "sensor actor" state = "stable">actor handling sensors attached to UPS/ePDU</class>
 
     <main name = "bios-agent-nut" service = "1" no_config = "1" />
     <main name = "bios-agent-nut-configurator" service = "1" no_config = "1" />

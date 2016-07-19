@@ -35,14 +35,6 @@ noinst_LTLIBRARIES =
 TESTS =
 
 EXTRA_DIST = \
-    CMakeLists.txt \
-    Findlibzmq.cmake \
-    Findczmq.cmake \
-    Findmalamute.cmake \
-    Findbiosproto.cmake \
-    Findlibcidr.cmake \
-    Findcxxtools.cmake \
-    Findlibnutclient.cmake \
     src/logger.h \
     src/fsutils.h \
     src/cidr.h \
