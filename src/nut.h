@@ -61,6 +61,18 @@ AGENT_NUT_EXPORT const char *
 AGENT_NUT_EXPORT const char *
     nut_asset_daisychain (nut_t *self, const char *asset_name);
 
+// return port number of sensor of given asset
+// or NULL when asset_name does not exist
+// or "" (empty string) when given
+AGENT_NUT_EXPORT const char *
+    nut_asset_port (nut_ *self, const char *asset_name);
+
+// return location number of sensor of given asset
+// or NULL when asset_name does not exist
+// or "" (empty string) when given
+AGENT_NUT_EXPORT const char *
+    nut_asset_location (nut_ *self, const char *asset_name);
+
 //  Save nut to disk
 //  If 'fullpath' is NULL does nothing
 //  0 - success, -1 - error
