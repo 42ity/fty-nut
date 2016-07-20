@@ -35,6 +35,8 @@ src_libagent_nut_la_SOURCES = \
     src/alert_device_list.cc \
     src/nut.cc \
     src/stream.cc \
+    src/sensor_device.cc \
+    src/sensor_list.cc \
     src/bios_nut_server.cc \
     src/bios_nut_configurator_server.cc \
     src/alert_actor.cc \

@@ -49,6 +49,8 @@ EXTRA_DIST = \
     src/alert_device_list.h \
     src/nut.h \
     src/stream.h \
+    src/sensor_device.h \
+    src/sensor_list.h \
     src/agent_nut_classes.h
 
 include $(srcdir)/src/Makemodule.am

@@ -47,6 +47,8 @@
 #include "alert_device_list.h"
 #include "nut.h"
 #include "stream.h"
+#include "sensor_device.h"
+#include "sensor_list.h"
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
@@ -117,5 +119,15 @@ AGENT_NUT_EXPORT void
 //  Self test of this class.
 AGENT_NUT_EXPORT void
     stream_test (bool verbose);
+
+//  *** Draft method, defined for internal use only ***
+//  Self test of this class.
+AGENT_NUT_EXPORT void
+    sensor_device_test (bool verbose);
+
+//  *** Draft method, defined for internal use only ***
+//  Self test of this class.
+AGENT_NUT_EXPORT void
+    sensor_list_test (bool verbose);
 
 #endif

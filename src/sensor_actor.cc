@@ -24,13 +24,18 @@
 #include "malamute.h"
 #include "logger.h"
 
+// ugly, declared in actor_commands, TODO: move it to some common
+int
+handle_asset_message (mlm_client_t *client, nut_t *data, zmsg_t **message_p);
+
 void
 sensor_actor (zsock_t *pipe, void *args)
 {
 
     uint64_t polling = 30000;
     bool verbose = false;
-
+    Sensors sensors;
+    
     mlm_client_t *client = mlm_client_new ();
     if (!client) {
         log_critical ("mlm_client_new () failed");
@@ -51,11 +56,13 @@ sensor_actor (zsock_t *pipe, void *args)
     if (rv != 0) {
         log_warning ("Could not load state file '%s'.", "/var/lib/bios/nut/state_file");
     }
+    sensors.updateSensorList (stateData);
     while (!zsys_interrupted) {
         void *which = zpoller_wait (poller, polling);
         if (which == NULL) {
             log_debug ("sa: alert update");
-            // TODO: handle sensors from nut
+            sensors.updateFromNUT ();
+            sensors.publish (client);
         }
         else if (which == pipe) {
             zmsg_t *msg = zmsg_recv (pipe);
@@ -68,7 +75,9 @@ sensor_actor (zsock_t *pipe, void *args)
         else if (which == mlm_client_msgpipe (client)) {
             // should be asset message
             zmsg_t *msg = mlm_client_recv (client);
-            // TODO: handle asset message
+            if (handle_asset_message (client, stateData, &msg)) {
+                sensors.updateSensorList (stateData);
+            }
             zmsg_destroy (&msg);
         }
         else {
