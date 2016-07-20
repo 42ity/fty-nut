@@ -85,7 +85,7 @@ filter_message (bios_proto_t *message)
     if (!type || !subtype)
         return 1;
     if (streq (type, "device") &&
-        (streq (subtype, "epdu") || streq (subtype, "ups")))
+        (streq (subtype, "epdu") || streq (subtype, "ups") || streq(subtype, "sensor") ))
         return 0;
     return 1;
 }
@@ -105,7 +105,9 @@ clear_ext (zhash_t *hash)
     while (item) {
         if (!streq (zhash_cursor (hash), "ip.1") &&
             !streq (zhash_cursor (hash), "upsconf_block") &&
-            !streq (zhash_cursor (hash), "daisy_chain")) {
+            !streq (zhash_cursor (hash), "daisy_chain") &&
+            !streq (zhash_cursor (hash), "port") &&
+            !streq (zhash_cursor (hash), "logical_asset")) {
             zlistx_add_end (to_delete, (void *) zhash_cursor (hash));
         }
         item = (const char *) zhash_next (hash);
@@ -131,6 +133,18 @@ int nut_ext_value_is_the_same (bios_proto_t *m1, bios_proto_t *m2, const char *a
     const char *a2 = bios_proto_ext_string (m2, attr, "");
     return streq (a1, a2);
 }
+//  --------------------------------------------------------------------------
+//  Helper function
+//  compare 'aux' field in two messages
+int nut_aux_value_is_the_same (bios_proto_t *m1, bios_proto_t *m2, const char *attr)
+{
+    if (!m1 || !m2 || !attr) return 0;
+    
+    const char *a1 = bios_proto_aux_string (m1, attr, "");
+    const char *a2 = bios_proto_aux_string (m2, attr, "");
+    return streq (a1, a2);
+}
+
 
 //  --------------------------------------------------------------------------
 //  are there changes to be saved
@@ -208,22 +222,14 @@ nut_put (nut_t *self, bios_proto_t **message_p)
             }
         }
 
-        if (bios_proto_ext_string (message, "location", NULL)) {
-            if (!nut_ext_value_is_the_same (asset, message, "location")) {
-                self->changed = true;
-                bios_proto_ext_insert (asset, "location", "%s", bios_proto_ext_string (message, "location",""));
-            }
-        }
-
-
-       if (bios_proto_ext_string (message, "port", NULL)) {
+        if (bios_proto_ext_string (message, "port", NULL)) {
             if (!nut_ext_value_is_the_same (asset, message, "port")) {
                 self->changed = true;
                 bios_proto_ext_insert (asset, "port", "%s", bios_proto_ext_string (message, "port",""));
             }
         }
 
-       if (bios_proto_ext_stirng (message, "logical_asset", NULL)) {
+       if (bios_proto_ext_string (message, "logical_asset", NULL)) {
             if (!nut_ext_value_is_the_same (asset, message, "logical_asset")) {
                 self->changed = true;
                 bios_proto_ext_insert (asset, "logical_asset", "%s", bios_proto_ext_string (message, "logical_asset",""));
@@ -309,17 +315,6 @@ const char *
 nut_asset_port (nut_t *self, const char *asset_name)
 {
     return nut_asset_get_string (self, asset_name, "port");
-}
-
-// ---------------------------------------------------------------------------
-// return location number of sensor of given asset
-// or NULL when asset_name does not exist
-// or "" (empty string) when given
-
-const char *
-nut_asset_location (nut_t *self, const char *asset_name)
-{
-    return nut_asset_get_string (self, asset_name, "location");
 }
 
 //  --------------------------------------------------------------------------
@@ -444,7 +439,6 @@ nut_load (nut_t *self, const char *fullpath)
         assert (zmessage);
         bios_proto_t *asset = bios_proto_decode (&zmessage); // zmessage destroyed
         assert (asset);
-//        bios_proto_print (asset);
 
         // nut_put (self, &asset);
         int rv = zhashx_insert (self->assets, bios_proto_name (asset), asset);
@@ -611,7 +605,7 @@ nut_test (bool verbose)
     //  @selftest
 
     //  Simple create/destroy test
-    nut_t *self = nut_new ();
+    nut_t *self = nut_new();
     assert (self);
     nut_destroy (&self);
     assert (self == NULL);
@@ -639,10 +633,9 @@ nut_test (bool verbose)
     asset =  test_asset_new ("sensor", BIOS_PROTO_ASSET_OP_CREATE);
     bios_proto_aux_insert (asset, "type", "%s", "device");
     bios_proto_aux_insert (asset, "subtype", "%s", "sensor");
-    bios_proto_aux_insert (asset, "location", "%s", "ups01");
-    bios_proto_aux_insert (asset, "port", "%s", "port01");             
-    bios_proto_aux_insert (asset, "logical_asset", "%s", "room01");
-    nut_put (self, &asset);
+    bios_proto_ext_insert (asset, "port", "%s", "port01");             
+    bios_proto_ext_insert (asset, "logical_asset", "%s", "room01");
+    nut_put (self, &asset);  
     zlistx_add_end (expected, (void *) "sensor");
     
     asset =  test_asset_new ("epdu", BIOS_PROTO_ASSET_OP_CREATE);
@@ -804,9 +797,9 @@ nut_test (bool verbose)
 
         assert (streq (nut_asset_ip (self, "ROZ.ePDU14"), "10.130.53.33"));
         assert (streq (nut_asset_daisychain (self, "ROZ.ePDU14"), "2"));
-        
+
         assert (streq (nut_asset_port (self, "sensor"), "port01"));
-        assert (streq (nut_asset_location (self, "sensor"), "ups01"));
+
         
     }
 
@@ -871,7 +864,6 @@ nut_test (bool verbose)
         assert (streq (nut_asset_daisychain (self, "ROZ.ePDU14"), "2"));
 
         assert (streq (nut_asset_port (self, "sensor"), "port00"));
-        assert (streq (nut_asset_location (self, "sensor"), "ups01"));
 
     }
 
@@ -881,11 +873,14 @@ nut_test (bool verbose)
     bios_proto_ext_insert (asset, "daisy_chain", "%s", "44");
     nut_put (self, &asset);
 
-    asset =  test_asset_new ("sensor", BIOS_PROTO_ASSET_OP_DELETE;
+    asset =  test_asset_new ("sensor", BIOS_PROTO_ASSET_OP_DELETE);
     bios_proto_aux_insert (asset, "type", "%s", "device");
     bios_proto_aux_insert (asset, "subtype", "%s", "sensor");
+    bios_proto_ext_insert (asset, "port", "%s", "port00");
     nut_put (self, &asset);
-
+    handle = zlistx_find (expected, (void *) "sensor");
+    zlistx_delete (expected, handle);
+    
     {
         zlistx_t *received = nut_get_assets (self);
         assert (received);
@@ -908,8 +903,7 @@ nut_test (bool verbose)
         assert (streq (nut_asset_ip (self, "ROZ.ePDU14"), "10.130.53.33"));
         assert (streq (nut_asset_daisychain (self, "ROZ.ePDU14"), "2"));
 
-        assert (streq (nut_asset_port (self, "sensor") == NULL ));
-        assert (streq (nut_asset_location (self, "sensor") == NULL ));
+        assert (nut_asset_port (self, "sensor") == NULL);
 
     }
 
