@@ -17,6 +17,7 @@ include_HEADERS = \
     include/bios_nut_server.h \
     include/bios_nut_configurator_server.h \
     include/alert_actor.h \
+    include/sensor_actor.h \
     include/agent_nut_library.h
 
 src_libagent_nut_la_SOURCES = \
@@ -34,9 +35,12 @@ src_libagent_nut_la_SOURCES = \
     src/alert_device_list.cc \
     src/nut.cc \
     src/stream.cc \
+    src/sensor_device.cc \
+    src/sensor_list.cc \
     src/bios_nut_server.cc \
     src/bios_nut_configurator_server.cc \
     src/alert_actor.cc \
+    src/sensor_actor.cc \
     src/platform.h
 
 src_libagent_nut_la_CPPFLAGS = ${AM_CPPFLAGS}
@@ -70,8 +74,6 @@ src_bios_agent_nut_configdir = $(sysconfdir)/agent-nut
 if WITH_SYSTEMD_UNITS
 src_bios_agent_nut_servicedir = @prefix@/lib/systemd/system
 src_bios_agent_nut_service_DATA = src/bios-agent-nut.service
-src_bios_agent_nut_tmpfilesdir = @prefix@/lib/tmpfiles.d/
-src_bios_agent_nut_tmpfiles_DATA = src/bios-agent-nut.conf
 endif #WITH_SYSTEMD_UNITS
 endif #ENABLE_BIOS_AGENT_NUT
 
@@ -111,31 +113,31 @@ src:
 	cd $(srcdir); gsl -target:- project.xml
 
 check-local: src/agent_nut_selftest
-	$(LIBTOOL) --mode=execute $(builddir)/src/agent_nut_selftest
+	$(LIBTOOL) --mode=execute $(srcdir)/src/agent_nut_selftest
 
 check-verbose: src/agent_nut_selftest
-	$(LIBTOOL) --mode=execute $(builddir)/src/agent_nut_selftest -v
+	$(LIBTOOL) --mode=execute $(srcdir)/src/agent_nut_selftest -v
 
 # Run the selftest binary under valgrind to check for memory leaks
 memcheck: src/agent_nut_selftest
 	$(LIBTOOL) --mode=execute valgrind --tool=memcheck \
 		--leak-check=full --show-reachable=yes --error-exitcode=1 \
 		--suppressions=$(srcdir)/src/.valgrind.supp \
-		$(builddir)/src/agent_nut_selftest
+		$(srcdir)/src/agent_nut_selftest
 
 # Run the selftest binary under valgrind to check for performance leaks
 callcheck: src/agent_nut_selftest
 	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
-		$(builddir)/src/agent_nut_selftest
+		$(srcdir)/src/agent_nut_selftest
 
 # Run the selftest binary under gdb for debugging
 debug: src/agent_nut_selftest
 	$(LIBTOOL) --mode=execute gdb -q \
-		$(builddir)/src/agent_nut_selftest
+		$(srcdir)/src/agent_nut_selftest
 
 # Run the selftest binary with verbose switch for tracing
 animate: src/agent_nut_selftest
-	$(LIBTOOL) --mode=execute $(builddir)/src/agent_nut_selftest -v
+	$(LIBTOOL) --mode=execute $(srcdir)/src/agent_nut_selftest -v
 
 if WITH_GCOV
 coverage: src/agent_nut_selftest

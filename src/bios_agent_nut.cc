@@ -33,6 +33,7 @@
 
 static const char *ACTOR_NUT_NAME = "agent-nut";
 static const char *ACTOR_ALERT_NAME = "agent-nut-alert";
+static const char *ACTOR_SENSOR_NAME = "agent-nut-sensor";
 static const char *ENDPOINT = "ipc://@/malamute";
 
 #define DEFAULT_LOG_LEVEL LOG_WARNING
@@ -171,10 +172,17 @@ int main (int argc, char *argv [])
         log_critical ("zactor_new (task = 'nut_device_server', args = 'NULL') failed");
         return -1;
     }
+    
+    zactor_t *nut_sensor = zactor_new (sensor_actor, (void *) NULL);
+    if (!nut_sensor) {
+        log_critical ("zactor_new (task = 'nut_sensor', args = 'NULL') failed");
+        return -1;
+    }
 
     if (verbose) {
         zstr_sendx (nut_server, "VERBOSE", NULL);
         zstr_sendx (nut_device_alert, "VERBOSE", NULL);
+        zstr_sendx (nut_sensor, "VERBOSE", NULL);
     }
     zstr_sendx (nut_server, "CONFIGURE", mapping_file.c_str (), state_file.c_str (), NULL);
     zstr_sendx (nut_server, "POLLING", polling, NULL);
@@ -187,7 +195,12 @@ int main (int argc, char *argv [])
     zstr_sendx (nut_device_alert, "PRODUCER", BIOS_PROTO_STREAM_ALERTS_SYS, NULL);
     zstr_sendx (nut_device_alert, "CONSUMER", BIOS_PROTO_STREAM_ASSETS, ".*", NULL);
 
-    zpoller_t *poller = zpoller_new(nut_server, nut_device_alert, NULL);
+    zstr_sendx (nut_sensor, "POLLING", polling, NULL);
+    zstr_sendx (nut_sensor, "CONNECT", ENDPOINT, ACTOR_SENSOR_NAME, NULL);
+    zstr_sendx (nut_sensor, "PRODUCER", BIOS_PROTO_STREAM_METRICS_SENSOR, NULL);
+    zstr_sendx (nut_sensor, "CONSUMER", BIOS_PROTO_STREAM_ASSETS, ".*", NULL);
+
+    zpoller_t *poller = zpoller_new(nut_server, nut_device_alert, nut_sensor, NULL);
     assert(poller);
 
     while (true) {
@@ -207,5 +220,6 @@ int main (int argc, char *argv [])
     zpoller_destroy (&poller);
     zactor_destroy (&nut_server);
     zactor_destroy (&nut_device_alert);
+    zactor_destroy (&nut_sensor);
     return 0;
 }
