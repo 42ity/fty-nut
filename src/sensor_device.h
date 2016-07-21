@@ -32,30 +32,31 @@
 
 class Sensor {
  public:
-    Sensor (const std::string& asset, const std::string& nut, int chain, std::string port, std::string logical_asset) :
-        _nutName(nut),
+    Sensor (const std::string& nutMaster, int chain, const std::string& location, std::string port) :
+        _nutMaster(nutMaster),
         _chain(chain),
-        _location(asset),
-        _port(port),
-        _logical_asset(logical_asset)
+        _location(location),
+        _port(port)
         { };
     Sensor () { };
     void update (nut::TcpClient &conn);
-    void publish (mlm_client_t *client);
+    void publish (mlm_client_t *client, int ttl);
+
     // friend functions for unit-testing
-    // friend void alert_device_test (bool verbose);
-    // friend void alert_actor_test (bool verbose);
- private:
-    std::string _nutName;
-    int _chain;
+    friend void sensor_device_test (bool verbose);
+    friend void sensor_list_test (bool verbose);
+ protected:
+    std::string _nutMaster;
+    int _chain = 0;
     std::string _location;
     std::string _port;
-    std::string _logical_asset;
+
     std::string _temperature;
     std::string _humidity;
-    int _ttl = 300;
 
     std::string sensorPrefix() const;
+    std::string topicSuffix() const;
+    std::string port() const;
 };
 
 AGENT_NUT_EXPORT void

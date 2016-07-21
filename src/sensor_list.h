@@ -26,14 +26,12 @@ class Sensors {
  public:
     void updateFromNUT ();
     void updateSensorList (nut_t *config);
-    void publish (mlm_client_t *client);
+    void publish (mlm_client_t *client, int ttl);
 
     // friend function for unit-testing
-    // friend void alert_actor_test (bool verbose);
+    friend void sensor_list_test (bool verbose);
  private:
     std::map <std::string, Sensor>  _sensors;
-
-    void addIfNotPresent (Sensor sensor);
 };
 
 //  Self test of this class

@@ -68,37 +68,37 @@ void Devices::addIfNotPresent (Device dev) {
 void Devices::updateDeviceList(nut_t *config)
 {
     if (!config) return;
-    zlistx_t *devices = nut_get_assets (config);
+    zlist_t *devices = nut_get_powerdevices (config);
     if (!devices) return;
 
     log_debug("aa: updating device list");
     std::map<std::string, std::string> ip2master;
     {
         // make ip->master map
-        const char *name = (char *)zlistx_first(devices);
+        const char *name = (char *)zlist_first(devices);
         while (name) {
             const char* ip = nut_asset_ip (config, name);
             const char* chain = nut_asset_daisychain (config, name);
             if (ip == NULL || chain == NULL || streq (ip, "") ) {
                 // this is strange. No IP?
-                name = (char *)zlistx_next(devices);
+                name = (char *)zlist_next(devices);
                 continue;
             }
             if (streq (chain,"") || streq (chain,"1")) {
                 // this is master
                 ip2master[ip] = name;
             }
-            name = (char *)zlistx_next(devices);
+            name = (char *)zlist_next(devices);
         }
     }
     {
         // add new/changed devices
-        const char *name = (char *)zlistx_first(devices);
+        const char *name = (char *)zlist_first(devices);
         while (name) {
             const char* ip = nut_asset_ip (config, name);
             if (!ip || streq (ip, "")) {
                 // this is strange. No IP?
-                name = (char *)zlistx_next(devices);
+                name = (char *)zlist_next(devices);
                 continue;
             }
             const char* chain_str = nut_asset_daisychain (config, name);
@@ -120,7 +120,7 @@ void Devices::updateDeviceList(nut_t *config)
                 }
                 break;
             }
-            name = (char *)zlistx_next(devices);
+            name = (char *)zlist_next(devices);
         }
     }
     {
@@ -136,7 +136,7 @@ void Devices::updateDeviceList(nut_t *config)
             }
         }
     }
-    zlistx_destroy (&devices);
+    zlist_destroy (&devices);
 }
 
 void Devices::publishAlerts (mlm_client_t *client)
@@ -163,7 +163,6 @@ void
 alert_device_list_test (bool verbose)
 {
     printf (" * alert device list: ");
-
     //  @selftest
     //  @end
     printf ("Empty test - OK\n");

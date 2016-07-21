@@ -62,7 +62,7 @@ sensor_actor (zsock_t *pipe, void *args)
         if (which == NULL) {
             log_debug ("sa: alert update");
             sensors.updateFromNUT ();
-            sensors.publish (client);
+            sensors.publish (client, polling*2);
         }
         else if (which == pipe) {
             zmsg_t *msg = zmsg_recv (pipe);
@@ -99,7 +99,7 @@ sensor_actor_test (bool verbose)
 {
     printf (" * sensor_actor: ");
     //  @selftest
-    static const char* endpoint = "ipc://bios-alert-actor";
+    static const char* endpoint = "ipc://bios-sensor-actor";
 
     // malamute broker
     zactor_t *malamute = zactor_new (mlm_server, (void*) "Malamute");

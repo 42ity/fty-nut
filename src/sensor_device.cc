@@ -24,58 +24,63 @@
 
 void Sensor::update (nut::TcpClient &conn)
 {
-    auto nutDevice = conn.getDevice(_nutName);
+    auto nutDevice = conn.getDevice(_nutMaster);
     if (! nutDevice.isOk()) return;
     try {
         std::string prefix = sensorPrefix();
         auto temperature = nutDevice.getVariableValue (prefix + ".temperature");
         if (temperature.empty ()) {
-            log_debug ("sa: %s.temperature on %s is not present", prefix.c_str(), _nutName.c_str ());
+            log_debug ("sa: %s.temperature on %s is not present", prefix.c_str(), _location.c_str ());
         } else {
             std::string _temperature =  temperature[0];
-            log_debug ("sa: %s.temperature on %s is %s", prefix.c_str (), _nutName.c_str (), _temperature.c_str());
+            log_debug ("sa: %s.temperature on %s is %s", prefix.c_str (), _location.c_str (), _temperature.c_str());
         }
         auto humidity = nutDevice.getVariableValue (prefix + ".humidity");
         if (humidity.empty ()) {
-            log_debug ("sa: %s.humidity on %s is not present", prefix.c_str(), _nutName.c_str ());
+            log_debug ("sa: %s.humidity on %s is not present", prefix.c_str(), _location.c_str ());
         } else {
             std::string _humidity =  humidity[0];
-            log_debug ("sa: %s.humidity on %s is %s", prefix.c_str (), _nutName.c_str (), _humidity.c_str());
+            log_debug ("sa: %s.humidity on %s is %s", prefix.c_str (), _location.c_str (), _humidity.c_str());
         }
     } catch (...) {}
 }
 
-void Sensor::publish (mlm_client_t *client)
+std::string Sensor::topicSuffix () const
+{
+        return "." + port() + "@" + _location;
+}
+
+void Sensor::publish (mlm_client_t *client, int ttl)
 {
     zmsg_t *msg = bios_proto_encode_metric (
         NULL,
         "temperature",
-        _nutName.c_str (),
+        _location.c_str (),
         _temperature.c_str (),
         "C",
-        _ttl);
+        ttl);
     if (msg) {
-        std::string subject = "temperature@" + _nutName; // TODO: correct subject
+        std::string topic = "temperature" + topicSuffix();
         log_debug ("sending new temperature for element_src = '%s', value = '%s'",
-                   _nutName.c_str (), _temperature.c_str ());
-        int r = mlm_client_send (client, subject.c_str (), &msg);
-        if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, subject.c_str(), r);
+                   _location.c_str (), _temperature.c_str ());
+        int r = mlm_client_send (client, topic.c_str (), &msg);
+        if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
         zmsg_destroy (&msg);
     }
 
     msg = bios_proto_encode_metric (
         NULL,
         "humidity",
-        _nutName.c_str (),
+        _location.c_str (),
         _humidity.c_str (),
         "C",
-        _ttl);
+        ttl);
     if (msg) {
-        std::string subject = "humidity@" + _nutName; // TODO: correct subject
+        std::string topic = "humidity" + topicSuffix();
         log_debug ("sending new humidity for element_src = '%s', value = '%s'",
-                   _nutName.c_str (), _humidity.c_str ());
-        int r = mlm_client_send (client, subject.c_str (), &msg);
-        if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, subject.c_str(), r);
+                   _location.c_str (), _humidity.c_str ());
+        int r = mlm_client_send (client, topic.c_str (), &msg);
+        if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
         zmsg_destroy (&msg);
     }
 }
@@ -91,11 +96,36 @@ std::string Sensor::sensorPrefix() const
     return prefix;
 }
 
+std::string Sensor::port() const
+{
+    if (_port.empty()) return "0";
+    return _port;
+}
+
 void
 sensor_device_test(bool verbose)
 {
-    printf (" * sensor device: ");
+    printf (" * sensor_device: ");
     //  @selftest
+    // sensor connected to stanalone ups
+    Sensor a("ups", 0, "ups", "");
+    assert (a.sensorPrefix() == "ambient.");
+    assert (a.topicSuffix() == ".0@ups");
+    
+    // sensor 2 connected to stanalone ups
+    Sensor b("ups", 0, "ups", "2");
+    assert (b.sensorPrefix() == "ambient.2.");
+    assert (b.topicSuffix() == ".2@ups");
+    
+    // sensor connected to daisy-chain master
+    Sensor c("ups", 1, "ups", "");
+    assert (c.sensorPrefix() == "device.1.ambient.");
+    assert (c.topicSuffix() == ".0@ups");
+    
+    // sensor 3 connected to daisy-chain slave 2
+    Sensor d("ups", 2, "ups2", "3");
+    assert (d.sensorPrefix() == "device.2.ambient.3.");
+    assert (d.topicSuffix() == ".3@ups2");
     //  @end
     printf (" OK\n");
 }

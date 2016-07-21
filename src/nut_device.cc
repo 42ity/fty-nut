@@ -565,36 +565,36 @@ NUTDeviceList::NUTDeviceList() {
 void NUTDeviceList::updateDeviceList(nut_t * deviceState) {
     try {
         if (!deviceState) return;
-        zlistx_t *devices = nut_get_assets (deviceState);
+        zlist_t *devices = nut_get_powerdevices (deviceState);
         if (!devices) return;
 
         _devices.clear();
         std::map<std::string, std::string> ip2master;
         {
             // make ip->master map
-            const char *name = (char *)zlistx_first(devices);
+            const char *name = (char *)zlist_first(devices);
             while (name) {
                 const char* ip = nut_asset_ip (deviceState, name);
                 const char* chain = nut_asset_daisychain (deviceState, name);
                 if (ip == NULL || chain == NULL || streq (ip, "") ) {
                     // this is strange. No IP?
-                    name = (char *)zlistx_next(devices);
+                    name = (char *)zlist_next(devices);
                     continue;
                 }
                 if (streq (chain,"") || streq (chain,"1")) {
                     // this is master
                     ip2master[ip] = name;
                 }
-                name = (char *)zlistx_next(devices);
+                name = (char *)zlist_next(devices);
             }
         }
         {
-            const char *name = (char *)zlistx_first(devices);
+            const char *name = (char *)zlist_first(devices);
             while (name) {
                 const char* ip = nut_asset_ip (deviceState, name);
                 if (!ip || streq (ip, "")) {
                     // this is strange. No IP?
-                    name = (char *)zlistx_next(devices);
+                    name = (char *)zlist_next(devices);
                     continue;
                 }
                 const char* chain_str = nut_asset_daisychain (deviceState, name);
@@ -616,10 +616,10 @@ void NUTDeviceList::updateDeviceList(nut_t * deviceState) {
                     }
                     break;
                 }
-                name = (char *)zlistx_next(devices);
+                name = (char *)zlist_next(devices);
             }
         }
-        zlistx_destroy (&devices);
+        zlist_destroy (&devices);
     } catch (const std::exception& e) {
         log_error ("exception while configuring device: %s", e.what ());
     }
