@@ -242,6 +242,7 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
         "  \"rule_name\"     : \"" + ruleName + "\","
         "  \"rule_source\"   : \"NUT\","
         "  \"rule_class\"    : \"Device internal\","
+        "  \"rule_hierarchy\": \"internal.device\","
         "  \"target\"        : \"" + ruleName + "\","
         "  \"element\"       : \"" + _assetName + "\","
         "  \"values\"        : ["
