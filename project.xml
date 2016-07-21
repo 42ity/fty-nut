@@ -38,10 +38,13 @@
     <class name = "alert device list"   private = "1">collection of alerts</class>
     <class name = "nut"                 private = "1">agent nut structure</class>
     <class name = "stream"              private = "1">stream deliver command</class>
+    <class name = "sensor device"       private = "1">sensor attached to UPS</class>
+    <class name = "sensor list"         private = "1">list of sensor attached to UPSes</class>
 
     <class name = "bios-nut-server" state = "stable">bios nut actor</class>
     <class name = "bios-nut-configurator-server" state = "stable">bios nut configurator actor</class>
     <class name = "alert actor" state = "stable">actor handling device alerts and thresholds</class>
+    <class name = "sensor actor" state = "stable">actor handling sensors attached to UPS/ePDU</class>
 
     <main name = "bios-agent-nut" service = "1" no_config = "1" />
     <main name = "bios-agent-nut-configurator" service = "1" no_config = "1" />

@@ -35,14 +35,6 @@ noinst_LTLIBRARIES =
 TESTS =
 
 EXTRA_DIST = \
-    CMakeLists.txt \
-    Findlibzmq.cmake \
-    Findczmq.cmake \
-    Findmalamute.cmake \
-    Findbiosproto.cmake \
-    Findlibcidr.cmake \
-    Findcxxtools.cmake \
-    Findlibnutclient.cmake \
     src/logger.h \
     src/fsutils.h \
     src/cidr.h \
@@ -57,6 +49,8 @@ EXTRA_DIST = \
     src/alert_device_list.h \
     src/nut.h \
     src/stream.h \
+    src/sensor_device.h \
+    src/sensor_list.h \
     src/agent_nut_classes.h
 
 include $(srcdir)/src/Makemodule.am
