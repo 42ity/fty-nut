@@ -55,6 +55,7 @@ class Sensor {
     std::string _humidity;
 
     std::string sensorPrefix() const;
+    std::string nutPrefix() const;
     std::string topicSuffix() const;
     std::string port() const;
 };

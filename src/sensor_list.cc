@@ -53,7 +53,7 @@ void Sensors::updateSensorList (nut_t *config)
     if (!devices) return;
     zlist_t *sensors = nut_get_sensors (config);
     if (!sensors) { zlist_destroy (&devices); return; }
-
+    log_debug ("sa: %zd sensors in assets", zlist_size (sensors));
     _sensors.clear ();
     std::map<std::string, std::string> ip2master;
     {
@@ -80,12 +80,14 @@ void Sensors::updateSensorList (nut_t *config)
         const char *connected_to = nut_asset_location (config, name);
         // do we know where is sensor connected?
         if (streq (connected_to, "")) {
+            log_debug ("sa: sensor %s ingnored (no location)", name);
             name = (char *) zlist_next (sensors);
             continue;
         }
         
         // is it connected to UPS/epdu?
         if ( ! zlist_exists (devices, (void *) connected_to)) {
+            log_debug ("sa: sensor %s connected to unknown location '%s'", name, connected_to);
             name = (char *) zlist_next (sensors);
             continue;
         }
@@ -120,6 +122,7 @@ void Sensors::updateSensorList (nut_t *config)
     }
     zlist_destroy (&sensors);
     zlist_destroy (&devices);
+    log_debug ("sa: loaded %zd nut sensors", _sensors.size());
 }
 
 
@@ -154,7 +157,7 @@ sensor_list_test (bool verbose)
     bios_proto_set_operation (asset, "%s", BIOS_PROTO_ASSET_OP_CREATE);    
     bios_proto_aux_insert (asset, "type", "%s", "device");
     bios_proto_aux_insert (asset, "subtype", "%s", "sensor");
-    bios_proto_aux_insert (asset, "location", "%s", "ups-1");
+    bios_proto_aux_insert (asset, "parent_name", "%s", "ups-1");
     nut_put (config, &asset);
 
     asset = bios_proto_new (BIOS_PROTO_ASSET);
@@ -180,7 +183,7 @@ sensor_list_test (bool verbose)
     bios_proto_set_operation (asset, "%s", BIOS_PROTO_ASSET_OP_CREATE);    
     bios_proto_aux_insert (asset, "type", "%s", "device");
     bios_proto_aux_insert (asset, "subtype", "%s", "sensor");
-    bios_proto_aux_insert (asset, "location", "%s", "epdu-2");
+    bios_proto_aux_insert (asset, "parent_name", "%s", "epdu-2");
     bios_proto_ext_insert (asset, "port", "%s", "21");
     nut_put (config, &asset);
     

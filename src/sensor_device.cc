@@ -24,23 +24,30 @@
 
 void Sensor::update (nut::TcpClient &conn)
 {
+    log_debug ("sa: updating temperature and humidity from NUT device %s", _nutMaster.c_str());
     auto nutDevice = conn.getDevice(_nutMaster);
-    if (! nutDevice.isOk()) return;
+    if (! nutDevice.isOk()) { 
+        log_debug ("sa: NUT device %s is not ready", _nutMaster.c_str());
+        return;
+    }
     try {
-        std::string prefix = sensorPrefix();
-        auto temperature = nutDevice.getVariableValue (prefix + ".temperature");
+        std::string prefix = nutPrefix();
+        log_debug ("sa: getting %stemperature from %s", prefix.c_str(), _nutMaster.c_str());
+        auto temperature = nutDevice.getVariableValue (prefix + "temperature");
         if (temperature.empty ()) {
-            log_debug ("sa: %s.temperature on %s is not present", prefix.c_str(), _location.c_str ());
+            log_debug ("sa: %stemperature on %s is not present", prefix.c_str(), _location.c_str ());
         } else {
-            std::string _temperature =  temperature[0];
-            log_debug ("sa: %s.temperature on %s is %s", prefix.c_str (), _location.c_str (), _temperature.c_str());
+            _temperature =  temperature[0];
+            log_debug ("sa: %stemperature on %s is %s", prefix.c_str (), _location.c_str (), _temperature.c_str());
         }
-        auto humidity = nutDevice.getVariableValue (prefix + ".humidity");
+        
+        log_debug ("sa: getting %shumidity from %s", prefix.c_str(), _nutMaster.c_str());
+        auto humidity = nutDevice.getVariableValue (prefix + "humidity");
         if (humidity.empty ()) {
-            log_debug ("sa: %s.humidity on %s is not present", prefix.c_str(), _location.c_str ());
+            log_debug ("sa: %shumidity on %s is not present", prefix.c_str(), _location.c_str ());
         } else {
-            std::string _humidity =  humidity[0];
-            log_debug ("sa: %s.humidity on %s is %s", prefix.c_str (), _location.c_str (), _humidity.c_str());
+            _humidity =  humidity[0];
+            log_debug ("sa: %shumidity on %s is %s", prefix.c_str (), _location.c_str (), _humidity.c_str());
         }
     } catch (...) {}
 }
@@ -52,6 +59,7 @@ std::string Sensor::topicSuffix () const
 
 void Sensor::publish (mlm_client_t *client, int ttl)
 {
+    log_debug ("sa: publishing temperature '%s' and humidity '%s' on '%s'", _temperature.c_str(), _humidity.c_str(),  _location.c_str());
     zmsg_t *msg = bios_proto_encode_metric (
         NULL,
         "temperature",
@@ -91,6 +99,17 @@ std::string Sensor::sensorPrefix() const
     if (_chain != 0)  prefix = "device." + std::to_string(_chain) + ".";
     prefix += "ambient.";
     if (! _port.empty ()) {
+        prefix += _port + ".";
+    }
+    return prefix;
+}
+
+std::string Sensor::nutPrefix() const
+{
+    std::string prefix;
+    if (_chain != 0)  prefix = "device." + std::to_string(_chain) + ".";
+    prefix += "ambient.";
+    if (! _port.empty () && _port != "0") {
         prefix += _port + ".";
     }
     return prefix;

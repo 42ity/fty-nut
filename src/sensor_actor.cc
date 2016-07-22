@@ -57,12 +57,14 @@ sensor_actor (zsock_t *pipe, void *args)
         log_warning ("Could not load state file '%s'.", "/var/lib/bios/nut/state_file");
     }
     sensors.updateSensorList (stateData);
+    int64_t publishtime = zclock_mono();
     while (!zsys_interrupted) {
         void *which = zpoller_wait (poller, polling);
-        if (which == NULL) {
-            log_debug ("sa: alert update");
+        if (which == NULL || zclock_mono() - publishtime > (int64_t)polling) {
+            log_debug ("sa: sensor update");
             sensors.updateFromNUT ();
-            sensors.publish (client, polling*2);
+            sensors.publish (client, polling*2/1000);
+            publishtime = zclock_mono();
         }
         else if (which == pipe) {
             zmsg_t *msg = zmsg_recv (pipe);
