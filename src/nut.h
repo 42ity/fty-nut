@@ -49,6 +49,14 @@ AGENT_NUT_EXPORT void
 AGENT_NUT_EXPORT zlistx_t *
     nut_get_assets (nut_t *self);
 
+// Get list of UPS and PDU
+AGENT_NUT_EXPORT zlist_t *
+    nut_get_powerdevices (nut_t *self);
+
+// Get list of sensors
+AGENT_NUT_EXPORT zlist_t *
+    nut_get_sensors (nut_t *self);
+
 // Returns ip address (well-known extended attribute 'ip.1') of given asset
 // or NULL when asset_name does not exist
 // or "" (empty string) when given asset does not have ip address specified
@@ -66,6 +74,12 @@ AGENT_NUT_EXPORT const char *
 // or "" (empty string) when given
 AGENT_NUT_EXPORT const char *
     nut_asset_port (nut_t *self, const char *asset_name);
+
+AGENT_NUT_EXPORT const char *
+    nut_asset_subtype (nut_t *self, const char *asset_name);
+
+AGENT_NUT_EXPORT const char *
+    nut_asset_location (nut_t *self, const char *asset_name);
 
 //  Save nut to disk
 //  If 'fullpath' is NULL does nothing
