@@ -49,11 +49,11 @@ AGENT_NUT_EXPORT void
 AGENT_NUT_EXPORT zlistx_t *
     nut_get_assets (nut_t *self);
 
-// Get list of UPS and PDU
+// Get list of names of all UPS and PDU
 AGENT_NUT_EXPORT zlist_t *
     nut_get_powerdevices (nut_t *self);
 
-// Get list of sensors
+// Get list of sensors names
 AGENT_NUT_EXPORT zlist_t *
     nut_get_sensors (nut_t *self);
 
@@ -69,15 +69,23 @@ AGENT_NUT_EXPORT const char *
 AGENT_NUT_EXPORT const char *
     nut_asset_daisychain (nut_t *self, const char *asset_name);
 
-// return port number of sensor of given asset
+// return port string of sensor of given asset
 // or NULL when asset_name does not exist
 // or "" (empty string) when given
 AGENT_NUT_EXPORT const char *
     nut_asset_port (nut_t *self, const char *asset_name);
 
+// ---------------------------------------------------------------------------
+// return asset subtype string of sensor of given asset
+// or NULL when asset_name does not exist
+// or "" (empty string) when given
 AGENT_NUT_EXPORT const char *
     nut_asset_subtype (nut_t *self, const char *asset_name);
 
+// ---------------------------------------------------------------------------
+// return asset location (aka parent_name) string of sensor of given asset
+// or NULL when asset_name does not exist
+// or "" (empty string) when given
 AGENT_NUT_EXPORT const char *
     nut_asset_location (nut_t *self, const char *asset_name);
 
