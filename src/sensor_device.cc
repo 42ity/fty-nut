@@ -60,36 +60,39 @@ std::string Sensor::topicSuffix () const
 void Sensor::publish (mlm_client_t *client, int ttl)
 {
     log_debug ("sa: publishing temperature '%s' and humidity '%s' on '%s'", _temperature.c_str(), _humidity.c_str(),  _location.c_str());
-    zmsg_t *msg = bios_proto_encode_metric (
-        NULL,
-        "temperature",
-        _location.c_str (),
-        _temperature.c_str (),
-        "C",
-        ttl);
-    if (msg) {
-        std::string topic = "temperature" + topicSuffix();
-        log_debug ("sending new temperature for element_src = '%s', value = '%s'",
-                   _location.c_str (), _temperature.c_str ());
-        int r = mlm_client_send (client, topic.c_str (), &msg);
-        if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
-        zmsg_destroy (&msg);
+    if (! _temperature.empty()) {
+        zmsg_t *msg = bios_proto_encode_metric (
+            NULL,
+            "temperature",
+            _location.c_str (),
+            _temperature.c_str (),
+            "C",
+            ttl);
+        if (msg) {
+            std::string topic = "temperature" + topicSuffix();
+            log_debug ("sending new temperature for element_src = '%s', value = '%s'",
+                       _location.c_str (), _temperature.c_str ());
+            int r = mlm_client_send (client, topic.c_str (), &msg);
+            if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
+            zmsg_destroy (&msg);
+        }
     }
-
-    msg = bios_proto_encode_metric (
-        NULL,
-        "humidity",
-        _location.c_str (),
-        _humidity.c_str (),
-        "C",
-        ttl);
-    if (msg) {
-        std::string topic = "humidity" + topicSuffix();
-        log_debug ("sending new humidity for element_src = '%s', value = '%s'",
-                   _location.c_str (), _humidity.c_str ());
-        int r = mlm_client_send (client, topic.c_str (), &msg);
-        if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
-        zmsg_destroy (&msg);
+    if (!_humidity.empty ()) {
+        zmsg_t *msg = bios_proto_encode_metric (
+            NULL,
+            "humidity",
+            _location.c_str (),
+            _humidity.c_str (),
+            "%",
+            ttl);
+        if (msg) {
+            std::string topic = "humidity" + topicSuffix();
+            log_debug ("sending new humidity for element_src = '%s', value = '%s'",
+                       _location.c_str (), _humidity.c_str ());
+            int r = mlm_client_send (client, topic.c_str (), &msg);
+            if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
+            zmsg_destroy (&msg);
+        }
     }
 }
 

@@ -30,7 +30,8 @@ class Sensors {
 
     // friend function for unit-testing
     friend void sensor_list_test (bool verbose);
- private:
+    friend void sensor_actor_test (bool verbose);
+ protected:
     std::map <std::string, Sensor>  _sensors;
 };
 

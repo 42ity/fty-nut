@@ -45,6 +45,7 @@ class Sensor {
     // friend functions for unit-testing
     friend void sensor_device_test (bool verbose);
     friend void sensor_list_test (bool verbose);
+    friend void sensor_actor_test (bool verbose);
  protected:
     std::string _nutMaster;
     int _chain = 0;

@@ -110,6 +110,56 @@ sensor_actor_test (bool verbose)
         zstr_send (malamute, "VERBOSE");
     zstr_sendx (malamute, "BIND", endpoint, NULL);
 
+    mlm_client_t *consumer = mlm_client_new ();
+    assert (consumer);
+    mlm_client_connect (consumer, endpoint, 1000, "sensor-client");
+    mlm_client_set_consumer (consumer, BIOS_PROTO_STREAM_METRICS_SENSOR, ".*");
+
+    mlm_client_t *producer = mlm_client_new ();
+    assert (producer);
+    mlm_client_connect (producer, endpoint, 1000, "sensor-producer");
+    mlm_client_set_producer (producer, BIOS_PROTO_STREAM_METRICS_SENSOR);
+
+    Sensors sensors;
+    sensors._sensors["sensor1"] = Sensor ("nut", 0, "PRG", "1");
+    sensors._sensors["sensor1"]._humidity = "50";
+
+    sensors.publish (producer, 300);
+
+    zmsg_t *msg = mlm_client_recv (consumer);
+    assert (msg);
+    bios_proto_t *bmsg = bios_proto_decode (&msg);
+    assert (bmsg);
+    assert (streq (bios_proto_value (bmsg), "50"));
+    assert (streq (bios_proto_type (bmsg), "humidity"));
+    assert (bios_proto_ttl (bmsg) == 300);
+    bios_proto_destroy (&bmsg);
+    
+    sensors._sensors["sensor1"]._temperature = "28";
+    sensors._sensors["sensor1"]._humidity = "51";
+
+    sensors.publish (producer, 300);
+
+    msg = mlm_client_recv (consumer);
+    assert (msg);
+    bmsg = bios_proto_decode (&msg);
+    assert (bmsg);
+    bios_proto_print (bmsg);
+    assert (streq (bios_proto_value (bmsg), "28"));
+    assert (streq (bios_proto_type (bmsg), "temperature"));
+    bios_proto_destroy (&bmsg);
+    
+    msg = mlm_client_recv (consumer);
+    assert (msg);
+    bmsg = bios_proto_decode (&msg);
+    assert (bmsg);
+    bios_proto_print (bmsg);
+    assert (streq (bios_proto_value (bmsg), "51"));
+    assert (streq (bios_proto_type (bmsg), "humidity"));
+    bios_proto_destroy (&bmsg);
+    
+    mlm_client_destroy (&producer);
+    mlm_client_destroy (&consumer);
     zactor_destroy (&malamute);
     //  @end
     printf (" OK\n");
