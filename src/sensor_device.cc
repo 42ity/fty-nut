@@ -59,8 +59,8 @@ std::string Sensor::topicSuffix () const
 
 void Sensor::publish (mlm_client_t *client, int ttl)
 {
+    log_debug ("sa: publishing temperature '%s' and humidity '%s' on '%s'", _temperature.c_str(), _humidity.c_str(),  _location.c_str());
     if (! _temperature.empty()) {
-        log_debug ("sa: publishing temperature '%s' and humidity '%s' on '%s'", _temperature.c_str(), _humidity.c_str(),  _location.c_str());
         zmsg_t *msg = bios_proto_encode_metric (
             NULL,
             "temperature",
@@ -83,7 +83,7 @@ void Sensor::publish (mlm_client_t *client, int ttl)
             "humidity",
             _location.c_str (),
             _humidity.c_str (),
-            "C",
+            "%",
             ttl);
         if (msg) {
             std::string topic = "humidity" + topicSuffix();
