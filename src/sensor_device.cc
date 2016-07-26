@@ -63,7 +63,7 @@ void Sensor::publish (mlm_client_t *client, int ttl)
     if (! _temperature.empty()) {
         zmsg_t *msg = bios_proto_encode_metric (
             NULL,
-            "temperature",
+            ("temperature." + port ()).c_str (),
             _location.c_str (),
             _temperature.c_str (),
             "C",
@@ -80,7 +80,7 @@ void Sensor::publish (mlm_client_t *client, int ttl)
     if (!_humidity.empty ()) {
         zmsg_t *msg = bios_proto_encode_metric (
             NULL,
-            "humidity",
+            ("humidity." + port ()).c_str (),
             _location.c_str (),
             _humidity.c_str (),
             "%",
