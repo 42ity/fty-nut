@@ -131,7 +131,7 @@ sensor_actor_test (bool verbose)
     bios_proto_t *bmsg = bios_proto_decode (&msg);
     assert (bmsg);
     assert (streq (bios_proto_value (bmsg), "50"));
-    assert (streq (bios_proto_type (bmsg), "humidity"));
+    assert (streq (bios_proto_type (bmsg), "humidity.1"));
     assert (bios_proto_ttl (bmsg) == 300);
     bios_proto_destroy (&bmsg);
     
@@ -146,7 +146,7 @@ sensor_actor_test (bool verbose)
     assert (bmsg);
     bios_proto_print (bmsg);
     assert (streq (bios_proto_value (bmsg), "28"));
-    assert (streq (bios_proto_type (bmsg), "temperature"));
+    assert (streq (bios_proto_type (bmsg), "temperature.1"));
     bios_proto_destroy (&bmsg);
     
     msg = mlm_client_recv (consumer);
@@ -155,7 +155,7 @@ sensor_actor_test (bool verbose)
     assert (bmsg);
     bios_proto_print (bmsg);
     assert (streq (bios_proto_value (bmsg), "51"));
-    assert (streq (bios_proto_type (bmsg), "humidity"));
+    assert (streq (bios_proto_type (bmsg), "humidity.1"));
     bios_proto_destroy (&bmsg);
     
     mlm_client_destroy (&producer);
