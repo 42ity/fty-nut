@@ -7,12 +7,12 @@
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation; either version 2 of the License, or
     (at your option) any later version.
-        
+
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
-        
+
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
@@ -35,7 +35,7 @@ sensor_actor (zsock_t *pipe, void *args)
     uint64_t polling = 30000;
     bool verbose = false;
     Sensors sensors;
-    
+
     mlm_client_t *client = mlm_client_new ();
     if (!client) {
         log_critical ("mlm_client_new () failed");
@@ -134,7 +134,7 @@ sensor_actor_test (bool verbose)
     assert (streq (bios_proto_type (bmsg), "humidity.1"));
     assert (bios_proto_ttl (bmsg) == 300);
     bios_proto_destroy (&bmsg);
-    
+
     sensors._sensors["sensor1"]._temperature = "28";
     sensors._sensors["sensor1"]._humidity = "51";
 
@@ -148,7 +148,7 @@ sensor_actor_test (bool verbose)
     assert (streq (bios_proto_value (bmsg), "28"));
     assert (streq (bios_proto_type (bmsg), "temperature.1"));
     bios_proto_destroy (&bmsg);
-    
+
     msg = mlm_client_recv (consumer);
     assert (msg);
     bmsg = bios_proto_decode (&msg);
@@ -157,7 +157,7 @@ sensor_actor_test (bool verbose)
     assert (streq (bios_proto_value (bmsg), "51"));
     assert (streq (bios_proto_type (bmsg), "humidity.1"));
     bios_proto_destroy (&bmsg);
-    
+
     mlm_client_destroy (&producer);
     mlm_client_destroy (&consumer);
     zactor_destroy (&malamute);

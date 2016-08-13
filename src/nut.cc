@@ -130,7 +130,7 @@ clear_ext (zhash_t *hash)
 int nut_ext_value_is_the_same (bios_proto_t *m1, bios_proto_t *m2, const char *attr)
 {
     if (!m1 || !m2 || !attr) return 0;
-    
+
     const char *a1 = bios_proto_ext_string (m1, attr, "");
     const char *a2 = bios_proto_ext_string (m2, attr, "");
     return streq (a1, a2);
@@ -141,7 +141,7 @@ int nut_ext_value_is_the_same (bios_proto_t *m1, bios_proto_t *m2, const char *a
 int nut_aux_value_is_the_same (bios_proto_t *m1, bios_proto_t *m2, const char *attr)
 {
     if (!m1 || !m2 || !attr) return 0;
-    
+
     const char *a1 = bios_proto_aux_string (m1, attr, "");
     const char *a2 = bios_proto_aux_string (m2, attr, "");
     return streq (a1, a2);
@@ -179,7 +179,7 @@ nut_put (nut_t *self, bios_proto_t **message_p)
     if (tmp) bios_proto_ext_insert (message, "subtype", tmp);
     tmp = bios_proto_aux_string (message,"parent_name", NULL);
     if (tmp) bios_proto_ext_insert (message, "parent_name", tmp);
-    
+
     bios_proto_t *asset = (bios_proto_t *) zhashx_lookup (self->assets, bios_proto_name (message));
     if (!asset) {
         clear_ext (bios_proto_ext (message));
@@ -221,7 +221,7 @@ nut_put (nut_t *self, bios_proto_t **message_p)
                 bios_proto_ext_insert (asset, "type", "%s", bios_proto_ext_string (message, "type",""));
             }
         }
-        
+
         if (bios_proto_ext_string (message, "subtype", NULL)) {
             if (!nut_ext_value_is_the_same (asset, message, "subtype")) {
                 self->changed = true;
@@ -242,14 +242,14 @@ nut_put (nut_t *self, bios_proto_t **message_p)
                 bios_proto_ext_insert (asset, "logical_asset", "%s", bios_proto_ext_string (message, "logical_asset",""));
             }
         }
-     
+
         if (bios_proto_ext_string (message, "parent_name", NULL)) {
             if (!nut_ext_value_is_the_same (asset, message, "parent_name")) {
                 self->changed = true;
                 bios_proto_ext_insert (asset, "parent_name", "%s", bios_proto_ext_string (message, "parent_name",""));
             }
         }
-       
+
         if (bios_proto_ext_string (message, "subtype", NULL)) {
             if (!nut_ext_value_is_the_same (asset, message, "subtype")) {
                 self->changed = true;
@@ -719,9 +719,9 @@ nut_test (bool verbose)
     bios_proto_ext_insert (asset, "port", "%s", "port01");
     bios_proto_aux_insert (asset, "parent_name", "%s", "ups");
     bios_proto_ext_insert (asset, "logical_asset", "%s", "room01");
-    nut_put (self, &asset);  
+    nut_put (self, &asset);
     zlistx_add_end (expected, (void *) "sensor");
-    
+
     asset =  test_asset_new ("epdu", BIOS_PROTO_ASSET_OP_CREATE);
     bios_proto_aux_insert (asset, "type", "%s", "device");
     bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
@@ -921,7 +921,7 @@ nut_test (bool verbose)
     bios_proto_aux_insert (asset, "subtype", "%s", "sensor");
     bios_proto_ext_insert (asset, "port", "%s", "port00");
     nut_put (self, &asset);
-    
+
     assert (nut_changed (self) == true);
 
     {
@@ -967,7 +967,7 @@ nut_test (bool verbose)
     nut_put (self, &asset);
     handle = zlistx_find (expected, (void *) "sensor");
     zlistx_delete (expected, handle);
-    
+
     {
         zlistx_t *received = nut_get_assets (self);
         assert (received);

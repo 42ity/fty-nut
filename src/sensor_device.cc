@@ -7,12 +7,12 @@
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation; either version 2 of the License, or
     (at your option) any later version.
-        
+
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
-        
+
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
@@ -26,7 +26,7 @@ void Sensor::update (nut::TcpClient &conn)
 {
     log_debug ("sa: updating temperature and humidity from NUT device %s", _nutMaster.c_str());
     auto nutDevice = conn.getDevice(_nutMaster);
-    if (! nutDevice.isOk()) { 
+    if (! nutDevice.isOk()) {
         log_debug ("sa: NUT device %s is not ready", _nutMaster.c_str());
         return;
     }
@@ -40,7 +40,7 @@ void Sensor::update (nut::TcpClient &conn)
             _temperature =  temperature[0];
             log_debug ("sa: %stemperature on %s is %s", prefix.c_str (), _location.c_str (), _temperature.c_str());
         }
-        
+
         log_debug ("sa: getting %shumidity from %s", prefix.c_str(), _nutMaster.c_str());
         auto humidity = nutDevice.getVariableValue (prefix + "humidity");
         if (humidity.empty ()) {
@@ -133,17 +133,17 @@ sensor_device_test(bool verbose)
     Sensor a("ups", 0, "ups", "");
     assert (a.sensorPrefix() == "ambient.");
     assert (a.topicSuffix() == ".0@ups");
-    
+
     // sensor 2 connected to stanalone ups
     Sensor b("ups", 0, "ups", "2");
     assert (b.sensorPrefix() == "ambient.2.");
     assert (b.topicSuffix() == ".2@ups");
-    
+
     // sensor connected to daisy-chain master
     Sensor c("ups", 1, "ups", "");
     assert (c.sensorPrefix() == "device.1.ambient.");
     assert (c.topicSuffix() == ".0@ups");
-    
+
     // sensor 3 connected to daisy-chain slave 2
     Sensor d("ups", 2, "ups2", "3");
     assert (d.sensorPrefix() == "device.2.ambient.3.");

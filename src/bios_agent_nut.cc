@@ -172,7 +172,7 @@ int main (int argc, char *argv [])
         log_critical ("zactor_new (task = 'nut_device_server', args = 'NULL') failed");
         return -1;
     }
-    
+
     zactor_t *nut_sensor = zactor_new (sensor_actor, (void *) NULL);
     if (!nut_sensor) {
         log_critical ("zactor_new (task = 'nut_sensor', args = 'NULL') failed");
