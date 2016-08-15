@@ -1,21 +1,21 @@
 /*  =========================================================================
     sensor_list - list of sensor attached to UPSes
 
-    Copyright (C) 2014 - 2015 Eaton                                        
-                                                                           
-    This program is free software; you can redistribute it and/or modify   
-    it under the terms of the GNU General Public License as published by   
-    the Free Software Foundation; either version 2 of the License, or      
-    (at your option) any later version.                                    
-                                                                           
-    This program is distributed in the hope that it will be useful,        
-    but WITHOUT ANY WARRANTY; without even the implied warranty of         
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          
-    GNU General Public License for more details.                           
-                                                                           
+    Copyright (C) 2014 - 2015 Eaton
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.            
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     =========================================================================
 */
 
@@ -74,7 +74,7 @@ void Sensors::updateSensorList (nut_t *config)
             name = (char *)zlist_next(devices);
         }
     }
-    
+
     char * name = (char *)zlist_first(sensors);
     while (name) {
         const char *connected_to = nut_asset_location (config, name);
@@ -84,14 +84,14 @@ void Sensors::updateSensorList (nut_t *config)
             name = (char *) zlist_next (sensors);
             continue;
         }
-        
+
         // is it connected to UPS/epdu?
         if ( ! zlist_exists (devices, (void *) connected_to)) {
             log_debug ("sa: sensor %s connected to unknown location '%s'", name, connected_to);
             name = (char *) zlist_next (sensors);
             continue;
         }
-        
+
         const char* ip = nut_asset_ip (config, connected_to);
         const char* chain_str = nut_asset_daisychain (config, connected_to);
         int chain = 0;
@@ -146,7 +146,7 @@ sensor_list_test (bool verbose)
 
     bios_proto_t *asset = bios_proto_new (BIOS_PROTO_ASSET);
     bios_proto_set_name (asset, "%s", "ups-1");
-    bios_proto_set_operation (asset, "%s", BIOS_PROTO_ASSET_OP_CREATE);    
+    bios_proto_set_operation (asset, "%s", BIOS_PROTO_ASSET_OP_CREATE);
     bios_proto_aux_insert (asset, "type", "%s", "device");
     bios_proto_aux_insert (asset, "subtype", "%s", "ups");
     bios_proto_ext_insert (asset, "ip.1", "%s", "1.1.1.1");
@@ -154,7 +154,7 @@ sensor_list_test (bool verbose)
 
     asset = bios_proto_new (BIOS_PROTO_ASSET);
     bios_proto_set_name (asset, "%s", "sensor-1");
-    bios_proto_set_operation (asset, "%s", BIOS_PROTO_ASSET_OP_CREATE);    
+    bios_proto_set_operation (asset, "%s", BIOS_PROTO_ASSET_OP_CREATE);
     bios_proto_aux_insert (asset, "type", "%s", "device");
     bios_proto_aux_insert (asset, "subtype", "%s", "sensor");
     bios_proto_aux_insert (asset, "parent_name", "%s", "ups-1");
@@ -162,7 +162,7 @@ sensor_list_test (bool verbose)
 
     asset = bios_proto_new (BIOS_PROTO_ASSET);
     bios_proto_set_name (asset, "%s", "epdu-1");
-    bios_proto_set_operation (asset, "%s", BIOS_PROTO_ASSET_OP_CREATE);    
+    bios_proto_set_operation (asset, "%s", BIOS_PROTO_ASSET_OP_CREATE);
     bios_proto_aux_insert (asset, "type", "%s", "device");
     bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
     bios_proto_ext_insert (asset, "ip.1", "%s", "1.1.1.2");
@@ -171,7 +171,7 @@ sensor_list_test (bool verbose)
 
     asset = bios_proto_new (BIOS_PROTO_ASSET);
     bios_proto_set_name (asset, "%s", "epdu-2");
-    bios_proto_set_operation (asset, "%s", BIOS_PROTO_ASSET_OP_CREATE);    
+    bios_proto_set_operation (asset, "%s", BIOS_PROTO_ASSET_OP_CREATE);
     bios_proto_aux_insert (asset, "type", "%s", "device");
     bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
     bios_proto_ext_insert (asset, "ip.1", "%s", "1.1.1.2");
@@ -180,13 +180,13 @@ sensor_list_test (bool verbose)
 
     asset = bios_proto_new (BIOS_PROTO_ASSET);
     bios_proto_set_name (asset, "%s", "sensor-2");
-    bios_proto_set_operation (asset, "%s", BIOS_PROTO_ASSET_OP_CREATE);    
+    bios_proto_set_operation (asset, "%s", BIOS_PROTO_ASSET_OP_CREATE);
     bios_proto_aux_insert (asset, "type", "%s", "device");
     bios_proto_aux_insert (asset, "subtype", "%s", "sensor");
     bios_proto_aux_insert (asset, "parent_name", "%s", "epdu-2");
     bios_proto_ext_insert (asset, "port", "%s", "21");
     nut_put (config, &asset);
-    
+
     Sensors list;
     list.updateSensorList (config);
     assert (list._sensors.size() == 2);

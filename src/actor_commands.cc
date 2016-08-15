@@ -54,6 +54,7 @@ actor_commands (
     int ret = 0;
     log_debug ("actor command = '%s'", cmd);
     if (streq (cmd, "$TERM")) {
+        log_info ("Got $TERM");
         ret = 1;
     }
     else
