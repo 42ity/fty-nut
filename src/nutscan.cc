@@ -148,11 +148,23 @@ nut_scan_snmp(
         const CIDRAddress& ip_address,
         std::vector<std::string>& out)
 {
-    Argv args = {"nut-scanner", "-S", "-s", ip_address.toString()};
-    return s_run_nut_scaner(
+    int r = -1;
+    // DMF enabled and available
+    Argv args = {"nut-scanner", "-z", "-s", ip_address.toString()};
+    r = s_run_nut_scaner(
             args,
             name,
             out);
+    if (r != -1)
+        return r;
+
+    // DMF not available
+    args = {"nut-scanner", "-S", "-s", ip_address.toString()};
+    r = s_run_nut_scaner(
+            args,
+            name,
+            out);
+    return r;
 }
 
 
