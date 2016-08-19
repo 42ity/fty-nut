@@ -35,7 +35,7 @@ BuildRequires:  gcc-c++
 BuildRequires:  zeromq-devel
 BuildRequires:  czmq-devel
 BuildRequires:  malamute-devel
-BuildRequires:  biosproto-devel
+BuildRequires:  libbiosproto-devel
 BuildRequires:  cxxtools-devel
 BuildRequires:  nut-devel
 BuildRequires:  libcidr-devel
@@ -66,7 +66,7 @@ Requires:       libagent_nut0 = %{version}
 Requires:       zeromq-devel
 Requires:       czmq-devel
 Requires:       malamute-devel
-Requires:       biosproto-devel
+Requires:       libbiosproto-devel
 Requires:       cxxtools-devel
 Requires:       nut-devel
 Requires:       cidr-devel
