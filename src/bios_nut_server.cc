@@ -197,7 +197,12 @@ bios_nut_server (zsock_t *pipe, void *args)
 
         zmsg_destroy (&message);
     } // while (!zsys_interrupted)
-
+    if (nut_changed (data)) {
+        r = nut_save (data, state_file.c_str ());
+        if (r != 0) {
+            log_warning ("Could not save state file '%s'.", state_file.c_str ());
+        }
+    }
     nut_destroy (&data);
     zpoller_destroy (&poller);
     mlm_client_destroy (&client);
