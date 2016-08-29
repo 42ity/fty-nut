@@ -157,7 +157,7 @@ sensor_list_test (bool verbose)
     bios_proto_set_operation (asset, "%s", BIOS_PROTO_ASSET_OP_CREATE);
     bios_proto_aux_insert (asset, "type", "%s", "device");
     bios_proto_aux_insert (asset, "subtype", "%s", "sensor");
-    bios_proto_aux_insert (asset, "parent_name", "%s", "ups-1");
+    bios_proto_aux_insert (asset, "parent_name.1", "%s", "ups-1");
     nut_put (config, &asset);
 
     asset = bios_proto_new (BIOS_PROTO_ASSET);
@@ -183,7 +183,7 @@ sensor_list_test (bool verbose)
     bios_proto_set_operation (asset, "%s", BIOS_PROTO_ASSET_OP_CREATE);
     bios_proto_aux_insert (asset, "type", "%s", "device");
     bios_proto_aux_insert (asset, "subtype", "%s", "sensor");
-    bios_proto_aux_insert (asset, "parent_name", "%s", "epdu-2");
+    bios_proto_aux_insert (asset, "parent_name.1", "%s", "epdu-2");
     bios_proto_ext_insert (asset, "port", "%s", "21");
     nut_put (config, &asset);
 
