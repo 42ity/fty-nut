@@ -186,6 +186,7 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
     case asset_operation::UPDATE:
         {
             std::vector<std::string> configs;
+            const std::string community;
             std::string IP = "127.0.0.1"; // Fake value for local-media devices or dummy-upses, either passed with an upsconf_block
                 // TODO: (lib)nutscan supports local media like serial or USB,
                 // as well as other remote protocols like IPMI. Use them later.
@@ -221,7 +222,7 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
                 }
                 IP = ipit->second;
 
-                nut_scan_snmp( name, CIDRAddress(IP), configs );
+                nut_scan_snmp( name, CIDRAddress(IP), configs, community );
                 nut_scan_xml_http( name, CIDRAddress(IP), configs );
             }
 
