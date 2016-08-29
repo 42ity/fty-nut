@@ -108,7 +108,7 @@ clear_ext (zhash_t *hash)
             !streq (zhash_cursor (hash), "daisy_chain") &&
             !streq (zhash_cursor (hash), "port") &&
             !streq (zhash_cursor (hash), "subtype") &&
-            !streq (zhash_cursor (hash), "parent_name") &&
+            !streq (zhash_cursor (hash), "parent_name.1") &&
             !streq (zhash_cursor (hash), "logical_asset")) {
             zlistx_add_end (to_delete, (void *) zhash_cursor (hash));
         }
@@ -177,8 +177,8 @@ nut_put (nut_t *self, bios_proto_t **message_p)
     // copy from aux to ext what we need
     const char *tmp = bios_proto_aux_string (message,"subtype", NULL);
     if (tmp) bios_proto_ext_insert (message, "subtype", tmp);
-    tmp = bios_proto_aux_string (message,"parent_name", NULL);
-    if (tmp) bios_proto_ext_insert (message, "parent_name", tmp);
+    tmp = bios_proto_aux_string (message,"parent_name.1", NULL);
+    if (tmp) bios_proto_ext_insert (message, "parent_name.1", tmp);
 
     bios_proto_t *asset = (bios_proto_t *) zhashx_lookup (self->assets, bios_proto_name (message));
     if (!asset) {
@@ -243,10 +243,10 @@ nut_put (nut_t *self, bios_proto_t **message_p)
             }
         }
 
-        if (bios_proto_ext_string (message, "parent_name", NULL)) {
-            if (!nut_ext_value_is_the_same (asset, message, "parent_name")) {
+        if (bios_proto_ext_string (message, "parent_name.1", NULL)) {
+            if (!nut_ext_value_is_the_same (asset, message, "parent_name.1")) {
                 self->changed = true;
-                bios_proto_ext_insert (asset, "parent_name", "%s", bios_proto_ext_string (message, "parent_name",""));
+                bios_proto_ext_insert (asset, "parent_name.1", "%s", bios_proto_ext_string (message, "parent_name.1",""));
             }
         }
 
@@ -391,13 +391,13 @@ nut_asset_subtype (nut_t *self, const char *asset_name)
 }
 
 // ---------------------------------------------------------------------------
-// return asset location (aka parent_name) string of sensor of given asset
+// return asset location (aka parent_name.1) string of sensor of given asset
 // or NULL when asset_name does not exist
 // or "" (empty string) when given
 const char *
 nut_asset_location (nut_t *self, const char *asset_name)
 {
-    return nut_asset_get_string (self, asset_name, "parent_name");
+    return nut_asset_get_string (self, asset_name, "parent_name.1");
 }
 
 //  --------------------------------------------------------------------------
@@ -717,7 +717,7 @@ nut_test (bool verbose)
     bios_proto_aux_insert (asset, "type", "%s", "device");
     bios_proto_aux_insert (asset, "subtype", "%s", "sensor");
     bios_proto_ext_insert (asset, "port", "%s", "port01");
-    bios_proto_aux_insert (asset, "parent_name", "%s", "ups");
+    bios_proto_aux_insert (asset, "parent_name.1", "%s", "ups");
     bios_proto_ext_insert (asset, "logical_asset", "%s", "room01");
     nut_put (self, &asset);
     zlistx_add_end (expected, (void *) "sensor");
