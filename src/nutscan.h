@@ -30,7 +30,7 @@
  * \param[in] name asset name of device
  * \param[in] ip_address ip address of device
  * \param[out] out resulted string with NUT config snippets
- * \param[in] community string
+ * \param[in] community string, if empty 'public' will be used
  * \return 0 if success, -1 otherwise
  */
 int
