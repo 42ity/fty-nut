@@ -141,8 +141,7 @@ int main (int argc, char *argv [])
         return EXIT_FAILURE;
     }
 
-
-    // poll interval
+    // polling interval
     if (!polling) {
         char *env_poll_interval = getenv ("BIOS_NUT_POLLING_INTERVAL");
         if (env_poll_interval) {
