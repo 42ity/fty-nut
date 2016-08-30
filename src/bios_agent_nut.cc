@@ -80,8 +80,8 @@ int main (int argc, char *argv [])
     int log_level = -1;
     std::string mapping_file;
     std::string state_file;
-    const char* polling = "30";
-
+    const char* polling = NULL;
+    
     while (true) {
         static struct option long_options[] =
         {
@@ -141,6 +141,18 @@ int main (int argc, char *argv [])
         return EXIT_FAILURE;
     }
 
+
+    // poll interval
+    if (!polling) {
+        char *env_poll_interval = getenv ("BIOS_NUT_POLLING_INTERVAL");
+        if (env_poll_interval) {
+            polling = env_poll_interval;
+        }
+        else {
+            polling = "30";
+        }
+    }
+    
     // log_level cascade (priority ascending)
     //  1. default value
     //  2. env. variable
@@ -185,7 +197,7 @@ int main (int argc, char *argv [])
         zstr_sendx (nut_sensor, "VERBOSE", NULL);
     }
     zstr_sendx (nut_server, "CONFIGURE", mapping_file.c_str (), state_file.c_str (), NULL);
-    zstr_sendx (nut_server, "POLLING", polling, NULL);
+    zstr_sendx (nut_server, "POLLING", polling, NULL);    
     zstr_sendx (nut_server, "CONNECT", ENDPOINT, ACTOR_NUT_NAME, NULL);
     zstr_sendx (nut_server, "PRODUCER", BIOS_PROTO_STREAM_METRICS, NULL);
     zstr_sendx (nut_server, "CONSUMER", BIOS_PROTO_STREAM_ASSETS, ".*", NULL);
