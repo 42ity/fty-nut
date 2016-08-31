@@ -29,16 +29,16 @@
  *
  * \param[in] name asset name of device
  * \param[in] ip_address ip address of device
+ * \param[in] community string, if empty 'public' will be used 
  * \param[out] out resulted string with NUT config snippets
- * \param[in] community string, if empty 'public' will be used
  * \return 0 if success, -1 otherwise
  */
 int
 nut_scan_snmp(
         const std::string& name,
         const CIDRAddress& ip_address,
-        std::vector<std::string>& out,
-        const std::string community);
+        const std::string community,
+        std::vector<std::string>& out);
 
 /**
  * \brief call nut scan over XML HTTP

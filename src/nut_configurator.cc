@@ -33,6 +33,7 @@
 #include <iostream>
 #include <fstream>
 #include <cxxtools/regex.h>
+#include <cxxtools/jsondeserializer.h>
 
 using namespace shared;
 
@@ -187,7 +188,6 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
         {
             std::vector<std::string> configs;
             const std::string community = getenv("BIOS_SNMP_COMMUNITY_NAME");
-            log_debug("Community == %s", community.c_str());
             
             std::string IP = "127.0.0.1"; // Fake value for local-media devices or dummy-upses, either passed with an upsconf_block
                 // TODO: (lib)nutscan supports local media like serial or USB,
@@ -224,7 +224,32 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
                 }
                 IP = ipit->second;
 
-                nut_scan_snmp( name, CIDRAddress(IP), configs, community );
+                try {
+                    std::ifstream input(community, std::ifstream::in);
+                    cxxtools::SerializationInfo si;
+                    cxxtools::JsonDeserializer deserializer(input);
+
+                    deserializer.deserialize(si);
+                    if (si.category () != cxxtools::SerializationInfo::Category::Array) {
+                        throw std::runtime_error ("BIOS_SNMP_COMMUNITY_NAME is not array."); 
+                    }
+                
+                    for (const auto& it : si)  {
+                        if (it.category() != cxxtools::SerializationInfo::Category::Value) {
+                            throw std::invalid_argument ("Item of array is not value/string.");
+                        }
+                        std::string community_item;
+                        it >>= community_item;
+                        log_debug("Community == %s", community_item.c_str());
+                        
+                        nut_scan_snmp( name, CIDRAddress(IP), community_item, configs );
+                    }
+                }
+                catch (std::exception& e) {
+                    puts (e.what());
+                    return false;
+                }
+                
                 nut_scan_xml_http( name, CIDRAddress(IP), configs );
             }
 
