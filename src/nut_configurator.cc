@@ -187,7 +187,7 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
     case asset_operation::UPDATE:
         {
             std::vector<std::string> configs;
-            const std::string community = getenv("BIOS_SNMP_COMMUNITY_NAME");
+            std::string community = getenv("BIOS_SNMP_COMMUNITY_NAME");
             if (community.empty ()) {
                 community = "[]";
             }
