@@ -146,8 +146,8 @@ int
 nut_scan_snmp(
         const std::string& name,
         const CIDRAddress& ip_address,
-        std::vector<std::string>& out,
-        const std::string community)
+        const std::string community,
+        std::vector<std::string>& out)
 {
     std::string comm;
     comm = community;
