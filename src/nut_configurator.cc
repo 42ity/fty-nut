@@ -224,6 +224,7 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
                 }
                 IP = ipit->second;
 
+                std::vector <std::string> communities;
                 try {
                     std::ifstream input(community, std::ifstream::in);
                     cxxtools::SerializationInfo si;
@@ -240,17 +241,27 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
                         }
                         std::string community_item;
                         it >>= community_item;
-                        log_debug("Community == %s", community_item.c_str());
-                        
-                        nut_scan_snmp( name, CIDRAddress(IP), community_item, configs );
+                        communities.push_back (community_item);
                     }
                 }
-                catch (std::exception& e) {
-                    puts (e.what());
+                catch (const std::exception& e) {
                     return false;
                 }
-                
-                nut_scan_xml_http( name, CIDRAddress(IP), configs );
+
+                bool scan_snmp_success = false;
+                communities.push_back ("public");
+                for (const auto& c : communities) {
+                    log_debug("Trying community == %s", c.c_str());
+                    if (nut_scan_snmp (name, CIDRAddress (IP), c, configs) == 0 && !configs.empty ()) {
+                        nut_scan_xml_http (name, CIDRAddress(IP), configs);
+                        scan_snmp_success = true;
+                        break;
+                    }
+                }
+                if (!scan_snmp_success) {
+                    log_error ("not one community string succeeded.");
+                    return false;
+                }
             }
 
             auto it = selectBest( configs );
