@@ -187,10 +187,8 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
     case asset_operation::UPDATE:
         {
             std::vector<std::string> configs;
-            std::string community = getenv("BIOS_SNMP_COMMUNITY_NAME");
-            if (community.empty ()) {
-                community = "[]";
-            }
+            char *tmp = getenv("BIOS_SNMP_COMMUNITY_NAME");
+            std::string community = tmp ? tmp : "[]";
             
             std::string IP = "127.0.0.1"; // Fake value for local-media devices or dummy-upses, either passed with an upsconf_block
                 // TODO: (lib)nutscan supports local media like serial or USB,
