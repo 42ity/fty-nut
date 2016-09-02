@@ -32,6 +32,7 @@
 #include <algorithm>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <cxxtools/regex.h>
 #include <cxxtools/jsondeserializer.h>
 
@@ -227,7 +228,7 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
 
                 std::vector <std::string> communities;
                 try {
-                    std::ifstream input(community, std::ifstream::in);
+                    std::stringstream input(community);
                     cxxtools::SerializationInfo si;
                     cxxtools::JsonDeserializer deserializer(input);
 
@@ -249,20 +250,14 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
                     return false;
                 }
 
-                bool scan_snmp_success = false;
                 communities.push_back ("public");
                 for (const auto& c : communities) {
                     log_debug("Trying community == %s", c.c_str());
                     if (nut_scan_snmp (name, CIDRAddress (IP), c, configs) == 0 && !configs.empty ()) {
-                        nut_scan_xml_http (name, CIDRAddress(IP), configs);
-                        scan_snmp_success = true;
                         break;
                     }
                 }
-                if (!scan_snmp_success) {
-                    log_error ("not one community string succeeded.");
-                    return false;
-                }
+                nut_scan_xml_http (name, CIDRAddress(IP), configs);
             }
 
             auto it = selectBest( configs );
