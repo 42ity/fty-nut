@@ -332,7 +332,7 @@ bool Autoconfig::connect(
 void
 bios_nut_configurator_server (zsock_t *pipe, void *args)
 {
-    Autoconfig agent ("agent-autoconfig");
+    Autoconfig agent ("nut-configurator");
     agent.connect (MLM_ENDPOINT, "ASSETS", ".*");
 
     zpoller_t *poller = zpoller_new (pipe, mlm_client_msgpipe (agent.client()), NULL);
