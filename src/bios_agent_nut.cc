@@ -196,7 +196,7 @@ int main (int argc, char *argv [])
         zstr_sendx (nut_sensor, "VERBOSE", NULL);
     }
     zstr_sendx (nut_server, "CONFIGURE", mapping_file.c_str (), state_file.c_str (), NULL);
-    zstr_sendx (nut_server, "POLLING", polling, NULL);    
+    zstr_sendx (nut_server, "POLLING", polling, NULL);
     zstr_sendx (nut_server, "CONNECT", ENDPOINT, ACTOR_NUT_NAME, NULL);
     zstr_sendx (nut_server, "PRODUCER", BIOS_PROTO_STREAM_METRICS, NULL);
     zstr_sendx (nut_server, "CONSUMER", BIOS_PROTO_STREAM_ASSETS, ".*", NULL);

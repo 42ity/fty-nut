@@ -78,13 +78,17 @@ void Sensor::publish (mlm_client_t *client, int ttl)
         }
     }
     if (!_humidity.empty ()) {
+        zhash_t *aux = zhash_new ();
+        zhash_autofree (aux);
+        zhash_insert (aux, "port", (void*) port().c_str());
         zmsg_t *msg = bios_proto_encode_metric (
-            NULL,
+            aux,
             ("humidity." + port ()).c_str (),
             _location.c_str (),
             _humidity.c_str (),
             "%",
             ttl);
+        zhash_destroy (&aux);
         if (msg) {
             std::string topic = "humidity" + topicSuffix();
             log_debug ("sending new humidity for element_src = '%s', value = '%s'",
