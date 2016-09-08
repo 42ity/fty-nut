@@ -61,6 +61,9 @@ void Sensor::publish (mlm_client_t *client, int ttl)
 {
     log_debug ("sa: publishing temperature '%s' and humidity '%s' on '%s'", _temperature.c_str(), _humidity.c_str(),  _location.c_str());
     if (! _temperature.empty()) {
+        zhash_t *aux = zhash_new ();
+        zhash_autofree (aux);
+        zhash_insert (aux, "port", (void*) port().c_str());
         zmsg_t *msg = bios_proto_encode_metric (
             NULL,
             ("temperature." + port ()).c_str (),
@@ -68,6 +71,7 @@ void Sensor::publish (mlm_client_t *client, int ttl)
             _temperature.c_str (),
             "C",
             ttl);
+        zhash_destroy (&aux);
         if (msg) {
             std::string topic = "temperature" + topicSuffix();
             log_debug ("sending new temperature for element_src = '%s', value = '%s'",
