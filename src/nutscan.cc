@@ -156,17 +156,19 @@ nut_scan_snmp(
     
     int r = -1;
     // DMF enabled and available
-    Argv args = {"nut-scanner", "--community", comm, "-z", "-s", ip_address.toString()};
-    r = s_run_nut_scaner(
-            args,
-            name,
-            out);
-    
-    if (r != -1)
-        return r;
+    if (::getenv ("BIOS_NUT_USE_DMF")) {
+        Argv args = {"nut-scanner", "--community", comm, "-z", "-s", ip_address.toString()};
+        r = s_run_nut_scaner(
+                args,
+                name,
+                out);
+        
+        if (r != -1)
+            return r;
+    }
 
     // DMF not available
-    args = {"nut-scanner", "--community", comm, "-S", "-s", ip_address.toString()};
+    Argv args = {"nut-scanner", "--community", comm, "-S", "-s", ip_address.toString()};
     r = s_run_nut_scaner(
             args,
             name,
