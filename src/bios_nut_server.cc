@@ -95,7 +95,7 @@ bios_nut_server (zsock_t *pipe, void *args)
     }
 
     mlm_client_t *iclient = mlm_client_new ();
-    if (!client) {
+    if (!iclient) {
         log_critical ("mlm_client_new () failed");
         return;
     }
