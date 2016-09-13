@@ -74,10 +74,10 @@ bool NUTAgent::isClientSet () const
 
 void NUTAgent::onPoll ()
 {
-    if (!_client)
-       return;
-    advertisePhysics ();
-    advertiseInventory ();
+    if (_client)
+        advertisePhysics ();
+    if (_iclient)
+        advertiseInventory ();
 }
 
 void NUTAgent::updateDeviceList (nut_t *deviceState) {
