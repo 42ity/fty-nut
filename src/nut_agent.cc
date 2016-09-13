@@ -221,15 +221,16 @@ void NUTAgent::advertisePhysics () {
 }
 
 void NUTAgent::advertiseInventory() {
-    bool advertise = false;
+    bool advertiseAll = false;
     if (_inventoryTimestamp_ms + NUT_INVENTORY_REPEAT_AFTER_MS < static_cast<uint64_t> (zclock_mono ())) {
-        advertise = true;
+        advertiseAll = true;
         _inventoryTimestamp_ms = static_cast<uint64_t> (zclock_mono ());
     }
     for (auto& device : _deviceList) {
         std::string log;
         zhash_t *inventory = zhash_new ();
-        for (auto& item : device.second.inventory (!advertise) ) {
+        // !advertiseAll = advetise_Not_OnlyChanged
+        for (auto& item : device.second.inventory (!advertiseAll) ) {
             if (item.first == "status.ups") {
                 // this value is not advertised as inventory information
                 continue;
