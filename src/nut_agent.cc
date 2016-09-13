@@ -115,7 +115,7 @@ int NUTAgent::isend (const std::string& subject, zmsg_t **message_p)
     return rv;
 }
 
-std::string NUTAgent::physicalQuantityShortName (const std::string& longName)
+std::string NUTAgent::physicalQuantityShortName (const std::string& longName) const
 {
     size_t i = longName.find ('.');
     if (i == std::string::npos) {
@@ -124,7 +124,7 @@ std::string NUTAgent::physicalQuantityShortName (const std::string& longName)
     return longName.substr (0, i);
 }
 
-std::string NUTAgent::physicalQuantityToUnits (const std::string& quantity) {
+std::string NUTAgent::physicalQuantityToUnits (const std::string& quantity) const {
     auto it = _units.find(quantity);
     if (it == _units.end ()) {
         return "";
