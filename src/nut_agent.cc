@@ -74,10 +74,10 @@ bool NUTAgent::isClientSet () const
 
 void NUTAgent::onPoll ()
 {
-    if (!_client)
-       return;
-    advertisePhysics ();
-    advertiseInventory ();
+    if (_client)
+        advertisePhysics ();
+    if (_iclient)
+        advertiseInventory ();
 }
 
 void NUTAgent::updateDeviceList (nut_t *deviceState) {
@@ -222,20 +222,21 @@ void NUTAgent::advertisePhysics () {
 
 void NUTAgent::advertiseInventory() {
     bool advertise = false;
-    if (_inventoryTimestamp + NUT_INVENTORY_REPEAT_AFTER < static_cast<uint64_t> (zclock_mono ())) {
+    if (_inventoryTimestamp_ms + NUT_INVENTORY_REPEAT_AFTER_MS < static_cast<uint64_t> (zclock_mono ())) {
         advertise = true;
-        _inventoryTimestamp = static_cast<uint64_t> (zclock_mono ());
+        _inventoryTimestamp_ms = static_cast<uint64_t> (zclock_mono ());
     }
     for (auto& device : _deviceList) {
-        std::string topic = "inventory@" + device.second.assetName ();
         std::string log;
         zhash_t *inventory = zhash_new ();
         for (auto& item : device.second.inventory (!advertise) ) {
-            if (item.first != "status.ups") {
-                zhash_insert (inventory, item.first.c_str (), (void *) item.second.c_str ()) ;
-                log += item.first + " = \"" + item.second + "\"; ";
-                device.second.setChanged (item.first, false);
+            if (item.first == "status.ups") {
+                // this value is not advertised as inventory information
+                continue;
             }
+            zhash_insert (inventory, item.first.c_str (), (void *) item.second.c_str ()) ;
+            log += item.first + " = \"" + item.second + "\"; ";
+            device.second.setChanged (item.first, false);
         }
         if (zhash_size (inventory) > 0) {
             zmsg_t *message = bios_proto_encode_asset (
@@ -243,17 +244,13 @@ void NUTAgent::advertiseInventory() {
                     device.second.assetName ().c_str (),
                     "inventory",
                     inventory);
-            /* NOTE: Left deliberately until verified to work
-            _scoped_ymsg_t *message = bios_inventory_encode(
-                device.second.name().c_str(),
-                &inventory,
-                "inventory" );
-            */
 
             if (message) {
-                log_debug( "new inventory message %s: %s", topic.c_str(), log.c_str() );
+                std::string topic = "inventory@" + device.second.assetName ();
+                log_debug ("new inventory message '%s': %s", topic.c_str(), log.c_str());
                 int r = isend (topic, &message);
-                if( r != 0 ) log_error("failed to send inventory %s result %" PRIi32, topic.c_str(), r);
+                if( r != 0 )
+                    log_error ("failed to send inventory %s result %i", topic.c_str(), r);
                 zmsg_destroy (&message);
             }
         }

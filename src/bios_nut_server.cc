@@ -93,9 +93,9 @@ bios_nut_server (zsock_t *pipe, void *args)
         log_critical ("mlm_client_new () failed");
         return;
     }
-
+    // inventory client
     mlm_client_t *iclient = mlm_client_new ();
-    if (!client) {
+    if (!iclient) {
         log_critical ("mlm_client_new () failed");
         return;
     }
@@ -112,11 +112,19 @@ bios_nut_server (zsock_t *pipe, void *args)
     if (!poller) {
         log_critical ("zpoller_new () failed");
         mlm_client_destroy (&client);
+        mlm_client_destroy (&iclient);
         return;
     }
 
-    NUTAgent nut_agent;
     nut_t *data = nut_new ();
+    if (!data) {
+        zpoller_destroy (&poller);
+        log_critical ("nut_new () failed");
+        mlm_client_destroy (&client);
+        mlm_client_destroy (&iclient);
+        return;
+    }
+    NUTAgent nut_agent;
     std::string state_file;
 
     zsock_signal (pipe, 0);
