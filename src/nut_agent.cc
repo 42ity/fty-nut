@@ -227,15 +227,16 @@ void NUTAgent::advertiseInventory() {
         _inventoryTimestamp_ms = static_cast<uint64_t> (zclock_mono ());
     }
     for (auto& device : _deviceList) {
-        std::string topic = "inventory@" + device.second.assetName ();
         std::string log;
         zhash_t *inventory = zhash_new ();
         for (auto& item : device.second.inventory (!advertise) ) {
-            if (item.first != "status.ups") {
-                zhash_insert (inventory, item.first.c_str (), (void *) item.second.c_str ()) ;
-                log += item.first + " = \"" + item.second + "\"; ";
-                device.second.setChanged (item.first, false);
+            if (item.first == "status.ups") {
+                // this value is not advertised as inventory information
+                continue;
             }
+            zhash_insert (inventory, item.first.c_str (), (void *) item.second.c_str ()) ;
+            log += item.first + " = \"" + item.second + "\"; ";
+            device.second.setChanged (item.first, false);
         }
         if (zhash_size (inventory) > 0) {
             zmsg_t *message = bios_proto_encode_asset (
@@ -245,6 +246,7 @@ void NUTAgent::advertiseInventory() {
                     inventory);
 
             if (message) {
+                std::string topic = "inventory@" + device.second.assetName ();
                 log_debug ("new inventory message '%s': %s", topic.c_str(), log.c_str());
                 int r = isend (topic, &message);
                 if( r != 0 )
