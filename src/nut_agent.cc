@@ -239,23 +239,26 @@ void NUTAgent::advertiseInventory() {
             log += item.first + " = \"" + item.second + "\"; ";
             device.second.setChanged (item.first, false);
         }
-        if (zhash_size (inventory) > 0) {
-            zmsg_t *message = bios_proto_encode_asset (
-                    NULL,
-                    device.second.assetName ().c_str (),
-                    "inventory",
-                    inventory);
-
-            if (message) {
-                std::string topic = "inventory@" + device.second.assetName ();
-                log_debug ("new inventory message '%s': %s", topic.c_str(), log.c_str());
-                int r = isend (topic, &message);
-                if( r != 0 )
-                    log_error ("failed to send inventory %s result %i", topic.c_str(), r);
-                zmsg_destroy (&message);
-            }
+        if (zhash_size (inventory) == 0) {
+            zhash_destroy (&inventory);
+            continue;
         }
-        zhash_destroy( &inventory );
+
+        zmsg_t *message = bios_proto_encode_asset (
+                NULL,
+                device.second.assetName().c_str(),
+                "inventory",
+                inventory);
+
+        if (message) {
+            std::string topic = "inventory@" + device.second.assetName();
+            log_debug ("new inventory message '%s': %s", topic.c_str(), log.c_str());
+            int r = isend (topic, &message);
+            if( r != 0 )
+                log_error ("failed to send inventory %s result %i", topic.c_str(), r);
+            zmsg_destroy (&message);
+        }
+        zhash_destroy (&inventory);
     }
 }
 
