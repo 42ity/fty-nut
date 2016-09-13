@@ -243,17 +243,12 @@ void NUTAgent::advertiseInventory() {
                     device.second.assetName ().c_str (),
                     "inventory",
                     inventory);
-            /* NOTE: Left deliberately until verified to work
-            _scoped_ymsg_t *message = bios_inventory_encode(
-                device.second.name().c_str(),
-                &inventory,
-                "inventory" );
-            */
 
             if (message) {
-                log_debug( "new inventory message %s: %s", topic.c_str(), log.c_str() );
+                log_debug ("new inventory message '%s': %s", topic.c_str(), log.c_str());
                 int r = isend (topic, &message);
-                if( r != 0 ) log_error("failed to send inventory %s result %" PRIi32, topic.c_str(), r);
+                if( r != 0 )
+                    log_error ("failed to send inventory %s result %i", topic.c_str(), r);
                 zmsg_destroy (&message);
             }
         }
