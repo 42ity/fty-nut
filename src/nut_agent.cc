@@ -222,9 +222,9 @@ void NUTAgent::advertisePhysics () {
 
 void NUTAgent::advertiseInventory() {
     bool advertise = false;
-    if (_inventoryTimestamp + NUT_INVENTORY_REPEAT_AFTER < static_cast<uint64_t> (zclock_mono ())) {
+    if (_inventoryTimestamp_ms + NUT_INVENTORY_REPEAT_AFTER_MS < static_cast<uint64_t> (zclock_mono ())) {
         advertise = true;
-        _inventoryTimestamp = static_cast<uint64_t> (zclock_mono ());
+        _inventoryTimestamp_ms = static_cast<uint64_t> (zclock_mono ());
     }
     for (auto& device : _deviceList) {
         std::string topic = "inventory@" + device.second.assetName ();

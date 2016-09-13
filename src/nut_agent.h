@@ -23,7 +23,7 @@
 #define NUT_AGENT_H_INCLUDED
 #include "nut.h"
 
-#define NUT_INVENTORY_REPEAT_AFTER      3600000
+#define NUT_INVENTORY_REPEAT_AFTER_MS      3600000
 
 class NUTAgent {
  public:
@@ -51,7 +51,7 @@ class NUTAgent {
     uint64_t _lastUpdate = 0;
 
     drivers::nut::NUTDeviceList _deviceList;
-    uint64_t _inventoryTimestamp = 0; // it is not an actual timestamp, it is just a reference point in time, when inventory was advertised
+    uint64_t _inventoryTimestamp_ms = 0; // [ms] it is not an actual timestamp, it is just a reference point in time, when inventory was advertised
 
     static const std::map <std::string, std::string> _units;
 
