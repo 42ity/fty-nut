@@ -132,13 +132,12 @@ std::string NUTAgent::physicalQuantityToUnits (const std::string& quantity) {
     return it->second;
 }
 
-void NUTAgent::advertisePhysics () {
-
+void NUTAgent::advertisePhysics ()
+{
     _deviceList.update (true);
     for (auto& device : _deviceList) {
         std::string subject;
         for (auto& measurement : device.second.physics (false)) {
-            subject = measurement.first + "@" + device.second.assetName ();
             std::string type = physicalQuantityShortName (measurement.first);
             std::string units = physicalQuantityToUnits (type);
             if (units.empty ()) {
@@ -161,15 +160,16 @@ void NUTAgent::advertisePhysics () {
                 log_debug ("sending new measurement for element_src = '%s', type = '%s', value = '%s', units = '%s'",
                            device.second.assetName ().c_str (), measurement.first.c_str (), buffer, units.c_str ());
 
+                subject = measurement.first + "@" + device.second.assetName ();
                 int r = send(subject, &msg);
-                if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, subject.c_str(), r);
+                if( r != 0 )
+                    log_error("failed to send measurement %s result %i", subject.c_str(), r);
                 zmsg_destroy (&msg);
                 device.second.setChanged (measurement.first, false);
             }
         }
         // send also status as bitmap
         if (device.second.hasProperty ("status.ups")) {
-            subject = "status@" + device.second.assetName ();
             std::string status_s = device.second.property ("status.ups");
             uint16_t    status_i = upsstatus_to_int (status_s);
             zmsg_t *msg = bios_proto_encode_metric (
@@ -182,8 +182,10 @@ void NUTAgent::advertisePhysics () {
             if (msg) {
                 log_debug ("sending new status for element_src = '%s', value = '%s' (%s)",
                            device.second.assetName().c_str (), std::to_string (status_i).c_str (), status_s.c_str ());
+                subject = "status@" + device.second.assetName ();
                 int r = send (subject, &msg);
-                if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, subject.c_str(), r);
+                if( r != 0 )
+                    log_error("failed to send measurement %s result %i", subject.c_str(), r);
                 zmsg_destroy (&msg);
                 device.second.setChanged ("status.ups", false);
             }
@@ -194,7 +196,6 @@ void NUTAgent::advertisePhysics () {
             // assumption, if outlet.10 does not exists, outlet.11 does not as well
             if (!device.second.hasProperty (property))
                 break;
-            subject = "status.outlet." + std::to_string (i) + "@" + device.second.assetName ();
             std::string status_s = device.second.property (property);
             uint16_t    status_i = status_s == "on" ? 42 : 0;
 
@@ -211,8 +212,10 @@ void NUTAgent::advertisePhysics () {
                            device.second.assetName().c_str(),
                            status_i,
                            status_s.c_str());
+                subject = "status.outlet." + std::to_string (i) + "@" + device.second.assetName ();
                 int r = send (subject, &msg);
-                if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, subject.c_str(), r);
+                if( r != 0 )
+                    log_error("failed to send measurement %s result %i", subject.c_str(), r);
                 zmsg_destroy (&msg);
                 device.second.setChanged (property, false);
             }
@@ -220,16 +223,18 @@ void NUTAgent::advertisePhysics () {
     }
 }
 
-void NUTAgent::advertiseInventory() {
-    bool advertise = false;
+void NUTAgent::advertiseInventory()
+{
+    bool advertiseAll = false;
     if (_inventoryTimestamp_ms + NUT_INVENTORY_REPEAT_AFTER_MS < static_cast<uint64_t> (zclock_mono ())) {
-        advertise = true;
+        advertiseAll = true;
         _inventoryTimestamp_ms = static_cast<uint64_t> (zclock_mono ());
     }
     for (auto& device : _deviceList) {
         std::string log;
         zhash_t *inventory = zhash_new ();
-        for (auto& item : device.second.inventory (!advertise) ) {
+        // !advertiseAll = advetise_Not_OnlyChanged
+        for (auto& item : device.second.inventory (!advertiseAll) ) {
             if (item.first == "status.ups") {
                 // this value is not advertised as inventory information
                 continue;
@@ -238,23 +243,26 @@ void NUTAgent::advertiseInventory() {
             log += item.first + " = \"" + item.second + "\"; ";
             device.second.setChanged (item.first, false);
         }
-        if (zhash_size (inventory) > 0) {
-            zmsg_t *message = bios_proto_encode_asset (
-                    NULL,
-                    device.second.assetName ().c_str (),
-                    "inventory",
-                    inventory);
-
-            if (message) {
-                std::string topic = "inventory@" + device.second.assetName ();
-                log_debug ("new inventory message '%s': %s", topic.c_str(), log.c_str());
-                int r = isend (topic, &message);
-                if( r != 0 )
-                    log_error ("failed to send inventory %s result %i", topic.c_str(), r);
-                zmsg_destroy (&message);
-            }
+        if (zhash_size (inventory) == 0) {
+            zhash_destroy (&inventory);
+            continue;
         }
-        zhash_destroy( &inventory );
+
+        zmsg_t *message = bios_proto_encode_asset (
+                NULL,
+                device.second.assetName().c_str(),
+                "inventory",
+                inventory);
+
+        if (message) {
+            std::string topic = "inventory@" + device.second.assetName();
+            log_debug ("new inventory message '%s': %s", topic.c_str(), log.c_str());
+            int r = isend (topic, &message);
+            if( r != 0 )
+                log_error ("failed to send inventory %s result %i", topic.c_str(), r);
+            zmsg_destroy (&message);
+        }
+        zhash_destroy (&inventory);
     }
 }
 
