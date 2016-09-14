@@ -44,6 +44,8 @@ const std::map<std::string, std::string> NUTAgent::_units =
 
 bool NUTAgent::loadMapping (const char *path_to_file)
 {
+    if ( !path_to_file )
+        return false;
     _conf = path_to_file;
     _deviceList.load_mapping (_conf.c_str ());
     return _deviceList.mappingLoaded ();
