@@ -34,7 +34,7 @@ class NUTAgent {
     void setiClient (mlm_client_t *client);
     bool isClientSet () const;
 
-    void onPoll ();
+    void onPoll (nut_t *data);
     void updateDeviceList (nut_t *state);
 
     void TTL (int ttl) { _ttl = ttl; };
@@ -42,7 +42,7 @@ class NUTAgent {
  protected:
     std::string physicalQuantityShortName (const std::string& longName) const;
     std::string physicalQuantityToUnits (const std::string& quantity) const;
-    void advertisePhysics ();
+    void advertisePhysics (nut_t *data);
     void advertiseInventory ();
     int send (const std::string& subject, zmsg_t **message_p);
     int isend (const std::string& subject, zmsg_t **message_p);

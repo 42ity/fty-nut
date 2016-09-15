@@ -109,7 +109,10 @@ clear_ext (zhash_t *hash)
             !streq (zhash_cursor (hash), "port") &&
             !streq (zhash_cursor (hash), "subtype") &&
             !streq (zhash_cursor (hash), "parent_name.1") &&
-            !streq (zhash_cursor (hash), "logical_asset")) {
+            !streq (zhash_cursor (hash), "logical_asset") &&
+            !streq (zhash_cursor (hash), "max_current") &&
+            !streq (zhash_cursor (hash), "max_power") )
+        {
             zlistx_add_end (to_delete, (void *) zhash_cursor (hash));
         }
         item = (const char *) zhash_next (hash);
@@ -234,6 +237,17 @@ nut_put (nut_t *self, bios_proto_t **message_p)
             self->changed = true;
             bios_proto_ext_insert (asset, "subtype", "%s", bios_proto_ext_string (message, "subtype",""));
         }
+
+        if (!nut_ext_value_is_the_same (asset, message, "max_current")) {
+            self->changed = true;
+            bios_proto_ext_insert (asset, "max_current", "%s", bios_proto_ext_string (message, "max_current",""));
+        }
+
+        if (!nut_ext_value_is_the_same (asset, message, "max_power")) {
+            self->changed = true;
+            bios_proto_ext_insert (asset, "max_power", "%s", bios_proto_ext_string (message, "max_power",""));
+        }
+
         bios_proto_destroy (message_p);
     }
     else
@@ -330,7 +344,6 @@ nut_asset_get_string (nut_t *self, const char *asset_name, const char *ext_key)
 // Returns ip address (well-known extended attribute 'ip.1') of given asset
 // or NULL when asset_name does not exist
 // or "" (empty string) when given asset does not have ip address specified
-
 const char *
 nut_asset_ip (nut_t *self, const char *asset_name)
 {
@@ -340,8 +353,7 @@ nut_asset_ip (nut_t *self, const char *asset_name)
 //  --------------------------------------------------------------------------
 // Returns daisychain number (well-known extended attribute '...') of give asset
 // or NULL when asset_name does not exist
-// or "" (empty string) when given
-
+// or "" (empty string) when given asset does not have daisychain number specified
 const char *
 nut_asset_daisychain (nut_t *self, const char *asset_name)
 {
@@ -349,9 +361,9 @@ nut_asset_daisychain (nut_t *self, const char *asset_name)
 }
 
 // ---------------------------------------------------------------------------
-// return port string of sensor of given asset
+// return port string of given asset
 // or NULL when asset_name does not exist
-// or "" (empty string) when given
+// or "" (empty string) when given asset does not have port specified
 const char *
 nut_asset_port (nut_t *self, const char *asset_name)
 {
@@ -359,9 +371,9 @@ nut_asset_port (nut_t *self, const char *asset_name)
 }
 
 // ---------------------------------------------------------------------------
-// return asset subtype string of sensor of given asset
+// return asset subtype string of given asset
 // or NULL when asset_name does not exist
-// or "" (empty string) when given
+// or "" (empty string) when given asset does not have asset subtype specified
 const char *
 nut_asset_subtype (nut_t *self, const char *asset_name)
 {
@@ -369,13 +381,23 @@ nut_asset_subtype (nut_t *self, const char *asset_name)
 }
 
 // ---------------------------------------------------------------------------
-// return asset location (aka parent_name.1) string of sensor of given asset
+// return asset location (aka parent_name.1) string of given asset
 // or NULL when asset_name does not exist
-// or "" (empty string) when given
+// or "" (empty string) when given asset does not have parent_name.1 specified
 const char *
 nut_asset_location (nut_t *self, const char *asset_name)
 {
     return nut_asset_get_string (self, asset_name, "parent_name.1");
+}
+
+// ---------------------------------------------------------------------------
+// return asset max_current (defined by user) of given asset
+// or NULL when asset_name does not exist
+// or "" (empty string) when given asset does not have max_current specified
+const char *
+nut_asset_max_current (nut_t *self, const char *asset_name)
+{
+    return nut_asset_get_string (self, asset_name, "max_current");
 }
 
 //  --------------------------------------------------------------------------

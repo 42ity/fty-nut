@@ -65,29 +65,35 @@ AGENT_NUT_EXPORT const char *
 
 // Returns daisychain number (well-known extended attribute '...') of give asset
 // or NULL when asset_name does not exist
-// or "" (empty string) when given
+// or "" (empty string) when given asset does not have daisychain number specified
 AGENT_NUT_EXPORT const char *
     nut_asset_daisychain (nut_t *self, const char *asset_name);
 
-// return port string of sensor of given asset
+// return port string of given asset
 // or NULL when asset_name does not exist
-// or "" (empty string) when given
+// or "" (empty string) when given asset does not have port specified
 AGENT_NUT_EXPORT const char *
     nut_asset_port (nut_t *self, const char *asset_name);
 
 // ---------------------------------------------------------------------------
-// return asset subtype string of sensor of given asset
+// return asset subtype string of given asset
 // or NULL when asset_name does not exist
-// or "" (empty string) when given
+// or "" (empty string) when given asset does not have asset subtype specified
 AGENT_NUT_EXPORT const char *
     nut_asset_subtype (nut_t *self, const char *asset_name);
 
 // ---------------------------------------------------------------------------
-// return asset location (aka parent_name) string of sensor of given asset
+// return asset location (aka parent_name) string of given asset
 // or NULL when asset_name does not exist
-// or "" (empty string) when given
+// or "" (empty string) when given asset does not have parent_name.1 specified
 AGENT_NUT_EXPORT const char *
     nut_asset_location (nut_t *self, const char *asset_name);
+
+// return asset max_current (defined by user) of given asset
+// or NULL when asset_name does not exist
+// or "" (empty string) when given asset does not have max_current specified
+AGENT_NUT_EXPORT const char *
+    nut_asset_max_current (nut_t *self, const char *asset_name);
 
 //  Save nut to disk
 //  If 'fullpath' is NULL does nothing

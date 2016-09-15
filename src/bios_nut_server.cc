@@ -29,9 +29,10 @@
 #include "agent_nut_classes.h"
 
 static void
-s_handle_poll (NUTAgent& nut_agent)
+s_handle_poll (NUTAgent& nut_agent, nut_t *data)
 {
-    nut_agent.onPoll ();
+    assert (data);
+    nut_agent.onPoll (data);
 }
 
 static void
@@ -156,7 +157,7 @@ bios_nut_server (zsock_t *pipe, void *args)
             }
             if (zpoller_expired (poller)) {
                 timestamp = static_cast<uint64_t> (zclock_mono ());
-                s_handle_poll (nut_agent);
+                s_handle_poll (nut_agent, data);
             }
             continue;
         }
