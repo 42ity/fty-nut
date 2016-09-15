@@ -891,7 +891,8 @@ nut_test (bool verbose)
     asset =  test_asset_new ("MBT.EPDU4", BIOS_PROTO_ASSET_OP_UPDATE);
     bios_proto_aux_insert (asset, "type", "%s", "device");
     bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
-    bios_proto_ext_insert (asset, "ip.1", "%s", "10.130.38.52");
+    bios_proto_ext_insert (asset, "ip.1", "%s", "10.130.38.52"); // ip changed
+    // daisy chane is missing intentionally
     nut_put (self, &asset);
 
     asset =  test_asset_new ("sensor", BIOS_PROTO_ASSET_OP_UPDATE);
@@ -919,7 +920,7 @@ nut_test (bool verbose)
         assert (streq (nut_asset_daisychain (self, "ROZ.UPS33"), "5"));
 
         assert (streq (nut_asset_ip (self, "MBT.EPDU4"), "10.130.38.52"));
-        assert (streq (nut_asset_daisychain (self, "MBT.EPDU4"), "3"));
+        assert (streq (nut_asset_daisychain (self, "MBT.EPDU4"), ""));
 
         assert (streq (nut_asset_ip (self, "ROZ.ePDU14"), "10.130.53.33"));
         assert (streq (nut_asset_daisychain (self, "ROZ.ePDU14"), "2"));
@@ -935,7 +936,8 @@ nut_test (bool verbose)
     asset =  test_asset_new ("MBT.EPDU4", BIOS_PROTO_ASSET_OP_UPDATE);
     bios_proto_aux_insert (asset, "type", "%s", "device");
     bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
-    bios_proto_ext_insert (asset, "daisy_chain", "%s", "44");
+    bios_proto_ext_insert (asset, "ip.1", "%s", "10.130.38.52"); // ip NOT changed
+    bios_proto_ext_insert (asset, "daisy_chain", "%s", "44"); // daisychain is added
     nut_put (self, &asset);
 
     asset =  test_asset_new ("sensor", BIOS_PROTO_ASSET_OP_DELETE);
