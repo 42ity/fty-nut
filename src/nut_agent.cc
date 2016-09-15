@@ -74,10 +74,10 @@ bool NUTAgent::isClientSet () const
     return _client != NULL;
 }
 
-void NUTAgent::onPoll ()
+void NUTAgent::onPoll (nut_t *data)
 {
     if (_client)
-        advertisePhysics ();
+        advertisePhysics (data);
     if (_iclient)
         advertiseInventory ();
 }
@@ -134,7 +134,7 @@ std::string NUTAgent::physicalQuantityToUnits (const std::string& quantity) cons
     return it->second;
 }
 
-void NUTAgent::advertisePhysics ()
+void NUTAgent::advertisePhysics (nut_t *data)
 {
     _deviceList.update (true);
     for (auto& device : _deviceList) {
@@ -170,6 +170,11 @@ void NUTAgent::advertisePhysics ()
                 device.second.setChanged (measurement.first, false);
             }
         }
+        // 'load' computing
+        // BIOS-1185 start
+
+
+        // BIOS-1185 end
         // send also status as bitmap
         if (device.second.hasProperty ("status.ups")) {
             std::string status_s = device.second.property ("status.ups");
