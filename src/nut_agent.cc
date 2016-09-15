@@ -139,7 +139,8 @@ void NUTAgent::advertisePhysics (nut_t *data)
     _deviceList.update (true);
     for (auto& device : _deviceList) {
         std::string subject;
-        for (auto& measurement : device.second.physics (false)) {
+        auto measurements = device.second.physics (false); // take  NOT only changed
+        for (const auto& measurement : measurements) {
             std::string type = physicalQuantityShortName (measurement.first);
             std::string units = physicalQuantityToUnits (type);
             if (units.empty ()) {
@@ -172,7 +173,49 @@ void NUTAgent::advertisePhysics (nut_t *data)
         }
         // 'load' computing
         // BIOS-1185 start
+        // if it is epdu, that doesn't provide load.default,
+        // but it is still could be calculated (because input.current is known) then do this
+        if (    streq ("epdu", nut_asset_subtype (data, device.second.assetName().c_str() ))
+             && measurements.count ("load.default") == 0
+             && measurements.count ("input.current") != 0 )
+        {
+            // try to compute it
+            // 1. Determine the MAX value
+            double max_value = 0;
+            if ( measurements.count ("input.current.nominal") == 1 ) {
+                max_value = measurements.at("input.current.nominal") * std::pow (10, -2);
+            } else
+            if ( !streq ("", nut_asset_max_current (data, device.second.assetName().c_str() ) ) ) {
+                // ASSUMPTION: max_current at this point is always verified to be double
+                max_value = std::stod (nut_asset_max_current (data, device.second.assetName().c_str()));
+            }
+            // 2. if MAX value is known -> do work, otherwise skip
+            if ( max_value != 0 ) {
+                double value =  measurements.at("input.current") * std::pow (10, -2);
+                char buffer [50];
+                // 3. compute a real value
+                sprintf (buffer, "%lf", value/max_value);
+                // 4. form message
+                zmsg_t *msg = bios_proto_encode_metric (
+                        NULL,
+                        "load.default",
+                        device.second.assetName().c_str(),
+                        buffer,
+                        "%",
+                        _ttl);
+                // 5. send the messsage
+                if (msg) {
+                    log_debug ("sending new measurement for element_src = '%s', type = '%s', value = '%s', units = '%s'",
+                            device.second.assetName ().c_str (), "load.default", buffer, "%");
 
+                    subject = "load.default@" + device.second.assetName();
+                    int r = send (subject, &msg);
+                    if( r != 0 )
+                        log_error("failed to send measurement %s result %i", subject.c_str(), r);
+                    zmsg_destroy (&msg);
+                }
+            }
+        }
 
         // BIOS-1185 end
         // send also status as bitmap

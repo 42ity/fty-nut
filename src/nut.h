@@ -89,6 +89,12 @@ AGENT_NUT_EXPORT const char *
 AGENT_NUT_EXPORT const char *
     nut_asset_location (nut_t *self, const char *asset_name);
 
+// return asset max_current (defined by user) of given asset
+// or NULL when asset_name does not exist
+// or "" (empty string) when given asset does not have max_current specified
+AGENT_NUT_EXPORT const char *
+    nut_asset_max_current (nut_t *self, const char *asset_name);
+
 //  Save nut to disk
 //  If 'fullpath' is NULL does nothing
 //  0 - success, -1 - error
