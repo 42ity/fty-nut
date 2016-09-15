@@ -330,7 +330,6 @@ nut_asset_get_string (nut_t *self, const char *asset_name, const char *ext_key)
 // Returns ip address (well-known extended attribute 'ip.1') of given asset
 // or NULL when asset_name does not exist
 // or "" (empty string) when given asset does not have ip address specified
-
 const char *
 nut_asset_ip (nut_t *self, const char *asset_name)
 {
@@ -340,8 +339,7 @@ nut_asset_ip (nut_t *self, const char *asset_name)
 //  --------------------------------------------------------------------------
 // Returns daisychain number (well-known extended attribute '...') of give asset
 // or NULL when asset_name does not exist
-// or "" (empty string) when given
-
+// or "" (empty string) when given asset does not have daisychain number specified
 const char *
 nut_asset_daisychain (nut_t *self, const char *asset_name)
 {
@@ -349,9 +347,9 @@ nut_asset_daisychain (nut_t *self, const char *asset_name)
 }
 
 // ---------------------------------------------------------------------------
-// return port string of sensor of given asset
+// return port string of given asset
 // or NULL when asset_name does not exist
-// or "" (empty string) when given
+// or "" (empty string) when given asset does not have port specified
 const char *
 nut_asset_port (nut_t *self, const char *asset_name)
 {
@@ -359,9 +357,9 @@ nut_asset_port (nut_t *self, const char *asset_name)
 }
 
 // ---------------------------------------------------------------------------
-// return asset subtype string of sensor of given asset
+// return asset subtype string of given asset
 // or NULL when asset_name does not exist
-// or "" (empty string) when given
+// or "" (empty string) when given asset does not have asset subtype specified
 const char *
 nut_asset_subtype (nut_t *self, const char *asset_name)
 {
@@ -369,9 +367,9 @@ nut_asset_subtype (nut_t *self, const char *asset_name)
 }
 
 // ---------------------------------------------------------------------------
-// return asset location (aka parent_name.1) string of sensor of given asset
+// return asset location (aka parent_name.1) string of given asset
 // or NULL when asset_name does not exist
-// or "" (empty string) when given
+// or "" (empty string) when given asset does not have parent_name.1 specified
 const char *
 nut_asset_location (nut_t *self, const char *asset_name)
 {
