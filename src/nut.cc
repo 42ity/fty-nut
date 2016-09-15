@@ -196,65 +196,43 @@ nut_put (nut_t *self, bios_proto_t **message_p)
         streq (bios_proto_operation (message), BIOS_PROTO_ASSET_OP_UPDATE)) {
 
         bios_proto_set_operation (asset, "%s", bios_proto_operation (message));
-        if (bios_proto_ext_string (message, "ip.1", NULL)) {
-            if (!nut_ext_value_is_the_same (asset, message, "ip.1")) {
-                self->changed = true;
-                bios_proto_ext_insert (asset, "ip.1", "%s", bios_proto_ext_string (message, "ip.1", ""));
-            }
+        if (!nut_ext_value_is_the_same (asset, message, "ip.1")) {
+            self->changed = true;
+            bios_proto_ext_insert (asset, "ip.1", "%s", bios_proto_ext_string (message, "ip.1", ""));
         }
-        if (bios_proto_ext_string (message, "upsconf_block", NULL)) {
-            if (!nut_ext_value_is_the_same (asset, message, "upsconf_block")) {
-                self->changed = true;
-                bios_proto_ext_insert (asset, "upsconf_block", "%s", bios_proto_ext_string (message, "upsconf_block", ""));
-            }
+        if (!nut_ext_value_is_the_same (asset, message, "upsconf_block")) {
+            self->changed = true;
+            bios_proto_ext_insert (asset, "upsconf_block", "%s", bios_proto_ext_string (message, "upsconf_block", ""));
         }
-        if (bios_proto_ext_string (message, "daisy_chain", NULL)) {
-            if (!nut_ext_value_is_the_same (asset, message, "daisy_chain")) {
-                self->changed = true;
-                bios_proto_ext_insert (asset, "daisy_chain", "%s", bios_proto_ext_string (message, "daisy_chain",""));
-            }
+        if (!nut_ext_value_is_the_same (asset, message, "daisy_chain")) {
+            self->changed = true;
+            bios_proto_ext_insert (asset, "daisy_chain", "%s", bios_proto_ext_string (message, "daisy_chain",""));
         }
-
-        if (bios_proto_ext_string (message, "type", NULL)) {
-            if (!nut_ext_value_is_the_same (asset, message, "type")) {
-                self->changed = true;
-                bios_proto_ext_insert (asset, "type", "%s", bios_proto_ext_string (message, "type",""));
-            }
+        if (!nut_ext_value_is_the_same (asset, message, "type")) {
+            self->changed = true;
+            bios_proto_ext_insert (asset, "type", "%s", bios_proto_ext_string (message, "type",""));
         }
-
-        if (bios_proto_ext_string (message, "subtype", NULL)) {
-            if (!nut_ext_value_is_the_same (asset, message, "subtype")) {
-                self->changed = true;
-                bios_proto_ext_insert (asset, "subtype", "%s", bios_proto_ext_string (message, "subtype",""));
-            }
+        if (!nut_ext_value_is_the_same (asset, message, "subtype")) {
+            self->changed = true;
+            bios_proto_ext_insert (asset, "subtype", "%s", bios_proto_ext_string (message, "subtype",""));
+        }
+        if (!nut_ext_value_is_the_same (asset, message, "port")) {
+            self->changed = true;
+            bios_proto_ext_insert (asset, "port", "%s", bios_proto_ext_string (message, "port",""));
+        }
+        if (!nut_ext_value_is_the_same (asset, message, "logical_asset")) {
+            self->changed = true;
+            bios_proto_ext_insert (asset, "logical_asset", "%s", bios_proto_ext_string (message, "logical_asset",""));
         }
 
-        if (bios_proto_ext_string (message, "port", NULL)) {
-            if (!nut_ext_value_is_the_same (asset, message, "port")) {
-                self->changed = true;
-                bios_proto_ext_insert (asset, "port", "%s", bios_proto_ext_string (message, "port",""));
-            }
+        if (!nut_ext_value_is_the_same (asset, message, "parent_name.1")) {
+            self->changed = true;
+            bios_proto_ext_insert (asset, "parent_name.1", "%s", bios_proto_ext_string (message, "parent_name.1",""));
         }
 
-        if (bios_proto_ext_string (message, "logical_asset", NULL)) {
-            if (!nut_ext_value_is_the_same (asset, message, "logical_asset")) {
-                self->changed = true;
-                bios_proto_ext_insert (asset, "logical_asset", "%s", bios_proto_ext_string (message, "logical_asset",""));
-            }
-        }
-
-        if (bios_proto_ext_string (message, "parent_name.1", NULL)) {
-            if (!nut_ext_value_is_the_same (asset, message, "parent_name.1")) {
-                self->changed = true;
-                bios_proto_ext_insert (asset, "parent_name.1", "%s", bios_proto_ext_string (message, "parent_name.1",""));
-            }
-        }
-
-        if (bios_proto_ext_string (message, "subtype", NULL)) {
-            if (!nut_ext_value_is_the_same (asset, message, "subtype")) {
-                self->changed = true;
-                bios_proto_ext_insert (asset, "subtype", "%s", bios_proto_ext_string (message, "subtype",""));
-            }
+        if (!nut_ext_value_is_the_same (asset, message, "subtype")) {
+            self->changed = true;
+            bios_proto_ext_insert (asset, "subtype", "%s", bios_proto_ext_string (message, "subtype",""));
         }
         bios_proto_destroy (message_p);
     }
