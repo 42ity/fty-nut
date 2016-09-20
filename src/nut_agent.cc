@@ -184,10 +184,12 @@ void NUTAgent::advertisePhysics (nut_t *data)
             double max_value = 0;
             if ( measurements.count ("input.current.nominal") == 1 ) {
                 max_value = measurements.at("input.current.nominal") * std::pow (10, -2);
+                log_debug ("load.default: max_value %lf from UPS", max_value);
             } else
             if ( !streq ("", nut_asset_max_current (data, device.second.assetName().c_str() ) ) ) {
                 // ASSUMPTION: max_current at this point is always verified to be double
                 max_value = std::stod (nut_asset_max_current (data, device.second.assetName().c_str()));
+                log_debug ("load.default: max_value %lf from user", max_value);
             }
             // 2. if MAX value is known -> do work, otherwise skip
             if ( max_value != 0 ) {
