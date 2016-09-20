@@ -20,6 +20,7 @@
         "input.L1.current"      :   "current.input.L1",
         "input.L2.current"      :   "current.input.L2",
         "input.L3.current"      :   "current.input.L3",
+        "input.current.nominal" :   "current.input.nominal",
 
         "input.realpower"       :   "realpower.default",
         "input.L1.realpower"    :   "realpower.input.L1",

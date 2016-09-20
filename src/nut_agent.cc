@@ -177,13 +177,13 @@ void NUTAgent::advertisePhysics (nut_t *data)
         // but it is still could be calculated (because input.current is known) then do this
         if (    streq ("epdu", nut_asset_subtype (data, device.second.assetName().c_str() ))
              && measurements.count ("load.default") == 0
-             && measurements.count ("input.current") != 0 )
+             && measurements.count ("current.input.L1") != 0 ) // it is a mapped value!!!!!!!!!!!
         {
             // try to compute it
             // 1. Determine the MAX value
             double max_value = 0;
-            if ( measurements.count ("input.current.nominal") == 1 ) {
-                max_value = measurements.at("input.current.nominal") * std::pow (10, -2);
+            if ( measurements.count ("current.input.nominal") == 1 ) {
+                max_value = measurements.at("current.input.nominal") * std::pow (10, -2);
                 log_debug ("load.default: max_value %lf from UPS", max_value);
             } else
             if ( !streq ("", nut_asset_max_current (data, device.second.assetName().c_str() ) ) ) {
@@ -193,7 +193,7 @@ void NUTAgent::advertisePhysics (nut_t *data)
             }
             // 2. if MAX value is known -> do work, otherwise skip
             if ( max_value != 0 ) {
-                double value =  measurements.at("input.current") * std::pow (10, -2);
+                double value =  measurements.at("current.input.L1") * std::pow (10, -2);
                 char buffer [50];
                 // 3. compute a real value
                 sprintf (buffer, "%lf", value/max_value);
