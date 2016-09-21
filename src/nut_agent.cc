@@ -196,7 +196,7 @@ void NUTAgent::advertisePhysics (nut_t *data)
                 double value =  measurements.at("current.input.L1") * std::pow (10, -2);
                 char buffer [50];
                 // 3. compute a real value
-                sprintf (buffer, "%lf", value/max_value);
+                sprintf (buffer, "%lf", value*100/max_value); // because it is %!!!!
                 // 4. form message
                 zmsg_t *msg = bios_proto_encode_metric (
                         NULL,
