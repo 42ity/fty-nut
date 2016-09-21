@@ -188,9 +188,7 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
     case asset_operation::UPDATE:
         {
             std::vector<std::string> configs;
-            char *tmp = getenv("BIOS_SNMP_COMMUNITY_NAME");
-            std::string community = tmp ? tmp : "[]";
-            
+
             std::string IP = "127.0.0.1"; // Fake value for local-media devices or dummy-upses, either passed with an upsconf_block
                 // TODO: (lib)nutscan supports local media like serial or USB,
                 // as well as other remote protocols like IPMI. Use them later.
@@ -227,30 +225,29 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
                 IP = ipit->second;
 
                 std::vector <std::string> communities;
-                try {
-                    std::stringstream input(community);
-                    cxxtools::SerializationInfo si;
-                    cxxtools::JsonDeserializer deserializer(input);
-
-                    deserializer.deserialize(si);
-                    if (si.category () != cxxtools::SerializationInfo::Category::Array) {
-                        throw std::runtime_error ("BIOS_SNMP_COMMUNITY_NAME is not array."); 
-                    }
-                
-                    for (const auto& it : si)  {
-                        if (it.category() != cxxtools::SerializationInfo::Category::Value) {
-                            throw std::invalid_argument ("Item of array is not value/string.");
+                zconfig_t *config = zconfig_load ("/etc/default/bios.cfg");
+                if (config) {
+                    zconfig_t *item = zconfig_locate (config, "BIOS_SNMP_COMMUNITY_NAME");
+                    if (item) {
+                        bool is_array = false;
+                        zconfig_t *child = zconfig_child (item);
+                        while (child) {
+                            if (!streq (zconfig_value (child), "")) {
+                                is_array = true;
+                                communities.push_back (zconfig_value (child));
+                            }
+                            child = zconfig_next (child);
                         }
-                        std::string community_item;
-                        it >>= community_item;
-                        communities.push_back (community_item);
+                        if (!is_array && !streq (zconfig_value (item), ""))
+                            communities.push_back (zconfig_value (item));
                     }
+                    zconfig_destroy (&config);
                 }
-                catch (const std::exception& e) {
-                    return false;
+                else {
+                    log_warning ("Config file '%s' could not be read.", "/etc/default/bios.cfg");
                 }
-
                 communities.push_back ("public");
+
                 for (const auto& c : communities) {
                     log_debug("Trying community == %s", c.c_str());
                     if (nut_scan_snmp (name, CIDRAddress (IP), c, configs) == 0 && !configs.empty ()) {
