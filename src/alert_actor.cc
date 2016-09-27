@@ -18,12 +18,11 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     =========================================================================
 */
-
+#include <malamute.h>
 #include "agent_nut_classes.h"
 #include "agent_nut_library.h"
 #include "alert_actor.h"
 #include "alert_device_list.h"
-#include "malamute.h"
 #include "logger.h"
 
 int
