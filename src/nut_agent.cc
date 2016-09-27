@@ -176,28 +176,12 @@ void NUTAgent::advertisePhysics (nut_t *data)
         // if it is epdu, that doesn't provide load.default,
         // but it is still could be calculated (because input.current is known) then do this
         if (    streq ("epdu", nut_asset_subtype (data, device.second.assetName().c_str() ))
-             && measurements.count ("load.default") == 0
-             && measurements.count ("current.input.L1") != 0 ) // it is a mapped value!!!!!!!!!!!
+             && measurements.count ("load.default") == 0 )
         {
-            // try to compute it
-            // 1. Determine the MAX value
-            double max_value = 0;
-            if ( measurements.count ("current.input.nominal") == 1 ) {
-                max_value = measurements.at("current.input.nominal") * std::pow (10, -2);
-                log_debug ("load.default: max_value %lf from UPS", max_value);
-            } else
-            if ( !streq ("", nut_asset_max_current (data, device.second.assetName().c_str() ) ) ) {
-                // ASSUMPTION: max_current at this point is always verified to be double
-                max_value = std::stod (nut_asset_max_current (data, device.second.assetName().c_str()));
-                log_debug ("load.default: max_value %lf from user", max_value);
-            }
-            // 2. if MAX value is known -> do work, otherwise skip
-            if ( max_value != 0 ) {
-                double value =  measurements.at("current.input.L1") * std::pow (10, -2);
+            if ( "load.input.L1" != 0 ) {
                 char buffer [50];
-                // 3. compute a real value
-                sprintf (buffer, "%lf", value*100/max_value); // because it is %!!!!
-                // 4. form message
+                double value = measurements.at("load.input.L1") * std::pow (10, -2);
+                sprintf (buffer, "%lf", value);
                 zmsg_t *msg = bios_proto_encode_metric (
                         NULL,
                         "load.default",
@@ -205,7 +189,6 @@ void NUTAgent::advertisePhysics (nut_t *data)
                         buffer,
                         "%",
                         _ttl);
-                // 5. send the messsage
                 if (msg) {
                     log_debug ("sending new measurement for element_src = '%s', type = '%s', value = '%s', units = '%s'",
                             device.second.assetName ().c_str (), "load.default", buffer, "%");
@@ -215,6 +198,47 @@ void NUTAgent::advertisePhysics (nut_t *data)
                     if( r != 0 )
                         log_error("failed to send measurement %s result %i", subject.c_str(), r);
                     zmsg_destroy (&msg);
+                }
+            }
+            else if ( measurements.count ("current.input.L1") != 0 ) // it is a mapped value!!!!!!!!!!!
+            {
+                // try to compute it
+                // 1. Determine the MAX value
+                double max_value = 0;
+                if ( measurements.count ("current.input.nominal") == 1 ) {
+                    max_value = measurements.at("current.input.nominal") * std::pow (10, -2);
+                    log_debug ("load.default: max_value %lf from UPS", max_value);
+                } else
+                    if ( !streq ("", nut_asset_max_current (data, device.second.assetName().c_str() ) ) ) {
+                        // ASSUMPTION: max_current at this point is always verified to be double
+                        max_value = std::stod (nut_asset_max_current (data, device.second.assetName().c_str()));
+                        log_debug ("load.default: max_value %lf from user", max_value);
+                    }
+                // 2. if MAX value is known -> do work, otherwise skip
+                if ( max_value != 0 ) {
+                    double value =  measurements.at("current.input.L1") * std::pow (10, -2);
+                    char buffer [50];
+                    // 3. compute a real value
+                    sprintf (buffer, "%lf", value*100/max_value); // because it is %!!!!
+                    // 4. form message
+                    zmsg_t *msg = bios_proto_encode_metric (
+                            NULL,
+                            "load.default",
+                            device.second.assetName().c_str(),
+                            buffer,
+                            "%",
+                            _ttl);
+                    // 5. send the messsage
+                    if (msg) {
+                        log_debug ("sending new measurement for element_src = '%s', type = '%s', value = '%s', units = '%s'",
+                                device.second.assetName ().c_str (), "load.default", buffer, "%");
+
+                        subject = "load.default@" + device.second.assetName();
+                        int r = send (subject, &msg);
+                        if( r != 0 )
+                            log_error("failed to send measurement %s result %i", subject.c_str(), r);
+                        zmsg_destroy (&msg);
+                    }
                 }
             }
         }
