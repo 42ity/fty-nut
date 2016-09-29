@@ -278,6 +278,10 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
                     log_debug ("add synchronous = yes");
                     cfgFile << "\tsynchronous = yes\n";
                 }
+                if (canXml (foo)) {
+                    log_debug ("add timeout for XML driver");
+                    cfgFile << "\ttimeout = 15\n";
+                }
             }
             cfgFile.close();
             updateNUTConfig();
