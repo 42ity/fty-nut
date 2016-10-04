@@ -287,7 +287,7 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
             updateNUTConfig();
             systemctl("enable",  std::string("nut-driver@") + name);
             systemctl("restart", std::string("nut-driver@") + name);
-            systemctl("restart", "nut-server");
+            systemctl("reload-or-restart", "nut-server");
             return true;
         }
     case asset_operation::DELETE:
@@ -301,7 +301,7 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
             updateNUTConfig();
             systemctl("stop",    std::string("nut-driver@") + name);
             systemctl("disable", std::string("nut-driver@") + name);
-            systemctl("restart", "nut-server");
+            systemctl("reload-or-restart", "nut-server");
             return true;
         }
     default:
