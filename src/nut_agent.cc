@@ -178,7 +178,7 @@ void NUTAgent::advertisePhysics (nut_t *data)
         if (    streq ("epdu", nut_asset_subtype (data, device.second.assetName().c_str() ))
              && measurements.count ("load.default") == 0 )
         {
-            if ( "load.input.L1" != 0 ) {
+            if ( measurements.count ("load.input.L1") != 0 ) {
                 char buffer [50];
                 double value = measurements.at("load.input.L1") * std::pow (10, -2);
                 sprintf (buffer, "%lf", value);
