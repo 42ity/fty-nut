@@ -201,6 +201,17 @@ s_digest (const char* file)
     return ret;
 }
 
+// compute hash (sha-1) of a std::stringstream
+static char*
+s_digest (const std::stringstream& s)
+{
+    zdigest_t *digest = zdigest_new ();
+    zdigest_update (digest, (byte*) s.str ().c_str (), s.str ().size ());
+    char *ret = strdup (zdigest_string (digest));
+    zdigest_destroy (&digest);
+    return ret;
+}
+
 bool NUTConfigurator::configure( const std::string &name, const AutoConfigurationInfo &info ) {
     log_debug("NUT configurator created");
 
@@ -286,13 +297,12 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
             }
             std::string deviceDir = NUT_PART_STORE;
             mkdir_if_needed( deviceDir.c_str() );
-            std::ofstream cfgFile;
+            std::stringstream cfg;
             log_info("creating new config file %s/%s", NUT_PART_STORE, name.c_str() );
 
             std::string config_name = std::string(NUT_PART_STORE) + path_separator() + name;
             char* digest_old = s_digest (config_name.c_str ());
-            cfgFile.open (config_name);
-            cfgFile << *it;
+            cfg << *it;
             {
                 std::string s = *it;
                 // prototypes expects std::vector <std::string> - lets create fake vector
@@ -300,21 +310,25 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
                 std::vector <std::string> foo = {s};
                 if (isEpdu (foo) && canSnmp (foo)) {
                     log_debug ("add synchronous = yes");
-                    cfgFile << "\tsynchronous = yes\n";
+                    cfg << "\tsynchronous = yes\n";
                 }
                 if (canXml (foo)) {
                     log_debug ("add timeout for XML driver");
-                    cfgFile << "\ttimeout = 15\n";
+                    cfg << "\ttimeout = 15\n";
                 }
             }
-            cfgFile.close();
-            updateNUTConfig();
-            char* digest_new = s_digest (config_name.c_str ());
+            char* digest_new = s_digest (cfg);
 
-            if (!streq (digest_old, digest_new)) {
-                systemctl("enable",  std::string("nut-driver@") + name);
-                systemctl("restart", std::string("nut-driver@") + name);
-                systemctl("reload-or-restart", "nut-server");
+            if (digest_old && !streq (digest_old, digest_new)) {
+                std::ofstream cfgFile;
+                cfgFile.open (config_name);
+                cfgFile << cfg.str ();
+                cfgFile.flush ();
+                cfgFile.close ();
+                updateNUTConfig ();
+                systemctl ("enable",  std::string("nut-driver@") + name);
+                systemctl ("restart", std::string("nut-driver@") + name);
+                systemctl ("reload-or-restart", "nut-server");
             }
             zstr_free (&digest_new);
             zstr_free (&digest_old);
