@@ -298,7 +298,6 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
             std::string deviceDir = NUT_PART_STORE;
             mkdir_if_needed( deviceDir.c_str() );
             std::stringstream cfg;
-            log_info("creating new config file %s/%s", NUT_PART_STORE, name.c_str() );
 
             std::string config_name = std::string(NUT_PART_STORE) + path_separator() + name;
             char* digest_old = s_digest (config_name.c_str ());
@@ -326,6 +325,7 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
                 cfgFile << cfg.str ();
                 cfgFile.flush ();
                 cfgFile.close ();
+                log_info("creating new config file %s/%s", NUT_PART_STORE, name.c_str() );
                 updateNUTConfig ();
                 systemctl ("enable",  std::string("nut-driver@") + name);
                 systemctl ("restart", std::string("nut-driver@") + name);
