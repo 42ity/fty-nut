@@ -180,6 +180,27 @@ std::vector<std::string> NUTConfigurator::createRules(std::string const &name) {
     return result;
 }
 
+// compute hash (sha-1) of a file
+static char*
+s_digest (const char* file)
+{
+    assert (file);
+    zdigest_t *digest = zdigest_new ();
+
+    int fd = open (file, O_NOFOLLOW | O_RDONLY);
+    if (fd == -1) {
+        log_info ("Cannot open file '%s', digest won't be computed: %s", file, strerror (errno));
+        return NULL;
+    }
+    std::string buffer = read_all (fd);
+    close (fd);
+
+    zdigest_update (digest, (byte*) buffer.c_str (), buffer.size ());
+    char *ret = strdup (zdigest_string (digest));
+    zdigest_destroy (&digest);
+    return ret;
+}
+
 bool NUTConfigurator::configure( const std::string &name, const AutoConfigurationInfo &info ) {
     log_debug("NUT configurator created");
 
@@ -267,7 +288,10 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
             mkdir_if_needed( deviceDir.c_str() );
             std::ofstream cfgFile;
             log_info("creating new config file %s/%s", NUT_PART_STORE, name.c_str() );
-            cfgFile.open(std::string(NUT_PART_STORE) + path_separator() + name );
+
+            std::string config_name = std::string(NUT_PART_STORE) + path_separator() + name;
+            char* digest_old = s_digest (config_name.c_str ());
+            cfgFile.open (config_name);
             cfgFile << *it;
             {
                 std::string s = *it;
@@ -285,9 +309,15 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
             }
             cfgFile.close();
             updateNUTConfig();
-            systemctl("enable",  std::string("nut-driver@") + name);
-            systemctl("restart", std::string("nut-driver@") + name);
-            systemctl("reload-or-restart", "nut-server");
+            char* digest_new = s_digest (config_name.c_str ());
+
+            if (!streq (digest_old, digest_new)) {
+                systemctl("enable",  std::string("nut-driver@") + name);
+                systemctl("restart", std::string("nut-driver@") + name);
+                systemctl("reload-or-restart", "nut-server");
+            }
+            zstr_free (&digest_new);
+            zstr_free (&digest_old);
             return true;
         }
     case asset_operation::DELETE:
