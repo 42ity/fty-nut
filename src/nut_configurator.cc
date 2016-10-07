@@ -319,7 +319,7 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
             char* digest_new = s_digest (cfg);
 
             log_debug ("%s: digest_old=%s, digest_new=%s", config_name.c_str (), digest_old, digest_new);
-            if (digest_old && !streq (digest_old, digest_new)) {
+            if (!digest_old || !streq (digest_old, digest_new)) {
                 std::ofstream cfgFile;
                 cfgFile.open (config_name);
                 cfgFile << cfg.str ();
