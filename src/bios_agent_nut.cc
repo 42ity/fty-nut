@@ -1,4 +1,4 @@
-/*  =========================================================================
+/*v  =========================================================================
     bios_agent_nut - description
 
     Copyright (C) 2014 - 2015 Eaton
@@ -143,12 +143,11 @@ int main (int argc, char *argv [])
 
     // polling interval
     if (!polling) {
-        char *env_poll_interval = getenv ("BIOS_NUT_POLLING_INTERVAL");
-        if (env_poll_interval) {
-            polling = env_poll_interval;
-        }
-        else {
-            polling = "30";
+        polling = "30";
+        zconfig_t *root = zconfig_load ("/etc/agent-nut/bios-agent-nut.cfg");
+        if (root) {
+            polling = zconfig_get (root, "nut/polling_interval", "30");
+            zconfig_destroy (&root);
         }
     }
     
