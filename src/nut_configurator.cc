@@ -259,7 +259,7 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
                 std::vector <std::string> communities;
                 zconfig_t *config = zconfig_load ("/etc/default/bios.cfg");
                 if (config) {
-                    zconfig_t *item = zconfig_locate (config, "BIOS_SNMP_COMMUNITY_NAME");
+                    zconfig_t *item = zconfig_locate (config, "snmp/community");
                     if (item) {
                         bool is_array = false;
                         zconfig_t *child = zconfig_child (item);
