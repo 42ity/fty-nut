@@ -102,6 +102,25 @@ int NUTDevice::daisyChainIndex () const {
     return _daisyChainIndex;
 }
 
+void NUTDevice::assetExtAttribute (const std::string name, const std::string value)
+{
+    if (value.empty ()) {
+        _assetExtAttributes.erase (name);
+    } else {
+        _assetExtAttributes [name] = value;
+    }
+}
+
+std::string NUTDevice::assetExtAttribute (const std::string name) const
+{
+    const auto a = _assetExtAttributes.find (name);
+    if (a != _assetExtAttributes.cend ()) {
+        return a->second;
+    }
+    return "";
+}
+
+
 std::string NUTDevice::daisyPrefix() const {
     if (_daisyChainIndex) {
         return "device." + std::to_string (_daisyChainIndex) + ".";
@@ -506,6 +525,67 @@ void NUTDevice::NUTRealpowerFromOutput (const std::string& prefix, std::map< std
     }
 }
 
+void NUTDevice::NUTFixMissingLoad (const std::string& prefix, std::map< std::string,std::vector<std::string> > &vars) {
+    if (vars.find (prefix + "ups.load") != vars.end ()) return;
+    try {
+        if (vars [prefix + "output.phases"][0] == "1") {
+            // 1 phase ups
+            {
+                // try realpower/max_power*100
+                const auto max_power_it = _assetExtAttributes.find ("max_power");
+                if (max_power_it != _assetExtAttributes.cend ()) {
+                    double max_power = stod (max_power_it->second);
+                    const auto realpower_it = vars.find (prefix + "ups.realpower");
+                    if (realpower_it != vars.cend ()) {
+                        double realpower = std::stod (realpower_it->second[0]);
+                        if (max_power > 0.1) {
+                            std::string load = std::to_string ((realpower / max_power) * 100.0);
+                            vars["ups.load"] = { load };
+                            return;
+                        }
+                    }
+                }
+            }
+        } else {
+            // 3 phase ups
+            {
+                // try ups.LX.load
+                const auto it1 = vars.find (prefix + "ups.L1.load");
+                const auto it2 = vars.find (prefix + "ups.L2.load");
+                const auto it3 = vars.find (prefix + "ups.L3.load");
+                if ((it1 != vars.cend ()) && (it2 != vars.cend ()) && (it2 != vars.cend ())) {
+                    std::string load = std::to_string(
+                        (std::stod (it1->second[0]) + std::stod (it2->second[0]) + std::stod (it3->second[0]))/3.0
+                    );
+                    vars["ups.load"] = { load };
+                    return;
+                }
+            }
+            {
+                // try awg(realpower_i)/max_power*100
+                const auto max_power_it = _assetExtAttributes.find ("max_power");
+                if (max_power_it != _assetExtAttributes.cend ()) {
+                    double max_power = stod (max_power_it->second);
+                    if (max_power > 0.1) {
+                        const auto it1 = vars.find (prefix + "output.L1.realpower");
+                        const auto it2 = vars.find (prefix + "output.L2.realpower");
+                        const auto it3 = vars.find (prefix + "output.L3.realpower");
+                        if ((it1 != vars.cend ()) && (it2 != vars.cend ()) && (it2 != vars.cend ())) {
+                            std::string load = std::to_string(
+                                (std::stod (it1->second[0]) + std::stod (it2->second[0]) + std::stod (it3->second[0]))/3.0/max_power*100.0
+                            );
+                            vars["ups.load"] = { load };
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    } catch (...) {
+        zsys_error ("failed to calculate load for %s", _assetName.c_str ());
+    }
+}
+
 void NUTDevice::NUTValuesTransformation (const std::string &prefix, std::map< std::string,std::vector<std::string> > &vars ) {
     if( vars.empty() ) return ;
 
@@ -544,6 +624,8 @@ void NUTDevice::NUTValuesTransformation (const std::string &prefix, std::map< st
     // hope that missing output values have been filled
     // from input values
     NUTRealpowerFromOutput (prefix, vars);
+    // ups load
+    NUTFixMissingLoad (prefix, vars);
 }
 
 void NUTDevice::clear() {
@@ -615,6 +697,15 @@ void NUTDeviceList::updateDeviceList(nut_t * deviceState) {
                         _devices[name] = NUTDevice(name, master_it->second.c_str (), chain);
                     }
                     break;
+                }
+                // other ext attributes
+                for (const auto attr : {"max_current", "max_power"}) {
+                    const char *p = nut_asset_get_string (deviceState, name, attr);
+                    if (p) {
+                        _devices[name].assetExtAttribute (attr, p);
+                    } else {
+                        _devices[name].assetExtAttribute (attr, "");
+                    }
                 }
                 name = (char *)zlist_next(devices);
             }

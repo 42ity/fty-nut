@@ -325,7 +325,7 @@ nut_get_powerdevices (nut_t *self)
 }
 
 // Helper function for nut_asset_XXX
-static const char *
+const char *
 nut_asset_get_string (nut_t *self, const char *asset_name, const char *ext_key)
 {
     assert (self);
