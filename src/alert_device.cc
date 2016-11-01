@@ -175,26 +175,31 @@ Device::publishAlert (mlm_client_t *client, DeviceAlert& alert)
     if (alert.status.empty()) return;
 
     const char *state = "ACTIVE", *severity = NULL;
+    std::string description = alert.name;
 
     log_debug ("aa: alert status '%s'", alert.status.c_str ());
     if (alert.status == "good") {
         state = "RESOLVED";
         severity = "ok";
+        description += " is resolved";
     }
     else if (alert.status == "warning-low") {
         severity = "WARNING";
+        description += " is low";
     }
     else if (alert.status == "critical-low") {
         severity = "CRITICAL";
+        description += " is critically low";
     }
     else if (alert.status == "warning-high") {
         severity = "WARNING";
+        description += " is high";
     }
     else if (alert.status == "critical-high") {
         severity = "CRITICAL";
+        description += " is critically high";
     }
     std::string rule = alert.name + "@" + _assetName;
-    std::string description = alert.name + " exceeded the limit";
 
     if (!severity) {
         log_error ("aa: alert %s has unknown severity value %s. Set to WARNING.", rule.c_str (), alert.status.c_str ());
