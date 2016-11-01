@@ -94,13 +94,18 @@ bios_nut_server (zsock_t *pipe, void *args)
         log_critical ("mlm_client_new () failed");
         return;
     }
+    int r = mlm_client_set_consumer (client, BIOS_PROTO_STREAM_ASSETS, ".*");
+    if (r == -1) {
+        log_error ("client set_consumer failed");
+    }
+
     // inventory client
     mlm_client_t *iclient = mlm_client_new ();
     if (!iclient) {
         log_critical ("mlm_client_new () failed");
         return;
     }
-    int r = mlm_client_connect (iclient, "ipc://@/malamute", 5000, "bios-agent-nut-inventory");
+    r = mlm_client_connect (iclient, "ipc://@/malamute", 5000, "bios-agent-nut-inventory");
     if (r == -1) {
         log_error ("connect of iclient failed");
     }

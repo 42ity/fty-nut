@@ -57,6 +57,10 @@ AGENT_NUT_EXPORT zlist_t *
 AGENT_NUT_EXPORT zlist_t *
     nut_get_sensors (nut_t *self);
 
+// Helper function for nut_asset_XXX
+AGENT_NUT_EXPORT const char *
+    nut_asset_get_string (nut_t *self, const char *asset_name, const char *ext_key);
+
 // Returns ip address (well-known extended attribute 'ip.1') of given asset
 // or NULL when asset_name does not exist
 // or "" (empty string) when given asset does not have ip address specified

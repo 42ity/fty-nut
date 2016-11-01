@@ -169,11 +169,15 @@ class NUTDevice {
     void daisyChainIndex(int index);
     int daisyChainIndex() const;
 
+    void assetExtAttribute (const std::string name, const std::string value);
+    std::string assetExtAttribute (const std::string name) const;
     ~NUTDevice();
  private:
-
-
-
+    /**
+     * \brief array for keeping interesting extended attributes from assets
+     */
+    std::map <std::string, std::string> _assetExtAttributes;
+    
     /**
      * \brief Updates physical or measurement value (like current or load) from float.
      *
@@ -243,6 +247,8 @@ class NUTDevice {
 
     //! \brief Transformation of our integer (x100) back
     std::string itof(const long int) const;
+    //! \brief calculate ups.load if not present
+    void NUTFixMissingLoad (const std::string& prefix, std::map< std::string,std::vector<std::string> > &vars);
     //! \brief calculate ups.realpower from output.Lx.realpower if not present
     void NUTRealpowerFromOutput (const std::string& prefix,  std::map< std::string,std::vector<std::string> > &vars);
     //! \brief NUT values transformation function
