@@ -233,6 +233,21 @@ Device::publishRules (mlm_client_t *client) {
     }
 }
 
+static std::string
+s_values_unit (const std::string& alert_name)
+{
+    if (alert_name.find ("power") != std::string::npos)
+        return "W";
+    else
+    if (alert_name.find ("voltage") != std::string::npos)
+        return "V";
+    else
+    if (alert_name.find ("current") != std::string::npos)
+        return "A";
+    else
+        return "";
+}
+
 void
 Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
 {
@@ -250,6 +265,7 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
         "  \"rule_hierarchy\": \"internal.device\","
         "  \"target\"        : \"" + ruleName + "\","
         "  \"element\"       : \"" + _assetName + "\","
+        "  \"values_unit\"   : \"" + s_values_unit (alert.name) + "\","
         "  \"values\"        : ["
         "    { \"low_warning\"  : \"" + alert.lowWarning + "\"},"
         "    { \"low_critical\" : \"" + alert.lowCritical + "\"},"
