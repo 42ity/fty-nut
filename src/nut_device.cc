@@ -562,7 +562,7 @@ void NUTDevice::NUTFixMissingLoad (const std::string& prefix, std::map< std::str
                 }
             }
             {
-                // try awg(realpower_i)/max_power*100
+                // try sum(realpower_i)/max_power*100
                 const auto max_power_it = _assetExtAttributes.find ("max_power");
                 if (max_power_it != _assetExtAttributes.cend ()) {
                     double max_power = stod (max_power_it->second);
@@ -572,7 +572,7 @@ void NUTDevice::NUTFixMissingLoad (const std::string& prefix, std::map< std::str
                         const auto it3 = vars.find (prefix + "output.L3.realpower");
                         if ((it1 != vars.cend ()) && (it2 != vars.cend ()) && (it2 != vars.cend ())) {
                             std::string load = std::to_string(
-                                (std::stod (it1->second[0]) + std::stod (it2->second[0]) + std::stod (it3->second[0]))/3.0/max_power*100.0
+                                (std::stod (it1->second[0]) + std::stod (it2->second[0]) + std::stod (it3->second[0]))/max_power*100.0
                             );
                             vars["ups.load"] = { load };
                             return;
