@@ -248,6 +248,21 @@ s_values_unit (const std::string& alert_name)
         return "";
 }
 
+static std::string
+s_rule_desc (const std::string& alert_name)
+{
+    if (alert_name.find ("power") != std::string::npos)
+        return "Power";
+    else
+    if (alert_name.find ("voltage") != std::string::npos)
+        return "Voltage";
+    else
+    if (alert_name.find ("current") != std::string::npos)
+        return "Current";
+    else
+        return "";
+}
+
 void
 Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
 {
@@ -263,6 +278,7 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
         "  \"rule_source\"   : \"NUT\","
         "  \"rule_class\"    : \"Device internal\","
         "  \"rule_hierarchy\": \"internal.device\","
+        "  \"rule_desc\"     : \"" + s_rule_desc (alert.name) + "\","
         "  \"target\"        : \"" + ruleName + "\","
         "  \"element\"       : \"" + _assetName + "\","
         "  \"values_unit\"   : \"" + s_values_unit (alert.name) + "\","
