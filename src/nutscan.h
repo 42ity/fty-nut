@@ -30,14 +30,20 @@
  * \param[in] name asset name of device
  * \param[in] ip_address ip address of device
  * \param[in] community string, if empty 'public' will be used 
+ * \param[in] use_dmf - true means that snmp-usp-dmf driver will be used
  * \param[out] out resulted string with NUT config snippets
  * \return 0 if success, -1 otherwise
+ *
+ * Environment variables:
+ * BIOS_NUT_USE_DMF - will force usage of snmp-ups-dmf driver regardless
+ *                    use_dmf argument
  */
 int
 nut_scan_snmp(
         const std::string& name,
         const CIDRAddress& ip_address,
         const std::string community,
+        bool use_dmf,
         std::vector<std::string>& out);
 
 /**

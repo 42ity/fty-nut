@@ -280,9 +280,14 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
                 }
                 communities.push_back ("public");
 
+                bool use_dmf = false;
+                auto use_dmfit = info.attributes.find ("upsconf_enable_dmf");
+                if (use_dmfit != info.attributes.end ())
+                    use_dmf = true;
+
                 for (const auto& c : communities) {
                     log_debug("Trying community == %s", c.c_str());
-                    if (nut_scan_snmp (name, CIDRAddress (IP), c, configs) == 0 && !configs.empty ()) {
+                    if (nut_scan_snmp (name, CIDRAddress (IP), c, use_dmf, configs) == 0 && !configs.empty ()) {
                         break;
                     }
                 }
