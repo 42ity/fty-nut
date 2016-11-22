@@ -147,6 +147,7 @@ nut_scan_snmp(
         const std::string& name,
         const CIDRAddress& ip_address,
         const std::string community,
+        bool use_dmf,
         std::vector<std::string>& out)
 {
     std::string comm;
@@ -156,7 +157,7 @@ nut_scan_snmp(
     
     int r = -1;
     // DMF enabled and available
-    if (::getenv ("BIOS_NUT_USE_DMF")) {
+    if (use_dmf || ::getenv ("BIOS_NUT_USE_DMF")) {
         Argv args = {"nut-scanner", "--community", comm, "-z", "-s", ip_address.toString()};
         r = s_run_nut_scaner(
                 args,
