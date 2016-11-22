@@ -49,6 +49,7 @@
     <main name = "bios-agent-nut" service = "1" no_config = "1" />
     <main name = "bios-agent-nut-configurator" service = "1" no_config = "1" />
     <bin name = "bios-nutconfig" />
+    <bin name = "bios-dmf" />
 
 </project>
 
