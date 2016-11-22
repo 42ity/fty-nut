@@ -41,6 +41,8 @@ NUTCONFIGDIR=/etc/nut
 NUTCONFIG="$NUTCONFIGDIR/ups.conf"
 
 DMFSNMPD=/usr/share/nut/dmfsnmp.d/
+DMFSNMP=/usr/share/nut/dmfsnmp/
+
 [ -d "${DMFSNMPD}" ] || die "Can't find NUT DMF runtime dir at ${DMFSNMPD}"
 
 usage () {
@@ -51,7 +53,11 @@ usage () {
 }
 
 do_upload () {
-    die "implement do_upload ${@}"
+    cp "${@}" -t ${DMFSNMP}
+    for dmf in "${@}"; do
+        DMFNAME=`basename $dmf`
+        ln -s ${DMFSNMP}${DMFNAME} -t ${DMFSNMPD}
+    done
 }
 
 do_enable () {
