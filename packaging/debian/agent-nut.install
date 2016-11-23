@@ -7,3 +7,4 @@ usr/lib/systemd/system/bios-agent-nut-configurator*.service
 usr/share/agent-nut/mapping.conf
 usr/share/bios/examples/config/sudoers.d/bios_10_agent-nut
 usr/lib/tmpfiles.d/*.conf
+etc/agent-nut/*.cfg

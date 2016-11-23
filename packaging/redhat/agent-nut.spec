@@ -107,6 +107,6 @@ find %{buildroot} -name '*.la' | xargs rm -f
 %{_datadir}/agent-nut/mapping.conf
 /usr/share/bios/examples/config/sudoers.d/bios_10_agent-nut
 /usr/lib/tmpfiles.d/*.conf
-
+%config(noreplace) %{_sysconfdir}/agent-nut/*.cfg
 
 %changelog
