@@ -292,7 +292,7 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
 
                 bool use_dmf = false;
                 auto use_dmfit = info.attributes.find ("upsconf_enable_dmf");
-                if (use_dmfit != info.attributes.end ())
+                if (use_dmfit != info.attributes.end () && use_dmfit->second == "true")
                     use_dmf = true;
 
                 for (const auto& c : communities) {
