@@ -94,7 +94,7 @@ do_disable () {
 }
 
 do_list () {
-    do_mysql 'SELECT t1.name FROM v_bios_asset_element t1 LEFT JOIN v_bios_asset_ext_attributes t2 ON t1.id = t2.id_asset_element WHERE t2.keytag="upsconf_enable_dmf" AND t2.value != "";'
+    do_mysql 'SELECT t1.name FROM v_bios_asset_element t1 LEFT JOIN v_bios_asset_ext_attributes t2 ON t1.id = t2.id_asset_element WHERE t2.keytag="upsconf_enable_dmf" AND t2.value="true";'
 }
 
 COMMAND=${1}
