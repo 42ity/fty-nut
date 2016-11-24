@@ -34,9 +34,7 @@ die() {
     exit 1
 }
 
-if [[ -z "${DB_USER}" ]]; then
-    source /etc/default/bios-db-ro
-fi
+source /etc/default/bios-db-rw
 
 TMPDIR=${TMPDIR:-/tmp}
 NUTCONFIGDIR=/etc/nut
@@ -56,7 +54,7 @@ fi
 usage () {
     echo "${PROG}"
     echo "upload dmf1 [dmf2 ...] - upload dmf files to ${DMFSNMPD}"
-    echo "enable asset 1 [asset2 ...] - enable dmf for particular asset"
+    echo "enable asset1 [asset2 ...] - enable dmf for particular asset"
     echo "list - list all assets with enabled dmf"
 }
 
@@ -78,11 +76,21 @@ do_upload () {
 }
 
 do_enable () {
-    die "implement do_enable ${@}"
+    for id in `get_asset_ids "${@}"`; do
+        do_mysql "INSERT INTO v_bios_asset_ext_attributes (keytag, value, id_asset_element, read_only) \
+            VALUES ('upsconf_enable_dmf', true, $id, 0)"
+        export WEBLIB_TRACE_CURL
+        JSON=`source /usr/share/bios/scripts/restapi-request.sh -q -u "${BIOS_USER}" -p "${BIOS_PASSWD}" --port-web 80 /asset/"$id"` 
+        source /usr/share/bios/scripts/restapi-request.sh -q -u "${BIOS_USER}" -p "${BIOS_PASSWD}" --port-web 80 -m api_auth_put /asset/"$id" "$JSON"
+    done
 }
 
 do_disable () {
-    die "implement do_disable ${@}"
+    for id in `get_asset_ids "${@}"`; do
+        do_mysql "DELETE FROM v_bios_asset_ext_attributes WHERE (keytag = 'upsconf_enable_dmf' AND id_asset_element=$id)"
+        JSON=`source /usr/share/bios/scripts/restapi-request.sh -q -u "${BIOS_USER}" -p "${BIOS_PASSWD}" --port-web 80 /asset/"$id"` 
+        source /usr/share/bios/scripts/restapi-request.sh -q -u "${BIOS_USER}" -p "${BIOS_PASSWD}" --port-web 80 -m api_auth_put /asset/"$id" "$JSON"
+    done
 }
 
 do_list () {
