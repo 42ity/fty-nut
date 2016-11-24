@@ -61,7 +61,12 @@ usage () {
 }
 
 do_mysql() {
-  mysql -N -B -u "${DB_USER}" -p"${DB_PASSWD}" box_utf8 -e "$@"
+    mysql -N -B -u "${DB_USER}" -p"${DB_PASSWD}" box_utf8 -e "$@"
+}
+
+get_asset_ids () {
+    condition=`echo "${@}" | sed -E "s/([^[:space:]]+)/name=\'\1\'/g" | sed 's/ / OR /g'`
+    do_mysql "SELECT id FROM v_bios_asset_element WHERE (${condition})"
 }
 
 do_upload () {
