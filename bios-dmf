@@ -34,6 +34,10 @@ die() {
     exit 1
 }
 
+if [[ -z "${DB_USER}" ]]; then
+    source /etc/default/bios-db-ro
+fi
+
 TMPDIR=${TMPDIR:-/tmp}
 NUTCONFIGDIR=/etc/nut
 [ -d "$NUTCONFIGDIR" ] || NUTCONFIGDIR=/etc/ups
@@ -45,11 +49,19 @@ DMFSNMP=/usr/share/nut/dmfsnmp/
 
 [ -d "${DMFSNMPD}" ] || die "Can't find NUT DMF runtime dir at ${DMFSNMPD}"
 
+if [[ -z "${BIOS_USER}" ]]; then
+    source /etc/default/_bios-script
+fi
+
 usage () {
     echo "${PROG}"
     echo "upload dmf1 [dmf2 ...] - upload dmf files to ${DMFSNMPD}"
     echo "enable asset 1 [asset2 ...] - enable dmf for particular asset"
     echo "list - list all assets with enabled dmf"
+}
+
+do_mysql() {
+  mysql -N -B -u "${DB_USER}" -p"${DB_PASSWD}" box_utf8 -e "$@"
 }
 
 do_upload () {
@@ -69,7 +81,7 @@ do_disable () {
 }
 
 do_list () {
-    die "implement do_list ${@}"
+    do_mysql 'SELECT t1.name FROM v_bios_asset_element t1 LEFT JOIN v_bios_asset_ext_attributes t2 ON t1.id = t2.id_asset_element WHERE t2.keytag="upsconf_enable_dmf" AND t2.value != "";'
 }
 
 COMMAND=${1}
