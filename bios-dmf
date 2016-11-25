@@ -21,6 +21,9 @@
 #  \author  Michal Vyskocil <MichalVyskocil@Eaton.com>
 #  \details Helper script for handling DMF files, it can copy and enable things
 #
+if [ "$(id -u)" != "0" ] ; then
+    exec sudo "$0" "$@"
+fi
 
 set -e
 
@@ -78,8 +81,8 @@ do_upload () {
 do_enable () {
     for id in `get_asset_ids "${@}"`; do
         do_mysql "INSERT INTO v_bios_asset_ext_attributes (keytag, value, id_asset_element, read_only) \
-            VALUES ('upsconf_enable_dmf', true, $id, 0) \
-            ON DUPLICATE KEY UPDATE value=true;
+            VALUES ('upsconf_enable_dmf', 'true', $id, 0) \
+            ON DUPLICATE KEY UPDATE value='true';
             "
     done
     agent-asset-cli republish "${@}"
