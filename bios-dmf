@@ -78,23 +78,22 @@ do_upload () {
 do_enable () {
     for id in `get_asset_ids "${@}"`; do
         do_mysql "INSERT INTO v_bios_asset_ext_attributes (keytag, value, id_asset_element, read_only) \
-            VALUES ('upsconf_enable_dmf', true, $id, 0)"
-        export WEBLIB_TRACE_CURL
-        JSON=`source /usr/share/bios/scripts/restapi-request.sh -q -u "${BIOS_USER}" -p "${BIOS_PASSWD}" --port-web 80 /asset/"$id"` 
-        source /usr/share/bios/scripts/restapi-request.sh -q -u "${BIOS_USER}" -p "${BIOS_PASSWD}" --port-web 80 -m api_auth_put /asset/"$id" "$JSON"
+            VALUES ('upsconf_enable_dmf', true, $id, 0) \
+            ON DUPLICATE KEY UPDATE value=true;
+            "
     done
+    agent-asset-cli republish "${@}"
 }
 
 do_disable () {
     for id in `get_asset_ids "${@}"`; do
         do_mysql "DELETE FROM v_bios_asset_ext_attributes WHERE (keytag = 'upsconf_enable_dmf' AND id_asset_element=$id)"
-        JSON=`source /usr/share/bios/scripts/restapi-request.sh -q -u "${BIOS_USER}" -p "${BIOS_PASSWD}" --port-web 80 /asset/"$id"` 
-        source /usr/share/bios/scripts/restapi-request.sh -q -u "${BIOS_USER}" -p "${BIOS_PASSWD}" --port-web 80 -m api_auth_put /asset/"$id" "$JSON"
     done
+    agent-asset-cli republish "${@}"
 }
 
 do_list () {
-    do_mysql 'SELECT t1.name FROM v_bios_asset_element t1 LEFT JOIN v_bios_asset_ext_attributes t2 ON t1.id = t2.id_asset_element WHERE t2.keytag="upsconf_enable_dmf" AND t2.value != "";'
+    do_mysql 'SELECT t1.name FROM v_bios_asset_element t1 LEFT JOIN v_bios_asset_ext_attributes t2 ON t1.id = t2.id_asset_element WHERE t2.keytag="upsconf_enable_dmf" AND t2.value="true";'
 }
 
 COMMAND=${1}
