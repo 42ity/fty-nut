@@ -18,7 +18,7 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     =========================================================================
 */
-#include "agent_nut_library.h"
+#include "fty_nut_library.h"
 #include "sensor_device.h"
 #include "logger.h"
 
@@ -64,7 +64,7 @@ void Sensor::publish (mlm_client_t *client, int ttl)
         zhash_t *aux = zhash_new ();
         zhash_autofree (aux);
         zhash_insert (aux, "port", (void*) port().c_str());
-        zmsg_t *msg = bios_proto_encode_metric (
+        zmsg_t *msg = fty_proto_encode_metric (
             NULL,
             ("temperature." + port ()).c_str (),
             _location.c_str (),
@@ -85,7 +85,7 @@ void Sensor::publish (mlm_client_t *client, int ttl)
         zhash_t *aux = zhash_new ();
         zhash_autofree (aux);
         zhash_insert (aux, "port", (void*) port().c_str());
-        zmsg_t *msg = bios_proto_encode_metric (
+        zmsg_t *msg = fty_proto_encode_metric (
             aux,
             ("humidity." + port ()).c_str (),
             _location.c_str (),

@@ -1,5 +1,5 @@
-/*v  =========================================================================
-    bios_agent_nut - description
+/*  =========================================================================
+    fty_nut - description
 
     Copyright (C) 2014 - 2015 Eaton
 
@@ -21,25 +21,25 @@
 
 /*
 @header
-    bios_agent_nut -
+    fty_nut - fty-nut main
 @discuss
 @end
 */
 #include <getopt.h>
 
-#include "agent_nut_classes.h"
+#include "fty_nut_classes.h"
 
 #define str(x) #x
 
-static const char *ACTOR_NUT_NAME = "agent-nut";
-static const char *ACTOR_ALERT_NAME = "agent-nut-alert";
+static const char *ACTOR_NUT_NAME = "fty-nut";
+static const char *ACTOR_ALERT_NAME = "bios-nut-alert";
 static const char *ACTOR_SENSOR_NAME = "agent-nut-sensor";
 static const char *ENDPOINT = "ipc://@/malamute";
 
 #define DEFAULT_LOG_LEVEL LOG_WARNING
 
 void usage () {
-    puts ("bios-agent-nut [options] ...\n"
+    puts ("fty-nut [options] ...\n"
           "  --log-level / -l       bios log level\n"
           "                         overrides setting in env. variable BIOS_LOG_LEVEL\n"
           "  --mapping-file / -m    NUT-to-BIOS mapping file\n"
@@ -169,11 +169,11 @@ int main (int argc, char *argv [])
     }
     log_set_level (log_level);
 
-    log_info ("bios_agent_nut - NUT (Network UPS Tools) wrapper/daemon");
+    log_info ("fty_nut - NUT (Network UPS Tools) wrapper/daemon");
 
-    zactor_t *nut_server = zactor_new (bios_nut_server, (void *) NULL);
+    zactor_t *nut_server = zactor_new (fty_nut_server, (void *) NULL);
     if (!nut_server) {
-        log_critical ("zactor_new (task = 'bios_nut_server', args = 'NULL') failed");
+        log_critical ("zactor_new (task = 'fty_nut_server', args = 'NULL') failed");
         return -1;
     }
 
@@ -197,18 +197,18 @@ int main (int argc, char *argv [])
     zstr_sendx (nut_server, "CONFIGURE", mapping_file.c_str (), state_file.c_str (), NULL);
     zstr_sendx (nut_server, "POLLING", polling, NULL);
     zstr_sendx (nut_server, "CONNECT", ENDPOINT, ACTOR_NUT_NAME, NULL);
-    zstr_sendx (nut_server, "PRODUCER", BIOS_PROTO_STREAM_METRICS, NULL);
-    zstr_sendx (nut_server, "CONSUMER", BIOS_PROTO_STREAM_ASSETS, ".*", NULL);
+    zstr_sendx (nut_server, "PRODUCER", FTY_PROTO_STREAM_METRICS, NULL);
+    zstr_sendx (nut_server, "CONSUMER", FTY_PROTO_STREAM_ASSETS, ".*", NULL);
 
     zstr_sendx (nut_device_alert, "POLLING", polling, NULL);
     zstr_sendx (nut_device_alert, "CONNECT", ENDPOINT, ACTOR_ALERT_NAME, NULL);
-    zstr_sendx (nut_device_alert, "PRODUCER", BIOS_PROTO_STREAM_ALERTS_SYS, NULL);
-    zstr_sendx (nut_device_alert, "CONSUMER", BIOS_PROTO_STREAM_ASSETS, ".*", NULL);
+    zstr_sendx (nut_device_alert, "PRODUCER", FTY_PROTO_STREAM_ALERTS_SYS, NULL);
+    zstr_sendx (nut_device_alert, "CONSUMER", FTY_PROTO_STREAM_ASSETS, ".*", NULL);
 
     zstr_sendx (nut_sensor, "POLLING", polling, NULL);
     zstr_sendx (nut_sensor, "CONNECT", ENDPOINT, ACTOR_SENSOR_NAME, NULL);
-    zstr_sendx (nut_sensor, "PRODUCER", BIOS_PROTO_STREAM_METRICS_SENSOR, NULL);
-    zstr_sendx (nut_sensor, "CONSUMER", BIOS_PROTO_STREAM_ASSETS, ".*", NULL);
+    zstr_sendx (nut_sensor, "PRODUCER", FTY_PROTO_STREAM_METRICS_SENSOR, NULL);
+    zstr_sendx (nut_sensor, "CONSUMER", FTY_PROTO_STREAM_ASSETS, ".*", NULL);
 
     zpoller_t *poller = zpoller_new(nut_server, nut_device_alert, nut_sensor, NULL);
     assert(poller);

@@ -24,10 +24,10 @@
 
 #include <malamute.h>
 
-AGENT_NUT_EXPORT void
+FTY_NUT_EXPORT void
 sensor_actor (zsock_t *pipe, void *args);
 
-AGENT_NUT_EXPORT void
+FTY_NUT_EXPORT void
 sensor_actor_test (bool verbose);
 
 #endif // __SENSOR_ACTOR_H

@@ -2,7 +2,7 @@
 # -*- makefile -*-
 
 override_dh_strip:
-	dh_strip --dbg-package=agent-nut-dbg
+	dh_strip --dbg-package=fty-nut-dbg
 
 override_dh_auto_test:
 	echo "Skipped for now"

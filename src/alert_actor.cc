@@ -19,8 +19,8 @@
     =========================================================================
 */
 #include <malamute.h>
-#include "agent_nut_classes.h"
-#include "agent_nut_library.h"
+#include "fty_nut_classes.h"
+#include "fty_nut_library.h"
 #include "alert_actor.h"
 #include "alert_device_list.h"
 #include "logger.h"
@@ -154,16 +154,16 @@ alert_actor_commands (
 int
 handle_asset_message (mlm_client_t *client, nut_t *data, zmsg_t **message_p) {
     if (!client || !data || !message_p || !*message_p) return 0;
-    if (!is_bios_proto (*message_p)) {
+    if (!is_fty_proto (*message_p)) {
         log_warning (
-            "Message received is not bios_proto; sender = '%s', subject = '%s'",
+            "Message received is not fty_proto; sender = '%s', subject = '%s'",
             mlm_client_sender (client), mlm_client_subject (client));
         zmsg_destroy (message_p);
         return 0;
     }
-    bios_proto_t *proto = bios_proto_decode (message_p);
+    fty_proto_t *proto = fty_proto_decode (message_p);
     if (!proto) {
-        log_critical ("bios_proto_decode () failed.");
+        log_critical ("fty_proto_decode () failed.");
         zmsg_destroy (message_p);
         return 0;
     }
@@ -195,9 +195,9 @@ alert_actor (zsock_t *pipe, void *args)
     log_debug ("alert actor started");
 
     nut_t *stateData = nut_new ();
-    int rv = nut_load (stateData, "/var/lib/bios/nut/state_file");
+    int rv = nut_load (stateData, "/var/lib/fty/nut/state_file");
     if (rv != 0) {
-        log_warning ("Could not load state file '%s'.", "/var/lib/bios/nut/state_file");
+        log_warning ("Could not load state file '%s'.", "/var/lib/fty/nut/state_file");
     }
     devices.updateDeviceList (stateData);
     while (!zsys_interrupted) {
@@ -243,7 +243,7 @@ alert_actor_test (bool verbose)
 {
     printf (" * alert_actor: ");
     //  @selftest
-    static const char* endpoint = "ipc://bios-alert-actor";
+    static const char* endpoint = "ipc://fty-alert-actor";
 
     // malamute broker
     zactor_t *malamute = zactor_new (mlm_server, (void*) "Malamute");
@@ -268,7 +268,7 @@ alert_actor_test (bool verbose)
     mlm_client_t *client = mlm_client_new ();
     assert (client);
     mlm_client_connect (client, endpoint, 1000, "agent-nut-alert");
-    mlm_client_set_producer (client, BIOS_PROTO_STREAM_ALERTS_SYS);
+    mlm_client_set_producer (client, FTY_PROTO_STREAM_ALERTS_SYS);
 
     mlm_client_t *rfc_evaluator = mlm_client_new ();
     assert (rfc_evaluator);
@@ -277,7 +277,7 @@ alert_actor_test (bool verbose)
     mlm_client_t *alert_list = mlm_client_new ();
     assert (alert_list);
     mlm_client_connect (alert_list, endpoint, 1000, "alert-list");
-    mlm_client_set_consumer (alert_list, BIOS_PROTO_STREAM_ALERTS_SYS, ".*");
+    mlm_client_set_consumer (alert_list, FTY_PROTO_STREAM_ALERTS_SYS, ".*");
 
     zpoller_t *poller = zpoller_new (
         mlm_client_msgpipe (client),
@@ -319,23 +319,23 @@ alert_actor_test (bool verbose)
         assert (which);
         zmsg_t *msg = mlm_client_recv (alert_list);
         assert (msg);
-        assert (is_bios_proto(msg));
-        bios_proto_t *bp = bios_proto_decode (&msg);
+        assert (is_fty_proto(msg));
+        fty_proto_t *bp = fty_proto_decode (&msg);
         assert (bp);
 
         verbose_printf ("    is alert\n");
-        assert (streq (bios_proto_command (bp), "ALERT"));
+        assert (streq (fty_proto_command (bp), "ALERT"));
 
         verbose_printf ("    is active\n");
-        assert (streq (bios_proto_state (bp), "ACTIVE"));
+        assert (streq (fty_proto_state (bp), "ACTIVE"));
 
         verbose_printf ("    severity\n");
-        assert (streq (bios_proto_severity (bp), "CRITICAL"));
+        assert (streq (fty_proto_severity (bp), "CRITICAL"));
 
         verbose_printf ("    element\n");
-        assert (streq (bios_proto_element_src (bp), "mydevice"));
+        assert (streq (fty_proto_element_src (bp), "mydevice"));
 
-        bios_proto_destroy (&bp);
+        fty_proto_destroy (&bp);
         zmsg_destroy (&msg);
     }
     devs._devices["mydevice"]._alerts["ambient.temperature"].status = "good";
@@ -347,15 +347,15 @@ alert_actor_test (bool verbose)
         assert (which);
         zmsg_t *msg = mlm_client_recv (alert_list);
         assert (msg);
-        assert (is_bios_proto(msg));
-        bios_proto_t *bp = bios_proto_decode (&msg);
+        assert (is_fty_proto(msg));
+        fty_proto_t *bp = fty_proto_decode (&msg);
         assert (bp);
-        assert (streq (bios_proto_command (bp), "ALERT"));
+        assert (streq (fty_proto_command (bp), "ALERT"));
 
         verbose_printf ("    is resolved\n");
-        assert (streq (bios_proto_state (bp), "RESOLVED"));
+        assert (streq (fty_proto_state (bp), "RESOLVED"));
 
-        bios_proto_destroy (&bp);
+        fty_proto_destroy (&bp);
         zmsg_destroy (&msg);
     }
 

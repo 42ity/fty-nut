@@ -21,7 +21,7 @@
 #ifndef __ALERT_DEVICE_LIST
 #define __ALERT_DEVICE_LIST
 
-#include "agent_nut_library.h"
+#include "fty_nut_library.h"
 #include "alert_device.h"
 #include "nut.h"
 
@@ -41,5 +41,10 @@ class Devices {
     void updateDevices (nut::TcpClient& nutClient);
     void addIfNotPresent (Device dev);
 };
+
+
+//  Self test of this class
+FTY_NUT_EXPORT void
+    alert_device_list_test (bool verbose);
 
 #endif // __ALERT_DEVICE_LIST

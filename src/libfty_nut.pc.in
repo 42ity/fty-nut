@@ -8,13 +8,13 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
 
-Name: libagent_nut
+Name: libfty_nut
 Description: NUT (Network UPS Tools) daemon wrapper/proxy
 Version: @VERSION@
 
-Requires:libzmq libczmq libmlm libbiosproto libcidr cxxtools libnutclient
+Requires:libzmq libczmq libmlm >= 1.0.0 libfty_proto libcidr cxxtools libnutclient
 
-Libs: -L${libdir} -lagent_nut
+Libs: -L${libdir} -lfty_nut
 Cflags: -I${includedir} @pkg_config_defines@
 
 ################################################################################

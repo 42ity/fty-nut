@@ -16,14 +16,14 @@ AM_CPPFLAGS = \
     ${libzmq_CFLAGS} \
     ${czmq_CFLAGS} \
     ${malamute_CFLAGS} \
-    ${biosproto_CFLAGS} \
+    ${fty_proto_CFLAGS} \
     ${libcidr_CFLAGS} \
     ${cxxtools_CFLAGS} \
     ${libnutclient_CFLAGS} \
     -D__STDC_FORMAT_MACROS \
     -I$(srcdir)/include
 
-project_libs = ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${biosproto_LIBS} ${libcidr_LIBS} ${cxxtools_LIBS} ${libnutclient_LIBS}
+project_libs = ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${fty_proto_LIBS} ${libcidr_LIBS} ${cxxtools_LIBS} ${libnutclient_LIBS}
 
 SUBDIRS = doc
 DIST_SUBDIRS = doc
@@ -51,7 +51,7 @@ EXTRA_DIST = \
     src/stream.h \
     src/sensor_device.h \
     src/sensor_list.h \
-    src/agent_nut_classes.h
+    src/fty_nut_classes.h
 
 include $(srcdir)/src/Makemodule.am
 include $(srcdir)/src/Makemodule-local.am # Optional project-local hook

@@ -23,7 +23,7 @@
 #include <exception>
 
 #include "alert_device_list.h"
-#include "agent_nut_library.h"
+#include "fty_nut_library.h"
 #include "logger.h"
 
 void Devices::updateFromNUT ()

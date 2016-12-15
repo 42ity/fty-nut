@@ -1,5 +1,5 @@
 /*  =========================================================================
-    bios_nut_configurator_server - bios nut configurator actor
+    fty_nut_configurator_server - fty nut configurator actor
 
     Copyright (C) 2014 - 2015 Eaton
 
@@ -21,12 +21,12 @@
 
 /*
 @header
-    bios_nut_configurator_server - bios nut configurator actor
+    fty_nut_configurator_server - fty nut configurator actor
 @discuss
 @end
 */
 
-#include "agent_nut_classes.h"
+#include "fty_nut_classes.h"
 
 #include <fstream>
 #include <cxxtools/jsonserializer.h>
@@ -36,8 +36,8 @@
 
 /* TODO: This state is shared with core::agent-autoconfig due to needed
  * upgradability from Alpha. Should be cleaned up around/after release. */
-static const char* PATH = "/var/lib/bios/agent-autoconfig";
-static const char* STATE = "/var/lib/bios/agent-autoconfig/state";
+static const char* PATH = "/var/lib/fty/agent-autoconfig";
+static const char* STATE = "/var/lib/fty/agent-autoconfig/state";
 
 static int
 load_agent_info(std::string &info)
@@ -115,15 +115,15 @@ void Autoconfig::onStart( )
 }
 
 static bool
-s_is_ups_or_epdu (bios_proto_t *bmsg)
+s_is_ups_or_epdu (fty_proto_t *bmsg)
 {
     assert (bmsg);
 
-    if (!streq (bios_proto_aux_string (bmsg, "type", ""), "device"))
+    if (!streq (fty_proto_aux_string (bmsg, "type", ""), "device"))
         return false;
 
-    if ((!streq (bios_proto_aux_string (bmsg, "subtype", ""), "ups")) &&
-        (!streq (bios_proto_aux_string (bmsg, "subtype", ""), "epdu")))
+    if ((!streq (fty_proto_aux_string (bmsg, "subtype", ""), "ups")) &&
+        (!streq (fty_proto_aux_string (bmsg, "subtype", ""), "epdu")))
         return false;
 
     return true;
@@ -167,32 +167,32 @@ void Autoconfig::onSend( zmsg_t **message )
     uint32_t subtype = 0;
     uint64_t count_upsconf_block = 0; // 0 or 1 in practice
 
-    bios_proto_t *bmsg = bios_proto_decode (message);
+    fty_proto_t *bmsg = fty_proto_decode (message);
     if (!bmsg)
     {
-        log_warning ("got non bios_proto from %s", mlm_client_sender (_client));
+        log_warning ("got non fty_proto from %s", mlm_client_sender (_client));
         return;
     }
 
     // ignore non ups/epdu devices - or those with non interesting operation
-    if (!s_is_ups_or_epdu (bmsg) || s_operation2i (bios_proto_operation (bmsg)) == -1) {
-        bios_proto_destroy (&bmsg);
+    if (!s_is_ups_or_epdu (bmsg) || s_operation2i (fty_proto_operation (bmsg)) == -1) {
+        fty_proto_destroy (&bmsg);
         return;
     }
 
     // this is a device that we should configure, we need extended attributes (ip.1 particularly)
-    device_name = bios_proto_name (bmsg);
+    device_name = fty_proto_name (bmsg);
     // MVY: 6 is device, for subtype see core.git/src/shared/asset_types.h
-    subtype = streq (bios_proto_aux_string (bmsg, "subtype", ""), "ups") ? 1 : 3;
+    subtype = streq (fty_proto_aux_string (bmsg, "subtype", ""), "ups") ? 1 : 3;
 
     // upsconf_block support - devices with an explicit "upsconf_block"
     // ext-attribute will be always configured ([ab]using nut-scanner logic
     // in nut_configurator.cc). Those without the block may differ...
-    count_upsconf_block = bios_proto_ext_number (bmsg, "upsconf_block", 0);
+    count_upsconf_block = fty_proto_ext_number (bmsg, "upsconf_block", 0);
     if (count_upsconf_block == 0) {
         // daisy_chain pdu support - only devices with daisy_chain == 1 or no such ext attribute will be configured via nut-scanner
-        if (bios_proto_ext_number (bmsg, "daisy_chain", 0) > 1) {
-            bios_proto_destroy (&bmsg);
+        if (fty_proto_ext_number (bmsg, "daisy_chain", 0) > 1) {
+            fty_proto_destroy (&bmsg);
             return;
         }
     }
@@ -200,9 +200,9 @@ void Autoconfig::onSend( zmsg_t **message )
     addDeviceIfNeeded( device_name, 6, subtype );
     _configurableDevices[device_name].configured = false;
     _configurableDevices[device_name].attributes.clear();
-    _configurableDevices[device_name].operation = s_operation2i (bios_proto_operation (bmsg));
-    _configurableDevices[device_name].attributes = s_zhash_to_map(bios_proto_ext (bmsg));
-    bios_proto_destroy (&bmsg);
+    _configurableDevices[device_name].operation = s_operation2i (fty_proto_operation (bmsg));
+    _configurableDevices[device_name].attributes = s_zhash_to_map(fty_proto_ext (bmsg));
+    fty_proto_destroy (&bmsg);
     saveState();
 
     if (count_upsconf_block == 0) {
@@ -330,7 +330,7 @@ bool Autoconfig::connect(
 }
 
 void
-bios_nut_configurator_server (zsock_t *pipe, void *args)
+fty_nut_configurator_server (zsock_t *pipe, void *args)
 {
     Autoconfig agent ("nut-configurator");
     agent.connect (MLM_ENDPOINT, "ASSETS", ".*");
@@ -365,14 +365,14 @@ bios_nut_configurator_server (zsock_t *pipe, void *args)
 //  Self test of this class
 
 void
-bios_nut_configurator_server_test (bool verbose)
+fty_nut_configurator_server_test (bool verbose)
 {
-    printf (" * bios_nut_configurator_server: ");
+    printf (" * fty_nut_configurator_server: ");
 
 
     //  @selftest
     //  Simple create/destroy test
-    zactor_t *self = zactor_new (bios_nut_configurator_server, NULL);
+    zactor_t *self = zactor_new (fty_nut_configurator_server, NULL);
     assert (self);
     zactor_destroy (&self);
     //  @end

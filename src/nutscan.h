@@ -22,7 +22,7 @@
 #ifndef NUTSCAN_H_INCLUDED
 #define NUTSCAN_H_INCLUDED
 
-#include "src/agent_nut_classes.h"
+#include "src/fty_nut_classes.h"
 
 /**
  * \brief call nut scan over SNMP
@@ -59,5 +59,10 @@ nut_scan_xml_http(
         const std::string& name,
         const CIDRAddress& ip_address,
         std::vector<std::string>& out);
+
+//  Self test of this class
+FTY_NUT_EXPORT void
+    nutscan_test (bool verbose);
+
 
 #endif

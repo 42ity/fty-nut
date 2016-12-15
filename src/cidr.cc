@@ -26,7 +26,7 @@
 @end
 */
 
-#include "agent_nut_classes.h"
+#include "fty_nut_classes.h"
 /*!
  * \file cidr.cc
  * \author Tomas Halman <TomasHalman@Eaton.com>
@@ -34,7 +34,7 @@
  * \author Karol Hrdina <KarolHrdina@Eaton.com>
  * \brief Not yet documented file
  */
-#include "cidr.h"
+//#include "cidr.h"
 #include <cstdio>
 #include <stdlib.h>
 #include <string.h>

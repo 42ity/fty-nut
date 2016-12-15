@@ -28,7 +28,7 @@
 
 #include <cerrno>
 
-#include "agent_nut_classes.h"
+#include "fty_nut_classes.h"
 
 #define ASSERT_LEVEL \
     assert(level == LOG_DEBUG   || \

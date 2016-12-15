@@ -508,6 +508,7 @@ public:
    * \brief Simple evaluation if address is in excluded networks.
    */
   bool excludes(const CIDRAddress& address) const;
+  
 private:
   // list of includes
   std::vector<CIDRAddress> _networks;
@@ -523,5 +524,10 @@ private:
   // simple increment address of 1 eventually go at the beginning
   bool _nextSimple(CIDRAddress& address);
 };
+
+
+//  Self test of this class
+FTY_NUT_EXPORT void
+    cidr_test (bool verbose);
 
 #endif

@@ -1,5 +1,5 @@
 /*  =========================================================================
-    bios_nut_server - bios nut actor
+    fty_nut_server - fty nut actor
 
     Copyright (C) 2014 - 2015 Eaton
 
@@ -21,12 +21,12 @@
 
 /*
 @header
-    bios_nut_server - bios nut actor
+    fty_nut_server - fty nut actor
 @discuss
 @end
 */
 
-#include "agent_nut_classes.h"
+#include "fty_nut_classes.h"
 
 static void
 s_handle_poll (NUTAgent& nut_agent, nut_t *data)
@@ -85,7 +85,7 @@ polling_timeout(uint64_t last_poll, uint64_t polling_timeout)
 }
 
 void
-bios_nut_server (zsock_t *pipe, void *args)
+fty_nut_server (zsock_t *pipe, void *args)
 {
     bool verbose = false;
 
@@ -94,7 +94,7 @@ bios_nut_server (zsock_t *pipe, void *args)
         log_critical ("mlm_client_new () failed");
         return;
     }
-    int r = mlm_client_set_consumer (client, BIOS_PROTO_STREAM_ASSETS, ".*");
+    int r = mlm_client_set_consumer (client, FTY_PROTO_STREAM_ASSETS, ".*");
     if (r == -1) {
         log_error ("client set_consumer failed");
     }
@@ -109,7 +109,7 @@ bios_nut_server (zsock_t *pipe, void *args)
     if (r == -1) {
         log_error ("connect of iclient failed");
     }
-    r = mlm_client_set_producer (iclient, BIOS_PROTO_STREAM_ASSETS);
+    r = mlm_client_set_producer (iclient, FTY_PROTO_STREAM_ASSETS);
     if (r == -1) {
         log_error ("iclient set_producer failed");
     }
@@ -228,9 +228,9 @@ bios_nut_server (zsock_t *pipe, void *args)
 //  Self test of this class
 
 void
-bios_nut_server_test (bool verbose)
+fty_nut_server_test (bool verbose)
 {
-    printf (" * bios_nut_server: ");
+    printf (" * fty_nut_server: ");
 
     //  @selftest
     //  @end
