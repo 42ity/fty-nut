@@ -20,7 +20,7 @@ stderr.txt
 *.lo
 
 # Executables
-src/agent-nut_selftest
+src/fty-nut_selftest
 src/bios-nut-outage
 src/agent_nut_selftest
 src/fty-nut
