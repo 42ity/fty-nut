@@ -195,9 +195,9 @@ alert_actor (zsock_t *pipe, void *args)
     log_debug ("alert actor started");
 
     nut_t *stateData = nut_new ();
-    int rv = nut_load (stateData, "/var/lib/fty/nut/state_file");
+    int rv = nut_load (stateData, "/var/lib/bios/nut/state_file");
     if (rv != 0) {
-        log_warning ("Could not load state file '%s'.", "/var/lib/fty/nut/state_file");
+        log_warning ("Could not load state file '%s'.", "/var/lib/bios/nut/state_file");
     }
     devices.updateDeviceList (stateData);
     while (!zsys_interrupted) {
