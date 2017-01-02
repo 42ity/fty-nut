@@ -37,7 +37,7 @@ if [ "$BUILD_TYPE" == "default" ]; then
     make -j4
     make install
     cd ..
-    git clone --quiet --depth 1 https://github.com/zeromq/czmq czmq
+    git clone --quiet --depth 1 -b v3.0.2 https://github.com/zeromq/czmq czmq
     cd czmq
     git --no-pager log --oneline -n1
     if [ -e autogen.sh ]; then
