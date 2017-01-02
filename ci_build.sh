@@ -113,6 +113,7 @@ if [ "$BUILD_TYPE" == "default" ]; then
     fi
     ( # Special override for NUT
       CONFIG_OPTS+=("--with-doc=no")
+      CONFIG_OPTS+=("--with-dev=yes")
       ./configure "${CONFIG_OPTS[@]}"
     )
     make -j4
