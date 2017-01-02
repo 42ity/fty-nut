@@ -24,13 +24,14 @@
     </use>
 
     <use project = "cidr" test = "cidr_alloc" header="libcidr.h"
-	 repository = "https://github.com/42ity/libcidr"/>
+        repository = "https://github.com/42ity/libcidr"/>
 
     <use project = "cxxtools" test="cxxtools::Utf8Codec::Utf8Codec" header="cxxtools/allocator.h"
         repository = "https://github.com/42ity/cxxtools"
         release = "42ity"/>
 
     <use project = "libnutclient" test = "nut::TcpClient::TcpClient" header="nutclient.h"
+        prefix="nutclient"
         repository = "https://github.com/networkupstools/nut"/>
 
     <class name = "logger"          private = "1">logging api</class>
