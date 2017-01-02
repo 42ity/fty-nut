@@ -608,8 +608,11 @@ fi
 AC_CONFIG_FILES([Makefile
                  doc/Makefile
                  src/libfty_nut.pc
+                 src/mapping.conf
                  src/fty-nut.cfg
                  src/fty-nut-configurator.cfg
+                 src/fty-nut.conf.in
+                 src/bios_10_agent-nut.in
                  ])
 
 AM_COND_IF([WITH_SYSTEMD_UNITS],
