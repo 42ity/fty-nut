@@ -9,10 +9,10 @@ PartOf=bios.target
 [Service]
 Type=simple
 User=bios
-EnvironmentFile=-/usr/share/bios/etc/default/bios
-EnvironmentFile=-/usr/share/bios/etc/default/bios__%n.conf
-EnvironmentFile=-/etc/default/bios
-EnvironmentFile=-/etc/default/bios__%n.conf
+EnvironmentFile=-@prefix@/share/bios/etc/default/bios
+EnvironmentFile=-@prefix@/share/bios/etc/default/bios__%n.conf
+EnvironmentFile=-@sysconfdir@/default/bios
+EnvironmentFile=-@sysconfdir@/default/bios__%n.conf
 Environment="prefix=@prefix@"
 ExecStart=@prefix@/bin/fty-nut --mapping-file @datadir@/@PACKAGE@/mapping.conf --state-file '/var/lib/bios/nut/state_file'
 Restart=always

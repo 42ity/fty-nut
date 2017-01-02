@@ -6,13 +6,13 @@ agent_nut_mapping_DATA = src/mapping.conf
 EXTRA_DIST += $(addsuffix .in,$(agent_nut_mapping_DATA))
 CLEAN_FILES += $(agent_nut_mapping_DATA)
 
-agent_nut_sudoersdir = $(DESTDIR)/usr/share/bios/examples/config/sudoers.d
+agent_nut_sudoersdir = @prefix@/share/bios/examples/config/sudoers.d
 agent_nut_sudoers_DATA = src/bios_10_agent-nut
 EXTRA_DIST += $(addsuffix .in,$(agent_nut_sudoers_DATA))
 CLEAN_FILES += $(agent_nut_sudoers_DATA)
 
 if WITH_SYSTEMD_UNITS
-agent_nut_tmpfilesdir = $(DESTDIR)/usr/lib/tmpfiles.d/
+agent_nut_tmpfilesdir = @prefix@/lib/tmpfiles.d/
 agent_nut_tmpfiles_DATA = src/bios-agent-nut.conf
 EXTRA_DIST += $(addsuffix .in,$(agent_nut_tmpfiles_DATA))
 CLEAN_FILES += $(agent_nut_tmpfiles_DATA)
