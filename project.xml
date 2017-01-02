@@ -65,8 +65,8 @@
 <!--
 TODO: Handle (automate) delivery of
                  src/mapping.conf
-                 src/fty-nut.conf.in
-                 src/bios_10_agent-nut.in
+                 src/fty-nut.conf
+                 src/bios_10_agent-nut
 -->
 
 </project>
