@@ -36,7 +36,7 @@ BuildRequires:  zeromq-devel
 BuildRequires:  czmq-devel
 BuildRequires:  malamute-devel
 BuildRequires:  fty-proto-devel
-BuildRequires:  libcidr-devel
+BuildRequires:  cidr-devel
 BuildRequires:  cxxtools-devel
 BuildRequires:  libnutclient-devel
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
@@ -68,7 +68,7 @@ Requires:       zeromq-devel
 Requires:       czmq-devel
 Requires:       malamute-devel
 Requires:       fty-proto-devel
-Requires:       libcidr-devel
+Requires:       cidr-devel
 Requires:       cxxtools-devel
 Requires:       libnutclient-devel
 

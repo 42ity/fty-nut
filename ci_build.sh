@@ -75,8 +75,8 @@ if [ "$BUILD_TYPE" == "default" ]; then
     make -j4
     make install
     cd ..
-    git clone --quiet --depth 1 https://github.com/42ity/libcidr libcidr
-    cd libcidr
+    git clone --quiet --depth 1 https://github.com/42ity/libcidr cidr
+    cd cidr
     git --no-pager log --oneline -n1
     if [ -e autogen.sh ]; then
         ./autogen.sh 2> /dev/null

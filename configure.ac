@@ -223,49 +223,49 @@ if test "x$was_fty_proto_check_lib_detected" = "xno"; then
     LIBS="${fty_proto_LIBS} ${LIBS}"
 fi
 
-was_libcidr_check_lib_detected=no
+was_cidr_check_lib_detected=no
 
-PKG_CHECK_MODULES([libcidr], [libcidr >= 0.0.0],
+PKG_CHECK_MODULES([cidr], [cidr >= 0.0.0],
     [
     ],
     [
-        AC_ARG_WITH([libcidr],
+        AC_ARG_WITH([cidr],
             [
-                AS_HELP_STRING([--with-libcidr],
-                [Specify libcidr prefix])
+                AS_HELP_STRING([--with-cidr],
+                [Specify cidr prefix])
             ],
-            [search_libcidr="yes"],
+            [search_cidr="yes"],
             [])
 
-        libcidr_synthetic_cflags=""
-        libcidr_synthetic_libs="-llibcidr"
+        cidr_synthetic_cflags=""
+        cidr_synthetic_libs="-lcidr"
 
-        if test "x$search_libcidr" = "xyes"; then
-            if test -r "${with_libcidr}/include/libcidr.h"; then
-                libcidr_synthetic_cflags="-I${with_libcidr}/include"
-                libcidr_synthetic_libs="-L${with_libcidr}/lib -llibcidr"
+        if test "x$search_cidr" = "xyes"; then
+            if test -r "${with_cidr}/include/libcidr.h"; then
+                cidr_synthetic_cflags="-I${with_cidr}/include"
+                cidr_synthetic_libs="-L${with_cidr}/lib -lcidr"
             else
-                AC_MSG_ERROR([${with_libcidr}/include/libcidr.h not found. Please check libcidr prefix])
+                AC_MSG_ERROR([${with_cidr}/include/libcidr.h not found. Please check cidr prefix])
             fi
         fi
 
 
-        AC_CHECK_LIB([libcidr], [cidr_alloc],
+        AC_CHECK_LIB([cidr], [cidr_alloc],
             [
-                CFLAGS="${libcidr_synthetic_cflags} ${CFLAGS}"
-                LDFLAGS="${libcidr_synthetic_libs} ${LDFLAGS}"
-                LIBS="${libcidr_synthetic_libs} ${LIBS}"
+                CFLAGS="${cidr_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${cidr_synthetic_libs} ${LDFLAGS}"
+                LIBS="${cidr_synthetic_libs} ${LIBS}"
 
-                AC_SUBST([libcidr_CFLAGS],[${libcidr_synthetic_cflags}])
-                AC_SUBST([libcidr_LIBS],[${libcidr_synthetic_libs}])
-                was_libcidr_check_lib_detected=yes
+                AC_SUBST([cidr_CFLAGS],[${cidr_synthetic_cflags}])
+                AC_SUBST([cidr_LIBS],[${cidr_synthetic_libs}])
+                was_cidr_check_lib_detected=yes
             ],
-            [AC_MSG_ERROR([cannot link with -llibcidr, install libcidr])])
+            [AC_MSG_ERROR([cannot link with -lcidr, install cidr])])
     ])
 
-if test "x$was_libcidr_check_lib_detected" = "xno"; then
-    CFLAGS="${libcidr_CFLAGS} ${CFLAGS}"
-    LIBS="${libcidr_LIBS} ${LIBS}"
+if test "x$was_cidr_check_lib_detected" = "xno"; then
+    CFLAGS="${cidr_CFLAGS} ${CFLAGS}"
+    LIBS="${cidr_LIBS} ${LIBS}"
 fi
 
 was_cxxtools_check_lib_detected=no

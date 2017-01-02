@@ -17,13 +17,13 @@ AM_CPPFLAGS = \
     ${czmq_CFLAGS} \
     ${malamute_CFLAGS} \
     ${fty_proto_CFLAGS} \
-    ${libcidr_CFLAGS} \
+    ${cidr_CFLAGS} \
     ${cxxtools_CFLAGS} \
     ${libnutclient_CFLAGS} \
     -D__STDC_FORMAT_MACROS \
     -I$(srcdir)/include
 
-project_libs = ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${fty_proto_LIBS} ${libcidr_LIBS} ${cxxtools_LIBS} ${libnutclient_LIBS}
+project_libs = ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${fty_proto_LIBS} ${cidr_LIBS} ${cxxtools_LIBS} ${libnutclient_LIBS}
 
 SUBDIRS = doc
 DIST_SUBDIRS = doc

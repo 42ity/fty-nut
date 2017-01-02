@@ -22,8 +22,9 @@
         test = "fty_proto_test">
         <use project = "malamute" />
     </use>
-    <use project = "libcidr" test = "cidr_alloc" 
+    <use project = "cidr" test = "cidr_alloc" header="libcidr.h"
 	 repository = "https://github.com/42ity/libcidr"/>
+
     <use project = "cxxtools" test="cxxtools::Utf8Codec::Utf8Codec" header="cxxtools/allocator.h"
         repository = "https://github.com/42ity/cxxtools"
         release = "42ity"/>
