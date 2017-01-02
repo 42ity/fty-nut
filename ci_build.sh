@@ -112,7 +112,7 @@ if [ "$BUILD_TYPE" == "default" ]; then
         ./buildconf 2> /dev/null
     fi
     ( # Special override for NUT
-      CONFIG_OPTS+=("--with-doc=skip")
+      CONFIG_OPTS+=("--with-doc=no")
       ./configure "${CONFIG_OPTS[@]}"
     )
     make -j4
