@@ -99,6 +99,7 @@ find %{buildroot} -name '*.la' | xargs rm -f
 
 %files
 %defattr(-,root,root)
+%doc README.md
 %{_bindir}/fty-nut
 %{_bindir}/fty-nut-configurator
 %{_bindir}/fty-nutconfig

@@ -286,11 +286,11 @@ PKG_CHECK_MODULES([cxxtools], [cxxtools >= 0.0.0],
         cxxtools_synthetic_libs="-lcxxtools"
 
         if test "x$search_cxxtools" = "xyes"; then
-            if test -r "${with_cxxtools}/include/cxxtools.h"; then
+            if test -r "${with_cxxtools}/include/cxxtools/allocator.h"; then
                 cxxtools_synthetic_cflags="-I${with_cxxtools}/include"
                 cxxtools_synthetic_libs="-L${with_cxxtools}/lib -lcxxtools"
             else
-                AC_MSG_ERROR([${with_cxxtools}/include/cxxtools.h not found. Please check cxxtools prefix])
+                AC_MSG_ERROR([${with_cxxtools}/include/cxxtools/allocator.h not found. Please check cxxtools prefix])
             fi
         fi
 
@@ -331,11 +331,11 @@ PKG_CHECK_MODULES([libnutclient], [libnutclient >= 0.0.0],
         libnutclient_synthetic_libs="-llibnutclient"
 
         if test "x$search_libnutclient" = "xyes"; then
-            if test -r "${with_libnutclient}/include/libnutclient.h"; then
+            if test -r "${with_libnutclient}/include/nutclient.h"; then
                 libnutclient_synthetic_cflags="-I${with_libnutclient}/include"
                 libnutclient_synthetic_libs="-L${with_libnutclient}/lib -llibnutclient"
             else
-                AC_MSG_ERROR([${with_libnutclient}/include/libnutclient.h not found. Please check libnutclient prefix])
+                AC_MSG_ERROR([${with_libnutclient}/include/nutclient.h not found. Please check libnutclient prefix])
             fi
         fi
 
@@ -610,15 +610,12 @@ AC_CONFIG_FILES([Makefile
                  src/libfty_nut.pc
                  src/fty-nut.cfg
                  src/fty-nut-configurator.cfg
-                 src/mapping.conf
-                 src/bios_10_agent-nut
                  ])
 
 AM_COND_IF([WITH_SYSTEMD_UNITS],
     [AC_CONFIG_FILES([
                  src/fty-nut.service
                  src/fty-nut-configurator.service
-		 src/fty-nut.conf
     ])],
     [])
 

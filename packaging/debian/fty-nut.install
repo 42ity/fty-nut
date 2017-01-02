@@ -4,7 +4,3 @@ usr/bin/fty-nutconfig
 usr/bin/fty-dmf
 usr/lib/systemd/system/fty-nut*.service
 usr/lib/systemd/system/fty-nut-configurator*.service
-usr/share/agent-nut/mapping.conf
-usr/share/bios/examples/config/sudoers.d/bios_10_agent-nut
-usr/lib/tmpfiles.d/*.conf
-etc/agent-nut/*.cfg

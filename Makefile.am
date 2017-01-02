@@ -51,6 +51,7 @@ EXTRA_DIST = \
     src/stream.h \
     src/sensor_device.h \
     src/sensor_list.h \
+    README.md \
     src/fty_nut_classes.h
 
 include $(srcdir)/src/Makemodule.am

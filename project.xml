@@ -22,9 +22,13 @@
         test = "fty_proto_test">
         <use project = "malamute" />
     </use>
-    <use project = "libcidr" test = "cidr_alloc" />
-    <use project = "cxxtools" test="cxxtools::Utf8Codec::Utf8Codec"/>
-    <use project = "libnutclient" test = "nut::TcpClient::TcpClient" />
+    <use project = "libcidr" test = "cidr_alloc" 
+	 repository = "https://github.com/42ity/libcidr"/>
+    <use project = "cxxtools" test="cxxtools::Utf8Codec::Utf8Codec" header="cxxtools/allocator.h"
+        repository = "https://github.com/42ity/cxxtools"
+        release = "42ity"/>
+
+    <use project = "libnutclient" test = "nut::TcpClient::TcpClient" header="nutclient.h"/>
 
     <class name = "logger"          private = "1">logging api</class>
     <class name = "fsutils"         private = "1">filesystem utils</class>
