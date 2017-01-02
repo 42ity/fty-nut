@@ -62,5 +62,12 @@
     <bin name = "fty-nutconfig" />
     <bin name = "fty-dmf" />
 
+<!--
+TODO: Handle (automate) delivery of
+                 src/mapping.conf
+                 src/fty-nut.conf.in
+                 src/bios_10_agent-nut.in
+-->
+
 </project>
 
