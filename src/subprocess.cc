@@ -26,7 +26,7 @@
 @end
 */
 
-#include "agent_nut_classes.h"
+#include "fty_nut_classes.h"
 
 // forward declaration of helper functions
 // TODO: move somewhere else

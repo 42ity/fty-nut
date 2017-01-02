@@ -27,7 +27,7 @@
 */
 #include <cmath>
 
-#include "agent_nut_classes.h"
+#include "fty_nut_classes.h"
 
 const std::map<std::string, std::string> NUTAgent::_units =
 {
@@ -88,10 +88,10 @@ void NUTAgent::updateDeviceList (nut_t *deviceState) {
 
 int NUTAgent::send (const std::string& subject, zmsg_t **message_p)
 {
-    bios_proto_t *m_decoded = bios_proto_decode(message_p);
+    fty_proto_t *m_decoded = fty_proto_decode(message_p);
     zmsg_destroy(message_p);
-    bios_proto_aux_insert(m_decoded, "time", "%" PRIi64, zclock_time () / 1000);
-    *message_p = bios_proto_encode(&m_decoded);
+    fty_proto_aux_insert(m_decoded, "time", "%" PRIi64, zclock_time () / 1000);
+    *message_p = fty_proto_encode(&m_decoded);
 
     int rv = mlm_client_send (_client, subject.c_str (), message_p);
     if (rv == -1) {
@@ -104,10 +104,10 @@ int NUTAgent::send (const std::string& subject, zmsg_t **message_p)
 //MVY: a hack for inventory messages
 int NUTAgent::isend (const std::string& subject, zmsg_t **message_p)
 {
-    bios_proto_t *m_decoded = bios_proto_decode(message_p);
+    fty_proto_t *m_decoded = fty_proto_decode(message_p);
     zmsg_destroy(message_p);
-    bios_proto_aux_insert(m_decoded, "time", "%" PRIi64, zclock_time () / 1000);
-    *message_p = bios_proto_encode(&m_decoded);
+    fty_proto_aux_insert(m_decoded, "time", "%" PRIi64, zclock_time () / 1000);
+    *message_p = fty_proto_encode(&m_decoded);
 
     int rv = mlm_client_send (_iclient, subject.c_str (), message_p);
     if (rv == -1) {
@@ -152,7 +152,7 @@ void NUTAgent::advertisePhysics (nut_t *data)
             char buffer [50];
             sprintf (buffer, "%lf", d_value);
 
-            zmsg_t *msg = bios_proto_encode_metric (
+            zmsg_t *msg = fty_proto_encode_metric (
                 NULL,
                 measurement.first.c_str (),
                 device.second.assetName ().c_str (),
@@ -182,7 +182,7 @@ void NUTAgent::advertisePhysics (nut_t *data)
                 char buffer [50];
                 double value = measurements.at("load.input.L1") * std::pow (10, -2);
                 sprintf (buffer, "%lf", value);
-                zmsg_t *msg = bios_proto_encode_metric (
+                zmsg_t *msg = fty_proto_encode_metric (
                         NULL,
                         "load.default",
                         device.second.assetName().c_str(),
@@ -221,7 +221,7 @@ void NUTAgent::advertisePhysics (nut_t *data)
                     // 3. compute a real value
                     sprintf (buffer, "%lf", value*100/max_value); // because it is %!!!!
                     // 4. form message
-                    zmsg_t *msg = bios_proto_encode_metric (
+                    zmsg_t *msg = fty_proto_encode_metric (
                             NULL,
                             "load.default",
                             device.second.assetName().c_str(),
@@ -248,7 +248,7 @@ void NUTAgent::advertisePhysics (nut_t *data)
         if (device.second.hasProperty ("status.ups")) {
             std::string status_s = device.second.property ("status.ups");
             uint16_t    status_i = upsstatus_to_int (status_s);
-            zmsg_t *msg = bios_proto_encode_metric (
+            zmsg_t *msg = fty_proto_encode_metric (
                 NULL,
                 "status.ups",
                 device.second.assetName ().c_str (),
@@ -275,7 +275,7 @@ void NUTAgent::advertisePhysics (nut_t *data)
             std::string status_s = device.second.property (property);
             uint16_t    status_i = status_s == "on" ? 42 : 0;
 
-            zmsg_t *msg = bios_proto_encode_metric (
+            zmsg_t *msg = fty_proto_encode_metric (
                 NULL,
                 property.c_str (),
                 device.second.assetName ().c_str (),
@@ -324,7 +324,7 @@ void NUTAgent::advertiseInventory()
             continue;
         }
 
-        zmsg_t *message = bios_proto_encode_asset (
+        zmsg_t *message = fty_proto_encode_asset (
                 NULL,
                 device.second.assetName().c_str(),
                 "inventory",

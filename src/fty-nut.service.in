@@ -1,9 +1,10 @@
 [Unit]
-Description=bios-agent-nut service
+Description=fty-nut service
 Requires=network.target malamute.service
 After=network.target malamute.service
-Before=bios-agent-asset.service
+Before=fty-asset.service
 PartOf=bios.target
+
 
 [Service]
 Type=simple
@@ -13,7 +14,7 @@ EnvironmentFile=-/usr/share/bios/etc/default/bios__%n.conf
 EnvironmentFile=-/etc/default/bios
 EnvironmentFile=-/etc/default/bios__%n.conf
 Environment="prefix=@prefix@"
-ExecStart=@prefix@/bin/bios-agent-nut --mapping-file @datadir@/@PACKAGE@/mapping.conf --state-file '/var/lib/bios/nut/state_file'
+ExecStart=@prefix@/bin/fty-nut --mapping-file @datadir@/@PACKAGE@/mapping.conf --state-file '/var/lib/bios/nut/state_file'
 Restart=always
 
 [Install]

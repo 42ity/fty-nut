@@ -57,7 +57,7 @@ class NUTAgent;
 // Performs the actor commands logic
 // Destroys the message
 // Returns 1 for $TERM (means exit), 0 otherwise
-AGENT_NUT_EXPORT int
+FTY_NUT_EXPORT int
     actor_commands (
             mlm_client_t *client,
             zmsg_t **message_p,
@@ -68,7 +68,7 @@ AGENT_NUT_EXPORT int
             std::string& state_fullpath);
 
 //  Self test of this class
-AGENT_NUT_EXPORT void
+FTY_NUT_EXPORT void
     actor_commands_test (bool verbose);
 //  @end
 

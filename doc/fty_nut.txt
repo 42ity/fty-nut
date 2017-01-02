@@ -1,0 +1,25 @@
+Name(7)
+=======
+
+
+NAME
+----
+fty_nut - NUT (Network UPS Tools) daemon wrapper/proxy
+
+
+SYNOPSIS
+--------
+----
+#include <fty_nut.h>
+
+cc ['flags'] 'files' -lfty_nut ['libraries']
+----
+
+
+DESCRIPTION
+-----------
+
+Classes
+~~~~~~~
+
+Something.

@@ -7,12 +7,12 @@
 # Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.61)
 #
-AC_INIT([agent-nut],[0.1.0],[bios@eaton.com])
+AC_INIT([fty-nut],[1.0.0],[eatonipcopensource@eaton.com])
 
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_MACRO_DIR(config)
 AC_CONFIG_HEADERS([src/platform.h])
-AM_INIT_AUTOMAKE([subdir-objects tar-ustar dist-zip foreign])
+AM_INIT_AUTOMAKE([subdir-objects tar-ustar foreign])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 # This defines PACKAGE_VERSION_... in src/platform.h
@@ -20,11 +20,11 @@ PV_MAJOR=`echo $PACKAGE_VERSION | cut -d . -f 1`
 PV_MINOR=`echo $PACKAGE_VERSION | cut -d . -f 2`
 PV_PATCH=`echo $PACKAGE_VERSION | cut -d . -f 3`
 AC_DEFINE_UNQUOTED([PACKAGE_VERSION_MAJOR],[$PV_MAJOR],
-    [AGENT_NUT major version])
+    [FTY_NUT major version])
 AC_DEFINE_UNQUOTED([PACKAGE_VERSION_MINOR],[$PV_MINOR],
-    [AGENT_NUT minor version])
+    [FTY_NUT minor version])
 AC_DEFINE_UNQUOTED([PACKAGE_VERSION_PATCH],[$PV_PATCH],
-    [AGENT_NUT patchlevel])
+    [FTY_NUT patchlevel])
 # This lets us use PACKAGE_VERSION in Makefiles
 AC_SUBST(PACKAGE_VERSION)
 
@@ -35,12 +35,12 @@ AC_SUBST(PACKAGE_VERSION)
 # know exactly what you're doing and have read and understand
 # http://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html
 #
-# libagent_nut -version-info
-LTVER="0:1:0"
+# libfty_nut -version-info
+LTVER="1:0:0"
 AC_SUBST(LTVER)
 
 # Capture c flags
-AGENT_NUT_ORIG_CFLAGS="${CFLAGS:-none}"
+FTY_NUT_ORIG_CFLAGS="${CFLAGS:-none}"
 
 # Checks for programs
 AC_PROG_CC
@@ -57,13 +57,13 @@ PKG_PROG_PKG_CONFIG
 # Code coverage
 AC_ARG_WITH(gcov, [AS_HELP_STRING([--with-gcov=yes/no],
                   [With GCC Code Coverage reporting])],
-                  [AGENT_NUT_GCOV="$withval"])
+                  [FTY_NUT_GCOV="$withval"])
 
-if test "x${AGENT_NUT_GCOV}" == "xyes"; then
+if test "x${FTY_NUT_GCOV}" == "xyes"; then
     CFLAGS="-O0 -g -fprofile-arcs -ftest-coverage"
 
-    if test "x${AGENT_NUT_ORIG_CFLAGS}" != "xnone"; then
-        CFLAGS="${CFLAGS} ${AGENT_NUT_ORIG_CFLAGS}"
+    if test "x${FTY_NUT_ORIG_CFLAGS}" != "xnone"; then
+        CFLAGS="${CFLAGS} ${FTY_NUT_ORIG_CFLAGS}"
     fi
     AM_CONDITIONAL(WITH_GCOV, true)
 else
@@ -166,42 +166,11 @@ fi
 
 was_malamute_check_lib_detected=no
 
-PKG_CHECK_MODULES([malamute], [libmlm >= 0.0.0],
+PKG_CHECK_MODULES([malamute], [libmlm >= 1.0.0],
     [
     ],
     [
-        AC_ARG_WITH([libmlm],
-            [
-                AS_HELP_STRING([--with-libmlm],
-                [Specify libmlm prefix])
-            ],
-            [search_libmlm="yes"],
-            [])
-
-        malamute_synthetic_cflags=""
-        malamute_synthetic_libs="-lmlm"
-
-        if test "x$search_libmlm" = "xyes"; then
-            if test -r "${with_libmlm}/include/malamute.h"; then
-                malamute_synthetic_cflags="-I${with_libmlm}/include"
-                malamute_synthetic_libs="-L${with_libmlm}/lib -lmlm"
-            else
-                AC_MSG_ERROR([${with_libmlm}/include/malamute.h not found. Please check libmlm prefix])
-            fi
-        fi
-
-
-        AC_CHECK_LIB([mlm], [mlm_server_test],
-            [
-                CFLAGS="${malamute_synthetic_cflags} ${CFLAGS}"
-                LDFLAGS="${malamute_synthetic_libs} ${LDFLAGS}"
-                LIBS="${malamute_synthetic_libs} ${LIBS}"
-
-                AC_SUBST([malamute_CFLAGS],[${malamute_synthetic_cflags}])
-                AC_SUBST([malamute_LIBS],[${malamute_synthetic_libs}])
-                was_malamute_check_lib_detected=yes
-            ],
-            [AC_MSG_ERROR([cannot link with -lmlm, install libmlm])])
+        AC_MSG_ERROR([Cannot find libmlm 1.0.0 or higher])
     ])
 
 if test "x$was_malamute_check_lib_detected" = "xno"; then
@@ -209,94 +178,94 @@ if test "x$was_malamute_check_lib_detected" = "xno"; then
     LIBS="${malamute_LIBS} ${LIBS}"
 fi
 
-was_biosproto_check_lib_detected=no
+was_fty_proto_check_lib_detected=no
 
-PKG_CHECK_MODULES([biosproto], [libbiosproto >= 0.0.0],
+PKG_CHECK_MODULES([fty_proto], [libfty_proto >= 0.0.0],
     [
     ],
     [
-        AC_ARG_WITH([libbiosproto],
+        AC_ARG_WITH([libfty_proto],
             [
-                AS_HELP_STRING([--with-libbiosproto],
-                [Specify libbiosproto prefix])
+                AS_HELP_STRING([--with-libfty_proto],
+                [Specify libfty_proto prefix])
             ],
-            [search_libbiosproto="yes"],
+            [search_libfty_proto="yes"],
             [])
 
-        biosproto_synthetic_cflags=""
-        biosproto_synthetic_libs="-lbiosproto"
+        fty_proto_synthetic_cflags=""
+        fty_proto_synthetic_libs="-lftyproto"
 
-        if test "x$search_libbiosproto" = "xyes"; then
-            if test -r "${with_libbiosproto}/include/biosproto.h"; then
-                biosproto_synthetic_cflags="-I${with_libbiosproto}/include"
-                biosproto_synthetic_libs="-L${with_libbiosproto}/lib -lbiosproto"
+        if test "x$search_libfty_proto" = "xyes"; then
+            if test -r "${with_libfty_proto}/include/ftyproto.h"; then
+                fty_proto_synthetic_cflags="-I${with_libfty_proto}/include"
+                fty_proto_synthetic_libs="-L${with_libfty_proto}/lib -lftyproto"
             else
-                AC_MSG_ERROR([${with_libbiosproto}/include/biosproto.h not found. Please check libbiosproto prefix])
+                AC_MSG_ERROR([${with_libfty_proto}/include/ftyproto.h not found. Please check libfty_proto prefix])
             fi
         fi
 
 
-        AC_CHECK_LIB([biosproto], [bios_proto_test],
+        AC_CHECK_LIB([ftyproto], [fty_proto_test],
             [
-                CFLAGS="${biosproto_synthetic_cflags} ${CFLAGS}"
-                LDFLAGS="${biosproto_synthetic_libs} ${LDFLAGS}"
-                LIBS="${biosproto_synthetic_libs} ${LIBS}"
+                CFLAGS="${fty_proto_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${fty_proto_synthetic_libs} ${LDFLAGS}"
+                LIBS="${fty_proto_synthetic_libs} ${LIBS}"
 
-                AC_SUBST([biosproto_CFLAGS],[${biosproto_synthetic_cflags}])
-                AC_SUBST([biosproto_LIBS],[${biosproto_synthetic_libs}])
-                was_biosproto_check_lib_detected=yes
+                AC_SUBST([fty_proto_CFLAGS],[${fty_proto_synthetic_cflags}])
+                AC_SUBST([fty_proto_LIBS],[${fty_proto_synthetic_libs}])
+                was_fty_proto_check_lib_detected=yes
             ],
-            [AC_MSG_ERROR([cannot link with -lbiosproto, install libbiosproto])])
+            [AC_MSG_ERROR([cannot link with -lftyproto, install libfty_proto])])
     ])
 
-if test "x$was_biosproto_check_lib_detected" = "xno"; then
-    CFLAGS="${biosproto_CFLAGS} ${CFLAGS}"
-    LIBS="${biosproto_LIBS} ${LIBS}"
+if test "x$was_fty_proto_check_lib_detected" = "xno"; then
+    CFLAGS="${fty_proto_CFLAGS} ${CFLAGS}"
+    LIBS="${fty_proto_LIBS} ${LIBS}"
 fi
 
-was_libcidr_check_lib_detected=no
+was_cidr_check_lib_detected=no
 
-PKG_CHECK_MODULES([libcidr], [libcidr >= 0.0.0],
+PKG_CHECK_MODULES([cidr], [cidr >= 0.0.0],
     [
     ],
     [
-        AC_ARG_WITH([libcidr],
+        AC_ARG_WITH([cidr],
             [
-                AS_HELP_STRING([--with-libcidr],
-                [Specify libcidr prefix])
+                AS_HELP_STRING([--with-cidr],
+                [Specify cidr prefix])
             ],
-            [search_libcidr="yes"],
+            [search_cidr="yes"],
             [])
 
-        libcidr_synthetic_cflags=""
-        libcidr_synthetic_libs="-llibcidr"
+        cidr_synthetic_cflags=""
+        cidr_synthetic_libs="-lcidr"
 
-        if test "x$search_libcidr" = "xyes"; then
-            if test -r "${with_libcidr}/include/libcidr.h"; then
-                libcidr_synthetic_cflags="-I${with_libcidr}/include"
-                libcidr_synthetic_libs="-L${with_libcidr}/lib -llibcidr"
+        if test "x$search_cidr" = "xyes"; then
+            if test -r "${with_cidr}/include/libcidr.h"; then
+                cidr_synthetic_cflags="-I${with_cidr}/include"
+                cidr_synthetic_libs="-L${with_cidr}/lib -lcidr"
             else
-                AC_MSG_ERROR([${with_libcidr}/include/libcidr.h not found. Please check libcidr prefix])
+                AC_MSG_ERROR([${with_cidr}/include/libcidr.h not found. Please check cidr prefix])
             fi
         fi
 
 
-        AC_CHECK_LIB([libcidr], [cidr_alloc],
+        AC_CHECK_LIB([cidr], [cidr_alloc],
             [
-                CFLAGS="${libcidr_synthetic_cflags} ${CFLAGS}"
-                LDFLAGS="${libcidr_synthetic_libs} ${LDFLAGS}"
-                LIBS="${libcidr_synthetic_libs} ${LIBS}"
+                CFLAGS="${cidr_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${cidr_synthetic_libs} ${LDFLAGS}"
+                LIBS="${cidr_synthetic_libs} ${LIBS}"
 
-                AC_SUBST([libcidr_CFLAGS],[${libcidr_synthetic_cflags}])
-                AC_SUBST([libcidr_LIBS],[${libcidr_synthetic_libs}])
-                was_libcidr_check_lib_detected=yes
+                AC_SUBST([cidr_CFLAGS],[${cidr_synthetic_cflags}])
+                AC_SUBST([cidr_LIBS],[${cidr_synthetic_libs}])
+                was_cidr_check_lib_detected=yes
             ],
-            [AC_MSG_ERROR([cannot link with -llibcidr, install libcidr])])
+            [AC_MSG_ERROR([cannot link with -lcidr, install cidr])])
     ])
 
-if test "x$was_libcidr_check_lib_detected" = "xno"; then
-    CFLAGS="${libcidr_CFLAGS} ${CFLAGS}"
-    LIBS="${libcidr_LIBS} ${LIBS}"
+if test "x$was_cidr_check_lib_detected" = "xno"; then
+    CFLAGS="${cidr_CFLAGS} ${CFLAGS}"
+    LIBS="${cidr_LIBS} ${LIBS}"
 fi
 
 was_cxxtools_check_lib_detected=no
@@ -317,11 +286,11 @@ PKG_CHECK_MODULES([cxxtools], [cxxtools >= 0.0.0],
         cxxtools_synthetic_libs="-lcxxtools"
 
         if test "x$search_cxxtools" = "xyes"; then
-            if test -r "${with_cxxtools}/include/cxxtools.h"; then
+            if test -r "${with_cxxtools}/include/cxxtools/allocator.h"; then
                 cxxtools_synthetic_cflags="-I${with_cxxtools}/include"
                 cxxtools_synthetic_libs="-L${with_cxxtools}/lib -lcxxtools"
             else
-                AC_MSG_ERROR([${with_cxxtools}/include/cxxtools.h not found. Please check cxxtools prefix])
+                AC_MSG_ERROR([${with_cxxtools}/include/cxxtools/allocator.h not found. Please check cxxtools prefix])
             fi
         fi
 
@@ -362,11 +331,11 @@ PKG_CHECK_MODULES([libnutclient], [libnutclient >= 0.0.0],
         libnutclient_synthetic_libs="-llibnutclient"
 
         if test "x$search_libnutclient" = "xyes"; then
-            if test -r "${with_libnutclient}/include/libnutclient.h"; then
+            if test -r "${with_libnutclient}/include/nutclient.h"; then
                 libnutclient_synthetic_cflags="-I${with_libnutclient}/include"
                 libnutclient_synthetic_libs="-L${with_libnutclient}/lib -llibnutclient"
             else
-                AC_MSG_ERROR([${with_libnutclient}/include/libnutclient.h not found. Please check libnutclient prefix])
+                AC_MSG_ERROR([${with_libnutclient}/include/nutclient.h not found. Please check libnutclient prefix])
             fi
         fi
 
@@ -393,11 +362,11 @@ CFLAGS="${PREVIOUS_CFLAGS}"
 LIBS="${PREVIOUS_LIBS}"
 
 # Platform specific checks
-agent_nut_on_mingw32="no"
-agent_nut_on_cygwin="no"
-agent_nut_on_android="no"
-agent_nut_on_linux="no"
-agent_nut_on_gnu="no"
+fty_nut_on_mingw32="no"
+fty_nut_on_cygwin="no"
+fty_nut_on_android="no"
+fty_nut_on_linux="no"
+fty_nut_on_gnu="no"
 
 # Host specific checks
 AC_CANONICAL_HOST
@@ -410,32 +379,32 @@ AC_ARG_WITH([docs],
     [with_docs=$withval])
 
 if test "x$with_docs" = "xno"; then
-    agent_nut_build_doc="no"
-    agent_nut_install_man="no"
+    fty_nut_build_doc="no"
+    fty_nut_install_man="no"
 else
     # Determine whether or not documentation should be built and installed.
-    agent_nut_build_doc="yes"
-    agent_nut_install_man="yes"
+    fty_nut_build_doc="yes"
+    fty_nut_install_man="yes"
 
     # Check for asciidoc and xmlto and don't build the docs if these are not installed.
-    AC_CHECK_PROG(agent_nut_have_asciidoc, asciidoc, yes, no)
-    AC_CHECK_PROG(agent_nut_have_xmlto, xmlto, yes, no)
-    if test "x$agent_nut_have_asciidoc" = "xno" -o "x$agent_nut_have_xmlto" = "xno"; then
-        agent_nut_build_doc="no"
+    AC_CHECK_PROG(fty_nut_have_asciidoc, asciidoc, yes, no)
+    AC_CHECK_PROG(fty_nut_have_xmlto, xmlto, yes, no)
+    if test "x$fty_nut_have_asciidoc" = "xno" -o "x$fty_nut_have_xmlto" = "xno"; then
+        fty_nut_build_doc="no"
         # Tarballs built with 'make dist' ship with prebuilt documentation.
-        if ! test -f doc/agent_nut.7; then
-            agent_nut_install_man="no"
-            AC_MSG_WARN([You are building an unreleased version of AGENT-NUT and asciidoc or xmlto are not installed.])
+        if ! test -f doc/fty_nut.7; then
+            fty_nut_install_man="no"
+            AC_MSG_WARN([You are building an unreleased version of FTY-NUT and asciidoc or xmlto are not installed.])
             AC_MSG_WARN([Documentation will not be built and manual pages will not be installed.])
         fi
     fi
 fi
 AC_MSG_CHECKING([whether to build documentation])
-AC_MSG_RESULT([$agent_nut_build_doc])
+AC_MSG_RESULT([$fty_nut_build_doc])
 AC_MSG_CHECKING([whether to install manpages])
-AC_MSG_RESULT([$agent_nut_install_man])
+AC_MSG_RESULT([$fty_nut_install_man])
 
-# Set some default features required by libagent_nut code.
+# Set some default features required by libfty_nut code.
 CPPFLAGS="-D_REENTRANT -D_THREAD_SAFE $CPPFLAGS"
 
 # OS-specific tests
@@ -443,73 +412,73 @@ case "${host_os}" in
     *linux*)
         # Define on Linux to enable all library features
         CPPFLAGS="-D_GNU_SOURCE -DLINUX $CPPFLAGS"
-        AC_DEFINE(AGENT_NUT_HAVE_LINUX, 1, [Have Linux OS])
-        agent_nut_on_linux="yes"
+        AC_DEFINE(FTY_NUT_HAVE_LINUX, 1, [Have Linux OS])
+        fty_nut_on_linux="yes"
 
         case "${host_os}" in
             *android*)
-                AC_DEFINE(AGENT_NUT_HAVE_ANDROID, 1, [Have Android OS])
-                agent_nut_on_android="yes"
+                AC_DEFINE(FTY_NUT_HAVE_ANDROID, 1, [Have Android OS])
+                fty_nut_on_android="yes"
             ;;
         esac
         ;;
     *solaris*)
         # Define on Solaris to enable all library features
         CPPFLAGS="-D_PTHREADS $CPPFLAGS"
-        AC_DEFINE(AGENT_NUT_HAVE_SOLARIS, 1, [Have Solaris OS])
+        AC_DEFINE(FTY_NUT_HAVE_SOLARIS, 1, [Have Solaris OS])
         CFLAGS="${CFLAGS} -lsocket -lssp"
         ;;
     *freebsd*)
         # Define on FreeBSD to enable all library features
         CPPFLAGS="-D__BSD_VISIBLE $CPPFLAGS"
-        AC_DEFINE(AGENT_NUT_HAVE_FREEBSD, 1, [Have FreeBSD OS])
+        AC_DEFINE(FTY_NUT_HAVE_FREEBSD, 1, [Have FreeBSD OS])
         ;;
     *darwin*)
         # Define on Darwin to enable all library features
         CPPFLAGS="-D_DARWIN_C_SOURCE $CPPFLAGS"
-        AC_DEFINE(AGENT_NUT_HAVE_OSX, 1, [Have DarwinOSX OS])
+        AC_DEFINE(FTY_NUT_HAVE_OSX, 1, [Have DarwinOSX OS])
         ;;
     *netbsd*)
         # Define on NetBSD to enable all library features
         CPPFLAGS="-D_NETBSD_SOURCE $CPPFLAGS"
-        AC_DEFINE(AGENT_NUT_HAVE_NETBSD, 1, [Have NetBSD OS])
+        AC_DEFINE(FTY_NUT_HAVE_NETBSD, 1, [Have NetBSD OS])
         ;;
     *openbsd*)
         # Define on OpenBSD to enable all library features
         CPPFLAGS="-D_BSD_SOURCE $CPPFLAGS"
-        AC_DEFINE(AGENT_NUT_HAVE_OPENBSD, 1, [Have OpenBSD OS])
+        AC_DEFINE(FTY_NUT_HAVE_OPENBSD, 1, [Have OpenBSD OS])
         ;;
     *nto-qnx*)
-        AC_DEFINE(AGENT_NUT_HAVE_QNXNTO, 1, [Have QNX Neutrino OS])
+        AC_DEFINE(FTY_NUT_HAVE_QNXNTO, 1, [Have QNX Neutrino OS])
         ;;
     *aix*)
-        AC_DEFINE(AGENT_NUT_HAVE_AIX, 1, [Have AIX OS])
+        AC_DEFINE(FTY_NUT_HAVE_AIX, 1, [Have AIX OS])
         ;;
     *hpux*)
         # Define on HP-UX to enable all library features
         CPPFLAGS="-D_POSIX_C_SOURCE=200112L"
-        AC_DEFINE(AGENT_NUT_HAVE_HPUX, 1, [Have HPUX OS])
+        AC_DEFINE(FTY_NUT_HAVE_HPUX, 1, [Have HPUX OS])
         ;;
     *mingw32*)
-        AC_DEFINE(AGENT_NUT_HAVE_WINDOWS, 1, [Have Windows OS])
-        AC_DEFINE(AGENT_NUT_HAVE_MINGW32, 1, [Have MinGW32])
+        AC_DEFINE(FTY_NUT_HAVE_WINDOWS, 1, [Have Windows OS])
+        AC_DEFINE(FTY_NUT_HAVE_MINGW32, 1, [Have MinGW32])
         AC_CHECK_HEADERS(windows.h)
-        agent_nut_on_mingw32="yes"
-        agent_nut_install_man="no"
+        fty_nut_on_mingw32="yes"
+        fty_nut_install_man="no"
         ;;
     *cygwin*)
         # Define on Cygwin to enable all library features
         CPPFLAGS="-D_GNU_SOURCE $CPPFLAGS"
-        AC_DEFINE(AGENT_NUT_HAVE_CYGWIN, 1, [Have Cygwin])
-        agent_nut_on_cygwin="yes"
+        AC_DEFINE(FTY_NUT_HAVE_CYGWIN, 1, [Have Cygwin])
+        fty_nut_on_cygwin="yes"
         ;;
     gnu*)
         # Define on GNU/Hurd to enable all library features
         if test "x$GXX" = "xyes"; then
             CPPFLAGS="-D_GNU_SOURCE $CPPFLAGS"
         fi
-        AC_DEFINE(AGENT_NUT_HAVE_GNU, 1, [Have GNU/Hurd OS])
-        agent_nut_on_gnu="yes"
+        AC_DEFINE(FTY_NUT_HAVE_GNU, 1, [Have GNU/Hurd OS])
+        fty_nut_on_gnu="yes"
         ;;
     *)
         AC_MSG_ERROR([unsupported system: ${host_os}])
@@ -546,43 +515,43 @@ if test "x$GCC" = "xyes"; then
 fi
 
 AM_CONDITIONAL(ENABLE_SHARED, test "x$enable_shared" = "xyes")
-AM_CONDITIONAL(ON_MINGW, test "x$agent_nut_on_mingw32" = "xyes")
-AM_CONDITIONAL(ON_CYGWIN, test "x$agent_nut_on_cygwin" = "xyes")
-AM_CONDITIONAL(ON_ANDROID, test "x$agent_nut_on_android" = "xyes")
-AM_CONDITIONAL(ON_LINUX, test "x$agent_nut_on_linux" = "xyes")
-AM_CONDITIONAL(ON_GNU, test "x$agent_nut_on_gnu" = "xyes")
-AM_CONDITIONAL(INSTALL_MAN, test "x$agent_nut_install_man" = "xyes")
-AM_CONDITIONAL(BUILD_DOC, test "x$agent_nut_build_doc" = "xyes")
+AM_CONDITIONAL(ON_MINGW, test "x$fty_nut_on_mingw32" = "xyes")
+AM_CONDITIONAL(ON_CYGWIN, test "x$fty_nut_on_cygwin" = "xyes")
+AM_CONDITIONAL(ON_ANDROID, test "x$fty_nut_on_android" = "xyes")
+AM_CONDITIONAL(ON_LINUX, test "x$fty_nut_on_linux" = "xyes")
+AM_CONDITIONAL(ON_GNU, test "x$fty_nut_on_gnu" = "xyes")
+AM_CONDITIONAL(INSTALL_MAN, test "x$fty_nut_install_man" = "xyes")
+AM_CONDITIONAL(BUILD_DOC, test "x$fty_nut_build_doc" = "xyes")
 
-# Check for bios-agent-nut intent
-AC_ARG_ENABLE([bios-agent-nut],
-    AS_HELP_STRING([--enable-bios-agent-nut],
-        [Compile and install 'bios-agent-nut' [default=yes]]),
-    [enable_bios_agent_nut=$enableval],
-    [enable_bios_agent_nut=yes])
+# Check for fty-nut intent
+AC_ARG_ENABLE([fty-nut],
+    AS_HELP_STRING([--enable-fty-nut],
+        [Compile and install 'fty-nut' [default=yes]]),
+    [enable_fty_nut=$enableval],
+    [enable_fty_nut=yes])
 
-AM_CONDITIONAL([ENABLE_BIOS_AGENT_NUT], [test x$enable_bios_agent_nut != xno])
-AM_COND_IF([ENABLE_BIOS_AGENT_NUT], [AC_MSG_NOTICE([ENABLE_BIOS_AGENT_NUT defined])])
+AM_CONDITIONAL([ENABLE_FTY_NUT], [test x$enable_fty_nut != xno])
+AM_COND_IF([ENABLE_FTY_NUT], [AC_MSG_NOTICE([ENABLE_FTY_NUT defined])])
 
-# Check for bios-agent-nut-configurator intent
-AC_ARG_ENABLE([bios-agent-nut-configurator],
-    AS_HELP_STRING([--enable-bios-agent-nut-configurator],
-        [Compile and install 'bios-agent-nut-configurator' [default=yes]]),
-    [enable_bios_agent_nut_configurator=$enableval],
-    [enable_bios_agent_nut_configurator=yes])
+# Check for fty-nut-configurator intent
+AC_ARG_ENABLE([fty-nut-configurator],
+    AS_HELP_STRING([--enable-fty-nut-configurator],
+        [Compile and install 'fty-nut-configurator' [default=yes]]),
+    [enable_fty_nut_configurator=$enableval],
+    [enable_fty_nut_configurator=yes])
 
-AM_CONDITIONAL([ENABLE_BIOS_AGENT_NUT_CONFIGURATOR], [test x$enable_bios_agent_nut_configurator != xno])
-AM_COND_IF([ENABLE_BIOS_AGENT_NUT_CONFIGURATOR], [AC_MSG_NOTICE([ENABLE_BIOS_AGENT_NUT_CONFIGURATOR defined])])
+AM_CONDITIONAL([ENABLE_FTY_NUT_CONFIGURATOR], [test x$enable_fty_nut_configurator != xno])
+AM_COND_IF([ENABLE_FTY_NUT_CONFIGURATOR], [AC_MSG_NOTICE([ENABLE_FTY_NUT_CONFIGURATOR defined])])
 
-# Check for agent_nut_selftest intent
-AC_ARG_ENABLE([agent_nut_selftest],
-    AS_HELP_STRING([--enable-agent_nut_selftest],
-        [Compile 'agent_nut_selftest' in src [default=yes]]),
-    [enable_agent_nut_selftest=$enableval],
-    [enable_agent_nut_selftest=yes])
+# Check for fty_nut_selftest intent
+AC_ARG_ENABLE([fty_nut_selftest],
+    AS_HELP_STRING([--enable-fty_nut_selftest],
+        [Compile 'fty_nut_selftest' in src [default=yes]]),
+    [enable_fty_nut_selftest=$enableval],
+    [enable_fty_nut_selftest=yes])
 
-AM_CONDITIONAL([ENABLE_AGENT_NUT_SELFTEST], [test x$enable_agent_nut_selftest != xno])
-AM_COND_IF([ENABLE_AGENT_NUT_SELFTEST], [AC_MSG_NOTICE([ENABLE_AGENT_NUT_SELFTEST defined])])
+AM_CONDITIONAL([ENABLE_FTY_NUT_SELFTEST], [test x$enable_fty_nut_selftest != xno])
+AM_COND_IF([ENABLE_FTY_NUT_SELFTEST], [AC_MSG_NOTICE([ENABLE_FTY_NUT_SELFTEST defined])])
 
 # Checks for library functions.
 AC_TYPE_SIGNAL
@@ -628,8 +597,8 @@ AM_CONDITIONAL([ENABLE_DRAFTS], [test x$enable_drafts != xno])
 
 if test "x$enable_drafts" = "xyes"; then
     AC_MSG_NOTICE([Building stable and legacy API + draft API])
-    AC_DEFINE(AGENT_NUT_BUILD_DRAFT_API, 1, [Provide draft classes and methods])
-    AC_SUBST(pkg_config_defines, "-DAGENT_NUT_BUILD_DRAFT_API=1")
+    AC_DEFINE(FTY_NUT_BUILD_DRAFT_API, 1, [Provide draft classes and methods])
+    AC_SUBST(pkg_config_defines, "-DFTY_NUT_BUILD_DRAFT_API=1")
 else
     AC_MSG_NOTICE([Building stable and legacy API (no draft API)])
     AC_SUBST(pkg_config_defines, "")
@@ -638,18 +607,15 @@ fi
 # Specify output files
 AC_CONFIG_FILES([Makefile
                  doc/Makefile
-                 src/libagent_nut.pc
-                 src/bios-agent-nut.cfg
-                 src/bios-agent-nut-configurator.cfg
-                 src/mapping.conf
-                 src/bios_10_agent-nut
+                 src/libfty_nut.pc
+                 src/fty-nut.cfg
+                 src/fty-nut-configurator.cfg
                  ])
 
 AM_COND_IF([WITH_SYSTEMD_UNITS],
     [AC_CONFIG_FILES([
-                 src/bios-agent-nut.service
-                 src/bios-agent-nut-configurator.service
-                 src/bios-agent-nut.conf
+                 src/fty-nut.service
+                 src/fty-nut-configurator.service
     ])],
     [])
 

@@ -106,4 +106,8 @@ class ConfigFactory {
     Configurator * getConfigurator( uint32_t type, uint32_t subtype );
 };
 
+//  Self test of this class
+FTY_NUT_EXPORT void
+    nut_configurator_test (bool verbose);
+
 #endif

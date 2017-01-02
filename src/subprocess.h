@@ -199,4 +199,9 @@ output(
     std::string& e,
     const std::string& i, uint64_t timeout = 0, size_t timestep = 500);
 
+
+//  Self test of this class
+FTY_NUT_EXPORT void
+    subprocess_test (bool verbose);
+
 #endif

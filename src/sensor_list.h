@@ -36,7 +36,7 @@ class Sensors {
 };
 
 //  Self test of this class
-AGENT_NUT_EXPORT void
+FTY_NUT_EXPORT void
     sensor_list_test (bool verbose);
 
 #endif

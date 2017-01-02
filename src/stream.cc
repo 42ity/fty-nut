@@ -26,7 +26,7 @@
 @end
 */
 
-#include "agent_nut_classes.h"
+#include "fty_nut_classes.h"
 
 
 //  --------------------------------------------------------------------------
@@ -43,16 +43,16 @@ stream_deliver_handle (
     assert (data);
     assert (message_p && *message_p);
 
-    if (!is_bios_proto (*message_p)) {
+    if (!is_fty_proto (*message_p)) {
         log_warning (
-                "Message received is not bios_proto; sender = '%s', subject = '%s'",
+                "Message received is not fty_proto; sender = '%s', subject = '%s'",
                 mlm_client_sender (client), mlm_client_subject (client));
         zmsg_destroy (message_p);
         return;
     }
-    bios_proto_t *proto = bios_proto_decode (message_p);
+    fty_proto_t *proto = fty_proto_decode (message_p);
     if (!proto) {
-        log_critical ("bios_proto_decode () failed.");
+        log_critical ("fty_proto_decode () failed.");
         zmsg_destroy (message_p);
         return;
     }

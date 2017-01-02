@@ -43,25 +43,25 @@
 #define STATUS_FSD             (1 << 13)       /* Forced Shutdown */
 
 // converts status from char* format (e.g. "OL CHRG") to bitmap representation
-AGENT_NUT_EXPORT uint16_t
+FTY_NUT_EXPORT uint16_t
     upsstatus_to_int (const char *status);
 
 // std::string wrapper for upsstatus_to_int
-AGENT_NUT_EXPORT uint16_t
+FTY_NUT_EXPORT uint16_t
     upsstatus_to_int (const std::string& status);
 
 // converts status from uint16_t bitmap (e.g. STATUS_CHRG|STATUS_OL) to text
 // representation (e.g. "OL CHRG")
-AGENT_NUT_EXPORT std::string
+FTY_NUT_EXPORT std::string
     upsstatus_to_string (uint16_t status);
 
 // converts status from std::string bitmap (e.g. "12") to text representation
 // (e.g. "OL CHRG")
-AGENT_NUT_EXPORT std::string
+FTY_NUT_EXPORT std::string
     upsstatus_to_string (const std::string& status);
 
 //  Self test of this class
-AGENT_NUT_EXPORT void
+FTY_NUT_EXPORT void
     ups_status_test (bool verbose);
 //  @end
 

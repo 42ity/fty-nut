@@ -1,0 +1,6 @@
+usr/bin/fty-nut
+usr/bin/fty-nut-configurator
+usr/bin/fty-nutconfig
+usr/bin/fty-dmf
+usr/lib/systemd/system/fty-nut*.service
+usr/lib/systemd/system/fty-nut-configurator*.service

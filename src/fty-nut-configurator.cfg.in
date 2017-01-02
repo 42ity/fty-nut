@@ -1,4 +1,4 @@
-#   bios-agent-nut-configurator configuration
+#   fty-nut-configurator configuration
 
 server
     timeout = 10000     #   Client connection timeout, msec

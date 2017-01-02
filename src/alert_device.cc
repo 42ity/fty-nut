@@ -20,7 +20,7 @@
 */
 
 #include "alert_device.h"
-#include "agent_nut_library.h"
+#include "fty_nut_library.h"
 #include "logger.h"
 
 void
@@ -207,7 +207,7 @@ Device::publishAlert (mlm_client_t *client, DeviceAlert& alert)
     }
 
     log_debug("aa: publishing alert %s", rule.c_str ());
-    zmsg_t *message = bios_proto_encode_alert(
+    zmsg_t *message = fty_proto_encode_alert(
         NULL,               // aux
         rule.c_str (),      // rule
         _assetName.c_str (),// element

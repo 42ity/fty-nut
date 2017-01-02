@@ -52,15 +52,15 @@ extern "C" {
 // Setting log level to a value means: that level + all the leves that are more
 // "critical" are triggered. E.g.: LOG_INFO triggers LOG_WARNING, LOG_ERR,
 // LOG_CRIT but not LOG_DEBUG
-AGENT_NUT_EXPORT void
+FTY_NUT_EXPORT void
     log_set_level (int level);
 
 // Get log level
-AGENT_NUT_EXPORT int
+FTY_NUT_EXPORT int
     log_get_level ();
 
 //
-AGENT_NUT_EXPORT int
+FTY_NUT_EXPORT int
     log_do (
         int level,
         const char* file,
@@ -96,7 +96,7 @@ AGENT_NUT_EXPORT int
         log_macro(LOG_CRIT, __VA_ARGS__)
 
 //  Self test of this class.
-AGENT_NUT_EXPORT void
+FTY_NUT_EXPORT void
     logger_test (bool verbose);
 
 //  @end

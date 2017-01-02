@@ -1,5 +1,5 @@
 /*  =========================================================================
-    bios_agent_nut_configurator - description
+    fty_nut_configurator - nut server configurator
 
     Copyright (C) 2014 - 2015 Eaton
 
@@ -21,12 +21,12 @@
 
 /*
 @header
-    bios_agent_nut_configurator - daemon to configure nut-server (upsd) from results of nut scanner
+    fty_nut_configurator - daemon to configure nut-server (upsd) from results of nut scanner
 @discuss
 @end
 */
 
-#include "agent_nut_classes.h"
+#include "fty_nut_classes.h"
 
 int main (int argc, char *argv [])
 {
@@ -35,7 +35,7 @@ int main (int argc, char *argv [])
     for (argn = 1; argn < argc; argn++) {
         if (streq (argv [argn], "--help")
         ||  streq (argv [argn], "-h")) {
-            puts ("bios-agent-nut-configurator [options] ...");
+            puts ("fty-nut-configurator [options] ...");
             puts ("  --verbose / -v         verbose test output");
             puts ("  --help / -h            this information");
             return 0;
@@ -51,9 +51,9 @@ int main (int argc, char *argv [])
     }
     //  Insert main code here
     if (verbose)
-        zsys_info ("bios_agent_nut_configurator - ");
+        zsys_info ("fty_nut_configurator - ");
 
-    zactor_t *server = zactor_new (bios_nut_configurator_server, NULL);
+    zactor_t *server = zactor_new (fty_nut_configurator_server, NULL);
 
     // code from src/malamute.c, under MPL
     //  Accept and print any message back from server

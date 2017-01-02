@@ -1,0 +1,11 @@
+[Unit]
+Description=fty-nut-configurator service
+After=network.target
+
+[Service]
+Type=simple
+Environment="prefix=@prefix@"
+ExecStart=@prefix@/bin/fty-nut-configurator @sysconfdir@/@PACKAGE@/fty-nut-configurator.cfg
+
+[Install]
+WantedBy=multi-user.target

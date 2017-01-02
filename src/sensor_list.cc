@@ -26,7 +26,7 @@
 @end
 */
 
-#include "agent_nut_classes.h"
+#include "fty_nut_classes.h"
 
 //  Structure of our class
 
@@ -144,47 +144,47 @@ sensor_list_test (bool verbose)
     //  @selftest
     nut_t *config = nut_new ();
 
-    bios_proto_t *asset = bios_proto_new (BIOS_PROTO_ASSET);
-    bios_proto_set_name (asset, "%s", "ups-1");
-    bios_proto_set_operation (asset, "%s", BIOS_PROTO_ASSET_OP_CREATE);
-    bios_proto_aux_insert (asset, "type", "%s", "device");
-    bios_proto_aux_insert (asset, "subtype", "%s", "ups");
-    bios_proto_ext_insert (asset, "ip.1", "%s", "1.1.1.1");
+    fty_proto_t *asset = fty_proto_new (FTY_PROTO_ASSET);
+    fty_proto_set_name (asset, "%s", "ups-1");
+    fty_proto_set_operation (asset, "%s", FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "ups");
+    fty_proto_ext_insert (asset, "ip.1", "%s", "1.1.1.1");
     nut_put (config, &asset);
 
-    asset = bios_proto_new (BIOS_PROTO_ASSET);
-    bios_proto_set_name (asset, "%s", "sensor-1");
-    bios_proto_set_operation (asset, "%s", BIOS_PROTO_ASSET_OP_CREATE);
-    bios_proto_aux_insert (asset, "type", "%s", "device");
-    bios_proto_aux_insert (asset, "subtype", "%s", "sensor");
-    bios_proto_aux_insert (asset, "parent_name.1", "%s", "ups-1");
+    asset = fty_proto_new (FTY_PROTO_ASSET);
+    fty_proto_set_name (asset, "%s", "sensor-1");
+    fty_proto_set_operation (asset, "%s", FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "sensor");
+    fty_proto_aux_insert (asset, "parent_name.1", "%s", "ups-1");
     nut_put (config, &asset);
 
-    asset = bios_proto_new (BIOS_PROTO_ASSET);
-    bios_proto_set_name (asset, "%s", "epdu-1");
-    bios_proto_set_operation (asset, "%s", BIOS_PROTO_ASSET_OP_CREATE);
-    bios_proto_aux_insert (asset, "type", "%s", "device");
-    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
-    bios_proto_ext_insert (asset, "ip.1", "%s", "1.1.1.2");
-    bios_proto_ext_insert (asset, "daisy_chain", "%s", "1");
+    asset = fty_proto_new (FTY_PROTO_ASSET);
+    fty_proto_set_name (asset, "%s", "epdu-1");
+    fty_proto_set_operation (asset, "%s", FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "epdu");
+    fty_proto_ext_insert (asset, "ip.1", "%s", "1.1.1.2");
+    fty_proto_ext_insert (asset, "daisy_chain", "%s", "1");
     nut_put (config, &asset);
 
-    asset = bios_proto_new (BIOS_PROTO_ASSET);
-    bios_proto_set_name (asset, "%s", "epdu-2");
-    bios_proto_set_operation (asset, "%s", BIOS_PROTO_ASSET_OP_CREATE);
-    bios_proto_aux_insert (asset, "type", "%s", "device");
-    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
-    bios_proto_ext_insert (asset, "ip.1", "%s", "1.1.1.2");
-    bios_proto_ext_insert (asset, "daisy_chain", "%s", "2");
+    asset = fty_proto_new (FTY_PROTO_ASSET);
+    fty_proto_set_name (asset, "%s", "epdu-2");
+    fty_proto_set_operation (asset, "%s", FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "epdu");
+    fty_proto_ext_insert (asset, "ip.1", "%s", "1.1.1.2");
+    fty_proto_ext_insert (asset, "daisy_chain", "%s", "2");
     nut_put (config, &asset);
 
-    asset = bios_proto_new (BIOS_PROTO_ASSET);
-    bios_proto_set_name (asset, "%s", "sensor-2");
-    bios_proto_set_operation (asset, "%s", BIOS_PROTO_ASSET_OP_CREATE);
-    bios_proto_aux_insert (asset, "type", "%s", "device");
-    bios_proto_aux_insert (asset, "subtype", "%s", "sensor");
-    bios_proto_aux_insert (asset, "parent_name.1", "%s", "epdu-2");
-    bios_proto_ext_insert (asset, "port", "%s", "21");
+    asset = fty_proto_new (FTY_PROTO_ASSET);
+    fty_proto_set_name (asset, "%s", "sensor-2");
+    fty_proto_set_operation (asset, "%s", FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "sensor");
+    fty_proto_aux_insert (asset, "parent_name.1", "%s", "epdu-2");
+    fty_proto_ext_insert (asset, "port", "%s", "21");
     nut_put (config, &asset);
 
     Sensors list;

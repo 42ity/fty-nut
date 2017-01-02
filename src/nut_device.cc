@@ -34,7 +34,7 @@
 #include <cxxtools/serializationerror.h>
 
 
-#include "agent_nut_classes.h"
+#include "fty_nut_classes.h"
 
 #define NUT_MEASUREMENT_REPEAT_AFTER    300     //!< (once in 5 minutes now (300s))
 

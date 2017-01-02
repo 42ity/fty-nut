@@ -27,7 +27,7 @@
 #include <nutclient.h>
 #include <malamute.h>
 
-#include "agent_nut_library.h"
+#include "fty_nut_library.h"
 #include "alert_device_alert.h"
 
 class Device {
@@ -79,5 +79,9 @@ class Device {
     void fixAlertLimits (DeviceAlert& alert);
     std::string daisychainPrefix() const;
 };
+
+//  Self test of this class
+FTY_NUT_EXPORT void
+    alert_device_test (bool verbose);
 
 #endif // __ALERT_DEVICE

@@ -339,8 +339,8 @@ class NUTDeviceList {
 
 
 //  Self test of this class
-AGENT_NUT_EXPORT void
-    nutdevice_test (bool verbose);
+FTY_NUT_EXPORT void
+    nut_device_test (bool verbose);
 //  @end
 
 

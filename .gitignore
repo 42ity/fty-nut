@@ -20,11 +20,11 @@ stderr.txt
 *.lo
 
 # Executables
-src/agent-nut_selftest
+src/fty-nut_selftest
 src/bios-nut-outage
 src/agent_nut_selftest
-src/bios-agent-nut
-src/bios-agent-nut-configurator
+src/fty-nut
+src/fty-nut-configurator
 *.exe
 *.out
 *.app
@@ -93,9 +93,9 @@ build/
 
 test_state_file
 src/mapping.conf
-src/bios-agent-nut.conf
+src/fty-nut.conf
 src/bios_10_agent-nut
-src/bios-agent-nut.service
-src/bios-agent-nut.cfg
-src/bios-agent-nut-configurator.service
-src/bios-agent-nut-configurator.cfg
+src/fty-nut.service
+src/fty-nut.cfg
+src/fty-nut-configurator.service
+src/fty-nut-configurator.cfg

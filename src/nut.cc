@@ -26,12 +26,12 @@
 @end
 */
 
-#include "agent_nut_classes.h"
+#include "fty_nut_classes.h"
 
 //  Structure of our class
 
 struct _nut_t {
-    zhashx_t *assets;      // hash of messages ("device name", bios_proto_t*)
+    zhashx_t *assets;      // hash of messages ("device name", fty_proto_t*)
     bool changed;
 };
 
@@ -46,7 +46,7 @@ nut_new (void)
     assert (self);
     //  Initialize class properties here
     self->assets = zhashx_new ();
-    zhashx_set_destructor (self->assets, (zhashx_destructor_fn *) bios_proto_destroy);
+    zhashx_set_destructor (self->assets, (zhashx_destructor_fn *) fty_proto_destroy);
     self->changed = false;
     return self;
 }
@@ -77,11 +77,11 @@ nut_destroy (nut_t **self_p)
 //  Helper function
 //  0 - OK, 1 - throw it away
 static int
-filter_message (bios_proto_t *message)
+filter_message (fty_proto_t *message)
 {
     assert (message);
-    const char *type = bios_proto_aux_string (message, "type", NULL);
-    const char *subtype = bios_proto_aux_string (message, "subtype", NULL);
+    const char *type = fty_proto_aux_string (message, "type", NULL);
+    const char *subtype = fty_proto_aux_string (message, "subtype", NULL);
     if (!type || !subtype)
         return 1;
     if (streq (type, "device") &&
@@ -130,23 +130,23 @@ clear_ext (zhash_t *hash)
 //  --------------------------------------------------------------------------
 //  Helper function
 //  compare 'ext' field in two messages
-int nut_ext_value_is_the_same (bios_proto_t *m1, bios_proto_t *m2, const char *attr)
+int nut_ext_value_is_the_same (fty_proto_t *m1, fty_proto_t *m2, const char *attr)
 {
     if (!m1 || !m2 || !attr) return 0;
 
-    const char *a1 = bios_proto_ext_string (m1, attr, "");
-    const char *a2 = bios_proto_ext_string (m2, attr, "");
+    const char *a1 = fty_proto_ext_string (m1, attr, "");
+    const char *a2 = fty_proto_ext_string (m2, attr, "");
     return streq (a1, a2);
 }
 //  --------------------------------------------------------------------------
 //  Helper function
 //  compare 'aux' field in two messages
-int nut_aux_value_is_the_same (bios_proto_t *m1, bios_proto_t *m2, const char *attr)
+int nut_aux_value_is_the_same (fty_proto_t *m1, fty_proto_t *m2, const char *attr)
 {
     if (!m1 || !m2 || !attr) return 0;
 
-    const char *a1 = bios_proto_aux_string (m1, attr, "");
-    const char *a2 = bios_proto_aux_string (m2, attr, "");
+    const char *a1 = fty_proto_aux_string (m1, attr, "");
+    const char *a2 = fty_proto_aux_string (m2, attr, "");
     return streq (a1, a2);
 }
 
@@ -160,109 +160,109 @@ nut_changed(nut_t *self)
 }
 
 //  --------------------------------------------------------------------------
-//  Store bios_proto_t message transfering ownership
+//  Store fty_proto_t message transfering ownership
 
 void
-nut_put (nut_t *self, bios_proto_t **message_p)
+nut_put (nut_t *self, fty_proto_t **message_p)
 {
     assert (self);
     assert (message_p);
 
-    bios_proto_t *message = *message_p;
+    fty_proto_t *message = *message_p;
 
     if (!message)
         return;
 
     if (filter_message (message)) {
-        bios_proto_destroy (message_p);
+        fty_proto_destroy (message_p);
         return;
     }
     // copy from aux to ext what we need
-    const char *tmp = bios_proto_aux_string (message,"subtype", NULL);
-    if (tmp) bios_proto_ext_insert (message, "subtype", tmp);
-    tmp = bios_proto_aux_string (message,"parent_name.1", NULL);
-    if (tmp) bios_proto_ext_insert (message, "parent_name.1", tmp);
+    const char *tmp = fty_proto_aux_string (message,"subtype", NULL);
+    if (tmp) fty_proto_ext_insert (message, "subtype", tmp);
+    tmp = fty_proto_aux_string (message,"parent_name.1", NULL);
+    if (tmp) fty_proto_ext_insert (message, "parent_name.1", tmp);
 
-    bios_proto_t *asset = (bios_proto_t *) zhashx_lookup (self->assets, bios_proto_name (message));
+    fty_proto_t *asset = (fty_proto_t *) zhashx_lookup (self->assets, fty_proto_name (message));
     if (!asset) {
-        clear_ext (bios_proto_ext (message));
-        zhash_t *aux = bios_proto_get_aux (message);
+        clear_ext (fty_proto_ext (message));
+        zhash_t *aux = fty_proto_get_aux (message);
         zhash_destroy (&aux);
-        int rv = zhashx_insert (self->assets, bios_proto_name (message), message);
+        int rv = zhashx_insert (self->assets, fty_proto_name (message), message);
         assert (rv == 0);
         *message_p = NULL;
         self->changed = true;
         return;
     }
 
-    if (streq (bios_proto_operation (message), BIOS_PROTO_ASSET_OP_CREATE) ||
-        streq (bios_proto_operation (message), BIOS_PROTO_ASSET_OP_UPDATE)) {
+    if (streq (fty_proto_operation (message), FTY_PROTO_ASSET_OP_CREATE) ||
+        streq (fty_proto_operation (message), FTY_PROTO_ASSET_OP_UPDATE)) {
 
-        bios_proto_set_operation (asset, "%s", bios_proto_operation (message));
+        fty_proto_set_operation (asset, "%s", fty_proto_operation (message));
         if (!nut_ext_value_is_the_same (asset, message, "ip.1")) {
             self->changed = true;
-            bios_proto_ext_insert (asset, "ip.1", "%s", bios_proto_ext_string (message, "ip.1", ""));
+            fty_proto_ext_insert (asset, "ip.1", "%s", fty_proto_ext_string (message, "ip.1", ""));
         }
         if (!nut_ext_value_is_the_same (asset, message, "upsconf_block")) {
             self->changed = true;
-            bios_proto_ext_insert (asset, "upsconf_block", "%s", bios_proto_ext_string (message, "upsconf_block", ""));
+            fty_proto_ext_insert (asset, "upsconf_block", "%s", fty_proto_ext_string (message, "upsconf_block", ""));
         }
         if (!nut_ext_value_is_the_same (asset, message, "daisy_chain")) {
             self->changed = true;
-            bios_proto_ext_insert (asset, "daisy_chain", "%s", bios_proto_ext_string (message, "daisy_chain",""));
+            fty_proto_ext_insert (asset, "daisy_chain", "%s", fty_proto_ext_string (message, "daisy_chain",""));
         }
         if (!nut_ext_value_is_the_same (asset, message, "type")) {
             self->changed = true;
-            bios_proto_ext_insert (asset, "type", "%s", bios_proto_ext_string (message, "type",""));
+            fty_proto_ext_insert (asset, "type", "%s", fty_proto_ext_string (message, "type",""));
         }
         if (!nut_ext_value_is_the_same (asset, message, "subtype")) {
             self->changed = true;
-            bios_proto_ext_insert (asset, "subtype", "%s", bios_proto_ext_string (message, "subtype",""));
+            fty_proto_ext_insert (asset, "subtype", "%s", fty_proto_ext_string (message, "subtype",""));
         }
         if (!nut_ext_value_is_the_same (asset, message, "port")) {
             self->changed = true;
-            bios_proto_ext_insert (asset, "port", "%s", bios_proto_ext_string (message, "port",""));
+            fty_proto_ext_insert (asset, "port", "%s", fty_proto_ext_string (message, "port",""));
         }
         if (!nut_ext_value_is_the_same (asset, message, "logical_asset")) {
             self->changed = true;
-            bios_proto_ext_insert (asset, "logical_asset", "%s", bios_proto_ext_string (message, "logical_asset",""));
+            fty_proto_ext_insert (asset, "logical_asset", "%s", fty_proto_ext_string (message, "logical_asset",""));
         }
 
         if (!nut_ext_value_is_the_same (asset, message, "parent_name.1")) {
             self->changed = true;
-            bios_proto_ext_insert (asset, "parent_name.1", "%s", bios_proto_ext_string (message, "parent_name.1",""));
+            fty_proto_ext_insert (asset, "parent_name.1", "%s", fty_proto_ext_string (message, "parent_name.1",""));
         }
 
         if (!nut_ext_value_is_the_same (asset, message, "subtype")) {
             self->changed = true;
-            bios_proto_ext_insert (asset, "subtype", "%s", bios_proto_ext_string (message, "subtype",""));
+            fty_proto_ext_insert (asset, "subtype", "%s", fty_proto_ext_string (message, "subtype",""));
         }
 
         if (!nut_ext_value_is_the_same (asset, message, "max_current")) {
             self->changed = true;
-            bios_proto_ext_insert (asset, "max_current", "%s", bios_proto_ext_string (message, "max_current",""));
+            fty_proto_ext_insert (asset, "max_current", "%s", fty_proto_ext_string (message, "max_current",""));
         }
 
         if (!nut_ext_value_is_the_same (asset, message, "max_power")) {
             self->changed = true;
-            bios_proto_ext_insert (asset, "max_power", "%s", bios_proto_ext_string (message, "max_power",""));
+            fty_proto_ext_insert (asset, "max_power", "%s", fty_proto_ext_string (message, "max_power",""));
         }
 
-        bios_proto_destroy (message_p);
+        fty_proto_destroy (message_p);
     }
     else
-    if (streq (bios_proto_operation (message), BIOS_PROTO_ASSET_OP_DELETE) ||
-        streq (bios_proto_operation (message), BIOS_PROTO_ASSET_OP_RETIRE)) {
+    if (streq (fty_proto_operation (message), FTY_PROTO_ASSET_OP_DELETE) ||
+        streq (fty_proto_operation (message), FTY_PROTO_ASSET_OP_RETIRE)) {
 
-        zhashx_delete (self->assets, bios_proto_name (message));
+        zhashx_delete (self->assets, fty_proto_name (message));
         self->changed = true;
-        bios_proto_destroy (message_p);
+        fty_proto_destroy (message_p);
     }
     else {
         log_error (
                 "unknown asset operation '%s'. Skipping.",
-                bios_proto_operation (message) ? bios_proto_operation (message) : "(null)");
-        bios_proto_destroy (message_p);
+                fty_proto_operation (message) ? fty_proto_operation (message) : "(null)");
+        fty_proto_destroy (message_p);
     }
     *message_p = NULL;
 }
@@ -332,12 +332,12 @@ nut_asset_get_string (nut_t *self, const char *asset_name, const char *ext_key)
     assert (asset_name);
     assert (ext_key);
 
-    bios_proto_t *asset = (bios_proto_t *) zhashx_lookup (self->assets, asset_name);
+    fty_proto_t *asset = (fty_proto_t *) zhashx_lookup (self->assets, asset_name);
     if (!asset) {
         return NULL;
     }
     static const char *default_value = "";
-    return bios_proto_ext_string (asset, ext_key, default_value);
+    return fty_proto_ext_string (asset, ext_key, default_value);
 }
 
 //  --------------------------------------------------------------------------
@@ -431,11 +431,11 @@ nut_save (nut_t *self, const char *fullpath)
                                             // avoid a lot of allocs
     assert (chunk);
 
-    bios_proto_t *asset = (bios_proto_t *) zhashx_first (self->assets);
+    fty_proto_t *asset = (fty_proto_t *) zhashx_first (self->assets);
     while (asset) {
-        bios_proto_t *duplicate = bios_proto_dup (asset);
+        fty_proto_t *duplicate = fty_proto_dup (asset);
         assert (duplicate);
-        zmsg_t *zmessage = bios_proto_encode (&duplicate); // duplicate destroyed here
+        zmsg_t *zmessage = fty_proto_encode (&duplicate); // duplicate destroyed here
         assert (zmessage);
 
         byte *buffer = NULL;
@@ -452,7 +452,7 @@ nut_save (nut_t *self, const char *fullpath)
 
         free (buffer); buffer = NULL;
 
-        asset = (bios_proto_t *) zhashx_next (self->assets);
+        asset = (fty_proto_t *) zhashx_next (self->assets);
     }
 
     if (zchunk_write (chunk, zfile_handle (file)) == -1) {
@@ -520,11 +520,11 @@ nut_load (nut_t *self, const char *fullpath)
 
         zmsg_t *zmessage = zmsg_decode (data, (size_t) *prefix);
         assert (zmessage);
-        bios_proto_t *asset = bios_proto_decode (&zmessage); // zmessage destroyed
+        fty_proto_t *asset = fty_proto_decode (&zmessage); // zmessage destroyed
         assert (asset);
 
         // nut_put (self, &asset);
-        int rv = zhashx_insert (self->assets, bios_proto_name (asset), asset);
+        int rv = zhashx_insert (self->assets, fty_proto_name (asset), asset);
         assert (rv == 0);
     }
     zchunk_destroy (&chunk);
@@ -540,15 +540,15 @@ void
 nut_print (nut_t *self)
 {
     assert (self);
-    bios_proto_t *asset = (bios_proto_t *) zhashx_first (self->assets);
+    fty_proto_t *asset = (fty_proto_t *) zhashx_first (self->assets);
     while (asset) {
         log_debug ("%s", (const char *) zhashx_cursor (self->assets));
         log_debug (
                 "\t%s %s",
-                bios_proto_name (asset),
-                bios_proto_operation (asset));
+                fty_proto_name (asset),
+                fty_proto_operation (asset));
         log_debug ("\tEXT:");
-        zhash_t *ext = bios_proto_ext (asset);
+        zhash_t *ext = fty_proto_ext (asset);
         if (ext) {
             const char *attribute = (const char *) zhash_first (ext);
             while (attribute) {
@@ -562,7 +562,7 @@ nut_print (nut_t *self)
             log_debug ("\t\t(null)");
         }
         log_debug ("\tAUX:");
-        zhash_t *aux = bios_proto_aux (asset);
+        zhash_t *aux = fty_proto_aux (asset);
         if (aux) {
             const char *attribute = (const char *) zhash_first (aux);
             while (attribute) {
@@ -575,7 +575,7 @@ nut_print (nut_t *self)
         else {
             log_debug ("\t\t(null)");
         }
-        asset = (bios_proto_t *) zhashx_next (self->assets);
+        asset = (fty_proto_t *) zhashx_next (self->assets);
     }
 }
 
@@ -583,15 +583,15 @@ static void
 nut_print_zsys (nut_t *self)
 {
     assert (self);
-    bios_proto_t *asset = (bios_proto_t *) zhashx_first (self->assets);
+    fty_proto_t *asset = (fty_proto_t *) zhashx_first (self->assets);
     while (asset) {
         zsys_debug ("%s", (const char *) zhashx_cursor (self->assets));
         zsys_debug (
                 "\t%s %s",
-                bios_proto_name (asset),
-                bios_proto_operation (asset));
+                fty_proto_name (asset),
+                fty_proto_operation (asset));
         zsys_debug ("\tEXT:");
-        zhash_t *ext = bios_proto_ext (asset);
+        zhash_t *ext = fty_proto_ext (asset);
         if (ext) {
             const char *attribute = (const char *) zhash_first (ext);
             while (attribute) {
@@ -605,7 +605,7 @@ nut_print_zsys (nut_t *self)
             zsys_debug ("\t\t(null)");
         }
         zsys_debug ("\tAUX:");
-        zhash_t *aux = bios_proto_aux (asset);
+        zhash_t *aux = fty_proto_aux (asset);
         if (aux) {
             const char *attribute = (const char *) zhash_first (aux);
             while (attribute) {
@@ -618,24 +618,24 @@ nut_print_zsys (nut_t *self)
         else {
             zsys_debug ("\t\t(null)");
         }
-        asset = (bios_proto_t *) zhashx_next (self->assets);
+        asset = (fty_proto_t *) zhashx_next (self->assets);
     }
 }
 //  --------------------------------------------------------------------------
 //  Self test of this class
 
 //  Helper test function
-//  create new ASSET message of type bios_proto_t
-static bios_proto_t *
+//  create new ASSET message of type fty_proto_t
+static fty_proto_t *
 test_asset_new (const char *name, const char *operation
         )
 {
     assert (name);
     assert (operation);
 
-    bios_proto_t *asset = bios_proto_new (BIOS_PROTO_ASSET);
-    bios_proto_set_name (asset, "%s", name);
-    bios_proto_set_operation (asset, "%s", operation);
+    fty_proto_t *asset = fty_proto_new (FTY_PROTO_ASSET);
+    fty_proto_set_name (asset, "%s", name);
+    fty_proto_set_operation (asset, "%s", operation);
     return asset;
 }
 
@@ -705,144 +705,144 @@ nut_test (bool verbose)
     zlistx_set_duplicator (expected, (czmq_duplicator *) strdup);
     zlistx_set_comparator (expected, (czmq_comparator *) strcmp);
 
-    bios_proto_t *asset =  test_asset_new ("ups", BIOS_PROTO_ASSET_OP_CREATE);
-    bios_proto_aux_insert (asset, "type", "%s", "device");
-    bios_proto_aux_insert (asset, "subtype", "%s", "ups");
-    bios_proto_ext_insert (asset, "abc.d", "%s", " ups string 1");
+    fty_proto_t *asset =  test_asset_new ("ups", FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "ups");
+    fty_proto_ext_insert (asset, "abc.d", "%s", " ups string 1");
     nut_put (self, &asset);
     assert (nut_changed(self) == true);
     zlistx_add_end (expected, (void *) "ups");
 
-    asset =  test_asset_new ("sensor", BIOS_PROTO_ASSET_OP_CREATE);
-    bios_proto_aux_insert (asset, "type", "%s", "device");
-    bios_proto_aux_insert (asset, "subtype", "%s", "sensor");
-    bios_proto_ext_insert (asset, "port", "%s", "port01");
-    bios_proto_aux_insert (asset, "parent_name.1", "%s", "ups");
-    bios_proto_ext_insert (asset, "logical_asset", "%s", "room01");
+    asset =  test_asset_new ("sensor", FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "sensor");
+    fty_proto_ext_insert (asset, "port", "%s", "port01");
+    fty_proto_aux_insert (asset, "parent_name.1", "%s", "ups");
+    fty_proto_ext_insert (asset, "logical_asset", "%s", "room01");
     nut_put (self, &asset);
     zlistx_add_end (expected, (void *) "sensor");
 
-    asset =  test_asset_new ("epdu", BIOS_PROTO_ASSET_OP_CREATE);
-    bios_proto_aux_insert (asset, "type", "%s", "device");
-    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
+    asset =  test_asset_new ("epdu", FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "epdu");
     nut_put (self, &asset);
     zlistx_add_end (expected, (void *) "epdu");
 
-    asset =  test_asset_new ("ROZ.UPS33", BIOS_PROTO_ASSET_OP_CREATE);
-    bios_proto_ext_insert (asset, "d.ef", "%s", "roz.ups33 string 1");
-    bios_proto_ext_insert (asset, "description" , "%s",  "UPS1 9PX 5000i");
-    bios_proto_ext_insert (asset, "device.location" , "%s",  "New IT Power LAB");
-    bios_proto_ext_insert (asset, "location_u_pos" , "%s",  "1");
-    bios_proto_ext_insert (asset, "u_size" , "%s",  "3");
-    bios_proto_ext_insert (asset, "device.contact" , "%s",  "Gabriel Szabo");
-    bios_proto_ext_insert (asset, "hostname.1" , "%s",  "ups33.roz53.lab.etn.com");
-    bios_proto_ext_insert (asset, "battery.type" , "%s",  "PbAc");
-    bios_proto_ext_insert (asset, "phases.output" , "%s",  "1");
-    bios_proto_ext_insert (asset,  "device.type" , "%s",  "ups");
-    bios_proto_ext_insert (asset, "business_critical" , "%s",  "yes");
-    bios_proto_ext_insert (asset, "status.outlet.2" , "%s",  "on");
-    bios_proto_ext_insert (asset, "status.outlet.1" , "%s",  "on");
-    bios_proto_ext_insert (asset, "serial_no" , "%s",  "G202D51129");
-    bios_proto_ext_insert (asset, "ups.serial" , "%s",  "G202D51129");
-    bios_proto_ext_insert (asset, "installation_date" , "%s",  "2015-01-05");
-    bios_proto_ext_insert (asset, "model" , "%s",  "Eaton 9PX");
-    bios_proto_ext_insert (asset, "phases.input" , "%s",  "1");
-    bios_proto_ext_insert (asset, "ip.1" , "%s",  "10.130.53.33");
-    bios_proto_ext_insert (asset, "ups.alarm" , "%s",  "Automatic bypass mode!");
-    bios_proto_ext_insert (asset, "manufacturer" , "%s",  "EATON");
+    asset =  test_asset_new ("ROZ.UPS33", FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_ext_insert (asset, "d.ef", "%s", "roz.ups33 string 1");
+    fty_proto_ext_insert (asset, "description" , "%s",  "UPS1 9PX 5000i");
+    fty_proto_ext_insert (asset, "device.location" , "%s",  "New IT Power LAB");
+    fty_proto_ext_insert (asset, "location_u_pos" , "%s",  "1");
+    fty_proto_ext_insert (asset, "u_size" , "%s",  "3");
+    fty_proto_ext_insert (asset, "device.contact" , "%s",  "Gabriel Szabo");
+    fty_proto_ext_insert (asset, "hostname.1" , "%s",  "ups33.roz53.lab.etn.com");
+    fty_proto_ext_insert (asset, "battery.type" , "%s",  "PbAc");
+    fty_proto_ext_insert (asset, "phases.output" , "%s",  "1");
+    fty_proto_ext_insert (asset,  "device.type" , "%s",  "ups");
+    fty_proto_ext_insert (asset, "business_critical" , "%s",  "yes");
+    fty_proto_ext_insert (asset, "status.outlet.2" , "%s",  "on");
+    fty_proto_ext_insert (asset, "status.outlet.1" , "%s",  "on");
+    fty_proto_ext_insert (asset, "serial_no" , "%s",  "G202D51129");
+    fty_proto_ext_insert (asset, "ups.serial" , "%s",  "G202D51129");
+    fty_proto_ext_insert (asset, "installation_date" , "%s",  "2015-01-05");
+    fty_proto_ext_insert (asset, "model" , "%s",  "Eaton 9PX");
+    fty_proto_ext_insert (asset, "phases.input" , "%s",  "1");
+    fty_proto_ext_insert (asset, "ip.1" , "%s",  "10.130.53.33");
+    fty_proto_ext_insert (asset, "ups.alarm" , "%s",  "Automatic bypass mode!");
+    fty_proto_ext_insert (asset, "manufacturer" , "%s",  "EATON");
 
-    bios_proto_aux_insert (asset, "type", "%s", "device");
-    bios_proto_aux_insert (asset, "subtype", "%s", "ups");
-    bios_proto_aux_insert (asset, "parent", "%s", "4");
-    bios_proto_aux_insert (asset, "status", "%s", "active");
-    bios_proto_aux_insert (asset, "priority", "%s", "2");
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "ups");
+    fty_proto_aux_insert (asset, "parent", "%s", "4");
+    fty_proto_aux_insert (asset, "status", "%s", "active");
+    fty_proto_aux_insert (asset, "priority", "%s", "2");
 
     nut_put (self, &asset);
     zlistx_add_end (expected, (void *) "ROZ.UPS33");
 
-    asset =  test_asset_new ("DUMMY.EPDU42", BIOS_PROTO_ASSET_OP_CREATE);
-    bios_proto_aux_insert (asset, "type", "%s", "device");
-    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
-    bios_proto_ext_insert (asset, "ip.1", "%s", "127.0.0.1");
-    bios_proto_ext_insert (asset, "upsconf_block", "%s", "|[DUMMY.EPDU42]|\tdriver=dummy-ups|\tport=/tmp/DUMMY.EPDU42.dev||");
+    asset =  test_asset_new ("DUMMY.EPDU42", FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "epdu");
+    fty_proto_ext_insert (asset, "ip.1", "%s", "127.0.0.1");
+    fty_proto_ext_insert (asset, "upsconf_block", "%s", "|[DUMMY.EPDU42]|\tdriver=dummy-ups|\tport=/tmp/DUMMY.EPDU42.dev||");
     nut_put (self, &asset);
     zlistx_add_end (expected, (void *) "DUMMY.EPDU42");
 
-    asset =  test_asset_new ("DUMMY.UPS42", BIOS_PROTO_ASSET_OP_CREATE);
-    bios_proto_aux_insert (asset, "type", "%s", "device");
-    bios_proto_aux_insert (asset, "subtype", "%s", "ups");
-    bios_proto_ext_insert (asset, "ip.1", "%s", "127.0.0.1");
-    bios_proto_ext_insert (asset, "upsconf_block", "%s", ",driver=dummy-ups,port=/tmp/DUMMY.UPS42.dev");
+    asset =  test_asset_new ("DUMMY.UPS42", FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "ups");
+    fty_proto_ext_insert (asset, "ip.1", "%s", "127.0.0.1");
+    fty_proto_ext_insert (asset, "upsconf_block", "%s", ",driver=dummy-ups,port=/tmp/DUMMY.UPS42.dev");
     nut_put (self, &asset);
     zlistx_add_end (expected, (void *) "DUMMY.UPS42");
 
-    asset =  test_asset_new ("MBT.EPDU4", BIOS_PROTO_ASSET_OP_CREATE);
-    bios_proto_aux_insert (asset, "type", "%s", "device");
-    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
-    bios_proto_ext_insert (asset, "hhh", "%s", "mbt.epdu4 string 1");
-    bios_proto_ext_insert (asset, "ip.1", "%s", "10.130.53.33");
-    bios_proto_ext_insert (asset, "daisy_chain", "%s", "3");
+    asset =  test_asset_new ("MBT.EPDU4", FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "epdu");
+    fty_proto_ext_insert (asset, "hhh", "%s", "mbt.epdu4 string 1");
+    fty_proto_ext_insert (asset, "ip.1", "%s", "10.130.53.33");
+    fty_proto_ext_insert (asset, "daisy_chain", "%s", "3");
     nut_put (self, &asset);
     zlistx_add_end (expected, (void *) "MBT.EPDU4");
 
-    asset =  test_asset_new ("ROZ.ePDU14", BIOS_PROTO_ASSET_OP_CREATE);
+    asset =  test_asset_new ("ROZ.ePDU14", FTY_PROTO_ASSET_OP_CREATE);
 
-    bios_proto_ext_insert (asset, "status.outlet.13", "%s", "on");
-    bios_proto_ext_insert (asset, "status.outlet.10", "%s", "on");
-    bios_proto_ext_insert (asset, "status.outlet.11", "%s", "on");
-    bios_proto_ext_insert (asset, "description" , "%s",  "ePDU14 G3");
-    bios_proto_ext_insert (asset, "hostname.1" , "%s",  "epdu14.roz53.lab.etn.com");
-    bios_proto_ext_insert (asset, "phases.output" , "%s",  "1");
-    bios_proto_ext_insert (asset, "daisy_chain" , "%s",  "2");
-    bios_proto_ext_insert (asset, "outlet.count" , "%s",  "16");
-    bios_proto_ext_insert (asset, "device.type" , "%s",  "epdu");
-    bios_proto_ext_insert (asset, "location_w_pos" , "%s",  "left");
-    bios_proto_ext_insert (asset, "status.outlet.7" , "%s",  "on");
-    bios_proto_ext_insert (asset, "status.outlet.6" , "%s",  "on");
-    bios_proto_ext_insert (asset, "outlet.group.count" , "%s",  "1");
-    bios_proto_ext_insert (asset, "status.outlet.5" , "%s",  "on");
-    bios_proto_ext_insert (asset, "status.outlet.4" , "%s",  "on");
-    bios_proto_ext_insert (asset, "business_critical" , "%s",  "yes");
-    bios_proto_ext_insert (asset, "status.outlet.3" , "%s",  "on");
-    bios_proto_ext_insert (asset, "status.outlet.2" , "%s",  "on");
-    bios_proto_ext_insert (asset, "status.outlet.1" , "%s",  "on");
-    bios_proto_ext_insert (asset, "status.outlet.9" , "%s",  "on");
-    bios_proto_ext_insert (asset, "status.outlet.8" , "%s",  "on");
-    bios_proto_ext_insert (asset, "serial_no" , "%s",  "H734F27009");
-    bios_proto_ext_insert (asset, "ups.serial" , "%s",  "H734F27009");
-    bios_proto_ext_insert (asset, "installation_date" , "%s",  "2015-01-05");
-    bios_proto_ext_insert (asset, "http_link.1" , "%s",  "http://epdu14.roz53.lab.etn.com/");
-    bios_proto_ext_insert (asset, "model" , "%s",  "EPDU MA 0U (C14 10A 1P)16XC13");
-    bios_proto_ext_insert (asset, "phases.input" , "%s",  "1");
-    bios_proto_ext_insert (asset, "ip.1" , "%s",  "10.130.53.33");
-    bios_proto_ext_insert (asset, "device.part" , "%s",  "EMAB03");
-    bios_proto_ext_insert (asset, "manufacturer" , "%s",  "EATON");
-    bios_proto_ext_insert (asset, "status.outlet.16" , "%s",  "on");
-    bios_proto_ext_insert (asset, "status.outlet.14" , "%s",  "on");
-    bios_proto_ext_insert (asset, "status.outlet.15" , "%s",  "on");
-    bios_proto_ext_insert (asset, "status.outlet.12" , "%s",  "on");
+    fty_proto_ext_insert (asset, "status.outlet.13", "%s", "on");
+    fty_proto_ext_insert (asset, "status.outlet.10", "%s", "on");
+    fty_proto_ext_insert (asset, "status.outlet.11", "%s", "on");
+    fty_proto_ext_insert (asset, "description" , "%s",  "ePDU14 G3");
+    fty_proto_ext_insert (asset, "hostname.1" , "%s",  "epdu14.roz53.lab.etn.com");
+    fty_proto_ext_insert (asset, "phases.output" , "%s",  "1");
+    fty_proto_ext_insert (asset, "daisy_chain" , "%s",  "2");
+    fty_proto_ext_insert (asset, "outlet.count" , "%s",  "16");
+    fty_proto_ext_insert (asset, "device.type" , "%s",  "epdu");
+    fty_proto_ext_insert (asset, "location_w_pos" , "%s",  "left");
+    fty_proto_ext_insert (asset, "status.outlet.7" , "%s",  "on");
+    fty_proto_ext_insert (asset, "status.outlet.6" , "%s",  "on");
+    fty_proto_ext_insert (asset, "outlet.group.count" , "%s",  "1");
+    fty_proto_ext_insert (asset, "status.outlet.5" , "%s",  "on");
+    fty_proto_ext_insert (asset, "status.outlet.4" , "%s",  "on");
+    fty_proto_ext_insert (asset, "business_critical" , "%s",  "yes");
+    fty_proto_ext_insert (asset, "status.outlet.3" , "%s",  "on");
+    fty_proto_ext_insert (asset, "status.outlet.2" , "%s",  "on");
+    fty_proto_ext_insert (asset, "status.outlet.1" , "%s",  "on");
+    fty_proto_ext_insert (asset, "status.outlet.9" , "%s",  "on");
+    fty_proto_ext_insert (asset, "status.outlet.8" , "%s",  "on");
+    fty_proto_ext_insert (asset, "serial_no" , "%s",  "H734F27009");
+    fty_proto_ext_insert (asset, "ups.serial" , "%s",  "H734F27009");
+    fty_proto_ext_insert (asset, "installation_date" , "%s",  "2015-01-05");
+    fty_proto_ext_insert (asset, "http_link.1" , "%s",  "http://epdu14.roz53.lab.etn.com/");
+    fty_proto_ext_insert (asset, "model" , "%s",  "EPDU MA 0U (C14 10A 1P)16XC13");
+    fty_proto_ext_insert (asset, "phases.input" , "%s",  "1");
+    fty_proto_ext_insert (asset, "ip.1" , "%s",  "10.130.53.33");
+    fty_proto_ext_insert (asset, "device.part" , "%s",  "EMAB03");
+    fty_proto_ext_insert (asset, "manufacturer" , "%s",  "EATON");
+    fty_proto_ext_insert (asset, "status.outlet.16" , "%s",  "on");
+    fty_proto_ext_insert (asset, "status.outlet.14" , "%s",  "on");
+    fty_proto_ext_insert (asset, "status.outlet.15" , "%s",  "on");
+    fty_proto_ext_insert (asset, "status.outlet.12" , "%s",  "on");
 
-    bios_proto_aux_insert (asset, "type", "%s", "device");
-    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
-    bios_proto_aux_insert (asset, "parent", "%s", "4");
-    bios_proto_aux_insert (asset, "status", "%s", "active");
-    bios_proto_aux_insert (asset, "priority", "%s", "1");
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "epdu");
+    fty_proto_aux_insert (asset, "parent", "%s", "4");
+    fty_proto_aux_insert (asset, "status", "%s", "active");
+    fty_proto_aux_insert (asset, "priority", "%s", "1");
 
     nut_put (self, &asset);
     zlistx_add_end (expected, (void *) "ROZ.ePDU14");
 
-    asset =  test_asset_new ("MBT.EPDU5", BIOS_PROTO_ASSET_OP_CREATE);
-    bios_proto_aux_insert (asset, "type", "%s", "datacenter");
+    asset =  test_asset_new ("MBT.EPDU5", FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert (asset, "type", "%s", "datacenter");
     nut_put (self, &asset);
 
-    asset =  test_asset_new ("abcde", BIOS_PROTO_ASSET_OP_CREATE);
-    bios_proto_aux_insert (asset, "type", "%s", "device");
-    bios_proto_aux_insert (asset, "subtype", "%s", "server");
+    asset =  test_asset_new ("abcde", FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "server");
     nut_put (self, &asset);
 
-    asset =  test_asset_new ("", BIOS_PROTO_ASSET_OP_CREATE);
-    bios_proto_aux_insert (asset, "type", "%s", "device");
-    bios_proto_aux_insert (asset, "subtype", "%s", "server");
+    asset =  test_asset_new ("", FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "server");
     nut_put (self, &asset);
 
     nut_print_zsys (self);
@@ -886,41 +886,41 @@ nut_test (bool verbose)
         assert (streq (nut_asset_location (self, "sensor"), "ups"));
     }
 
-    asset = test_asset_new ("epdu", BIOS_PROTO_ASSET_OP_CREATE);
-    bios_proto_aux_insert (asset, "type", "%s", "device");
-    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
-    bios_proto_ext_insert (asset, "ip.1", "%s", "121.120.199.198");
-    bios_proto_ext_insert (asset, "daisy_chain", "%s", "14");
+    asset = test_asset_new ("epdu", FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "epdu");
+    fty_proto_ext_insert (asset, "ip.1", "%s", "121.120.199.198");
+    fty_proto_ext_insert (asset, "daisy_chain", "%s", "14");
     nut_put (self, &asset);
 
-    asset =  test_asset_new ("ROZ.UPS33", BIOS_PROTO_ASSET_OP_UPDATE);
-    bios_proto_aux_insert (asset, "type", "%s", "device");
-    bios_proto_aux_insert (asset, "subtype", "%s", "ups");
-    bios_proto_ext_insert (asset, "ip.1", "%s", "1.1.2.3");
-    bios_proto_ext_insert (asset, "daisy_chain", "%s", "5");
+    asset =  test_asset_new ("ROZ.UPS33", FTY_PROTO_ASSET_OP_UPDATE);
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "ups");
+    fty_proto_ext_insert (asset, "ip.1", "%s", "1.1.2.3");
+    fty_proto_ext_insert (asset, "daisy_chain", "%s", "5");
     nut_put (self, &asset);
 
-    asset =  test_asset_new ("ups", BIOS_PROTO_ASSET_OP_RETIRE);
-    bios_proto_aux_insert (asset, "type", "%s", "device");
-    bios_proto_aux_insert (asset, "subtype", "%s", "ups");
-    bios_proto_ext_insert (asset, "d.ef", "%s", "roz.ups33 string 1");
-    bios_proto_ext_insert (asset, "ip.1", "%s", "127.0.0.1");
-    bios_proto_ext_insert (asset, "daisy_chain", "%s", "16");
+    asset =  test_asset_new ("ups", FTY_PROTO_ASSET_OP_RETIRE);
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "ups");
+    fty_proto_ext_insert (asset, "d.ef", "%s", "roz.ups33 string 1");
+    fty_proto_ext_insert (asset, "ip.1", "%s", "127.0.0.1");
+    fty_proto_ext_insert (asset, "daisy_chain", "%s", "16");
     nut_put (self, &asset);
     void *handle = zlistx_find (expected, (void *) "ups");
     zlistx_delete (expected, handle);
 
-    asset =  test_asset_new ("MBT.EPDU4", BIOS_PROTO_ASSET_OP_UPDATE);
-    bios_proto_aux_insert (asset, "type", "%s", "device");
-    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
-    bios_proto_ext_insert (asset, "ip.1", "%s", "10.130.38.52"); // ip changed
+    asset =  test_asset_new ("MBT.EPDU4", FTY_PROTO_ASSET_OP_UPDATE);
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "epdu");
+    fty_proto_ext_insert (asset, "ip.1", "%s", "10.130.38.52"); // ip changed
     // daisy chane is missing intentionally
     nut_put (self, &asset);
 
-    asset =  test_asset_new ("sensor", BIOS_PROTO_ASSET_OP_UPDATE);
-    bios_proto_aux_insert (asset, "type", "%s", "device");
-    bios_proto_aux_insert (asset, "subtype", "%s", "sensor");
-    bios_proto_ext_insert (asset, "port", "%s", "port00");
+    asset =  test_asset_new ("sensor", FTY_PROTO_ASSET_OP_UPDATE);
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "sensor");
+    fty_proto_ext_insert (asset, "port", "%s", "port00");
     nut_put (self, &asset);
 
     assert (nut_changed (self) == true);
@@ -955,17 +955,17 @@ nut_test (bool verbose)
         zlist_destroy (&sensors);
     }
 
-    asset =  test_asset_new ("MBT.EPDU4", BIOS_PROTO_ASSET_OP_UPDATE);
-    bios_proto_aux_insert (asset, "type", "%s", "device");
-    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
-    bios_proto_ext_insert (asset, "ip.1", "%s", "10.130.38.52"); // ip NOT changed
-    bios_proto_ext_insert (asset, "daisy_chain", "%s", "44"); // daisychain is added
+    asset =  test_asset_new ("MBT.EPDU4", FTY_PROTO_ASSET_OP_UPDATE);
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "epdu");
+    fty_proto_ext_insert (asset, "ip.1", "%s", "10.130.38.52"); // ip NOT changed
+    fty_proto_ext_insert (asset, "daisy_chain", "%s", "44"); // daisychain is added
     nut_put (self, &asset);
 
-    asset =  test_asset_new ("sensor", BIOS_PROTO_ASSET_OP_DELETE);
-    bios_proto_aux_insert (asset, "type", "%s", "device");
-    bios_proto_aux_insert (asset, "subtype", "%s", "sensor");
-    bios_proto_ext_insert (asset, "port", "%s", "port00");
+    asset =  test_asset_new ("sensor", FTY_PROTO_ASSET_OP_DELETE);
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "sensor");
+    fty_proto_ext_insert (asset, "port", "%s", "port00");
     nut_put (self, &asset);
     handle = zlistx_find (expected, (void *) "sensor");
     zlistx_delete (expected, handle);
@@ -996,11 +996,11 @@ nut_test (bool verbose)
 
     }
 
-    asset =  test_asset_new ("MBT.EPDU4", BIOS_PROTO_ASSET_OP_CREATE);
-    bios_proto_aux_insert (asset, "type", "%s", "device");
-    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
-    bios_proto_ext_insert (asset, "daisy_chain", "%s", "44");
-    bios_proto_ext_insert (asset, "ip.1", "%s", "10.130.38.52");
+    asset =  test_asset_new ("MBT.EPDU4", FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "epdu");
+    fty_proto_ext_insert (asset, "daisy_chain", "%s", "44");
+    fty_proto_ext_insert (asset, "ip.1", "%s", "10.130.38.52");
     nut_put (self, &asset);
 
     {
@@ -1026,16 +1026,16 @@ nut_test (bool verbose)
         assert (streq (nut_asset_daisychain (self, "ROZ.ePDU14"), "2"));
     }
 
-    asset =  test_asset_new ("ROZ.UPS33", BIOS_PROTO_ASSET_OP_DELETE);
-    bios_proto_aux_insert (asset, "type", "%s", "device");
-    bios_proto_aux_insert (asset, "subtype", "%s", "ups");
+    asset =  test_asset_new ("ROZ.UPS33", FTY_PROTO_ASSET_OP_DELETE);
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "ups");
     nut_put (self, &asset);
     handle = zlistx_find (expected, (void *) "ROZ.UPS33");
     zlistx_delete (expected, handle);
 
-    asset =  test_asset_new ("epdu", BIOS_PROTO_ASSET_OP_DELETE);
-    bios_proto_aux_insert (asset, "type", "%s", "device");
-    bios_proto_aux_insert (asset, "subtype", "%s", "epdu");
+    asset =  test_asset_new ("epdu", FTY_PROTO_ASSET_OP_DELETE);
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "epdu");
     nut_put (self, &asset);
     handle = zlistx_find (expected, (void *) "epdu");
     zlistx_delete (expected, handle);
