@@ -22,6 +22,7 @@
         test = "fty_proto_test">
         <use project = "malamute" />
     </use>
+
     <use project = "cidr" test = "cidr_alloc" header="libcidr.h"
 	 repository = "https://github.com/42ity/libcidr"/>
 
@@ -29,13 +30,14 @@
         repository = "https://github.com/42ity/cxxtools"
         release = "42ity"/>
 
-    <use project = "libnutclient" test = "nut::TcpClient::TcpClient" header="nutclient.h"/>
+    <use project = "libnutclient" test = "nut::TcpClient::TcpClient" header="nutclient.h"
+        repository = "https://github.com/networkupstools/nut"/>
 
     <class name = "logger"          private = "1">logging api</class>
     <class name = "fsutils"         private = "1">filesystem utils</class>
-    <class name = "cidr" private = "1">C++ Wrapper around libcidr</class>
-    <class name = "nutscan" private = "1">Wrapper around nut-scanner tool</class>
-    <class name = "subprocess" private = "1">C++ Wrapper around cxxtools::Fork</class>
+    <class name = "cidr"            private = "1">C++ Wrapper around libcidr</class>
+    <class name = "nutscan"         private = "1">Wrapper around nut-scanner tool</class>
+    <class name = "subprocess"      private = "1">C++ Wrapper around cxxtools::Fork</class>
 
     <class name = "actor commands"      private = "1">actor commands</class>
     <class name = "ups status"          private = "1">ups status converting functions</class>
