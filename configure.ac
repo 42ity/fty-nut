@@ -328,12 +328,12 @@ PKG_CHECK_MODULES([libnutclient], [libnutclient >= 0.0.0],
             [])
 
         libnutclient_synthetic_cflags=""
-        libnutclient_synthetic_libs="-llibnutclient"
+        libnutclient_synthetic_libs="-lnutclient"
 
         if test "x$search_libnutclient" = "xyes"; then
             if test -r "${with_libnutclient}/include/nutclient.h"; then
                 libnutclient_synthetic_cflags="-I${with_libnutclient}/include"
-                libnutclient_synthetic_libs="-L${with_libnutclient}/lib -llibnutclient"
+                libnutclient_synthetic_libs="-L${with_libnutclient}/lib -lnutclient"
             else
                 AC_MSG_ERROR([${with_libnutclient}/include/nutclient.h not found. Please check libnutclient prefix])
             fi
@@ -350,7 +350,7 @@ PKG_CHECK_MODULES([libnutclient], [libnutclient >= 0.0.0],
                 AC_SUBST([libnutclient_LIBS],[${libnutclient_synthetic_libs}])
                 was_libnutclient_check_lib_detected=yes
             ],
-            [AC_MSG_ERROR([cannot link with -llibnutclient, install libnutclient])])
+            [AC_MSG_ERROR([cannot link with -lnutclient, install libnutclient])])
     ])
 
 if test "x$was_libnutclient_check_lib_detected" = "xno"; then
@@ -608,8 +608,11 @@ fi
 AC_CONFIG_FILES([Makefile
                  doc/Makefile
                  src/libfty_nut.pc
+                 src/mapping.conf
                  src/fty-nut.cfg
                  src/fty-nut-configurator.cfg
+                 src/fty-nut.conf
+                 src/bios_10_agent-nut
                  ])
 
 AM_COND_IF([WITH_SYSTEMD_UNITS],

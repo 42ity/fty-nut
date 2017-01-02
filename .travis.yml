@@ -1,6 +1,8 @@
 # Travis CI script
 language: c
 
+cache: ccache
+
 os:
 - linux
 
