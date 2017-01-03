@@ -20,6 +20,7 @@ addons:
     packages:
     - valgrind
     - git
+    - asciidoc
 
 before_install:
 - if [ $TRAVIS_OS_NAME == "osx" ] ; then brew update; brew install binutils valgrind ; fi
