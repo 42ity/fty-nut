@@ -23,7 +23,6 @@ stderr.txt
 src/fty-nut
 src/fty-nut-configurator
 src/fty_nut_selftest
-src/selftest_state_file
 *.exe
 *.out
 *.app
@@ -90,7 +89,12 @@ build/
 *.swp
 *~
 
+# Test artifacts
+src/selftest_state_file
 test_state_file
+.testdir/
+
+# Generated from templates
 src/mapping.conf
 src/fty-nut.conf
 src/fty_10_agent-nut
