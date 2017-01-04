@@ -7,7 +7,7 @@ EXTRA_DIST += $(addsuffix .in,$(agent_nut_mapping_DATA))
 CLEAN_FILES += $(agent_nut_mapping_DATA)
 
 agent_nut_sudoersdir = @prefix@/share/bios/examples/config/sudoers.d
-agent_nut_sudoers_DATA = src/bios_10_agent-nut
+agent_nut_sudoers_DATA = src/fty_10_agent-nut
 EXTRA_DIST += $(addsuffix .in,$(agent_nut_sudoers_DATA))
 CLEAN_FILES += $(agent_nut_sudoers_DATA)
 

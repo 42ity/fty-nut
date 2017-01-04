@@ -94,7 +94,7 @@ build/
 test_state_file
 src/mapping.conf
 src/fty-nut.conf
-src/bios_10_agent-nut
+src/fty_10_agent-nut
 src/fty-nut.service
 src/fty-nut.cfg
 src/fty-nut-configurator.service
