@@ -162,7 +162,6 @@ fsutils_test (bool verbose)
     assert (shared::is_file ("src/mapping.conf") == true);
     log_warning ("NOTE: We do expect the error for './non-existant.conf' below...");
     assert (shared::is_file ("non-existant.conf") == false);
-    assert (shared::is_file ("src/fsutils.cc") == true);
 
     // is_dir
     assert (shared::is_dir ("src") == true);
