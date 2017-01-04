@@ -165,18 +165,25 @@ fsutils_test (bool verbose)
 
     // is_dir
     assert (shared::is_dir ("src") == true);
-    assert (shared::is_dir ("include") == true);
     log_warning ("NOTE: We do expect the error for './karci/' below...");
     assert (shared::is_dir ("karci") == false);
 
+    assert (shared::mkdir_if_needed(".testdir") == true);
+    log_warning ("NOTE: We do expect the error for './.testdir/missingsub/dir/' below...");
+    assert (shared::mkdir_if_needed(".testdir/missingsub/dir", 0700, false) == false);
+    log_warning ("NOTE: We do expect the errors for './.testdir/sub/dir/' and '.testdir/sub' below (if this is a first run of the test)...");
+    assert (shared::mkdir_if_needed(".testdir/sub/dir", 0711, true) == true);
+    assert (shared::mkdir_if_needed(".testdir/sub/dir-twoo", 0711, true) == true);
+    log_warning ("NOTE: We do not expect errors re-ensuring that './.testdir/sub/dir/' exists below...");
+    assert (shared::mkdir_if_needed(".testdir/sub/dir") == true);
+    log_warning ("NOTE: We do foresee a possible error for mkdir of 'src/mapping.conf' below (but not an assertion fault), or maybe no error at all...");
+    assert (shared::mkdir_if_needed("src/mapping.conf") == false);
+
     // items_in_directory
     std::vector <std::string> items;
-    // NOTE: If we do a build, the amount of files under doc/ is volatile
-    //assert (shared::items_in_directory ("doc", items) == true);
-    //assert (items.size () == 11);
     // This location is less subject to change over time...
-    assert (shared::items_in_directory ("packaging/redhat", items) == true);
-    log_warning ("NOTE: If you get assertion failure for items.size() here, make sure packaging/redhat/ contains the expected amount of files");
+    assert (shared::items_in_directory (".testdir/sub", items) == true);
+    log_warning ("NOTE: If you get assertion failure for items.size() here, make sure .testdir/sub/ contains the expected amount of objects");
     assert (items.size () == 2);
     log_warning ("      Never mind the assertion note above, check passed :)");
 
@@ -184,16 +191,6 @@ fsutils_test (bool verbose)
     log_warning ("NOTE: We do expect the error for './non-existing-dir/' below...");
     assert (shared::items_in_directory ("non-existing-dir", items) == false);
     assert (items.size () == 0);
-
-    assert (shared::mkdir_if_needed(".testdir") == true);
-    log_warning ("NOTE: We do expect the error for './.testdir/missingsub/dir/' below...");
-    assert (shared::mkdir_if_needed(".testdir/missingsub/dir", 0700, false) == false);
-    log_warning ("NOTE: We do expect the errors for './.testdir/sub/dir/' and '.testdir/sub' below (if this is a first run of the test)...");
-    assert (shared::mkdir_if_needed(".testdir/sub/dir", 0711, true) == true);
-    log_warning ("NOTE: We do not expect errors re-ensuring that './.testdir/sub/dir/' exists below...");
-    assert (shared::mkdir_if_needed(".testdir/sub/dir") == true);
-    log_warning ("NOTE: We do foresee a possible error for mkdir of 'src/mapping.conf' below (but not an assertion fault), or maybe no error at all...");
-    assert (shared::mkdir_if_needed("src/mapping.conf") == false);
 
     // TODO: the rest
 
