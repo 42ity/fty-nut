@@ -152,14 +152,14 @@ fsutils_test (bool verbose)
     assert (strcmp (separator, "/") == 0);
 
     // file_mode
-    mode_t mode = shared::file_mode ("src/mapping.conf.in");
+    mode_t mode = shared::file_mode ("src/mapping.conf");
     assert ((mode & S_IFMT) == S_IFREG);
     struct stat sb;
-    stat ("src/mapping.conf.in", &sb);
+    stat ("src/mapping.conf", &sb);
     assert (sb.st_mode == mode);
 
     // is_file
-    assert (shared::is_file ("src/mapping.conf.in") == true);
+    assert (shared::is_file ("src/mapping.conf") == true);
     log_warning ("NOTE: We do expect the error for './non-existant.conf' below...");
     assert (shared::is_file ("non-existant.conf") == false);
     assert (shared::is_file ("src/fsutils.cc") == true);
@@ -193,8 +193,8 @@ fsutils_test (bool verbose)
     assert (shared::mkdir_if_needed(".testdir/sub/dir", 0711, true) == true);
     log_warning ("NOTE: We do not expect errors re-ensuring that './.testdir/sub/dir/' exists below...");
     assert (shared::mkdir_if_needed(".testdir/sub/dir") == true);
-    log_warning ("NOTE: We do foresee a possible error for mkdir of 'src/mapping.conf.in' below (but not an assertion fault), or maybe no error at all...");
-    assert (shared::mkdir_if_needed("src/mapping.conf.in") == false);
+    log_warning ("NOTE: We do foresee a possible error for mkdir of 'src/Makefile' below (but not an assertion fault), or maybe no error at all...");
+    assert (shared::mkdir_if_needed("src/Makefile") == false);
 
     // TODO: the rest
 
