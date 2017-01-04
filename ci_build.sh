@@ -126,6 +126,7 @@ if [ "$BUILD_TYPE" == "default" ]; then
     make -j4
     make check
     make install
+    make distcheck
 
     # Build and check this project without DRAFT APIs
     make clean
@@ -135,6 +136,7 @@ if [ "$BUILD_TYPE" == "default" ]; then
     make -j4
     make check
     make install
+    make distcheck
 else
     pushd "./builds/${BUILD_TYPE}" && REPO_DIR="$(dirs -l +1)" ./ci_build.sh
 fi
