@@ -13,7 +13,8 @@ EnvironmentFile=-@prefix@/share/bios/etc/default/bios__%n.conf
 EnvironmentFile=-@sysconfdir@/default/bios
 EnvironmentFile=-@sysconfdir@/default/bios__%n.conf
 Environment="prefix=@prefix@"
-ExecStart=@prefix@/bin/fty-nut-configurator @sysconfdir@/@PACKAGE@/fty-nut-configurator.cfg
+ExecStart=@prefix@/bin/fty-nut-configurator
+#ExecStart=@prefix@/bin/fty-nut-configurator @sysconfdir@/@PACKAGE@/fty-nut-configurator.cfg
 Restart=always
 
 [Install]
