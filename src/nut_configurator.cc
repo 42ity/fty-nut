@@ -134,15 +134,15 @@ void NUTConfigurator::systemctl( const std::string &operation, const std::string
 }
 
 void NUTConfigurator::updateNUTConfig() {
-    std::vector<std::string> _argv = { "sudo", "bios-nutconfig" };
+    std::vector<std::string> _argv = { "sudo", "fty-nut-configurator" };
     SubProcess systemd( _argv );
     if( systemd.run() ) {
         int result = systemd.wait();
-        log_info("sudo bios-nutconfig %i (%s)",
+        log_info("sudo fty-nut-configurator %i (%s)",
                  result,
                  (result == 0 ? "ok" : "failed"));
     } else {
-        log_error("can't run sudo bios-nutconfig command");
+        log_error("can't run sudo fty-nut-configurator command");
     }
 }
 
