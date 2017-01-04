@@ -193,8 +193,8 @@ fsutils_test (bool verbose)
     assert (shared::mkdir_if_needed(".testdir/sub/dir", 0711, true) == true);
     log_warning ("NOTE: We do not expect errors re-ensuring that './.testdir/sub/dir/' exists below...");
     assert (shared::mkdir_if_needed(".testdir/sub/dir") == true);
-    log_warning ("NOTE: We do foresee a possible error for mkdir of 'src/Makefile' below (but not an assertion fault), or maybe no error at all...");
-    assert (shared::mkdir_if_needed("src/Makefile") == false);
+    log_warning ("NOTE: We do foresee a possible error for mkdir of 'src/mapping.conf' below (but not an assertion fault), or maybe no error at all...");
+    assert (shared::mkdir_if_needed("src/mapping.conf") == false);
 
     // TODO: the rest
 
