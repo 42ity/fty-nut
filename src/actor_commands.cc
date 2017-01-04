@@ -509,11 +509,17 @@ actor_commands_test (bool verbose)
     mlm_client_destroy (&client);
     client = mlm_client_new ();
     assert (client);
-    // re-set actor_polling to zero again (so we dont' have to remember
+    // re-set actor_polling to zero again (so we don't have to remember
     // to assert to the previous value)
     actor_polling = 0;
 
     // --------------------------------------------------------------
+    // touch the state-file for test below (should exist, may be empty)
+    fp = fopen ("src/selftest_state_file", "w+");
+    if (fp)
+        fclose (fp);
+
+    // Prepare the error logger
     fp = freopen ("stderr.txt", "w+", stderr);
 
     // VERBOSE

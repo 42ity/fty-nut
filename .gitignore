@@ -23,6 +23,7 @@ stderr.txt
 src/fty-nut
 src/fty-nut-configurator
 src/fty_nut_selftest
+src/selftest_state_file
 *.exe
 *.out
 *.app
