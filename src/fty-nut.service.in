@@ -14,7 +14,7 @@ EnvironmentFile=-@prefix@/share/bios/etc/default/bios__%n.conf
 EnvironmentFile=-@sysconfdir@/default/bios
 EnvironmentFile=-@sysconfdir@/default/bios__%n.conf
 Environment="prefix=@prefix@"
-ExecStart=@prefix@/bin/fty-nut --mapping-file @datadir@/@PACKAGE@/mapping.conf --state-file '/var/lib/bios/nut/state_file'
+ExecStart=@prefix@/bin/fty-nut --mapping-file @datadir@/@PACKAGE@/mapping.conf --state-file '/var/lib/fty/nut/state_file'
 Restart=always
 
 [Install]
