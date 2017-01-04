@@ -5,7 +5,6 @@ After=network.target malamute.service
 Before=fty-asset.service
 PartOf=bios.target
 
-
 [Service]
 Type=simple
 User=bios
