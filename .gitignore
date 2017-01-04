@@ -20,11 +20,9 @@ stderr.txt
 *.lo
 
 # Executables
-src/fty-nut_selftest
-src/bios-nut-outage
-src/agent_nut_selftest
 src/fty-nut
 src/fty-nut-configurator
+src/fty_nut_selftest
 *.exe
 *.out
 *.app
