@@ -160,8 +160,8 @@ fsutils_test (bool verbose)
 
     // is_file
     assert (shared::is_file ("src/mapping.conf.in") == true);
-    log_warning ("NOTE: We do expect the error for './mapping.conf' below...");
-    assert (shared::is_file ("mapping.conf") == false);
+    log_warning ("NOTE: We do expect the error for './non-existant.conf' below...");
+    assert (shared::is_file ("non-existant.conf") == false);
     assert (shared::is_file ("src/fsutils.cc") == true);
 
     // is_dir
@@ -176,9 +176,9 @@ fsutils_test (bool verbose)
     //assert (shared::items_in_directory ("doc", items) == true);
     //assert (items.size () == 11);
     // This location is less subject to change over time...
-    assert (shared::items_in_directory ("packaging/debian", items) == true);
-    log_warning ("NOTE: If you get assertion failure for items.size() here, make sure packaging/debian/ contains the expected amount of files");
-    assert (items.size () == 8);
+    assert (shared::items_in_directory ("packaging/redhat", items) == true);
+    log_warning ("NOTE: If you get assertion failure for items.size() here, make sure packaging/redhat/ contains the expected amount of files");
+    assert (items.size () == 2);
     log_warning ("      Never mind the assertion note above, check passed :)");
 
     items.clear ();
