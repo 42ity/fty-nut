@@ -1,0 +1,37 @@
+fty_nut_configurator_server(3)
+==============================
+
+NAME
+----
+fty_nut_configurator_server - fty nut configurator actor
+
+SYNOPSIS
+--------
+----
+//  Create a fty_nut_configurator_server
+FTY_NUT_EXPORT void
+    fty_nut_configurator_server (zsock_t *pipe, void *args);
+
+//  Self test of this class
+FTY_NUT_EXPORT void
+    fty_nut_configurator_server_test (bool verbose);
+
+Please add '@interface' section in '../src/fty_nut_configurator_server.cc'.
+----
+
+DESCRIPTION
+-----------
+
+fty_nut_configurator_server - fty nut configurator actor
+
+Please add '@discuss' section in '../src/fty_nut_configurator_server.cc'.
+
+EXAMPLE
+-------
+.From fty_nut_configurator_server_test method
+----
+//  Simple create/destroy test
+zactor_t *self = zactor_new (fty_nut_configurator_server, NULL);
+assert (self);
+zactor_destroy (&self);
+----

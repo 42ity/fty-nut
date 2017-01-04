@@ -1,0 +1,27 @@
+fty_nut_configurator(1)
+=======================
+
+NAME
+----
+fty_nut_configurator - nut server configurator
+
+SYNOPSIS
+--------
+----
+Please add '@interface' section in '../src/fty_nut_configurator.cc'.
+Please add '@interface' section in '../src/fty_nut_configurator.cc'.
+----
+
+DESCRIPTION
+-----------
+
+fty_nut_configurator - daemon to configure nut-server (upsd) from results of nut scanner
+
+Please add '@discuss' section in '../src/fty_nut_configurator.cc'.
+
+EXAMPLE
+-------
+.From fty_nut_configurator_test method
+----
+Please add '@selftest' section in '../src/fty_nut_configurator.cc'.
+----

@@ -47,6 +47,7 @@ EXTRA_DIST = \
     src/nut_configurator.h \
     src/alert_device.h \
     src/alert_device_list.h \
+    src/alert_device_alert.h \
     src/nut.h \
     src/stream.h \
     src/sensor_device.h \

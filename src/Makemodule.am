@@ -104,6 +104,8 @@ fty_nut_SCRIPTS = \
     fty-nutconfig \
     fty-dmf
 
+EXTRA_DIST += $(fty_nut_SCRIPTS)
+
 # define custom target for all products of /src
 src:
 	src/fty-nut \

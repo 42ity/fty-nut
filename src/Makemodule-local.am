@@ -1,6 +1,9 @@
 CLEAN_FILES =
 EXTRA_DIST ?=
 
+AM_CPPFLAGS += \
+	-I$(srcdir)/src
+
 agent_nut_mappingdir = @prefix@/share/agent-nut/
 agent_nut_mapping_DATA = src/mapping.conf
 EXTRA_DIST += $(addsuffix .in,$(agent_nut_mapping_DATA))

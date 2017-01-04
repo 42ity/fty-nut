@@ -1,25 +1,27 @@
-Name(7)
-=======
-
+fty_nut(1)
+==========
 
 NAME
 ----
 fty_nut - NUT (Network UPS Tools) daemon wrapper/proxy
 
-
 SYNOPSIS
 --------
 ----
-#include <fty_nut.h>
-
-cc ['flags'] 'files' -lfty_nut ['libraries']
+Please add '@interface' section in '../src/fty_nut.cc'.
+Please add '@interface' section in '../src/fty_nut.cc'.
 ----
-
 
 DESCRIPTION
 -----------
 
-Classes
-~~~~~~~
+fty_nut - fty-nut main
 
-Something.
+Please add '@discuss' section in '../src/fty_nut.cc'.
+
+EXAMPLE
+-------
+.From fty_nut_test method
+----
+Please add '@selftest' section in '../src/fty_nut.cc'.
+----
