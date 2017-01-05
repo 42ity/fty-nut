@@ -38,7 +38,11 @@
 
 using namespace shared;
 
+/* TODO: Change later to parametrised names and un-legacy bios=>fty :
 #define NUT_PART_STORE "/var/lib/fty/nut/devices"
+ */
+
+#define NUT_PART_STORE "/var/lib/bios/nut/devices"
 
 static const char * NUTConfigXMLPattern = "[[:blank:]]driver[[:blank:]]+=[[:blank:]]+\"netxml-ups\"";
 /* TODO: This explicitly lists NUT MIB mappings for the static snmp-ups driver,
