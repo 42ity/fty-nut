@@ -1,6 +1,7 @@
 # This is a skeleton created by zproject.
 # You can add hand-written code here.
 save.xml
+
 # Object files
 *.o
 *.so
@@ -21,7 +22,7 @@ save.xml
 *.lo
 
 # Executables
-src/fty-nut_selftest
+###src/fty-nut_selftest
 src/fty-nut
 src/fty-nut-configurator
 src/fty_nut_selftest
@@ -71,6 +72,9 @@ compile_commands.json
 DartConfiguration.tcl
 install_manifest.txt
 Testing/
+# We here do not want cmake integration
+*.cmake
+CMakeLists.txt
 
 # Repositories downloaded by CI integration scripts
 libzmq/
@@ -132,3 +136,18 @@ bindings/qt/selftest/selftest
 
 # editor backups
 *~
+
+# Test artifacts
+src/selftest_state_file
+test_state_file
+.testdir/
+stderr.txt
+
+# Generated from templates
+src/mapping.conf
+src/fty-nut.conf
+src/fty_10_agent-nut
+src/fty-nut.service
+src/fty-nut.cfg
+src/fty-nut-configurator.service
+src/fty-nut-configurator.cfg

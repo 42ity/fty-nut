@@ -1,6 +1,9 @@
 CLEANFILES =
 EXTRA_DIST ?=
 
+EXTRA_DIST += \
+	src/alert_device_alert.h
+
 AM_CPPFLAGS += \
 	-I$(srcdir)/src
 

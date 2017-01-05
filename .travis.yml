@@ -19,13 +19,13 @@ services:
 # Set CI_CONFIG_QUIET=true to enable "configure --quiet" (only report stderr)
 env:
   global:
-    - CI_TIME=false
+    - CI_TIME=true
     - CI_TRACE=false
-    - CI_QUIET=true
+    - CI_QUIET=false
   matrix:
     - BUILD_TYPE=default
-    - BUILD_TYPE=default-Werror
-    - BUILD_TYPE=cmake
+#   - BUILD_TYPE=default-Werror
+#   - BUILD_TYPE=cmake
 #   - BUILD_TYPE=android
 #   - BUILD_TYPE=check-py
 
