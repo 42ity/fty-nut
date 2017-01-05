@@ -122,10 +122,13 @@ if [ "$BUILD_TYPE" == "default" ]; then
 
     # Build and check this project
     ./autogen.sh 2> /dev/null
-    ./configure "${CONFIG_OPTS[@]}"
+    ./configure --enable-drafts=yes "${CONFIG_OPTS[@]}"
     make -j4
     make check
     make install
+
+    ( export DISTCHECK_CONFIGURE_FLAGS="--enable-drafts=yes ${CONFIG_OPTS[@]}" && \
+      make DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS" distcheck )
 
     # Build and check this project without DRAFT APIs
     make clean
@@ -135,6 +138,10 @@ if [ "$BUILD_TYPE" == "default" ]; then
     make -j4
     make check
     make install
+
+    ( export DISTCHECK_CONFIGURE_FLAGS="--enable-drafts=no ${CONFIG_OPTS[@]}" && \
+      make DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS" distcheck )
+
 else
     pushd "./builds/${BUILD_TYPE}" && REPO_DIR="$(dirs -l +1)" ./ci_build.sh
 fi

@@ -38,7 +38,7 @@
 
 using namespace shared;
 
-#define NUT_PART_STORE "/var/lib/bios/nut/devices"
+#define NUT_PART_STORE "/var/lib/fty/nut/devices"
 
 static const char * NUTConfigXMLPattern = "[[:blank:]]driver[[:blank:]]+=[[:blank:]]+\"netxml-ups\"";
 /* TODO: This explicitly lists NUT MIB mappings for the static snmp-ups driver,
@@ -134,15 +134,15 @@ void NUTConfigurator::systemctl( const std::string &operation, const std::string
 }
 
 void NUTConfigurator::updateNUTConfig() {
-    std::vector<std::string> _argv = { "sudo", "bios-nutconfig" };
+    std::vector<std::string> _argv = { "sudo", "fty-nut-configurator" };
     SubProcess systemd( _argv );
     if( systemd.run() ) {
         int result = systemd.wait();
-        log_info("sudo bios-nutconfig %i (%s)",
+        log_info("sudo fty-nut-configurator %i (%s)",
                  result,
                  (result == 0 ? "ok" : "failed"));
     } else {
-        log_error("can't run sudo bios-nutconfig command");
+        log_error("can't run sudo fty-nut-configurator command");
     }
 }
 

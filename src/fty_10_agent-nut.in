@@ -13,9 +13,9 @@
 # Shorthands to reference the specific commands or command-line (shell
 # globs generally) which we may be interested in:
 
-Cmnd_Alias BIOS_NUTCONFIG   = @prefix@/bin/bios-nutconfig
+Cmnd_Alias FTY_NUTCONFIG   = @prefix@/bin/fty-nut-configurator
 
 # Overall, what is currently allowed with different privileges?
-Cmnd_Alias BIOS_AGENT_NUT_PROGS	= BIOS_NUTCONFIG
+Cmnd_Alias FTY_AGENT_NUT_PROGS	= FTY_NUTCONFIG
 
-BIOS_USERS ALL=(BIOS_RUNAS) NOPASSWD:BIOS_NUTCONFIG
+BIOS_USERS ALL=(BIOS_RUNAS) NOPASSWD:FTY_NUTCONFIG

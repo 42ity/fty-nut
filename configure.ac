@@ -612,7 +612,7 @@ AC_CONFIG_FILES([Makefile
                  src/fty-nut.cfg
                  src/fty-nut-configurator.cfg
                  src/fty-nut.conf
-                 src/bios_10_agent-nut
+                 src/fty_10_agent-nut
                  ])
 
 AM_COND_IF([WITH_SYSTEMD_UNITS],

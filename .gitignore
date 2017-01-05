@@ -20,11 +20,9 @@ stderr.txt
 *.lo
 
 # Executables
-src/fty-nut_selftest
-src/bios-nut-outage
-src/agent_nut_selftest
 src/fty-nut
 src/fty-nut-configurator
+src/fty_nut_selftest
 *.exe
 *.out
 *.app
@@ -91,10 +89,15 @@ build/
 *.swp
 *~
 
+# Test artifacts
+src/selftest_state_file
 test_state_file
+.testdir/
+
+# Generated from templates
 src/mapping.conf
 src/fty-nut.conf
-src/bios_10_agent-nut
+src/fty_10_agent-nut
 src/fty-nut.service
 src/fty-nut.cfg
 src/fty-nut-configurator.service

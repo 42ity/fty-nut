@@ -213,6 +213,8 @@ actor_commands (
     fseek (fp, 0L, SEEK_END);\
     uint64_t sz = ftell (fp);\
     fclose (fp);\
+    if (sz > 0)\
+        printf("STDERR_EMPTY() check failed, please review the stderr.txt in workspace root\n");\
     assert (sz == 0);\
     }
 
@@ -221,6 +223,8 @@ actor_commands (
     fseek (fp, 0L, SEEK_END);\
     uint64_t sz = ftell (fp);\
     fclose (fp);\
+    if (sz == 0)\
+        printf("STDERR_NON_EMPTY() check failed\n");\
     assert (sz > 0);\
     }
 
@@ -230,7 +234,7 @@ actor_commands_test (bool verbose)
     printf (" * actor_commands: \n");
 
     //  @selftest
-    static const char* endpoint = "ipc://bios-smtp-server-test";
+    static const char* endpoint = "ipc://fty-nut-server-test";
 
     // malamute broker
     zactor_t *malamute = zactor_new (mlm_server, (void*) "Malamute");
@@ -389,7 +393,7 @@ actor_commands_test (bool verbose)
     message = zmsg_new ();
     assert (message);
     zmsg_addstr (message, "CONNECT");
-    zmsg_addstr (message, "ipc://bios-smtp-server-BAD");
+    zmsg_addstr (message, "ipc://fty-nut-server-BAD");
     zmsg_addstr (message, "test-agent");
     rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
     assert (rv == 0);
@@ -505,11 +509,17 @@ actor_commands_test (bool verbose)
     mlm_client_destroy (&client);
     client = mlm_client_new ();
     assert (client);
-    // re-set actor_polling to zero again (so we dont' have to remember
+    // re-set actor_polling to zero again (so we don't have to remember
     // to assert to the previous value)
     actor_polling = 0;
 
     // --------------------------------------------------------------
+    // touch the state-file for test below (should exist, may be empty)
+    fp = fopen ("src/selftest_state_file", "w+");
+    if (fp)
+        fclose (fp);
+
+    // Prepare the error logger
     fp = freopen ("stderr.txt", "w+", stderr);
 
     // VERBOSE
@@ -530,7 +540,7 @@ actor_commands_test (bool verbose)
     message = zmsg_new ();
     assert (message);
     zmsg_addstr (message, "CONFIGURE");
-    zmsg_addstr (message, "src/mapping.conf.in");
+    zmsg_addstr (message, "src/mapping.conf");
     zmsg_addstr (message, "src/selftest_state_file");
     rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
     assert (rv == 0);

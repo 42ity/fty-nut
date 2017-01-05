@@ -1,4 +1,4 @@
-# create runtime directories for bios-agent-nut
-d /var/lib/bios/nut 0755 bios root
-d /var/lib/bios/nut/devices 0755 bios bios-infra
-x /var/lib/bios/nut/*
+# create runtime directories for fty-nut
+d /var/lib/fty/nut 0755 bios root
+d /var/lib/fty/nut/devices 0755 bios bios-infra
+x /var/lib/fty/nut/*

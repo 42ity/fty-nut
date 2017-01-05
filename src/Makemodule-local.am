@@ -1,19 +1,32 @@
-CLEAN_FILES =
+CLEANFILES =
 EXTRA_DIST ?=
+
+AM_CPPFLAGS += \
+	-I$(srcdir)/src
 
 agent_nut_mappingdir = @prefix@/share/agent-nut/
 agent_nut_mapping_DATA = src/mapping.conf
 EXTRA_DIST += $(addsuffix .in,$(agent_nut_mapping_DATA))
-CLEAN_FILES += $(agent_nut_mapping_DATA)
+CLEANFILES += $(agent_nut_mapping_DATA)
 
 agent_nut_sudoersdir = @prefix@/share/bios/examples/config/sudoers.d
-agent_nut_sudoers_DATA = src/bios_10_agent-nut
+agent_nut_sudoers_DATA = src/fty_10_agent-nut
 EXTRA_DIST += $(addsuffix .in,$(agent_nut_sudoers_DATA))
-CLEAN_FILES += $(agent_nut_sudoers_DATA)
+CLEANFILES += $(agent_nut_sudoers_DATA)
 
 if WITH_SYSTEMD_UNITS
 agent_nut_tmpfilesdir = @prefix@/lib/tmpfiles.d/
-agent_nut_tmpfiles_DATA = src/bios-agent-nut.conf
+agent_nut_tmpfiles_DATA = src/fty-nut.conf
 EXTRA_DIST += $(addsuffix .in,$(agent_nut_tmpfiles_DATA))
-CLEAN_FILES += $(agent_nut_tmpfiles_DATA)
+CLEANFILES += $(agent_nut_tmpfiles_DATA)
 endif #WITH_SYSTEMD_UNITS
+
+CLEANFILES += \
+	stderr.txt \
+	test_state_file \
+	src/selftest_state_file
+
+clean-local: clean-local-check
+.PHONY: clean-local-check
+clean-local-check:
+	rm -rf .testdir || true
