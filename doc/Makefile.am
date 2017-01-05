@@ -50,19 +50,19 @@ GENERATED_DOCS =
 
 GENERATED_DOCS += fty_nut_server.txt fty_nut_server.doc
 fty_nut_server.txt: $(top_srcdir)/src/fty_nut_server.cc
-	$(srcdir)/mkman fty_nut_server $(builddir)/fty-nut-server $(srcdir)/..
+	$(srcdir)/mkman fty_nut_server $(builddir)/fty_nut_server $(srcdir)/..
 
 GENERATED_DOCS += fty_nut_configurator_server.txt fty_nut_configurator_server.doc
 fty_nut_configurator_server.txt: $(top_srcdir)/src/fty_nut_configurator_server.cc
-	$(srcdir)/mkman fty_nut_configurator_server $(builddir)/fty-nut-configurator-server $(srcdir)/..
+	$(srcdir)/mkman fty_nut_configurator_server $(builddir)/fty_nut_configurator_server $(srcdir)/..
 
 GENERATED_DOCS += alert_actor.txt alert_actor.doc
 alert_actor.txt: $(top_srcdir)/src/alert_actor.cc
-	$(srcdir)/mkman alert_actor $(builddir)/alert actor $(srcdir)/..
+	$(srcdir)/mkman alert_actor $(builddir)/alert_actor $(srcdir)/..
 
 GENERATED_DOCS += sensor_actor.txt sensor_actor.doc
 sensor_actor.txt: $(top_srcdir)/src/sensor_actor.cc
-	$(srcdir)/mkman sensor_actor $(builddir)/sensor actor $(srcdir)/..
+	$(srcdir)/mkman sensor_actor $(builddir)/sensor_actor $(srcdir)/..
 
 GENERATED_DOCS += fty-nut.txt fty-nut.doc
 fty-nut.txt: $(top_srcdir)/src/fty_nut.cc
