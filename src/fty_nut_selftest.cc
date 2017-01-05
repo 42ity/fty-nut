@@ -41,6 +41,7 @@ all_tests [] = {
 //       and https://github.com/zeromq/zproject/commit/e63ccee20f910f0656eda75fc69800b749549b84
 //       such tests should not be exposed and rather be called
 //       from the public class's self-test routine
+#ifdef EXPOSE_PRIVATE_SELFTESTS
     { "logger", logger_test },
     { "fsutils", fsutils_test },
     { "cidr", cidr_test },
@@ -57,6 +58,7 @@ all_tests [] = {
     { "stream", stream_test },
     { "sensor_device", sensor_device_test },
     { "sensor_list", sensor_list_test },
+#endif
 // Tests for stable public classes:
     { "fty_nut_server", fty_nut_server_test },
     { "fty_nut_configurator_server", fty_nut_configurator_server_test },

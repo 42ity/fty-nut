@@ -62,24 +62,24 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 %description
 fty-nut nut (network ups tools) daemon wrapper/proxy.
 
-%package -n libfty_nut0
+%package -n libfty_nut1
 Group:          System/Libraries
 Summary:        nut (network ups tools) daemon wrapper/proxy shared library
 
-%description -n libfty_nut0
+%description -n libfty_nut1
 This package contains shared library for fty-nut: nut (network ups tools) daemon wrapper/proxy
 
-%post -n libfty_nut0 -p /sbin/ldconfig
-%postun -n libfty_nut0 -p /sbin/ldconfig
+%post -n libfty_nut1 -p /sbin/ldconfig
+%postun -n libfty_nut1 -p /sbin/ldconfig
 
-%files -n libfty_nut0
+%files -n libfty_nut1
 %defattr(-,root,root)
 %{_libdir}/libfty_nut.so.*
 
 %package devel
 Summary:        nut (network ups tools) daemon wrapper/proxy
 Group:          System/Libraries
-Requires:       libfty_nut0 = %{version}
+Requires:       libfty_nut1 = %{version}
 Requires:       zeromq-devel
 Requires:       czmq-devel
 Requires:       malamute-devel
@@ -124,17 +124,17 @@ find %{buildroot} -name '*.la' | xargs rm -f
 %{_bindir}/fty-nutconfig
 %{_bindir}/fty-dmf
 %config(noreplace) %{_sysconfdir}/fty-nut/fty-nut.cfg
-/usr/lib/systemd/system/fty-nut.service
+/usr/lib/systemd/system/fty-nut*.service
 %config(noreplace) %{_sysconfdir}/fty-nut/fty-nut-configurator.cfg
-/usr/lib/systemd/system/fty-nut-configurator.service
+/usr/lib/systemd/system/fty-nut-configurator*.service
 %dir %{_sysconfdir}/fty-nut
 %if 0%{?suse_version} > 1315
 %post
-%systemd_post fty-nut.service fty-nut-configurator.service
+%systemd_post fty-nut*.service fty-nut-configurator*.service
 %preun
-%systemd_preun fty-nut.service fty-nut-configurator.service
+%systemd_preun fty-nut*.service fty-nut-configurator*.service
 %postun
-%systemd_postun_with_restart fty-nut.service fty-nut-configurator.service
+%systemd_postun_with_restart fty-nut*.service fty-nut-configurator*.service
 %endif
 
 %changelog
