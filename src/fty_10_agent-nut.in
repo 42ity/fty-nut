@@ -13,7 +13,8 @@
 # Shorthands to reference the specific commands or command-line (shell
 # globs generally) which we may be interested in:
 
-Cmnd_Alias FTY_NUTCONFIG   = @prefix@/bin/fty-nut-configurator
+# The helper script to reconfigure and restart NUT services
+Cmnd_Alias FTY_NUTCONFIG   = @prefix@/bin/fty-nutconfig
 
 # Overall, what is currently allowed with different privileges?
 Cmnd_Alias FTY_AGENT_NUT_PROGS	= FTY_NUTCONFIG
