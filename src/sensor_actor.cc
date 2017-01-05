@@ -24,6 +24,15 @@
 #include "malamute.h"
 #include "logger.h"
 
+/* TODO: Change later to parametrised names and un-legacy bios=>fty :
+static const char* PATH = "/var/lib/fty/nut";
+static const char* STATE = "/var/lib/fty/nut/state_file";
+ */
+/* No consumers for PATH at this time:
+static const char* PATH = "/var/lib/bios/nut";
+ */
+static const char* STATE = "/var/lib/bios/nut/state_file";
+
 // ugly, declared in actor_commands, TODO: move it to some common
 int
 handle_asset_message (mlm_client_t *client, nut_t *data, zmsg_t **message_p);
@@ -52,9 +61,9 @@ sensor_actor (zsock_t *pipe, void *args)
     log_debug ("sa: sensor actor started");
 
     nut_t *stateData = nut_new ();
-    int rv = nut_load (stateData, "/var/lib/fty/nut/state_file");
+    int rv = nut_load (stateData, STATE);
     if (rv != 0) {
-        log_warning ("Could not load state file '%s'.", "/var/lib/fty/nut/state_file");
+        log_warning ("Could not load state file '%s'.", STATE);
     }
     sensors.updateSensorList (stateData);
     int64_t publishtime = zclock_mono();

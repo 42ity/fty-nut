@@ -36,8 +36,13 @@
 
 /* TODO: This state is shared with core::agent-autoconfig due to needed
  * upgradability from Alpha. Should be cleaned up around/after release. */
+/* TODO: Change later to parametrised names and un-legacy bios=>fty :
 static const char* PATH = "/var/lib/fty/agent-autoconfig";
 static const char* STATE = "/var/lib/fty/agent-autoconfig/state";
+ */
+
+static const char* PATH = "/var/lib/bios/agent-autoconfig";
+static const char* STATE = "/var/lib/bios/agent-autoconfig/state";
 
 static int
 load_agent_info(std::string &info)

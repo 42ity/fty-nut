@@ -28,6 +28,15 @@
 
 #include "fty_nut_classes.h"
 
+/* TODO: Change later to parametrised names and un-legacy bios=>fty :
+static const char* PATH = "/var/lib/fty/nut";
+static const char* STATE = "/var/lib/fty/nut/state_file";
+ */
+/* Consumers of these vars are currently commented away below
+static const char* PATH = "/var/lib/bios/nut";
+static const char* STATE = "/var/lib/bios/nut/state_file";
+ */
+
 static void
 s_handle_poll (NUTAgent& nut_agent, nut_t *data)
 {
@@ -135,9 +144,9 @@ fty_nut_server (zsock_t *pipe, void *args)
 
     zsock_signal (pipe, 0);
 /*
-    r = nut_load (data, "/var/lib/fty/nut/state_file");
+    r = nut_load (data, STATE);
     if (r != 0) {
-        log_warning ("Could not load state file '%s'.", "/var/lib/fty/nut/state_file");
+        log_warning ("Could not load state file '%s'.", STATE);
     }
     nut_agent.updateDeviceList (data);
 */

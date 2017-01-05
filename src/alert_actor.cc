@@ -25,6 +25,15 @@
 #include "alert_device_list.h"
 #include "logger.h"
 
+/* TODO: Change later to parametrised names and un-legacy bios=>fty :
+static const char* PATH = "/var/lib/fty/nut";
+static const char* STATE = "/var/lib/fty/nut/state_file";
+ */
+/* No consumers for PATH at this time:
+static const char* PATH = "/var/lib/bios/nut";
+ */
+static const char* STATE = "/var/lib/bios/nut/state_file";
+
 int
 alert_actor_commands (
     mlm_client_t *client,
@@ -195,9 +204,9 @@ alert_actor (zsock_t *pipe, void *args)
     log_debug ("alert actor started");
 
     nut_t *stateData = nut_new ();
-    int rv = nut_load (stateData, "/var/lib/fty/nut/state_file");
+    int rv = nut_load (stateData, STATE);
     if (rv != 0) {
-        log_warning ("Could not load state file '%s'.", "/var/lib/fty/nut/state_file");
+        log_warning ("Could not load state file '%s'.", STATE);
     }
     devices.updateDeviceList (stateData);
     while (!zsys_interrupted) {
