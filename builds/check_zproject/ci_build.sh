@@ -12,7 +12,7 @@ git clone --quiet --depth 1 -b v3.0.2 https://github.com/zeromq/czmq.git czmq
 git clone --quiet --depth 1 https://github.com/zeromq/malamute.git malamute
 git clone --quiet --depth 1 https://github.com/42ity/fty-proto fty-proto
 git clone --quiet --depth 1 https://github.com/42ity/libcidr cidr
-git clone --quiet --depth 1 https://github.com/42ity/cxxtools cxxtools
+git clone --quiet --depth 1 -b 42ity https://github.com/42ity/cxxtools cxxtools
 git clone --quiet --depth 1 https://github.com/networkupstools/nut libnutclient
 cd -
 

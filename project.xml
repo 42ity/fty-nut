@@ -5,7 +5,6 @@
     email = "EatonIPCOpenSource@eaton.com"
     reposotory = "https://github.com/42ity/fty-nut"
     license = "GPL-2.0+"
-    abi = "1:0:0"
     >
 
     <include filename = "license.xml" />
@@ -16,14 +15,18 @@
         http://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html
         for details on how/when to increment it.
         If not defined 0:0:0 will be used.
-    <abi current = "0" revision = "0" age = "0" />
     -->
+    <abi current = "1" revision = "0" age = "0" />
 
     <target name = "debian" />
     <target name = "redhat" />
     <target name = "travis" />
 
-    <use project = "czmq" release="v3.0.2" />
+    <!-- Note that if pkg-config version attrs are specified,
+        then the "test" is not used by current zproject. -->
+    <use project = "czmq" release = "v3.0.2" test = "zctx_test"
+        min_major = "3" min_minor = "0" min_patch = "2"
+        next_incompatible_version = "4" />
     <use project = "malamute" min_major = "1"/>
     <use project = "fty-proto" libname = "libfty_proto" prefix="ftyproto"
         min_major = "0" min_minor = "0" min_patch = "0"

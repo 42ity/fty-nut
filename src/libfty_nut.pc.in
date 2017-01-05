@@ -12,7 +12,7 @@ Name: libfty_nut
 Description: NUT (Network UPS Tools) daemon wrapper/proxy
 Version: @VERSION@
 
-Requires:libzmq libczmq libmlm >= 1.0.0 libfty_proto cidr cxxtools libnutclient
+Requires:libzmq libczmq >= 3.0.2 libczmq < 4 libmlm >= 1.0.0 libfty_proto cidr cxxtools libnutclient
 
 Libs: -L${libdir} -lfty_nut
 Cflags: -I${includedir} @pkg_config_defines@

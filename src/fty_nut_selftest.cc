@@ -36,6 +36,28 @@ typedef struct {
 
 static test_item_t
 all_tests [] = {
+// Tests for private classes:
+// TODO: Per https://github.com/zeromq/zproject/commit/d44194965e5ccd61fa9d9d9a636a62581fa67adb
+//       and https://github.com/zeromq/zproject/commit/e63ccee20f910f0656eda75fc69800b749549b84
+//       such tests should not be exposed and rather be called
+//       from the public class's self-test routine
+    { "logger", logger_test },
+    { "fsutils", fsutils_test },
+    { "cidr", cidr_test },
+    { "nutscan", nutscan_test },
+    { "subprocess", subprocess_test },
+    { "actor_commands", actor_commands_test },
+    { "ups_status", ups_status_test },
+    { "nut_device", nut_device_test },
+    { "nut_agent", nut_agent_test },
+    { "nut_configurator", nut_configurator_test },
+    { "alert_device", alert_device_test },
+    { "alert_device_list", alert_device_list_test },
+    { "nut", nut_test },
+    { "stream", stream_test },
+    { "sensor_device", sensor_device_test },
+    { "sensor_list", sensor_list_test },
+// Tests for stable public classes:
     { "fty_nut_server", fty_nut_server_test },
     { "fty_nut_configurator_server", fty_nut_configurator_server_test },
     { "alert_actor", alert_actor_test },
@@ -103,27 +125,27 @@ main (int argc, char **argv)
         else
         if (streq (argv [argn], "--list")
         ||  streq (argv [argn], "-l")) {
-            puts ("Available tests:");
-            puts ("    logger");
-            puts ("    fsutils");
-            puts ("    cidr");
-            puts ("    nutscan");
-            puts ("    subprocess");
-            puts ("    actor_commands");
-            puts ("    ups_status");
-            puts ("    nut_device");
-            puts ("    nut_agent");
-            puts ("    nut_configurator");
-            puts ("    alert_device");
-            puts ("    alert_device_list");
-            puts ("    nut");
-            puts ("    stream");
-            puts ("    sensor_device");
-            puts ("    sensor_list");
-            puts ("    fty_nut_server");
-            puts ("    fty_nut_configurator_server");
-            puts ("    alert_actor");
-            puts ("    sensor_actor");
+            puts ("Available tests (note that only stable classes are exposed to test):");
+            puts ("    logger\t- stable private API; selftest is implemented");
+            puts ("    fsutils\t- stable private API; selftest is implemented");
+            puts ("    cidr\t- stable private API; selftest is implemented");
+            puts ("    nutscan\t- stable private API; selftest is implemented");
+            puts ("    subprocess\t- stable private API; selftest is implemented");
+            puts ("    actor_commands\t- stable private API; selftest is implemented");
+            puts ("    ups_status\t- stable private API; selftest is implemented");
+            puts ("    nut_device\t- stable private API; selftest is implemented");
+            puts ("    nut_agent\t- stable private API; selftest is implemented");
+            puts ("    nut_configurator\t- stable private API; selftest is implemented");
+            puts ("    alert_device\t- stable private API; selftest is implemented");
+            puts ("    alert_device_list\t- stable private API; selftest is implemented");
+            puts ("    nut\t- stable private API; selftest is implemented");
+            puts ("    stream\t- stable private API; selftest is implemented");
+            puts ("    sensor_device\t- stable private API; selftest is implemented");
+            puts ("    sensor_list\t- stable private API; selftest is implemented");
+            puts ("    fty_nut_server\t- stable public  API; selftest is implemented");
+            puts ("    fty_nut_configurator_server\t- stable public  API; selftest is implemented");
+            puts ("    alert_actor\t- stable public  API; selftest is implemented");
+            puts ("    sensor_actor\t- stable public  API; selftest is implemented");
             return 0;
         }
         else
