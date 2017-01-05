@@ -4,7 +4,7 @@
     Runs all selftests.
 
     -------------------------------------------------------------------------
-    Copyright (C) 2014 - 2015 Eaton                                        
+    Copyright (C) 2014 - 2017 Eaton                                        
                                                                            
     This program is free software; you can redistribute it and/or modify   
     it under the terms of the GNU General Public License as published by   
@@ -36,22 +36,6 @@ typedef struct {
 
 static test_item_t
 all_tests [] = {
-    { "logger", logger_test },
-    { "fsutils", fsutils_test },
-    { "cidr", cidr_test },
-    { "nutscan", nutscan_test },
-    { "subprocess", subprocess_test },
-    { "actor_commands", actor_commands_test },
-    { "ups_status", ups_status_test },
-    { "nut_device", nut_device_test },
-    { "nut_agent", nut_agent_test },
-    { "nut_configurator", nut_configurator_test },
-    { "alert_device", alert_device_test },
-    { "alert_device_list", alert_device_list_test },
-    { "nut", nut_test },
-    { "stream", stream_test },
-    { "sensor_device", sensor_device_test },
-    { "sensor_list", sensor_list_test },
     { "fty_nut_server", fty_nut_server_test },
     { "fty_nut_configurator_server", fty_nut_configurator_server_test },
     { "alert_actor", alert_actor_test },

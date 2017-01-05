@@ -1,3 +1,4 @@
 usr/include/*
 usr/lib/*/libfty_nut.so
 usr/lib/*/pkgconfig/libfty_nut.pc
+usr/share/man/man3/*

@@ -1,7 +1,7 @@
 /*  =========================================================================
     fty-nut - generated layer of public API
 
-    Copyright (C) 2014 - 2015 Eaton                                        
+    Copyright (C) 2014 - 2017 Eaton                                        
                                                                            
     This program is free software; you can redistribute it and/or modify   
     it under the terms of the GNU General Public License as published by   
@@ -30,6 +30,7 @@
 //  Set up environment for the application
 
 //  External dependencies
+#include <czmq.h>
 #include <malamute.h>
 #include <ftyproto.h>
 #include <libcidr.h>
@@ -49,13 +50,25 @@
 #if defined (__WINDOWS__)
 #   if defined FTY_NUT_STATIC
 #       define FTY_NUT_EXPORT
+#   elif defined FTY_NUT_INTERNAL_BUILD
+#       if defined DLL_EXPORT
+#           define FTY_NUT_EXPORT __declspec(dllexport)
+#       else
+#           define FTY_NUT_EXPORT
+#       endif
 #   elif defined FTY_NUT_EXPORTS
 #       define FTY_NUT_EXPORT __declspec(dllexport)
 #   else
 #       define FTY_NUT_EXPORT __declspec(dllimport)
 #   endif
+#   define FTY_NUT_PRIVATE
 #else
 #   define FTY_NUT_EXPORT
+#   if (defined __GNUC__ && __GNUC__ >= 4) || defined __INTEL_COMPILER
+#       define FTY_NUT_PRIVATE __attribute__ ((visibility ("hidden")))
+#   else
+#       define FTY_NUT_PRIVATE
+#   endif
 #endif
 
 //  Opaque class structures to allow forward references

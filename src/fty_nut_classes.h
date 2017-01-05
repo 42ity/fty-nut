@@ -1,7 +1,7 @@
 /*  =========================================================================
     fty_nut_classes - private header file
 
-    Copyright (C) 2014 - 2015 Eaton                                        
+    Copyright (C) 2014 - 2017 Eaton                                        
                                                                            
     This program is free software; you can redistribute it and/or modify   
     it under the terms of the GNU General Public License as published by   
@@ -55,82 +55,82 @@
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
-FTY_NUT_EXPORT void
+FTY_NUT_PRIVATE void
     logger_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
-FTY_NUT_EXPORT void
+FTY_NUT_PRIVATE void
     fsutils_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
-FTY_NUT_EXPORT void
+FTY_NUT_PRIVATE void
     cidr_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
-FTY_NUT_EXPORT void
+FTY_NUT_PRIVATE void
     nutscan_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
-FTY_NUT_EXPORT void
+FTY_NUT_PRIVATE void
     subprocess_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
-FTY_NUT_EXPORT void
+FTY_NUT_PRIVATE void
     actor_commands_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
-FTY_NUT_EXPORT void
+FTY_NUT_PRIVATE void
     ups_status_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
-FTY_NUT_EXPORT void
+FTY_NUT_PRIVATE void
     nut_device_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
-FTY_NUT_EXPORT void
+FTY_NUT_PRIVATE void
     nut_agent_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
-FTY_NUT_EXPORT void
+FTY_NUT_PRIVATE void
     nut_configurator_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
-FTY_NUT_EXPORT void
+FTY_NUT_PRIVATE void
     alert_device_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
-FTY_NUT_EXPORT void
+FTY_NUT_PRIVATE void
     alert_device_list_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
-FTY_NUT_EXPORT void
+FTY_NUT_PRIVATE void
     nut_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
-FTY_NUT_EXPORT void
+FTY_NUT_PRIVATE void
     stream_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
-FTY_NUT_EXPORT void
+FTY_NUT_PRIVATE void
     sensor_device_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
-FTY_NUT_EXPORT void
+FTY_NUT_PRIVATE void
     sensor_list_test (bool verbose);
 
 #endif // FTY_NUT_BUILD_DRAFT_API
