@@ -90,14 +90,14 @@ sub generate_manpage {
             $source = "$rootsrcdir/src/$name.cc";
             $header = "$rootsrcdir/src/$name.cc";
             $cat = 1;
-            $cat_text = "Program ";
+            $cat_text = "Program for ";
             last;
         }
         elsif (/MAN3.*$name\.3/) {
             $source = "$rootsrcdir/src/$name.cc";
             $header = "$rootsrcdir/include/$name.h";
             $cat = 3;
-            $cat_text = "Class ";
+            $cat_text = "Class for ";
             last;
         }
     }
@@ -117,7 +117,7 @@ sub generate_manpage {
     $title = $1 if (/    \w+ - (.*)/);
     close (SOURCE);
 
-    printf "  MKMAN[txt]\t$source "
+    printf "  MKMAN[txt]\t$source ";
     if ($source ne $header) {
         printf "+ $header ";
     }
@@ -134,7 +134,7 @@ $underline
 
 NAME
 ----
-$cat_text$outp_basename - $title
+$outp_basename - $cat_text$title
 
 SYNOPSIS
 --------
@@ -170,7 +170,7 @@ END
     close OUTPUT;
 
     #   Generate a simple text documentation for README.txt
-    printf "  MKMAN[doc]\t$source "
+    printf "  MKMAN[doc]\t$source ";
     if ($source ne $header) {
         printf "+ $header ";
     }

@@ -4,7 +4,7 @@ Name(7)
 
 NAME
 ----
-Overview of fty-nut - NUT (Network UPS Tools) daemon wrapper/proxy
+fty-nut - Overview of NUT (Network UPS Tools) daemon wrapper/proxy
 
 
 SYNOPSIS
