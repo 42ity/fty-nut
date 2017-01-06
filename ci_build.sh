@@ -298,7 +298,7 @@ if [ "$BUILD_TYPE" == "default" ] || [ "$BUILD_TYPE" == "default-Werror" ] || [ 
     fi
 
     # Start of recipe for dependency: cidr
-    if ! ((command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list cidr-dev >/dev/null 2>&1) || \
+    if ! ((command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libcidr0-dev >/dev/null 2>&1) || \
            (command -v brew >/dev/null 2>&1 && brew ls --versions cidr >/dev/null 2>&1)); then
         echo ""
         BASE_PWD=${PWD}
