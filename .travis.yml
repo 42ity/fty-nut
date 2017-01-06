@@ -49,12 +49,13 @@ addons:
     - asciidoc
     - xmlto
     - libzmq3-dev
-    - libczmq-dev
-    - libmlm-dev
-    - libfty_proto-dev
-    - cidr-dev
-    - cxxtools-dev
-    - libnutclient-dev
+# Not packaged yet, or wrong names for Travis repos
+#    - libczmq-dev
+#    - libmlm-dev
+#    - libfty_proto-dev
+#    - cidr-dev
+#    - cxxtools-dev
+#    - libnutclient-dev
 
 before_install:
 - if [ $TRAVIS_OS_NAME == "osx" ] ; then brew update; brew install binutils valgrind ; fi
