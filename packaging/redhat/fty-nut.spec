@@ -98,6 +98,7 @@ This package contains development files for fty-nut: nut (network ups tools) dae
 %{_libdir}/libfty_nut.so
 %{_libdir}/pkgconfig/libfty_nut.pc
 %{_mandir}/man3/*
+%{_mandir}/man7/*
 
 %prep
 %setup -q
