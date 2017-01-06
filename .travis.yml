@@ -48,8 +48,8 @@ addons:
     packages:
     - asciidoc
     - xmlto
-    - libzmq3-dev
-# Not packaged yet, or wrong names for Travis repos
+# Not packaged yet, or wrong names for Travis repos, or wrong versions
+#    - libzmq3-dev
 #    - libczmq-dev
 #    - libmlm-dev
 #    - libfty_proto-dev
