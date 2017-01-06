@@ -124,17 +124,17 @@ find %{buildroot} -name '*.la' | xargs rm -f
 %{_bindir}/fty-nutconfig
 %{_bindir}/fty-dmf
 %config(noreplace) %{_sysconfdir}/fty-nut/fty-nut.cfg
-/usr/lib/systemd/system/fty-nut*.service
+/usr/lib/systemd/system/fty-nut.service
 %config(noreplace) %{_sysconfdir}/fty-nut/fty-nut-configurator.cfg
-/usr/lib/systemd/system/fty-nut-configurator*.service
+/usr/lib/systemd/system/fty-nut-configurator.service
 %dir %{_sysconfdir}/fty-nut
 %if 0%{?suse_version} > 1315
 %post
-%systemd_post fty-nut*.service fty-nut-configurator*.service
+%systemd_post fty-nut.service fty-nut-configurator.service
 %preun
-%systemd_preun fty-nut*.service fty-nut-configurator*.service
+%systemd_preun fty-nut.service fty-nut-configurator.service
 %postun
-%systemd_postun_with_restart fty-nut*.service fty-nut-configurator*.service
+%systemd_postun_with_restart fty-nut.service fty-nut-configurator.service
 %endif
 
 %changelog

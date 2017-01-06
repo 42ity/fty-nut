@@ -24,16 +24,16 @@ Maintainer:     fty-nut Developers <eatonipcopensource@eaton.com>
 Standards-Version: 3.9.7
 Build-Depends: debhelper (>= 9),
     pkg-config,
+    dh-autoreconf,
     libzmq3-dev,
     libczmq-dev,
     libmlm-dev,
     libfty-proto-dev,
-    libcidr-dev,
+    libcidr0-dev,
     libcxxtools-dev,
     libnutclient-dev,
     systemd,
     dh-systemd,
-    dh-autoreconf
 Build-Depends-Indep: asciidoc,
                      xmlto
 
@@ -51,7 +51,7 @@ Depends:
     libczmq-dev,
     libmlm-dev,
     libfty-proto-dev,
-    libcidr-dev,
+    libcidr0-dev,
     libcxxtools-dev,
     libnutclient-dev,
     libfty-nut1 (= ${binary:Version})
