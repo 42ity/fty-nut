@@ -12,13 +12,13 @@ if [ "$BUILD_TYPE" == "default" ]; then
     # Tell travis to deploy all files in dist
     mkdir dist
     export FTY_NUT_DEPLOYMENT=dist/*
-    # Move archives to dist
+    # Move archives to dist, zip is optional
     mv *.tar.gz dist
-    mv *.zip dist
+    mv *.zip dist || true
     # Generate hash sums
     cd dist
-    md5sum *.zip *.tar.gz > MD5SUMS
-    sha1sum *.zip *.tar.gz > SHA1SUMS
+    md5sum *.zip *.tar.gz > MD5SUMS || true
+    sha1sum *.zip *.tar.gz > SHA1SUMS || true
     cd -
 elif [ "$BUILD_TYPE" == "bindings" ] && [ "$BINDING" == "jni" ]; then
     ( cd bindings/jni && TERM=dumb PKG_CONFIG_PATH=/tmp/lib/pkgconfig ./gradlew clean bintrayUpload )

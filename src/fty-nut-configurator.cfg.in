@@ -1,4 +1,6 @@
 #   fty-nut-configurator configuration
+# This is a skeleton created by zproject.
+# You can add hand-written code here.
 
 server
     timeout = 10000     #   Client connection timeout, msec

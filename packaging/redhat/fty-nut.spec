@@ -1,7 +1,7 @@
 #
 #    fty-nut - NUT (Network UPS Tools) daemon wrapper/proxy
 #
-#    Copyright (C) 2014 - 2015 Eaton                                        
+#    Copyright (C) 2014 - 2017 Eaton                                        
 #                                                                           
 #    This program is free software; you can redistribute it and/or modify   
 #    it under the terms of the GNU General Public License as published by   
@@ -18,6 +18,16 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.            
 #
 
+# To build with draft APIs, use "--with drafts" in rpmbuild for local builds or add
+#   Macros:
+#   %_with_drafts 1
+# at the BOTTOM of the OBS prjconf
+%bcond_with drafts
+%if %{with drafts}
+%define DRAFTS yes
+%else
+%define DRAFTS no
+%endif
 Name:           fty-nut
 Version:        1.0.0
 Release:        1
@@ -26,11 +36,19 @@ License:        GPL-2.0+
 URL:            http://example.com/
 Source0:        %{name}-%{version}.tar.gz
 Group:          System/Libraries
+# Note: ghostscript is required by graphviz which is required by
+#       asciidoc. On Fedora 24 the ghostscript dependencies cannot
+#       be resolved automatically. Thus add working dependency here!
+BuildRequires:  ghostscript
+BuildRequires:  asciidoc
 BuildRequires:  automake
 BuildRequires:  autoconf
 BuildRequires:  libtool
-BuildRequires:  pkg-config
+BuildRequires:  pkgconfig
 BuildRequires:  systemd-devel
+BuildRequires:  systemd
+%{?systemd_requires}
+BuildRequires:  xmlto
 BuildRequires:  gcc-c++
 BuildRequires:  zeromq-devel
 BuildRequires:  czmq-devel
@@ -46,18 +64,16 @@ fty-nut nut (network ups tools) daemon wrapper/proxy.
 
 %package -n libfty_nut1
 Group:          System/Libraries
-Summary:        nut (network ups tools) daemon wrapper/proxy
+Summary:        nut (network ups tools) daemon wrapper/proxy shared library
 
 %description -n libfty_nut1
-fty-nut nut (network ups tools) daemon wrapper/proxy.
-This package contains shared library.
+This package contains shared library for fty-nut: nut (network ups tools) daemon wrapper/proxy
 
 %post -n libfty_nut1 -p /sbin/ldconfig
 %postun -n libfty_nut1 -p /sbin/ldconfig
 
 %files -n libfty_nut1
 %defattr(-,root,root)
-%doc COPYING
 %{_libdir}/libfty_nut.so.*
 
 %package devel
@@ -73,21 +89,22 @@ Requires:       cxxtools-devel
 Requires:       libnutclient-devel
 
 %description devel
-fty-nut nut (network ups tools) daemon wrapper/proxy.
-This package contains development files.
+nut (network ups tools) daemon wrapper/proxy development tools
+This package contains development files for fty-nut: nut (network ups tools) daemon wrapper/proxy
 
 %files devel
 %defattr(-,root,root)
 %{_includedir}/*
 %{_libdir}/libfty_nut.so
 %{_libdir}/pkgconfig/libfty_nut.pc
+%{_mandir}/man3/*
 
 %prep
 %setup -q
 
 %build
 sh autogen.sh
-%{configure} --with-systemd-units
+%{configure} --enable-drafts=%{DRAFTS} --with-systemd-units
 make %{_smp_mflags}
 
 %install
@@ -101,11 +118,23 @@ find %{buildroot} -name '*.la' | xargs rm -f
 %defattr(-,root,root)
 %doc README.md
 %{_bindir}/fty-nut
+%{_mandir}/man1/fty-nut*
 %{_bindir}/fty-nut-configurator
+%{_mandir}/man1/fty-nut-configurator*
 %{_bindir}/fty-nutconfig
 %{_bindir}/fty-dmf
-%{_prefix}/lib/systemd/system/fty-nut*.service
-%{_prefix}/lib/systemd/system/fty-nut-configurator*.service
-
+%config(noreplace) %{_sysconfdir}/fty-nut/fty-nut.cfg
+/usr/lib/systemd/system/fty-nut*.service
+%config(noreplace) %{_sysconfdir}/fty-nut/fty-nut-configurator.cfg
+/usr/lib/systemd/system/fty-nut-configurator*.service
+%dir %{_sysconfdir}/fty-nut
+%if 0%{?suse_version} > 1315
+%post
+%systemd_post fty-nut*.service fty-nut-configurator*.service
+%preun
+%systemd_preun fty-nut*.service fty-nut-configurator*.service
+%postun
+%systemd_postun_with_restart fty-nut*.service fty-nut-configurator*.service
+%endif
 
 %changelog

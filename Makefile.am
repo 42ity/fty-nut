@@ -3,6 +3,9 @@
 #  Read the zproject/README.md for information about making permanent changes. #
 ################################################################################
 
+DISTCHECK_CONFIGURE_FLAGS = \
+  --with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir)
+
 ACLOCAL_AMFLAGS = -I config
 
 AM_CFLAGS = \
@@ -33,8 +36,21 @@ noinst_PROGRAMS =
 check_PROGRAMS =
 noinst_LTLIBRARIES =
 TESTS =
+EXTRA_DIST =
 
-EXTRA_DIST = \
+if ENABLE_DIST_CMAKEFILES
+EXTRA_DIST += \
+    Findlibzmq.cmake \
+    Findczmq.cmake \
+    Findmalamute.cmake \
+    Findfty_proto.cmake \
+    Findcidr.cmake \
+    Findcxxtools.cmake \
+    Findlibnutclient.cmake \
+    CMakeLists.txt
+endif
+
+EXTRA_DIST += \
     src/logger.h \
     src/fsutils.h \
     src/cidr.h \
@@ -47,12 +63,13 @@ EXTRA_DIST = \
     src/nut_configurator.h \
     src/alert_device.h \
     src/alert_device_list.h \
-    src/alert_device_alert.h \
     src/nut.h \
     src/stream.h \
     src/sensor_device.h \
     src/sensor_list.h \
+    LICENSE \
     README.md \
+    CONTRIBUTING.md \
     src/fty_nut_classes.h
 
 include $(srcdir)/src/Makemodule.am

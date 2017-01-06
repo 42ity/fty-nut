@@ -31,7 +31,7 @@ AC_SUBST(PACKAGE_VERSION)
 #
 # Libtool -version-info (ABI version)
 #
-# Currently 2.0.1 ("stable"). Don't change this unless you
+# Currently 1:0:0 ("stable"). Don't change this unless you
 # know exactly what you're doing and have read and understand
 # http://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html
 #
@@ -70,6 +70,9 @@ else
     AM_CONDITIONAL(WITH_GCOV, false)
 fi
 
+# Will be used to add flags to pkg-config useful when apps want to statically link
+PKGCFG_LIBS_PRIVATE=""
+
 PREVIOUS_CFLAGS="${CFLAGS}"
 PREVIOUS_LIBS="${LIBS}"
 
@@ -78,6 +81,7 @@ was_libzmq_check_lib_detected=no
 
 PKG_CHECK_MODULES([libzmq], [libzmq >= 0.0.0],
     [
+        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $libzmq_LIBS"
     ],
     [
         AC_ARG_WITH([libzmq],
@@ -110,6 +114,7 @@ PKG_CHECK_MODULES([libzmq], [libzmq >= 0.0.0],
                 AC_SUBST([libzmq_CFLAGS],[${libzmq_synthetic_cflags}])
                 AC_SUBST([libzmq_LIBS],[${libzmq_synthetic_libs}])
                 was_libzmq_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lzmq"
             ],
             [AC_MSG_ERROR([cannot link with -lzmq, install libzmq])])
     ])
@@ -121,42 +126,12 @@ fi
 
 was_czmq_check_lib_detected=no
 
-PKG_CHECK_MODULES([czmq], [libczmq >= 0.0.0],
+PKG_CHECK_MODULES([czmq], [libczmq >= 3.0.2 libczmq < 4],
     [
+        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $czmq_LIBS"
     ],
     [
-        AC_ARG_WITH([libczmq],
-            [
-                AS_HELP_STRING([--with-libczmq],
-                [Specify libczmq prefix])
-            ],
-            [search_libczmq="yes"],
-            [])
-
-        czmq_synthetic_cflags=""
-        czmq_synthetic_libs="-lczmq"
-
-        if test "x$search_libczmq" = "xyes"; then
-            if test -r "${with_libczmq}/include/czmq.h"; then
-                czmq_synthetic_cflags="-I${with_libczmq}/include"
-                czmq_synthetic_libs="-L${with_libczmq}/lib -lczmq"
-            else
-                AC_MSG_ERROR([${with_libczmq}/include/czmq.h not found. Please check libczmq prefix])
-            fi
-        fi
-
-
-        AC_CHECK_LIB([czmq], [zctx_test],
-            [
-                CFLAGS="${czmq_synthetic_cflags} ${CFLAGS}"
-                LDFLAGS="${czmq_synthetic_libs} ${LDFLAGS}"
-                LIBS="${czmq_synthetic_libs} ${LIBS}"
-
-                AC_SUBST([czmq_CFLAGS],[${czmq_synthetic_cflags}])
-                AC_SUBST([czmq_LIBS],[${czmq_synthetic_libs}])
-                was_czmq_check_lib_detected=yes
-            ],
-            [AC_MSG_ERROR([cannot link with -lczmq, install libczmq])])
+        AC_MSG_ERROR([Cannot find libczmq >= 3.0.2 and < 4])
     ])
 
 if test "x$was_czmq_check_lib_detected" = "xno"; then
@@ -168,6 +143,7 @@ was_malamute_check_lib_detected=no
 
 PKG_CHECK_MODULES([malamute], [libmlm >= 1.0.0],
     [
+        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $malamute_LIBS"
     ],
     [
         AC_MSG_ERROR([Cannot find libmlm 1.0.0 or higher])
@@ -182,6 +158,7 @@ was_fty_proto_check_lib_detected=no
 
 PKG_CHECK_MODULES([fty_proto], [libfty_proto >= 0.0.0],
     [
+        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $fty_proto_LIBS"
     ],
     [
         AC_ARG_WITH([libfty_proto],
@@ -214,6 +191,7 @@ PKG_CHECK_MODULES([fty_proto], [libfty_proto >= 0.0.0],
                 AC_SUBST([fty_proto_CFLAGS],[${fty_proto_synthetic_cflags}])
                 AC_SUBST([fty_proto_LIBS],[${fty_proto_synthetic_libs}])
                 was_fty_proto_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lftyproto"
             ],
             [AC_MSG_ERROR([cannot link with -lftyproto, install libfty_proto])])
     ])
@@ -227,6 +205,7 @@ was_cidr_check_lib_detected=no
 
 PKG_CHECK_MODULES([cidr], [cidr >= 0.0.0],
     [
+        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $cidr_LIBS"
     ],
     [
         AC_ARG_WITH([cidr],
@@ -259,6 +238,7 @@ PKG_CHECK_MODULES([cidr], [cidr >= 0.0.0],
                 AC_SUBST([cidr_CFLAGS],[${cidr_synthetic_cflags}])
                 AC_SUBST([cidr_LIBS],[${cidr_synthetic_libs}])
                 was_cidr_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lcidr"
             ],
             [AC_MSG_ERROR([cannot link with -lcidr, install cidr])])
     ])
@@ -272,6 +252,7 @@ was_cxxtools_check_lib_detected=no
 
 PKG_CHECK_MODULES([cxxtools], [cxxtools >= 0.0.0],
     [
+        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $cxxtools_LIBS"
     ],
     [
         AC_ARG_WITH([cxxtools],
@@ -304,6 +285,7 @@ PKG_CHECK_MODULES([cxxtools], [cxxtools >= 0.0.0],
                 AC_SUBST([cxxtools_CFLAGS],[${cxxtools_synthetic_cflags}])
                 AC_SUBST([cxxtools_LIBS],[${cxxtools_synthetic_libs}])
                 was_cxxtools_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lcxxtools"
             ],
             [AC_MSG_ERROR([cannot link with -lcxxtools, install cxxtools])])
     ])
@@ -317,6 +299,7 @@ was_libnutclient_check_lib_detected=no
 
 PKG_CHECK_MODULES([libnutclient], [libnutclient >= 0.0.0],
     [
+        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $libnutclient_LIBS"
     ],
     [
         AC_ARG_WITH([libnutclient],
@@ -340,7 +323,7 @@ PKG_CHECK_MODULES([libnutclient], [libnutclient >= 0.0.0],
         fi
 
 
-        AC_CHECK_LIB([libnutclient], [nut::TcpClient::TcpClient],
+        AC_CHECK_LIB([nutclient], [nut::TcpClient::TcpClient],
             [
                 CFLAGS="${libnutclient_synthetic_cflags} ${CFLAGS}"
                 LDFLAGS="${libnutclient_synthetic_libs} ${LDFLAGS}"
@@ -349,6 +332,7 @@ PKG_CHECK_MODULES([libnutclient], [libnutclient >= 0.0.0],
                 AC_SUBST([libnutclient_CFLAGS],[${libnutclient_synthetic_cflags}])
                 AC_SUBST([libnutclient_LIBS],[${libnutclient_synthetic_libs}])
                 was_libnutclient_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lnutclient"
             ],
             [AC_MSG_ERROR([cannot link with -lnutclient, install libnutclient])])
     ])
@@ -360,6 +344,8 @@ fi
 
 CFLAGS="${PREVIOUS_CFLAGS}"
 LIBS="${PREVIOUS_LIBS}"
+
+AC_SUBST(pkg_config_libs_private, $PKGCFG_LIBS_PRIVATE)
 
 # Platform specific checks
 fty_nut_on_mingw32="no"
@@ -392,7 +378,7 @@ else
     if test "x$fty_nut_have_asciidoc" = "xno" -o "x$fty_nut_have_xmlto" = "xno"; then
         fty_nut_build_doc="no"
         # Tarballs built with 'make dist' ship with prebuilt documentation.
-        if ! test -f doc/fty_nut.7; then
+        if ! test -f doc/fty-nut.7; then
             fty_nut_install_man="no"
             AC_MSG_WARN([You are building an unreleased version of FTY-NUT and asciidoc or xmlto are not installed.])
             AC_MSG_WARN([Documentation will not be built and manual pages will not be installed.])
@@ -405,7 +391,7 @@ AC_MSG_CHECKING([whether to install manpages])
 AC_MSG_RESULT([$fty_nut_install_man])
 
 # Set some default features required by libfty_nut code.
-CPPFLAGS="-D_REENTRANT -D_THREAD_SAFE $CPPFLAGS"
+CPPFLAGS="-DFTY_NUT_INTERNAL_BUILD -D_REENTRANT -D_THREAD_SAFE $CPPFLAGS"
 
 # OS-specific tests
 case "${host_os}" in
@@ -425,6 +411,8 @@ case "${host_os}" in
     *solaris*)
         # Define on Solaris to enable all library features
         CPPFLAGS="-D_PTHREADS $CPPFLAGS"
+        # Allow definitions of common OS-provided functions that are not in old standards
+        CPPFLAGS="-D__EXTENSIONS__ $CPPFLAGS"
         AC_DEFINE(FTY_NUT_HAVE_SOLARIS, 1, [Have Solaris OS])
         CFLAGS="${CFLAGS} -lsocket -lssp"
         ;;
@@ -460,6 +448,16 @@ case "${host_os}" in
         AC_DEFINE(FTY_NUT_HAVE_HPUX, 1, [Have HPUX OS])
         ;;
     *mingw32*)
+        AC_DEFINE(FTY_NUT_HAVE_WINDOWS, 1, [Have Windows OS])
+        AC_DEFINE(FTY_NUT_HAVE_MINGW32, 1, [Have MinGW32])
+        AC_CHECK_HEADERS(windows.h)
+        fty_nut_on_mingw32="yes"
+        fty_nut_install_man="no"
+        ;;
+    *mingw64*)
+        # Define on MINGW64 to enable all libeary features
+        # Disable format error due to incomplete ANSI C
+        CPPFLAGS="-Wno-error=format -D_XOPEN_SOURCE $CPPFLAGS"
         AC_DEFINE(FTY_NUT_HAVE_WINDOWS, 1, [Have Windows OS])
         AC_DEFINE(FTY_NUT_HAVE_MINGW32, 1, [Have MinGW32])
         AC_CHECK_HEADERS(windows.h)
@@ -523,6 +521,19 @@ AM_CONDITIONAL(ON_GNU, test "x$fty_nut_on_gnu" = "xyes")
 AM_CONDITIONAL(INSTALL_MAN, test "x$fty_nut_install_man" = "xyes")
 AM_CONDITIONAL(BUILD_DOC, test "x$fty_nut_build_doc" = "xyes")
 
+AC_ARG_ENABLE([dist_cmakefiles],
+    AS_HELP_STRING([--enable-dist_cmakefiles],
+        [Distribute CMakeLists.txt and related files [default depends: on if present and not cross compiling]]),
+    [enable_dist_cmakefiles=$enableval],
+    [AC_MSG_CHECKING([for presence of CMake recipes])
+if test "x$cross_compiling" = "xyes"; then
+     enable_dist_cmakefiles=no
+else
+     AC_CHECK_FILE($srcdir/CMakeLists.txt, [enable_dist_cmakefiles=yes], [enable_dist_cmakefiles=no])
+fi
+     AC_MSG_RESULT([$enable_dist_cmakefiles])])
+AM_CONDITIONAL(ENABLE_DIST_CMAKEFILES, test "x$enable_dist_cmakefiles" = "xyes")
+
 # Check for fty-nut intent
 AC_ARG_ENABLE([fty-nut],
     AS_HELP_STRING([--enable-fty-nut],
@@ -571,7 +582,22 @@ AC_ARG_WITH([systemd-units],
     [with_systemd_units=$withval],
     [with_systemd_units=no])
 
-AM_CONDITIONAL([WITH_SYSTEMD_UNITS], [test x$with_systemd_units != xno])
+PKG_PROG_PKG_CONFIG
+AC_ARG_WITH([systemdsystemunitdir],
+     [AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files])],,
+     [with_systemdsystemunitdir=auto])
+AS_IF([test "x$with_systemdsystemunitdir" = "xyes" -o "x$with_systemdsystemunitdir" = "xauto"], [
+     def_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
+
+     AS_IF([test "x$def_systemdsystemunitdir" = "x"],
+   [AS_IF([test "x$with_systemdsystemunitdir" = "xyes"],
+    [AC_MSG_ERROR([systemd support requested but pkg-config unable to query systemd package])])
+    with_systemdsystemunitdir=no],
+   [with_systemdsystemunitdir="$def_systemdsystemunitdir"])])
+AS_IF([test "x$with_systemdsystemunitdir" != "xno"],
+      [AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])])
+
+AM_CONDITIONAL([WITH_SYSTEMD_UNITS], [test "x$with_systemdsystemunitdir" != "xno" -a x$with_systemd_units != xno])
 
 AM_COND_IF([WITH_SYSTEMD_UNITS],
     [AC_DEFINE(WITH_SYSTEMD_UNITS, 1, [systemd units are going to be installed])
@@ -604,13 +630,44 @@ else
     AC_SUBST(pkg_config_defines, "")
 fi
 
+AC_ARG_ENABLE([Werror],
+    AS_HELP_STRING([--enable-Werror],
+        [Add -Wall -Werror to GCC/GXX arguments [default=no; default=auto if nothing specified]]),
+    [AS_IF([test -n "$enableval"], [enable_Werror=$enableval], [enable_Werror=auto])],
+    [enable_Werror=no])
+
+AS_IF([test "x$enable_Werror" = "xyes" || test "x$enable_Werror" = "xauto"],
+    [AS_IF([test -n "$CC"],[AS_IF([$CC --version 2>&1 | grep 'Free Software Foundation' > /dev/null],
+        [AC_MSG_NOTICE([Enabling pedantic errors for GNU C])
+         CFLAGS="$CFLAGS -Wall -Werror"],
+        [AC_MSG_NOTICE([Not enabling pedantic errors: compiler not supported by this recipe (not GNU C)])
+         AS_IF([test "x$enable_Werror" = "xyes"], [AC_MSG_ERROR([--enable-Werror=yes was requested and can not be satisfied for C: $CC])])
+        ])])
+     AS_IF([test -n "$CXX"],[AS_IF([$CXX --version 2>&1 | grep 'Free Software Foundation' > /dev/null],
+        [AC_MSG_NOTICE([Enabling pedantic errors for GNU C++])
+         CXXFLAGS="$CXXFLAGS -Wall -Werror"],
+        [AC_MSG_NOTICE([Not enabling pedantic errors: compiler not supported by this recipe (not GNU C++)])
+         AS_IF([test "x$enable_Werror" = "xyes"], [AC_MSG_ERROR([--enable-Werror=yes was requested and can not be satisfied for C++: $CXX])])
+        ])])
+     AS_IF([test -n "$CPP"],[AS_IF([$CPP --version 2>&1 | grep 'Free Software Foundation' > /dev/null],
+        [AC_MSG_NOTICE([Enabling pedantic errors for GNU CPP preprocessor])
+         CPPFLAGS="$CPPFLAGS -Wall -Werror"],
+        [AC_MSG_NOTICE([Not enabling pedantic errors: preprocessor not supported by this recipe (not GNU CPP)])
+         AS_IF([test "x$enable_Werror" = "xyes"], [AC_MSG_ERROR([--enable-Werror=yes was requested and can not be satisfied for CPP: $CPP])])
+        ])])
+])
+
 # Specify output files
 AC_CONFIG_FILES([Makefile
                  doc/Makefile
                  src/libfty_nut.pc
-                 src/mapping.conf
                  src/fty-nut.cfg
                  src/fty-nut-configurator.cfg
+                 ])
+
+# Added manually:
+AC_CONFIG_FILES([
+                 src/mapping.conf
                  src/fty-nut.conf
                  src/fty_10_agent-nut
                  ])
@@ -624,6 +681,82 @@ AM_COND_IF([WITH_SYSTEMD_UNITS],
 
 
 AC_OUTPUT
+
+# Print configure summary and list make options
+AC_DEFUN([AX_SUMMARIZE_ENV],
+[
+BUILD_USER=${USER}
+BUILD_ARCH=${host}
+BUILD_HOST=${ac_hostname}
+BUILD_DATE=$(date +'%F %H:%M')
+
+AC_DEFINE_UNQUOTED([BUILD_USER],     "${BUILD_USER}",     [The fine user who built the package])
+AC_DEFINE_UNQUOTED([BUILD_ARCH],     "${BUILD_ARCH}",     [Architecture of the build host])
+AC_DEFINE_UNQUOTED([BUILD_HOST],     "${BUILD_HOST}",     [Build host name])
+AC_DEFINE_UNQUOTED([BUILD_DATE],     "${BUILD_DATE}",     [Build date])
+
+AC_SUBST(BUILD_USER)
+AC_SUBST(BUILD_ARCH)
+AC_SUBST(BUILD_HOST)
+AC_SUBST(BUILD_DATE)
+AC_SUBST(BUILD_VERSION)
+])
+
+AC_DEFUN([AX_SUMMARIZE_CONFIG],
+[
+echo
+echo '##########################################################################'
+echo '#                                SUMMARY                                 #'
+echo '##########################################################################'
+echo
+echo Package version............... : $PACKAGE-$VERSION
+echo
+echo C compiler.................... : $CC
+echo C compiler flags.............. : $CFLAGS
+echo C++ compiler.................. : $CXX
+echo C++ compiler flags............ : $CXXFLAGS
+echo Configure date................ : $BUILD_DATE
+echo Build architecture............ : $BUILD_ARCH
+echo Build docs.................... : $fty_nut_build_doc
+echo Build host.................... : $BUILD_HOST
+echo Build user.................... : $USER
+echo Draft API..................... : $enable_drafts
+echo Install dir................... : $prefix
+echo Install man pages............. : $fty_nut_install_man
+
+echo
+echo Help:
+echo Use the Draft API \(default = yes\):
+echo --enable-drafts=\(yes\|no\)
+echo
+echo Build the docs and install the man pages \(default = yes\):
+echo --with-docs=\(yes\|no\)       *requires asciidoc and xmlto
+
+echo
+echo '##########################################################################'
+
+echo
+echo Configure complete! Now proceed with:
+echo "    - 'make'               compile the project"
+echo "    - 'make check'         run the project's selftest"
+echo "    - 'make install'       install the project to $prefix"
+echo
+echo Further options are:
+echo "    - 'make callcheck'     run the project's selftest with valgrind to"
+echo "                           check for performance leaks"
+echo "    - 'make check-verbose' run the project's selftest in verbose mode"
+echo "    - 'make code'          generate code from models in src directory"
+echo "                           (requires zproject and zproto)"
+echo "    - 'make debug'         run the project's selftest under gdb"
+echo "    - 'make memcheck'      run the project's selftest with valgrind to"
+echo "                           check for memory leaks"
+echo "    - 'make coverage'      generate project's selftest coverage report"
+echo "                           expects --with-gcov option for configure"
+echo
+])
+
+AX_SUMMARIZE_ENV
+AX_SUMMARIZE_CONFIG
 ################################################################################
 #  THIS FILE IS 100% GENERATED BY ZPROJECT; DO NOT EDIT EXCEPT EXPERIMENTALLY  #
 #  Read the zproject/README.md for information about making permanent changes. #

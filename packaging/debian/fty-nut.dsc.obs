@@ -1,0 +1,23 @@
+Format: 3.0 (quilt)
+Binary: fty-nut
+Source: fty-nut
+Version: 1.0.0
+Maintainer: fty-nut Developers <eatonipcopensource@eaton.com>
+Architecture: any
+Build-Depends: debhelper (>= 9),
+    pkg-config,
+    libzmq3-dev,
+    libczmq-dev,
+    libmlm-dev,
+    libfty-proto-dev,
+    libcidr-dev,
+    libcxxtools-dev,
+    libnutclient-dev,
+    systemd,
+    dh-systemd,
+    dh-autoreconf
+Build-Depends-Indep: asciidoc,
+                     xmlto
+
+Files:
+ 7697688bf65a35bc33ae2db51ebb0e3b 818110 fty-nut.tar.gz
