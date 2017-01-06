@@ -26,6 +26,8 @@
 ################################################################################
     =========================================================================
 */
+/* Note: This file is customized (private-class test names retained to remind
+   that they should be called, until fixed in zproject) */
 
 #include "fty_nut_classes.h"
 
@@ -127,27 +129,11 @@ main (int argc, char **argv)
         else
         if (streq (argv [argn], "--list")
         ||  streq (argv [argn], "-l")) {
-            puts ("Available tests (note that only stable classes are exposed to test):");
-            puts ("    logger\t- stable private API; selftest is implemented");
-            puts ("    fsutils\t- stable private API; selftest is implemented");
-            puts ("    cidr\t- stable private API; selftest is implemented");
-            puts ("    nutscan\t- stable private API; selftest is implemented");
-            puts ("    subprocess\t- stable private API; selftest is implemented");
-            puts ("    actor_commands\t- stable private API; selftest is implemented");
-            puts ("    ups_status\t- stable private API; selftest is implemented");
-            puts ("    nut_device\t- stable private API; selftest is implemented");
-            puts ("    nut_agent\t- stable private API; selftest is implemented");
-            puts ("    nut_configurator\t- stable private API; selftest is implemented");
-            puts ("    alert_device\t- stable private API; selftest is implemented");
-            puts ("    alert_device_list\t- stable private API; selftest is implemented");
-            puts ("    nut\t- stable private API; selftest is implemented");
-            puts ("    stream\t- stable private API; selftest is implemented");
-            puts ("    sensor_device\t- stable private API; selftest is implemented");
-            puts ("    sensor_list\t- stable private API; selftest is implemented");
-            puts ("    fty_nut_server\t- stable public  API; selftest is implemented");
-            puts ("    fty_nut_configurator_server\t- stable public  API; selftest is implemented");
-            puts ("    alert_actor\t- stable public  API; selftest is implemented");
-            puts ("    sensor_actor\t- stable public  API; selftest is implemented");
+            puts ("Available tests:");
+            puts ("    fty_nut_server\t- stable");
+            puts ("    fty_nut_configurator_server\t- stable");
+            puts ("    alert_actor\t- stable");
+            puts ("    sensor_actor\t- stable");
             return 0;
         }
         else

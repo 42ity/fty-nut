@@ -36,6 +36,7 @@
     </use>
 
     <use project = "cidr" test = "cidr_alloc" header="libcidr.h"
+        debian_name = "libcidr0-dev"
         repository = "https://github.com/42ity/libcidr"/>
 
     <use project = "cxxtools" test="cxxtools::Utf8Codec::Utf8Codec" header="cxxtools/allocator.h"

@@ -50,10 +50,10 @@ addons:
     - xmlto
 # Not packaged yet, or wrong names for Travis repos, or wrong versions
 #    - libzmq3-dev
-#    - libczmq-dev
+#    - libczmq3-dev
 #    - libmlm-dev
 #    - libfty_proto-dev
-#    - cidr-dev
+#    - libcidr0-dev
 #    - cxxtools-dev
 #    - libnutclient-dev
 
