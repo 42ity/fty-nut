@@ -12,7 +12,7 @@ AC_INIT([fty-nut],[1.0.0],[eatonipcopensource@eaton.com])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_MACRO_DIR(config)
 AC_CONFIG_HEADERS([src/platform.h])
-AM_INIT_AUTOMAKE([subdir-objects tar-ustar foreign])
+AM_INIT_AUTOMAKE([subdir-objects tar-ustar dist-zip foreign])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 # This defines PACKAGE_VERSION_... in src/platform.h
@@ -126,12 +126,12 @@ fi
 
 was_czmq_check_lib_detected=no
 
-PKG_CHECK_MODULES([czmq], [libczmq >= 3.0.2 libczmq < 4],
+PKG_CHECK_MODULES([czmq], [libczmq >= 3.0.2],
     [
         PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $czmq_LIBS"
     ],
     [
-        AC_MSG_ERROR([Cannot find libczmq >= 3.0.2 and < 4])
+        AC_MSG_ERROR([Cannot find libczmq 3.0.2 or higher])
     ])
 
 if test "x$was_czmq_check_lib_detected" = "xno"; then
@@ -663,13 +663,6 @@ AC_CONFIG_FILES([Makefile
                  src/libfty_nut.pc
                  src/fty-nut.cfg
                  src/fty-nut-configurator.cfg
-                 ])
-
-# Added manually:
-AC_CONFIG_FILES([
-                 src/mapping.conf
-                 src/fty-nut.conf
-                 src/fty_10_agent-nut
                  ])
 
 AM_COND_IF([WITH_SYSTEMD_UNITS],
