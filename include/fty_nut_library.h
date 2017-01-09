@@ -89,6 +89,12 @@ typedef struct _sensor_actor_t sensor_actor_t;
 #include "alert_actor.h"
 #include "sensor_actor.h"
 
+#ifdef FTY_NUT_BUILD_DRAFT_API
+//  Self test for private classes
+FTY_NUT_EXPORT void
+    fty_nut_private_selftest (bool verbose);
+#endif // FTY_NUT_BUILD_DRAFT_API
+
 #endif
 /*
 ################################################################################

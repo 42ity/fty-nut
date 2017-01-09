@@ -133,6 +133,10 @@ FTY_NUT_PRIVATE void
 FTY_NUT_PRIVATE void
     sensor_list_test (bool verbose);
 
+//  Self test for private classes
+FTY_NUT_PRIVATE void
+    fty_nut_private_selftest (bool verbose);
+
 #endif // FTY_NUT_BUILD_DRAFT_API
 
 #endif
