@@ -43,6 +43,11 @@ src_libfty_nut_la_SOURCES = \
     src/sensor_actor.cc \
     src/platform.h
 
+if ENABLE_DRAFTS
+src_libfty_nut_la_SOURCES += \
+    src/fty_nut_private_selftest.cc
+endif
+
 src_libfty_nut_la_CPPFLAGS = ${AM_CPPFLAGS}
 src_libfty_nut_la_CXXFLAGS = ${AM_CXXFLAGS}
 

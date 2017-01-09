@@ -26,8 +26,6 @@
 ################################################################################
     =========================================================================
 */
-/* Note: This file is customized (private-class test names retained to remind
-   that they should be called, until fixed in zproject) */
 
 #include "fty_nut_classes.h"
 
@@ -38,34 +36,14 @@ typedef struct {
 
 static test_item_t
 all_tests [] = {
-// Tests for private classes:
-// TODO: Per https://github.com/zeromq/zproject/commit/d44194965e5ccd61fa9d9d9a636a62581fa67adb
-//       and https://github.com/zeromq/zproject/commit/e63ccee20f910f0656eda75fc69800b749549b84
-//       such tests should not be exposed and rather be called
-//       from the public class's self-test routine
-#ifdef EXPOSE_PRIVATE_SELFTESTS
-    { "logger", logger_test },
-    { "fsutils", fsutils_test },
-    { "cidr", cidr_test },
-    { "nutscan", nutscan_test },
-    { "subprocess", subprocess_test },
-    { "actor_commands", actor_commands_test },
-    { "ups_status", ups_status_test },
-    { "nut_device", nut_device_test },
-    { "nut_agent", nut_agent_test },
-    { "nut_configurator", nut_configurator_test },
-    { "alert_device", alert_device_test },
-    { "alert_device_list", alert_device_list_test },
-    { "nut", nut_test },
-    { "stream", stream_test },
-    { "sensor_device", sensor_device_test },
-    { "sensor_list", sensor_list_test },
-#endif
 // Tests for stable public classes:
     { "fty_nut_server", fty_nut_server_test },
     { "fty_nut_configurator_server", fty_nut_configurator_server_test },
     { "alert_actor", alert_actor_test },
     { "sensor_actor", sensor_actor_test },
+#ifdef FTY_NUT_BUILD_DRAFT_API
+    { "private_classes", fty_nut_private_selftest },
+#endif // FTY_NUT_BUILD_DRAFT_API
     {0, 0}          //  Sentinel
 };
 
@@ -130,10 +108,11 @@ main (int argc, char **argv)
         if (streq (argv [argn], "--list")
         ||  streq (argv [argn], "-l")) {
             puts ("Available tests:");
-            puts ("    fty_nut_server\t- stable");
-            puts ("    fty_nut_configurator_server\t- stable");
-            puts ("    alert_actor\t- stable");
-            puts ("    sensor_actor\t- stable");
+            puts ("    fty_nut_server\t\t- stable");
+            puts ("    fty_nut_configurator_server\t\t- stable");
+            puts ("    alert_actor\t\t- stable");
+            puts ("    sensor_actor\t\t- stable");
+            puts ("    private_classes\t- draft");
             return 0;
         }
         else
