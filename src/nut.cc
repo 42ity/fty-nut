@@ -179,9 +179,9 @@ nut_put (nut_t *self, fty_proto_t **message_p)
     }
     // copy from aux to ext what we need
     const char *tmp = fty_proto_aux_string (message,"subtype", NULL);
-    if (tmp) fty_proto_ext_insert (message, "subtype", tmp);
+    if (tmp) fty_proto_ext_insert (message, "subtype", "%s", tmp);
     tmp = fty_proto_aux_string (message,"parent_name.1", NULL);
-    if (tmp) fty_proto_ext_insert (message, "parent_name.1", tmp);
+    if (tmp) fty_proto_ext_insert (message, "parent_name.1", "%s", tmp);
 
     fty_proto_t *asset = (fty_proto_t *) zhashx_lookup (self->assets, fty_proto_name (message));
     if (!asset) {
