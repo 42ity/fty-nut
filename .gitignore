@@ -144,9 +144,6 @@ test_state_file
 stderr.txt
 
 # Generated from templates
-src/mapping.conf
-src/fty-nut.conf
-src/fty_10_agent-nut
 src/fty-nut.service
 src/fty-nut.cfg
 src/fty-nut-configurator.service
