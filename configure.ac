@@ -669,13 +669,6 @@ AC_CONFIG_FILES([Makefile
                  src/fty-nut-configurator.cfg
                  ])
 
-# Added manually:
-AC_CONFIG_FILES([
-                 src/mapping.conf
-                 src/fty-nut.conf
-                 src/fty_10_agent-nut
-                 ])
-
 AM_COND_IF([WITH_SYSTEMD_UNITS],
     [AC_CONFIG_FILES([
                  src/fty-nut.service
