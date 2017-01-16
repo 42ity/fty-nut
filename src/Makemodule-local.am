@@ -1,0 +1,15 @@
+EXTRA_DIST += \
+	src/alert_device_alert.h
+
+AM_CPPFLAGS += \
+	-I$(srcdir)/src
+
+CLEANFILES += \
+	stderr.txt \
+	test_state_file \
+	src/selftest_state_file
+
+clean-local: clean-local-check
+.PHONY: clean-local-check
+clean-local-check:
+	rm -rf .testdir || true
