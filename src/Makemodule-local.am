@@ -1,4 +1,5 @@
 EXTRA_DIST += \
+	src/mapping.conf \
 	src/alert_device_alert.h
 
 AM_CPPFLAGS += \
