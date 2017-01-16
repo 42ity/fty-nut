@@ -152,14 +152,14 @@ fsutils_test (bool verbose)
     assert (strcmp (separator, "/") == 0);
 
     // file_mode
-    mode_t mode = shared::file_mode ("src/mapping.conf");
+    mode_t mode = shared::file_mode ("src/fty-nut.cfg");
     assert ((mode & S_IFMT) == S_IFREG);
     struct stat sb;
-    stat ("src/mapping.conf", &sb);
+    stat ("src/fty-nut.cfg", &sb);
     assert (sb.st_mode == mode);
 
     // is_file
-    assert (shared::is_file ("src/mapping.conf") == true);
+    assert (shared::is_file ("src/fty-nut.cfg") == true);
     log_warning ("NOTE: We do expect the error for './non-existant.conf' below...");
     assert (shared::is_file ("non-existant.conf") == false);
 
@@ -176,8 +176,8 @@ fsutils_test (bool verbose)
     assert (shared::mkdir_if_needed(".testdir/sub/dir-twoo", 0711, true) == true);
     log_warning ("NOTE: We do not expect errors re-ensuring that './.testdir/sub/dir/' exists below...");
     assert (shared::mkdir_if_needed(".testdir/sub/dir") == true);
-    log_warning ("NOTE: We do foresee a possible error for mkdir of 'src/mapping.conf' below (but not an assertion fault), or maybe no error at all...");
-    assert (shared::mkdir_if_needed("src/mapping.conf") == false);
+    log_warning ("NOTE: We do foresee a possible error for mkdir of 'src/fty-nut.cfg' below (but not an assertion fault), or maybe no error at all...");
+    assert (shared::mkdir_if_needed("src/fty-nut.cfg") == false);
 
     // items_in_directory
     std::vector <std::string> items;

@@ -540,7 +540,7 @@ actor_commands_test (bool verbose)
     message = zmsg_new ();
     assert (message);
     zmsg_addstr (message, "CONFIGURE");
-    zmsg_addstr (message, "src/mapping.conf");
+    zmsg_addstr (message, "src/fty-nut.cfg");
     zmsg_addstr (message, "src/selftest_state_file");
     rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
     assert (rv == 0);
