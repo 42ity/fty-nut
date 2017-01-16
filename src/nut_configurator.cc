@@ -38,11 +38,7 @@
 
 using namespace shared;
 
-/* TODO: Change later to parametrised names and un-legacy bios=>fty :
 #define NUT_PART_STORE "/var/lib/fty/nut/devices"
- */
-
-#define NUT_PART_STORE "/var/lib/bios/nut/devices"
 
 static const char * NUTConfigXMLPattern = "[[:blank:]]driver[[:blank:]]+=[[:blank:]]+\"netxml-ups\"";
 /* TODO: This explicitly lists NUT MIB mappings for the static snmp-ups driver,
@@ -227,13 +223,13 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
             // get polling interval first
             std::string polling = "30";
             {
-                zconfig_t *config = zconfig_load ("/etc/agent-nut/bios-agent-nut.cfg");
+                zconfig_t *config = zconfig_load ("/etc/fty-nut/fty-nut.cfg");
                 if (config) {
                     polling = zconfig_get (config, "nut/polling_interval", "30");
                     zconfig_destroy (&config);
                 }
             }
-            
+
             std::vector<std::string> configs;
 
             std::string IP = "127.0.0.1"; // Fake value for local-media devices or dummy-upses, either passed with an upsconf_block
