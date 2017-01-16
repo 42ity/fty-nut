@@ -18,10 +18,7 @@ EnvironmentFile=-@sysconfdir@/default/bios
 EnvironmentFile=-@sysconfdir@/default/bios__agent-nut.service.conf
 EnvironmentFile=-@sysconfdir@/default/bios__%n.conf
 Environment="prefix=@prefix@"
-# TODO: Change later to parametrised names and un-legacy bios=>fty (and remove explicit service files above):
-#ExecStart=@prefix@/bin/fty-nut --mapping-file @datadir@/@PACKAGE@/mapping.conf --state-file '/var/lib/fty/nut/state_file'
-ExecStart=@prefix@/bin/fty-nut --mapping-file @datadir@/agent-nut/mapping.conf --state-file '/var/lib/bios/nut/state_file'
-#ExecStart=@prefix@/bin/fty-nut @sysconfdir@/@PACKAGE@/fty-nut.cfg
+ExecStart=@prefix@/bin/fty-nut --mapping-file @datadir@/fty-nut/mapping.conf --state-file '/var/lib/bios/nut/state_file'
 Restart=always
 
 [Install]
