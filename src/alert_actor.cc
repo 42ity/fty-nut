@@ -25,14 +25,10 @@
 #include "alert_device_list.h"
 #include "logger.h"
 
-/* TODO: Change later to parametrised names and un-legacy bios=>fty :
-static const char* PATH = "/var/lib/fty/nut";
-static const char* STATE = "/var/lib/fty/nut/state_file";
- */
 /* No consumers for PATH at this time:
-static const char* PATH = "/var/lib/bios/nut";
+static const char* PATH = "/var/lib/fty/nut";
  */
-static const char* STATE = "/var/lib/bios/nut/state_file";
+static const char* STATE = "/var/lib/fty/nut/state_file";
 
 int
 alert_actor_commands (

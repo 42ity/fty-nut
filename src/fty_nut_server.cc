@@ -28,13 +28,9 @@
 
 #include "fty_nut_classes.h"
 
-/* TODO: Change later to parametrised names and un-legacy bios=>fty :
+/* Consumers of these vars are currently commented away below
 static const char* PATH = "/var/lib/fty/nut";
 static const char* STATE = "/var/lib/fty/nut/state_file";
- */
-/* Consumers of these vars are currently commented away below
-static const char* PATH = "/var/lib/bios/nut";
-static const char* STATE = "/var/lib/bios/nut/state_file";
  */
 
 static void

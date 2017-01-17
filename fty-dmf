@@ -85,14 +85,14 @@ do_enable () {
             ON DUPLICATE KEY UPDATE value='true';
             "
     done
-    agent-asset-cli republish "${@}"
+    fty-asset-cli republish "${@}"
 }
 
 do_disable () {
     for id in `get_asset_ids "${@}"`; do
         do_mysql "DELETE FROM v_bios_asset_ext_attributes WHERE (keytag = 'upsconf_enable_dmf' AND id_asset_element=$id)"
     done
-    agent-asset-cli republish "${@}"
+    fty-asset-cli republish "${@}"
 }
 
 do_list () {

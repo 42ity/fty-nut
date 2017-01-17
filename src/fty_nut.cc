@@ -144,13 +144,13 @@ int main (int argc, char *argv [])
     // polling interval
     if (!polling) {
         polling = "30";
-        zconfig_t *root = zconfig_load ("/etc/agent-nut/bios-agent-nut.cfg");
+        zconfig_t *root = zconfig_load ("/etc/fty-nut/fty-nut.cfg");
         if (root) {
             polling = zconfig_get (root, "nut/polling_interval", "30");
             zconfig_destroy (&root);
         }
     }
-    
+
     // log_level cascade (priority ascending)
     //  1. default value
     //  2. env. variable
