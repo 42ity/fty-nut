@@ -34,8 +34,8 @@
 
 #define MLM_ENDPOINT "ipc://@/malamute"
 
-static const char* PATH = "/var/lib/fty/agent-autoconfig";
-static const char* STATE = "/var/lib/fty/agent-autoconfig/state";
+static const char* PATH = "/var/lib/fty/fty-autoconfig";
+static const char* STATE = "/var/lib/fty/fty-autoconfig/state";
 
 static int
 load_agent_info(std::string &info)
