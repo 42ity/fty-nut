@@ -45,7 +45,10 @@
 
     <use project = "libnutclient" test = "nut::TcpClient::TcpClient" header="nutclient.h"
         prefix="nutclient"
-        repository = "https://github.com/networkupstools/nut"/>
+        repository = "https://github.com/networkupstools/nut">
+            <add_config_opts>--with-doc=no</add_config_opts>
+            <add_config_opts>--with-dev=yes</add_config_opts>
+    </use>
 
     <class name = "logger"          private = "1">logging api</class>
     <class name = "fsutils"         private = "1">filesystem utils</class>
