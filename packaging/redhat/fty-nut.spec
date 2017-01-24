@@ -124,6 +124,7 @@ find %{buildroot} -name '*.la' | xargs rm -f
 %{_mandir}/man1/fty-nut-configurator*
 %{_bindir}/fty-nutconfig
 %{_bindir}/fty-dmf
+%config(noreplace) %{_sysconfdir}/fty-nut/fty-nut.cfg
 /usr/lib/systemd/system/fty-nut.service
 %config(noreplace) %{_sysconfdir}/fty-nut/fty-nut-configurator.cfg
 /usr/lib/systemd/system/fty-nut-configurator.service

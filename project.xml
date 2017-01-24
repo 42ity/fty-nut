@@ -73,7 +73,7 @@
     <class name = "alert actor" state = "stable">actor handling device alerts and thresholds</class>
     <class name = "sensor actor" state = "stable">actor handling sensors attached to UPS/ePDU</class>
 
-    <main name = "fty-nut" service = "1" no_config = "1" />
+    <main name = "fty-nut" service = "1" />
     <main name = "fty-nut-configurator" service = "1" />
     <bin name = "fty-nutconfig" />
     <bin name = "fty-dmf" />

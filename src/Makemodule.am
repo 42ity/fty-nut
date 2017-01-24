@@ -79,6 +79,7 @@ src_fty_nut_CPPFLAGS = ${AM_CPPFLAGS}
 src_fty_nut_LDADD = ${program_libs}
 src_fty_nut_SOURCES = src/fty_nut.cc
 src_fty_nut_config_DATA =
+src_fty_nut_config_DATA += src/fty-nut.cfg
 src_fty_nut_configdir = $(sysconfdir)/fty-nut
 if WITH_SYSTEMD_UNITS
 systemdsystemunit_DATA += src/fty-nut.service
