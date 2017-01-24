@@ -19,9 +19,9 @@ services:
 # Set CI_CONFIG_QUIET=true to enable "configure --quiet" (only report stderr)
 env:
   global:
-    - CI_TIME=true
+    - CI_TIME=false
     - CI_TRACE=false
-    - CI_QUIET=false
+    - CI_QUIET=true
   matrix:
     - BUILD_TYPE=default
 #   - BUILD_TYPE=default-Werror
@@ -52,7 +52,7 @@ addons:
 #    - libzmq3-dev
 #    - libczmq3-dev
 #    - libmlm-dev
-#    - libfty_proto-dev
+#    - libfty-proto-dev
 #    - libcidr0-dev
 #    - cxxtools-dev
 #    - libnutclient-dev

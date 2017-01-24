@@ -9,7 +9,6 @@ libfty_nut.pc
 # + main->extra sources (if any):
 
 # + config files for mains (if any):
-fty-nut.cfg
 fty-nut-configurator.cfg
 
 # + systemd service unit for daemons (if any):
