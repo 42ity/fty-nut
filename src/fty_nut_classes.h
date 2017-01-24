@@ -32,6 +32,74 @@
 //  External API
 #include "../include/fty_nut.h"
 
+//  Extra headers
+
+//  Opaque class structures to allow forward references
+#ifndef LOGGER_T_DEFINED
+typedef struct _logger_t logger_t;
+#define LOGGER_T_DEFINED
+#endif
+#ifndef FSUTILS_T_DEFINED
+typedef struct _fsutils_t fsutils_t;
+#define FSUTILS_T_DEFINED
+#endif
+#ifndef CIDR_T_DEFINED
+typedef struct _cidr_t cidr_t;
+#define CIDR_T_DEFINED
+#endif
+#ifndef NUTSCAN_T_DEFINED
+typedef struct _nutscan_t nutscan_t;
+#define NUTSCAN_T_DEFINED
+#endif
+#ifndef SUBPROCESS_T_DEFINED
+typedef struct _subprocess_t subprocess_t;
+#define SUBPROCESS_T_DEFINED
+#endif
+#ifndef ACTOR_COMMANDS_T_DEFINED
+typedef struct _actor_commands_t actor_commands_t;
+#define ACTOR_COMMANDS_T_DEFINED
+#endif
+#ifndef UPS_STATUS_T_DEFINED
+typedef struct _ups_status_t ups_status_t;
+#define UPS_STATUS_T_DEFINED
+#endif
+#ifndef NUT_DEVICE_T_DEFINED
+typedef struct _nut_device_t nut_device_t;
+#define NUT_DEVICE_T_DEFINED
+#endif
+#ifndef NUT_AGENT_T_DEFINED
+typedef struct _nut_agent_t nut_agent_t;
+#define NUT_AGENT_T_DEFINED
+#endif
+#ifndef NUT_CONFIGURATOR_T_DEFINED
+typedef struct _nut_configurator_t nut_configurator_t;
+#define NUT_CONFIGURATOR_T_DEFINED
+#endif
+#ifndef ALERT_DEVICE_T_DEFINED
+typedef struct _alert_device_t alert_device_t;
+#define ALERT_DEVICE_T_DEFINED
+#endif
+#ifndef ALERT_DEVICE_LIST_T_DEFINED
+typedef struct _alert_device_list_t alert_device_list_t;
+#define ALERT_DEVICE_LIST_T_DEFINED
+#endif
+#ifndef NUT_T_DEFINED
+typedef struct _nut_t nut_t;
+#define NUT_T_DEFINED
+#endif
+#ifndef STREAM_T_DEFINED
+typedef struct _stream_t stream_t;
+#define STREAM_T_DEFINED
+#endif
+#ifndef SENSOR_DEVICE_T_DEFINED
+typedef struct _sensor_device_t sensor_device_t;
+#define SENSOR_DEVICE_T_DEFINED
+#endif
+#ifndef SENSOR_LIST_T_DEFINED
+typedef struct _sensor_list_t sensor_list_t;
+#define SENSOR_LIST_T_DEFINED
+#endif
+
 //  Internal API
 #include "logger.h"
 #include "fsutils.h"

@@ -22,7 +22,7 @@ save.xml
 *.lo
 
 # Executables
-###src/fty-nut_selftest
+src/fty-nut_selftest
 src/fty-nut
 src/fty-nut-configurator
 src/fty_nut_selftest
@@ -72,6 +72,7 @@ compile_commands.json
 DartConfiguration.tcl
 install_manifest.txt
 Testing/
+
 # We here do not want cmake integration
 *.cmake
 CMakeLists.txt
