@@ -175,7 +175,8 @@ void NUTAgent::advertisePhysics (nut_t *data)
         // BIOS-1185 start
         // if it is epdu, that doesn't provide load.default,
         // but it is still could be calculated (because input.current is known) then do this
-        if (    streq ("epdu", nut_asset_subtype (data, device.second.assetName().c_str() ))
+        const char *subtype = nut_asset_subtype (data, device.second.assetName().c_str() );
+        if (    (subtype && streq ("epdu", subtype))
              && measurements.count ("load.default") == 0 )
         {
             if ( measurements.count ("load.input.L1") != 0 ) {
@@ -208,12 +209,14 @@ void NUTAgent::advertisePhysics (nut_t *data)
                 if ( measurements.count ("current.input.nominal") == 1 ) {
                     max_value = measurements.at("current.input.nominal") * std::pow (10, -2);
                     log_debug ("load.default: max_value %lf from UPS", max_value);
-                } else
-                    if ( !streq ("", nut_asset_max_current (data, device.second.assetName().c_str() ) ) ) {
+                } else {
+                    const char *max_current = nut_asset_max_current (data, device.second.assetName().c_str() );
+                    if ( max_current && !streq ("", max_current) ) {
                         // ASSUMPTION: max_current at this point is always verified to be double
-                        max_value = std::stod (nut_asset_max_current (data, device.second.assetName().c_str()));
+                        max_value = std::stod (max_current);
                         log_debug ("load.default: max_value %lf from user", max_value);
                     }
+                }
                 // 2. if MAX value is known -> do work, otherwise skip
                 if ( max_value != 0 ) {
                     double value =  measurements.at("current.input.L1") * std::pow (10, -2);
