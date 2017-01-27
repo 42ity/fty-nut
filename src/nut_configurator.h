@@ -91,6 +91,7 @@ class NUTConfigurator : public Configurator {
     std::string makeRule(const std::string &alert, const std::string &bit, const std::string &device, std::string const &description) const;
     bool match( const std::vector<std::string> &texts, const char *pattern);
     bool isEpdu( const std::vector<std::string> &texts);
+    bool isAts( const std::vector<std::string> &texts);
     bool isUps( const std::vector<std::string> &texts);
     bool canSnmp( const std::vector<std::string> &texts);
     bool canXml( const std::vector<std::string> &texts);
