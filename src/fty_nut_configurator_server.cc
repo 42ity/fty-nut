@@ -113,18 +113,24 @@ void Autoconfig::onStart( )
 }
 
 static bool
-s_is_ups_or_epdu (fty_proto_t *bmsg)
+s_is_ups_epdu_or_sts (fty_proto_t *bmsg)
 {
     assert (bmsg);
 
     if (!streq (fty_proto_aux_string (bmsg, "type", ""), "device"))
         return false;
 
-    if ((!streq (fty_proto_aux_string (bmsg, "subtype", ""), "ups")) &&
-        (!streq (fty_proto_aux_string (bmsg, "subtype", ""), "epdu")))
-        return false;
+    const char *subtype = fty_proto_aux_string (bmsg, "subtype", "");
+    return streq (subtype, "ups") || streq (subtype, "epdu") || streq (subtype, "sts");
+}
 
-    return true;
+static int
+s_powerdevice_subtype_id (const char *subtype)
+{
+    if (streq (subtype, "ups")) return 1;
+    if (streq (subtype, "epdu")) return 3;
+    if (streq (subtype, "sts")) return 7;
+    return -1;
 }
 
 static std::map<std::string,std::string>
@@ -173,7 +179,7 @@ void Autoconfig::onSend( zmsg_t **message )
     }
 
     // ignore non ups/epdu devices - or those with non interesting operation
-    if (!s_is_ups_or_epdu (bmsg) || s_operation2i (fty_proto_operation (bmsg)) == -1) {
+    if (!s_is_ups_epdu_or_sts (bmsg) || s_operation2i (fty_proto_operation (bmsg)) == -1) {
         fty_proto_destroy (&bmsg);
         return;
     }
@@ -181,7 +187,7 @@ void Autoconfig::onSend( zmsg_t **message )
     // this is a device that we should configure, we need extended attributes (ip.1 particularly)
     device_name = fty_proto_name (bmsg);
     // MVY: 6 is device, for subtype see core.git/src/shared/asset_types.h
-    subtype = streq (fty_proto_aux_string (bmsg, "subtype", ""), "ups") ? 1 : 3;
+    subtype = s_powerdevice_subtype_id (fty_proto_aux_string (bmsg, "subtype", ""));
 
     // upsconf_block support - devices with an explicit "upsconf_block"
     // ext-attribute will be always configured ([ab]using nut-scanner logic

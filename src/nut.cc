@@ -85,7 +85,7 @@ filter_message (fty_proto_t *message)
     if (!type || !subtype)
         return 1;
     if (streq (type, "device") &&
-        (streq (subtype, "epdu") || streq (subtype, "ups") || streq(subtype, "sensor") ))
+        (streq (subtype, "epdu") || streq (subtype, "ups") || streq (subtype, "sts") || streq(subtype, "sensor") ))
         return 0;
     return 1;
 }
@@ -315,7 +315,7 @@ nut_get_powerdevices (nut_t *self)
     char * name = (char *) zlistx_first (list);
     while (name) {
         const char *subtype = nut_asset_subtype(self, name);
-        if (subtype && (streq (subtype, "ups") || streq (subtype, "pdu") || streq (subtype, "epdu"))) {
+        if (subtype && (streq (subtype, "ups") || streq (subtype, "pdu") || streq (subtype, "epdu") || streq (subtype, "sts"))) {
             zlist_append (result, name);
         }
         name = (char *)zlistx_next (list);

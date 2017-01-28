@@ -50,6 +50,8 @@ static const char * NUTConfigEpduPattern = "[[:blank:]](mibs[[:blank:]]+=[[:blan
                                            "desc[[:blank:]]+=[[:blank:]]+\"[^\"]+ epdu [^\"]+\")";
 static const char * NUTConfigCanSnmpPattern = "[[:blank:]]driver[[:blank:]]+=[[:blank:]]+\"snmp-ups(-dmf)?\"";
 
+static const char * NUTConfigATSPattern = "[[:blank:]]mibs[[:blank:]]*=[[:blank:]]*\"[^\"]*ats[^\"]*\"";
+
 std::vector<std::string>::const_iterator NUTConfigurator::stringMatch(const std::vector<std::string> &texts, const char *pattern) {
     log_debug("regex: %s", pattern );
     cxxtools::Regex reg( pattern, REG_EXTENDED | REG_ICASE );
@@ -72,8 +74,12 @@ bool NUTConfigurator::isEpdu( const std::vector<std::string> &texts) {
     return match( texts, NUTConfigEpduPattern );
 }
 
+bool NUTConfigurator::isAts( const std::vector<std::string> &texts) {
+    return match( texts, NUTConfigATSPattern );
+}
+
 bool NUTConfigurator::isUps( const std::vector<std::string> &texts) {
-    return ! isEpdu(texts);
+    return ! (isEpdu(texts) || isAts (texts));
 }
 
 bool NUTConfigurator::canSnmp( const std::vector<std::string> &texts) {
@@ -100,7 +106,7 @@ std::vector<std::string>::const_iterator NUTConfigurator::selectBest(const std::
     // don't do any complicated decision on empty/single set
     if( configs.size() <= 1 ) return configs.begin();
 
-    log_debug("isEpdu: %i; isUps: %i; canSnmp: %i; canXml: %i", isEpdu(configs), isUps(configs), canSnmp(configs), canXml(configs) );
+    log_debug("isEpdu: %i; isUps: %i; isAts: %i; canSnmp: %i; canXml: %i", isEpdu(configs), isUps(configs), isAts(configs), canSnmp(configs), canXml(configs) );
     if( canSnmp( configs ) && isEpdu( configs ) ) {
         log_debug("SNMP capable EPDU => Use SNMP");
         return getBestSnmpMib( configs );
@@ -391,7 +397,7 @@ std::vector<std::string> Configurator::createRules(std::string const &name) {
 }
 
 Configurator * ConfigFactory::getConfigurator( uint32_t type, uint32_t subtype ) {
-    if( type == asset_type::DEVICE && ( subtype == asset_subtype::UPS || subtype == asset_subtype::EPDU ) ) {
+    if( type == asset_type::DEVICE && ( subtype == asset_subtype::UPS || subtype == asset_subtype::EPDU || subtype == asset_subtype::STS ) ) {
         return new NUTConfigurator();
     }
     // if( type == "server" ) return ServerConfigurator();
