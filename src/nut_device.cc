@@ -591,12 +591,20 @@ void NUTDevice::NUTValuesTransformation (const std::string &prefix, std::map< st
 
     // number of input phases
     if (vars.find (prefix + "input.phases") == vars.end ()) {
-        vars [prefix + "input.phases"] = { "1" };
+        if ( vars.find (prefix + "input.L3-N.voltage") != vars.end () || vars.find (prefix + "input.L3.current") != vars.end () ) {
+            vars [prefix + "input.phases"] = { "3" };
+        } else {
+            vars [prefix + "input.phases"] = { "1" };
+        }
     }
 
     // number of output phases
     if (vars.find (prefix + "output.phases") == vars.end ()) {
-        vars [prefix + "output.phases"] = { "1" };
+        if ( vars.find (prefix + "output.L3-N.voltage") != vars.end () || vars.find (prefix + "output.L3.current") != vars.end () ) {
+            vars [prefix + "output.phases"] = { "3" };
+        } else {
+            vars [prefix + "output.phases"] = { "1" };
+        }
     }
     {
         // pdu replace with epdu
