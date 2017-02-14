@@ -40,6 +40,7 @@ const std::map<std::string, std::string> NUTAgent::_units =
     { "frequency",   "Hz"},
     { "power",       "W" },
     { "runtime",     "s" },
+    { "input",       ""  },
 };
 
 bool NUTAgent::loadMapping (const char *path_to_file)
