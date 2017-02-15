@@ -189,6 +189,7 @@ alert_actor (zsock_t *pipe, void *args)
         return;
     }
     Devices devices;
+    devices.setPollingMs (polling);
 
     zpoller_t *poller = zpoller_new (pipe, mlm_client_msgpipe (client), NULL);
     if (!poller) {
@@ -217,6 +218,7 @@ alert_actor (zsock_t *pipe, void *args)
             zmsg_t *msg = zmsg_recv (pipe);
             if (msg) {
                 int quit = alert_actor_commands (client, &msg, verbose, polling);
+                devices.setPollingMs (polling);
                 zmsg_destroy (&msg);
                 if (quit) break;
             }
@@ -338,7 +340,7 @@ alert_actor_test (bool verbose)
         assert (streq (fty_proto_severity (bp), "CRITICAL"));
 
         verbose_printf ("    element\n");
-        assert (streq (fty_proto_element_src (bp), "mydevice"));
+        assert (streq (fty_proto_name (bp), "mydevice"));
 
         fty_proto_destroy (&bp);
         zmsg_destroy (&msg);

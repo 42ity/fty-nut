@@ -66,11 +66,12 @@ void Sensor::publish (mlm_client_t *client, int ttl)
         zhash_insert (aux, "port", (void*) port().c_str());
         zmsg_t *msg = fty_proto_encode_metric (
             NULL,
+            time (NULL),
+            ttl,
             ("temperature." + port ()).c_str (),
             _location.c_str (),
             _temperature.c_str (),
-            "C",
-            ttl);
+            "C");
         zhash_destroy (&aux);
         if (msg) {
             std::string topic = "temperature" + topicSuffix();
@@ -87,11 +88,12 @@ void Sensor::publish (mlm_client_t *client, int ttl)
         zhash_insert (aux, "port", (void*) port().c_str());
         zmsg_t *msg = fty_proto_encode_metric (
             aux,
+            time (NULL),
+            ttl,
             ("humidity." + port ()).c_str (),
             _location.c_str (),
             _humidity.c_str (),
-            "%",
-            ttl);
+            "%");
         zhash_destroy (&aux);
         if (msg) {
             std::string topic = "humidity" + topicSuffix();

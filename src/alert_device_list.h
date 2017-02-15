@@ -31,10 +31,14 @@ class Devices {
     void updateDeviceList (nut_t *config);
     void publishAlerts (mlm_client_t *client);
     void publishRules (mlm_client_t *client);
+    void setPollingMs (uint64_t polling_ms) {
+        _polling_ms = polling_ms;
+    }
 
     // friend function for unit-testing
     friend void alert_actor_test (bool verbose);
  private:
+    uint64_t _polling_ms = 30000;
     std::map <std::string, Device>  _devices;
 
     void updateDeviceCapabilities (nut::TcpClient& nutClient);

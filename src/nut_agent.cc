@@ -91,7 +91,6 @@ int NUTAgent::send (const std::string& subject, zmsg_t **message_p)
 {
     fty_proto_t *m_decoded = fty_proto_decode(message_p);
     zmsg_destroy(message_p);
-    fty_proto_aux_insert(m_decoded, "time", "%" PRIi64, zclock_time () / 1000);
     *message_p = fty_proto_encode(&m_decoded);
 
     int rv = mlm_client_send (_client, subject.c_str (), message_p);
@@ -107,7 +106,6 @@ int NUTAgent::isend (const std::string& subject, zmsg_t **message_p)
 {
     fty_proto_t *m_decoded = fty_proto_decode(message_p);
     zmsg_destroy(message_p);
-    fty_proto_aux_insert(m_decoded, "time", "%" PRIi64, zclock_time () / 1000);
     *message_p = fty_proto_encode(&m_decoded);
 
     int rv = mlm_client_send (_iclient, subject.c_str (), message_p);
@@ -155,11 +153,12 @@ void NUTAgent::advertisePhysics (nut_t *data)
 
             zmsg_t *msg = fty_proto_encode_metric (
                 NULL,
+                time (NULL),
+                _ttl,
                 measurement.first.c_str (),
                 device.second.assetName ().c_str (),
                 buffer,
-                units.c_str (),
-                _ttl);
+                units.c_str ());
             if (msg) {
                 log_debug ("sending new measurement for element_src = '%s', type = '%s', value = '%s', units = '%s'",
                            device.second.assetName ().c_str (), measurement.first.c_str (), buffer, units.c_str ());
@@ -186,11 +185,12 @@ void NUTAgent::advertisePhysics (nut_t *data)
                 sprintf (buffer, "%lf", value);
                 zmsg_t *msg = fty_proto_encode_metric (
                         NULL,
+                        time (NULL),
+                        _ttl,
                         "load.default",
                         device.second.assetName().c_str(),
                         buffer,
-                        "%",
-                        _ttl);
+                        "%");
                 if (msg) {
                     log_debug ("sending new measurement for element_src = '%s', type = '%s', value = '%s', units = '%s'",
                             device.second.assetName ().c_str (), "load.default", buffer, "%");
@@ -227,11 +227,12 @@ void NUTAgent::advertisePhysics (nut_t *data)
                     // 4. form message
                     zmsg_t *msg = fty_proto_encode_metric (
                             NULL,
+                            time (NULL),
+                            _ttl,
                             "load.default",
                             device.second.assetName().c_str(),
                             buffer,
-                            "%",
-                            _ttl);
+                            "%");
                     // 5. send the messsage
                     if (msg) {
                         log_debug ("sending new measurement for element_src = '%s', type = '%s', value = '%s', units = '%s'",
@@ -254,11 +255,12 @@ void NUTAgent::advertisePhysics (nut_t *data)
             uint16_t    status_i = upsstatus_to_int (status_s);
             zmsg_t *msg = fty_proto_encode_metric (
                 NULL,
+                time (NULL),
+                _ttl,
                 "status.ups",
                 device.second.assetName ().c_str (),
                 std::to_string (status_i).c_str (),
-                "",
-                _ttl);
+                "");
             if (msg) {
                 log_debug ("sending new status for element_src = '%s', value = '%s' (%s)",
                            device.second.assetName().c_str (), std::to_string (status_i).c_str (), status_s.c_str ());
@@ -281,11 +283,12 @@ void NUTAgent::advertisePhysics (nut_t *data)
 
             zmsg_t *msg = fty_proto_encode_metric (
                 NULL,
+                time (NULL),
+                _ttl,
                 property.c_str (),
                 device.second.assetName ().c_str (),
                 std::to_string (status_i).c_str (),
-                "",
-                _ttl);
+                "");
             if (msg) {
                 log_debug ("sending new status for %s %s, value %i (%s)",
                            property.c_str (),

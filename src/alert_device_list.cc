@@ -143,7 +143,7 @@ void Devices::publishAlerts (mlm_client_t *client)
 {
     if (!client) return;
     for (auto &device : _devices) {
-        device.second.publishAlerts (client);
+        device.second.publishAlerts (client, (_polling_ms / 1000) * 3);
     }
 }
 
