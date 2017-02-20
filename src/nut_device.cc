@@ -188,24 +188,17 @@ void NUTDevice::setChanged(const std::string& name,const bool status){
     setChanged(name.c_str(),status);
 }
 
-void NUTDevice::updatePhysics(const std::string& varName, const float newValue) {
-    long int newValueInt = round(newValue * 100.0);
-    if( newValueInt > INT32_MAX  || newValueInt < INT32_MIN ) {
-        // value is out of range (like gigawats), the measurement is invalid
-        log_error("%s value exceeded the range on %s", varName.c_str(), _assetName.c_str() );
-        _physics.erase( varName );
-        return;
-    }
+void NUTDevice::updatePhysics(const std::string& varName, const std::string& newValue) {
     if( _physics.count( varName ) == 0 ) {
         // this is new value
         struct NUTPhysicalValue pvalue;
         pvalue.changed = true;
-        pvalue.value = 0;
-        pvalue.candidate = newValueInt;
+        pvalue.value = "0";
+        pvalue.candidate = newValue;
         _physics[ varName ] = pvalue;
     } else {
-        if (_physics[ varName ].value != newValueInt) {
-            _physics[ varName ].candidate = newValueInt;
+        if (_physics[ varName ].value != newValue) {
+            _physics[ varName ].candidate = newValue;
         }
     }
 }
@@ -215,8 +208,7 @@ void NUTDevice::updatePhysics(const std::string& varName, std::vector<std::strin
         // don't know how to handle multiple values
         // multiple values would be probably nonsence
         try {
-            float value = std::stof(values[0]);
-            updatePhysics(varName,value);
+            updatePhysics(varName,values[0]);
         } catch (...) {}
     }
 }
@@ -357,7 +349,7 @@ std::string NUTDevice::itof(const long int X) const {
 std::string NUTDevice::toString() const {
     std::string msg = "",val;
     for(auto it : _physics ){
-        msg += "\"" + it.first + "\":" + itof(it.second.value) + ", ";
+        msg += "\"" + it.first + "\":" + it.second.value + ", ";
     }
     for(auto it : _inventory ){
         val = it.second.value;
@@ -373,7 +365,7 @@ std::string NUTDevice::toString() const {
 std::map<std::string,std::string> NUTDevice::properties() const {
     std::map<std::string,std::string> map;
     for(auto it : _physics ){
-        map[ it.first ] = itof(it.second.value);
+        map[ it.first ] = it.second.value;
     }
     for(auto it : _inventory ){
         map[ it.first ] = it.second.value;
@@ -381,8 +373,8 @@ std::map<std::string,std::string> NUTDevice::properties() const {
     return map;
 }
 
-std::map<std::string,int32_t> NUTDevice::physics(bool onlyChanged) const {
-    std::map<std::string,int32_t> map;
+std::map<std::string,std::string> NUTDevice::physics(bool onlyChanged) const {
+    std::map<std::string,std::string> map;
     for ( const auto &it : _physics ) {
         if( ( ! onlyChanged ) || it.second.changed ) {
             map[ it.first ] = it.second.value;
@@ -436,7 +428,7 @@ std::string NUTDevice::property(const char *name) const {
     auto iterP = _physics.find(name);
     if( iterP != _physics.end() ) {
         // this is a number, value exists
-        return itof(iterP->second.value);
+        return iterP->second.value;
     }
     auto iterI = _inventory.find(name);
     if( iterI != _inventory.end() ) {
