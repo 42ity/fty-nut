@@ -40,7 +40,6 @@ const std::map<std::string, std::string> NUTAgent::_units =
     { "frequency",   "Hz"},
     { "power",       "W" },
     { "runtime",     "s" },
-    { "input",       ""  },
 };
 
 bool NUTAgent::loadMapping (const char *path_to_file)
@@ -142,14 +141,6 @@ void NUTAgent::advertisePhysics (nut_t *data)
         for (const auto& measurement : measurements) {
             std::string type = physicalQuantityShortName (measurement.first);
             std::string units = physicalQuantityToUnits (type);
-            if (units.empty ()) {
-                log_error ("undefined physical quantity '%s'", type.c_str ());
-                continue;
-            }
-
-            double d_value = measurement.second * std::pow (10, -2);
-            char buffer [50];
-            sprintf (buffer, "%lf", d_value);
 
             zmsg_t *msg = fty_proto_encode_metric (
                 NULL,
@@ -157,11 +148,14 @@ void NUTAgent::advertisePhysics (nut_t *data)
                 _ttl,
                 measurement.first.c_str (),
                 device.second.assetName ().c_str (),
-                buffer,
+                measurement.second.c_str (),
                 units.c_str ());
             if (msg) {
                 log_debug ("sending new measurement for element_src = '%s', type = '%s', value = '%s', units = '%s'",
-                           device.second.assetName ().c_str (), measurement.first.c_str (), buffer, units.c_str ());
+                           device.second.assetName ().c_str (),
+                           measurement.first.c_str (),
+                           measurement.second.c_str (),
+                           units.c_str ());
 
                 subject = measurement.first + "@" + device.second.assetName ();
                 int r = send(subject, &msg);
@@ -180,20 +174,18 @@ void NUTAgent::advertisePhysics (nut_t *data)
              && measurements.count ("load.default") == 0 )
         {
             if ( measurements.count ("load.input.L1") != 0 ) {
-                char buffer [50];
-                double value = measurements.at("load.input.L1") * std::pow (10, -2);
-                sprintf (buffer, "%lf", value);
+                std::string value = measurements.at("load.input.L1");
                 zmsg_t *msg = fty_proto_encode_metric (
                         NULL,
                         time (NULL),
                         _ttl,
                         "load.default",
                         device.second.assetName().c_str(),
-                        buffer,
+                        value.c_str (),
                         "%");
                 if (msg) {
                     log_debug ("sending new measurement for element_src = '%s', type = '%s', value = '%s', units = '%s'",
-                            device.second.assetName ().c_str (), "load.default", buffer, "%");
+                               device.second.assetName ().c_str (), "load.default", value.c_str (), "%");
 
                     subject = "load.default@" + device.second.assetName();
                     int r = send (subject, &msg);
@@ -208,8 +200,10 @@ void NUTAgent::advertisePhysics (nut_t *data)
                 // 1. Determine the MAX value
                 double max_value = 0;
                 if ( measurements.count ("current.input.nominal") == 1 ) {
-                    max_value = measurements.at("current.input.nominal") * std::pow (10, -2);
-                    log_debug ("load.default: max_value %lf from UPS", max_value);
+                    try {
+                        max_value = std::stof (measurements.at("current.input.nominal"));
+                        log_debug ("load.default: max_value %lf from UPS", max_value);
+                    } catch (...) {}
                 } else {
                     const char *max_current = nut_asset_max_current (data, device.second.assetName().c_str() );
                     if ( max_current && !streq ("", max_current) ) {
@@ -220,7 +214,10 @@ void NUTAgent::advertisePhysics (nut_t *data)
                 }
                 // 2. if MAX value is known -> do work, otherwise skip
                 if ( max_value != 0 ) {
-                    double value =  measurements.at("current.input.L1") * std::pow (10, -2);
+                    double value = 0;
+                    try {
+                        value = stof (measurements.at("current.input.L1"));
+                    } catch (...) {};
                     char buffer [50];
                     // 3. compute a real value
                     sprintf (buffer, "%lf", value*100/max_value); // because it is %!!!!
