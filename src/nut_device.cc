@@ -471,9 +471,14 @@ void NUTDevice::NUTRealpowerFromOutput (const std::string& prefix, std::map< std
         double sum = 0.0;
         for (int i=1; i<= phases; i++) {
             auto it = vars.find (prefix + "output.L" + std::to_string(i) + ".realpower");
+            
             if (it  == vars.end ()) {
-                // even output is missing, can't compute
-                break;
+                it = vars.find (prefix + "ups.L" + std::to_string(i) + ".realpower");
+                
+                if (it  == vars.end ()) {
+                    // even output is missing, can't compute
+                        break;
+                }
             }
             try {
                 sum += std::stod (it->second[0]);
