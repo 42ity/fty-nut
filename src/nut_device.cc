@@ -881,6 +881,15 @@ nut_device_test (bool verbose)
     printf (" * nutdevice: ");
 
     //  @selftest
+
+    // test case: load the mappig file
+    drivers::nut::NUTDeviceList self {};
+    const char* path = "src/mapping.conf";
+    if (zsys_file_exists ("_build/../src/mapping.conf"))
+        path = "_build/../src/mapping.conf";
+
+    self.load_mapping (path);
+
     //  @end
-    printf ("Empty test - OK\n");
+    printf ("OK\n");
 }
