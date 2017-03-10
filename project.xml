@@ -3,7 +3,7 @@
     description = "NUT (Network UPS Tools) daemon wrapper/proxy"
     script = "zproject.gsl"
     email = "EatonIPCOpenSource@eaton.com"
-    reposotory = "https://github.com/42ity/fty-nut"
+    repository = "https://github.com/42ity/fty-nut"
     license = "GPL-2.0+"
     >
 
