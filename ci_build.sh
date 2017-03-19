@@ -370,7 +370,7 @@ if [ "$BUILD_TYPE" == "default" ] || [ "$BUILD_TYPE" == "default-Werror" ] || [ 
         echo ""
         BASE_PWD=${PWD}
         echo "`date`: INFO: Building prerequisite 'libnutclient' from Git repository..." >&2
-        $CI_TIME git clone --quiet --depth 1 -b fty https://github.com/42ity/nut libnutclient
+        $CI_TIME git clone --quiet --depth 1 -b FTY https://github.com/42ity/nut libnutclient
         cd libnutclient
         CCACHE_BASEDIR=${PWD}
         export CCACHE_BASEDIR
