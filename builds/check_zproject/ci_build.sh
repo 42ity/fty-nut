@@ -13,7 +13,7 @@ git clone --quiet --depth 1 https://github.com/zeromq/malamute.git malamute
 git clone --quiet --depth 1 https://github.com/42ity/fty-proto fty-proto
 git clone --quiet --depth 1 https://github.com/42ity/libcidr cidr
 git clone --quiet --depth 1 -b 42ity https://github.com/42ity/cxxtools cxxtools
-git clone --quiet --depth 1 https://github.com/networkupstools/nut libnutclient
+git clone --quiet --depth 1 -b fty https://github.com/42ity/nut libnutclient
 cd -
 
 if ! ((command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list zproject >/dev/null 2>&1) || \
