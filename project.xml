@@ -25,6 +25,7 @@
     <!-- Note that if pkg-config version attrs are specified,
         then the "test" is not used by current zproject. -->
     <use project = "czmq" release = "v3.0.2" test = "zctx_test"
+        repository="https://github.com/42ity/czmq.git"
         min_major = "3" min_minor = "0" min_patch = "2"
         next_incompatible_version = "4" />
     <use project = "malamute" min_major = "1"/>
