@@ -391,7 +391,10 @@ if [ "$BUILD_TYPE" == "default" ] || [ "$BUILD_TYPE" == "default-Werror" ] || [ 
         fi
         ( # Custom additional options for libnutclient
             CONFIG_OPTS+=("--with-doc=no")
+            CONFIG_OPTS+=("--with-all=no")
             CONFIG_OPTS+=("--with-dev=yes")
+            CONFIG_OPTS+=("--with-dmfnutscan-regenerate=no")
+            CONFIG_OPTS+=("--with-dmfsnmp-regenerate=no")
             $CI_TIME ./configure "${CONFIG_OPTS[@]}"
         )
         $CI_TIME make -j4

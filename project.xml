@@ -44,11 +44,18 @@
         repository = "https://github.com/42ity/cxxtools"
         release = "42ity"/>
 
+    <!-- Note: From NUT we really only need up-to-date libraries that
+         we use in our project to link against during Travis CI tests.
+         Of course, settings are different for an image build.
+      -->
     <use project = "libnutclient" test = "nut::TcpClient::TcpClient" header="nutclient.h"
         prefix="nutclient"
         repository = "https://github.com/42ity/nut" release = "FTY">
             <add_config_opts>--with-doc=no</add_config_opts>
+            <add_config_opts>--with-all=no</add_config_opts>
             <add_config_opts>--with-dev=yes</add_config_opts>
+            <add_config_opts>--with-dmfnutscan-regenerate=no</add_config_opts>
+            <add_config_opts>--with-dmfsnmp-regenerate=no</add_config_opts>
     </use>
 
     <class name = "logger"          private = "1">logging api</class>
