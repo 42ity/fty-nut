@@ -210,7 +210,7 @@ if [ "$BUILD_TYPE" == "default" ] || [ "$BUILD_TYPE" == "default-Werror" ] || [ 
         echo ""
         BASE_PWD=${PWD}
         echo "`date`: INFO: Building prerequisite 'czmq' from Git repository..." >&2
-        $CI_TIME git clone --quiet --depth 1 -b v3.0.2 https://github.com/zeromq/czmq.git czmq
+        $CI_TIME git clone --quiet --depth 1 -b v3.0.2 https://github.com/42ity/czmq.git czmq
         cd czmq
         CCACHE_BASEDIR=${PWD}
         export CCACHE_BASEDIR
@@ -370,7 +370,7 @@ if [ "$BUILD_TYPE" == "default" ] || [ "$BUILD_TYPE" == "default-Werror" ] || [ 
         echo ""
         BASE_PWD=${PWD}
         echo "`date`: INFO: Building prerequisite 'libnutclient' from Git repository..." >&2
-        $CI_TIME git clone --quiet --depth 1 https://github.com/networkupstools/nut libnutclient
+        $CI_TIME git clone --quiet --depth 1 -b FTY https://github.com/42ity/nut libnutclient
         cd libnutclient
         CCACHE_BASEDIR=${PWD}
         export CCACHE_BASEDIR
@@ -391,7 +391,10 @@ if [ "$BUILD_TYPE" == "default" ] || [ "$BUILD_TYPE" == "default-Werror" ] || [ 
         fi
         ( # Custom additional options for libnutclient
             CONFIG_OPTS+=("--with-doc=no")
+            CONFIG_OPTS+=("--with-all=no")
             CONFIG_OPTS+=("--with-dev=yes")
+            CONFIG_OPTS+=("--with-dmfnutscan-regenerate=no")
+            CONFIG_OPTS+=("--with-dmfsnmp-regenerate=no")
             $CI_TIME ./configure "${CONFIG_OPTS[@]}"
         )
         $CI_TIME make -j4
