@@ -81,21 +81,30 @@ int main (int argc, char *argv [])
     std::string mapping_file;
     std::string state_file;
     const char* polling = NULL;
-    
-    while (true) {
-        static struct option long_options[] =
-        {
+
+// Some systems define struct option with non-"const" "char *"
+#if defined(__GNUC__) || defined(__GNUG__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wwrite-strings"
+#endif
+    static const char *short_options = "hvl:m:p:";
+    static struct option long_options[] =
+    {
             {"help",            no_argument,        0,  1},
             {"verbose",         no_argument,        0,  1},
             {"log-level",       required_argument,  0,  'l'},
             {"mapping-file",    required_argument,  0,  'm'},
             {"state-file",      required_argument,  0,  's'},
             {"polling",         required_argument,  0,  'p'},
-            {0,                 0,                  0,  0}
-        };
+            {NULL,              0,                  0,  0}
+    };
+#if defined(__GNUC__) || defined(__GNUG__)
+#pragma GCC diagnostic pop
+#endif
 
+    while (true) {
         int option_index = 0;
-        int c = getopt_long (argc, argv, "hvl:m:p:", long_options, &option_index);
+        int c = getopt_long (argc, argv, short_options, long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
