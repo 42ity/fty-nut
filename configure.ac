@@ -254,7 +254,7 @@ AS_IF([test x"${search_libczmq}" = xyes], [
                 )
         fi
 
-        AC_CHECK_LIB([czmq], [zctx_test],
+        AC_CHECK_LIB([czmq], [zhashx_test],
             [
                 was_czmq_check_lib_detected=yes
                 PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lczmq"
