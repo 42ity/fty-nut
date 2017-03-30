@@ -439,14 +439,14 @@ nut_save (nut_t *self, const char *fullpath)
         assert (zmessage);
 
         byte *buffer = NULL;
-        uint64_t size = zmsg_encode (zmessage, &buffer);
+        size_t size = zmsg_encode (zmessage, &buffer);
         zmsg_destroy (&zmessage);
 
         assert (buffer);
         assert (size > 0);
 
         // prefix
-        zchunk_extend (chunk, (const void *) &size, sizeof (uint64_t));
+        zchunk_extend (chunk, (const void *) &size, sizeof (size));
         // data
         zchunk_extend (chunk, (const void *) buffer, size);
 
@@ -515,8 +515,8 @@ nut_load (nut_t *self, const char *fullpath)
 
     while (offset < cursize) {
         byte *prefix = zchunk_data (chunk) + offset;
-        byte *data = zchunk_data (chunk) + offset + sizeof (uint64_t);
-        offset += (uint64_t) *prefix +  sizeof (uint64_t);
+        byte *data = zchunk_data (chunk) + offset + sizeof (size_t);
+        offset += (size_t) *prefix +  sizeof (size_t);
 
         zmsg_t *zmessage = zmsg_decode (data, (size_t) *prefix);
         assert (zmessage);
