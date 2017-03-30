@@ -56,7 +56,7 @@ class Device {
 
     void update (nut::TcpClient &conn);
     int scanCapabilities (nut::TcpClient &conn);
-    void publishAlerts (mlm_client_t *client);
+    void publishAlerts (mlm_client_t *client, uint64_t ttl);
     void publishRules (mlm_client_t *client);
 
     // friend functions for unit-testing
@@ -74,7 +74,7 @@ class Device {
         const std::string& quantity,
         const std::map<std::string,std::vector<std::string> >& variables
     );
-    void publishAlert (mlm_client_t *client, DeviceAlert& alert);
+    void publishAlert (mlm_client_t *client, DeviceAlert& alert, uint64_t ttl);
     void publishRule (mlm_client_t *client, DeviceAlert& alert);
     void fixAlertLimits (DeviceAlert& alert);
     std::string daisychainPrefix() const;

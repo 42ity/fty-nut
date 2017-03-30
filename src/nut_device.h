@@ -45,8 +45,8 @@ struct NUTInventoryValue {
 
 struct NUTPhysicalValue {
     bool changed;
-    long int value;
-    long int candidate;
+    std::string value;
+    std::string candidate;
 };
 
 // Class for keeping status information of one UPS/ePDU/...
@@ -110,7 +110,7 @@ class NUTDevice {
      *        all properties are returned.
      * \return bool, true if property exists
      */
-    std::map<std::string,int32_t> physics(bool onlyChanged) const;
+    std::map<std::string,std::string> physics(bool onlyChanged) const;
 
     /**
      * \brief Method returns list of inventory properties. If the parameter
@@ -184,7 +184,7 @@ class NUTDevice {
      * Updates the value if new value is significantly differen (> threshold%). Flag _change is
      * set if new value is saved.
      */
-    void updatePhysics(const std::string& varName, const float newValue);
+    void updatePhysics(const std::string& varName, const std::string& newValue);
 
     /**
      * \brief Updates physical or measurement value from vector.

@@ -160,16 +160,16 @@ Device::scanCapabilities (nut::TcpClient& conn)
 }
 
 void
-Device::publishAlerts (mlm_client_t *client) {
+Device::publishAlerts (mlm_client_t *client, uint64_t ttl) {
     if (!client) return;
     log_debug("aa: publishing %zu alerts on %s", _alerts.size (), _assetName.c_str());
     for (auto& it: _alerts) {
-        publishAlert (client, it.second);
+        publishAlert (client, it.second, ttl);
     }
 }
 
 void
-Device::publishAlert (mlm_client_t *client, DeviceAlert& alert)
+Device::publishAlert (mlm_client_t *client, DeviceAlert& alert, uint64_t ttl)
 {
     if (!client) return;
     if (alert.status.empty()) return;
@@ -209,12 +209,13 @@ Device::publishAlert (mlm_client_t *client, DeviceAlert& alert)
     log_debug("aa: publishing alert %s", rule.c_str ());
     zmsg_t *message = fty_proto_encode_alert(
         NULL,               // aux
+        alert.timestamp,    // timestamp
+        ttl,
         rule.c_str (),      // rule
         _assetName.c_str (),// element
         state,              // state
         severity,           // severity
         description.c_str (), // description
-        alert.timestamp,    // timestamp
         ""                  // action ?email
     );
     std::string topic = rule + "/" + severity + "@" + _assetName;
