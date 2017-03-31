@@ -438,19 +438,39 @@ nut_save (nut_t *self, const char *fullpath)
         zmsg_t *zmessage = fty_proto_encode (&duplicate); // duplicate destroyed here
         assert (zmessage);
 
+#if CZMQ_VERSION_MAJOR == 3
         byte *buffer = NULL;
         size_t size = zmsg_encode (zmessage, &buffer);
         zmsg_destroy (&zmessage);
-
         assert (buffer);
+#else
+/* FIXME: Someone should look at this - what do we want achieved here? */
+        zframe_t *ret_frame = zmsg_encode (zmessage);
+        size_t size = zframe_size (ret_frame);
+        zmsg_destroy (&zmessage);
+        assert (ret_frame);
+#endif
+
         assert (size > 0);
 
         // prefix
         zchunk_extend (chunk, (const void *) &size, sizeof (size));
+
+#if CZMQ_VERSION_MAJOR == 3
         // data
         zchunk_extend (chunk, (const void *) buffer, size);
+#else
+/* FIXME: Someone should look at this - don't we have anything
+ * to extend for ret_frame case? */
+#endif
 
+#if CZMQ_VERSION_MAJOR == 3
         free (buffer); buffer = NULL;
+#else
+/* FIXME: Someone should look at this - don't we have anything
+ * to free for ret_frame case? */
+        zframe_destroy (&ret_frame);
+#endif
 
         asset = (fty_proto_t *) zhashx_next (self->assets);
     }
@@ -515,10 +535,17 @@ nut_load (nut_t *self, const char *fullpath)
 
     while (offset < cursize) {
         byte *prefix = zchunk_data (chunk) + offset;
+#if CZMQ_VERSION_MAJOR == 3
         byte *data = zchunk_data (chunk) + offset + sizeof (size_t);
+#endif
         offset += (size_t) *prefix +  sizeof (size_t);
 
+#if CZMQ_VERSION_MAJOR == 3
         zmsg_t *zmessage = zmsg_decode (data, (size_t) *prefix);
+#else
+/* FIXME: Someone should look at this - what do we want achieved here? */
+        zmsg_t *zmessage = zmsg_decode (*prefix);
+#endif
         assert (zmessage);
         fty_proto_t *asset = fty_proto_decode (&zmessage); // zmessage destroyed
         assert (asset);
