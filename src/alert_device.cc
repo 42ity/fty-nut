@@ -298,7 +298,7 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
     log_debug("aa: publishing rule %s", ruleName.c_str ());
     zmsg_addstr (message, "ADD");
     zmsg_addstr (message, rule.c_str ());
-    if (mlm_client_sendto (client, "alert-agent", "rfc-evaluator-rules", NULL, 1000, &message) == 0) {
+    if (mlm_client_sendto (client, "fty-alert-engine", "rfc-evaluator-rules", NULL, 1000, &message) == 0) {
         alert.rulePublished = true;
     };
     zmsg_destroy (&message);
