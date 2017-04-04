@@ -279,7 +279,7 @@ alert_actor_test (bool verbose)
 
     mlm_client_t *rfc_evaluator = mlm_client_new ();
     assert (rfc_evaluator);
-    mlm_client_connect (rfc_evaluator, endpoint, 1000, "alert-agent");
+    mlm_client_connect (rfc_evaluator, endpoint, 1000, "fty-alert-engine");
 
     mlm_client_t *alert_list = mlm_client_new ();
     assert (alert_list);
