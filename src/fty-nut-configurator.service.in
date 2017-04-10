@@ -3,7 +3,6 @@
 
 [Unit]
 Description=fty-nut-configurator service
-After=network.target
 Requires=network.target malamute.service
 After=network.target malamute.service
 PartOf=bios.target
