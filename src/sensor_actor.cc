@@ -25,9 +25,9 @@
 #include "logger.h"
 
 /* No consumers for PATH at this time:
-static const char* PATH = "/var/lib/fty/nut";
+static const char* PATH = "/var/lib/fty/fty-nut";
  */
-static const char* STATE = "/var/lib/fty/nut/state_file";
+static const char* STATE = "/var/lib/fty/fty-nut/state_file";
 
 // ugly, declared in actor_commands, TODO: move it to some common
 int

@@ -21,7 +21,7 @@
 #  \author  Tomas Halman <TomasHalman@Eaton.com>
 #           Michal Vyskocil <MichalVyskocil@Eaton.com>
 #  \details Helper script for autoconfig agent. It creates new NUT configuration
-#           from files stored in /var/lib/fty/nut/devices.
+#           from files stored in /var/lib/fty/fty-nut/devices.
 
 set -e
 
@@ -36,7 +36,7 @@ die() {
 }
 
 TMPDIR=${TMPDIR:-/tmp}
-BIOSCONFDIR=/var/lib/fty/nut/devices
+BIOSCONFDIR=/var/lib/fty/fty-nut/devices
 NUTCONFIGDIR=/etc/nut
 [ -d "$NUTCONFIGDIR" ] || NUTCONFIGDIR=/etc/ups
 [ -d "$NUTCONFIGDIR" ] || die "NUT configuration directory not found"

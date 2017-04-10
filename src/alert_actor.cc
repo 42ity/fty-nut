@@ -26,9 +26,9 @@
 #include "logger.h"
 
 /* No consumers for PATH at this time:
-static const char* PATH = "/var/lib/fty/nut";
+static const char* PATH = "/var/lib/fty/fty-nut";
  */
-static const char* STATE = "/var/lib/fty/nut/state_file";
+static const char* STATE = "/var/lib/fty/fty-nut/state_file";
 
 int
 alert_actor_commands (

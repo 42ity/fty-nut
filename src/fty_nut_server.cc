@@ -29,8 +29,8 @@
 #include "fty_nut_classes.h"
 
 /* Consumers of these vars are currently commented away below
-static const char* PATH = "/var/lib/fty/nut";
-static const char* STATE = "/var/lib/fty/nut/state_file";
+static const char* PATH = "/var/lib/fty/fty-nut";
+static const char* STATE = "/var/lib/fty/fty-nut/state_file";
  */
 
 static void

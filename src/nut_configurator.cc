@@ -38,7 +38,7 @@
 
 using namespace shared;
 
-#define NUT_PART_STORE "/var/lib/fty/nut/devices"
+#define NUT_PART_STORE "/var/lib/fty/fty-nut/devices"
 
 static const char * NUTConfigXMLPattern = "[[:blank:]]driver[[:blank:]]+=[[:blank:]]+\"netxml-ups\"";
 /* TODO: This explicitly lists NUT MIB mappings for the static snmp-ups driver,
@@ -48,7 +48,7 @@ static const char * NUTConfigXMLPattern = "[[:blank:]]driver[[:blank:]]+=[[:blan
  */
 static const char * NUTConfigEpduPattern = "[[:blank:]](mibs[[:blank:]]+=[[:blank:]]+\"(eaton_epdu|aphel_genesisII|aphel_revelation|pulizzi_switched1|pulizzi_switched2)\"|"
                                            "desc[[:blank:]]+=[[:blank:]]+\"[^\"]+ epdu [^\"]+\")";
-static const char * NUTConfigCanSnmpPattern = "[[:blank:]]driver[[:blank:]]+=[[:blank:]]+\"snmp-ups(-dmf)?\"";
+static const char * NUTConfigCanSnmpPattern = "[[:blank:]]driver[[:blank:]]+=[[:blank:]]+\"snmp-ups(-old|-dmf)?\"";
 
 static const char * NUTConfigATSPattern = "[[:blank:]]mibs[[:blank:]]*=[[:blank:]]*\"[^\"]*ats[^\"]*\"";
 
