@@ -37,7 +37,7 @@
     </use>
 
     <use project = "cidr" test = "cidr_alloc" header="libcidr.h"
-        debian_name = "libcidr0-dev"
+        debian_name = "libcidr0-dev" redhat_name = "libcidr-devel"
         repository = "https://github.com/42ity/libcidr"/>
 
     <use project = "cxxtools" test="cxxtools::Utf8Codec::Utf8Codec" header="cxxtools/allocator.h"
@@ -49,7 +49,7 @@
          Of course, settings are different for an image build.
       -->
     <use project = "libnutclient" test = "nut::TcpClient::TcpClient" header="nutclient.h"
-        prefix="nutclient"
+        prefix="nutclient" redhat_name = "nut-devel"
         repository = "https://github.com/42ity/nut" release = "FTY">
             <add_config_opts>--with-doc=no</add_config_opts>
             <add_config_opts>--with-all=no</add_config_opts>
