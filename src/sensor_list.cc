@@ -80,14 +80,14 @@ void Sensors::updateSensorList (nut_t *config)
         const char *connected_to = nut_asset_location (config, name);
         // do we know where is sensor connected?
         if (streq (connected_to, "")) {
-            log_debug ("sa: sensor %s ingnored (no location)", name);
+            log_debug ("sa: sensor %s ignored (no location)", name);
             name = (char *) zlist_next (sensors);
             continue;
         }
 
         // is it connected to UPS/epdu?
         if ( ! zlist_exists (devices, (void *) connected_to)) {
-            log_debug ("sa: sensor %s connected to unknown location '%s'", name, connected_to);
+            log_debug ("sa: sensor %s ignored (connected to unknown location or not a power device '%s')", name, connected_to);
             name = (char *) zlist_next (sensors);
             continue;
         }
