@@ -65,7 +65,7 @@ void Sensor::publish (mlm_client_t *client, int ttl)
         zhash_autofree (aux);
         zhash_insert (aux, "port", (void*) port().c_str());
         zmsg_t *msg = fty_proto_encode_metric (
-            NULL,
+            aux,
             time (NULL),
             ttl,
             ("temperature." + port ()).c_str (),
