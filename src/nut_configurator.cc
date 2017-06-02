@@ -274,7 +274,7 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
                 IP = ipit->second;
 
                 std::vector <std::string> communities;
-                zconfig_t *config = zconfig_load ("/etc/default/bios.cfg");
+                zconfig_t *config = zconfig_load ("/etc/default/fty.cfg");
                 if (config) {
                     zconfig_t *item = zconfig_locate (config, "snmp/community");
                     if (item) {
@@ -293,7 +293,7 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
                     zconfig_destroy (&config);
                 }
                 else {
-                    log_warning ("Config file '%s' could not be read.", "/etc/default/bios.cfg");
+                    log_warning ("Config file '%s' could not be read.", "/etc/default/fty.cfg");
                 }
                 communities.push_back ("public");
 
@@ -426,4 +426,3 @@ void
 nut_configurator_test (bool verbose)
 {
 }
-
