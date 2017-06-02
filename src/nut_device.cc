@@ -471,10 +471,10 @@ void NUTDevice::NUTRealpowerFromOutput (const std::string& prefix, std::map< std
         double sum = 0.0;
         for (int i=1; i<= phases; i++) {
             auto it = vars.find (prefix + "output.L" + std::to_string(i) + ".realpower");
-            
+
             if (it  == vars.end ()) {
                 it = vars.find (prefix + "ups.L" + std::to_string(i) + ".realpower");
-                
+
                 if (it  == vars.end ()) {
                     // even output is missing, can't compute
                         break;
@@ -519,6 +519,23 @@ void NUTDevice::NUTRealpowerFromOutput (const std::string& prefix, std::map< std
         value.push_back (itof (round (sum * 100)));
         vars[prefix + "ups.realpower"] = value;
         return;
+    }
+
+    // mainly for STS/ATS - if we have output voltage and current let's multiply them
+    {
+        auto it_current = vars.find (prefix + "output.current");
+        auto it_voltage = vars.find (prefix + "output.voltage");
+        if ((it_current != vars.end ()) && (it_voltage != vars.end ())) {
+            try {
+                double power = std::stod (it_current->second[0]) * std::stod (it_voltage->second[0]);
+                std::vector<std::string> value;
+                value.push_back (itof (round (power * 100)));
+                vars[prefix + "ups.realpower"] = value;
+                return;
+            } catch(...) {
+                zsys_error ("Exception in power = current*voltage calculation");
+            }
+        }
     }
 }
 
