@@ -544,13 +544,13 @@ nut_load (nut_t *self, const char *fullpath)
  * https://stackoverflow.com/questions/586928/how-should-i-print-types-like-off-t-and-size-t
  */
     off_t offset = 0;
-    zsys_debug ("zfile_cursize == %jd", (intmax_t)cursize);
+    log_debug ("zfile_cursize == %jd", (intmax_t)cursize);
 
     while (offset < cursize) {
         byte *prefix = zframe_data (frame) + offset;
         byte *data = zframe_data (frame) + offset + sizeof (uint64_t);
         offset += (uint64_t) *prefix +  sizeof (uint64_t);
-        zsys_debug ("prefix == %" PRIu64 "; offset = %" PRIu64 " ", (uint64_t ) *prefix, offset);
+        log_debug ("prefix == %" PRIu64 "; offset = %" PRIu64 " ", (uint64_t ) *prefix, offset);
 
 /* Note: the CZMQ_VERSION_MAJOR comparison below actually assumes versions
  * we know and care about - v3.0.2 (our legacy default, already obsoleted
@@ -630,6 +630,7 @@ nut_print (nut_t *self)
 static void
 nut_print_zsys (nut_t *self)
 {
+    // Note: no "if (verbose)" checks in this dedicated routine
     assert (self);
     fty_proto_t *asset = (fty_proto_t *) zhashx_first (self->assets);
     while (asset) {
@@ -692,6 +693,7 @@ test_asset_new (const char *name, const char *operation
 static int
 test_zlistx_compare (zlistx_t *expected, zlistx_t **received_p, int print = 0)
 {
+    // Note: no "if (self->verbose)" checks in this dedicated routine for tests
     assert (expected);
     assert (received_p && *received_p);
 
