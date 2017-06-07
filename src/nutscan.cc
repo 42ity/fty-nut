@@ -81,6 +81,7 @@ s_parse_nut_scanner_output(
         return;
 
     std::stringstream buf;
+    bool got_name = false;
 
     while (inp.good() && !inp.eof()) {
         std::string line;
@@ -92,17 +93,28 @@ s_parse_nut_scanner_output(
             continue;
 
         if (line[0] == '[') {
+            // New snippet begins, flust old data to out (if any)
             if (buf.tellp() > 0) {
                 out.push_back(buf.str());
                 buf.clear();
                 buf.str("");
             }
-            buf << '[' << name << ']' << std::endl;
+            // Do not flush the name into buf here just yet -
+            // do so if we have nontrivial config later on
+            got_name = true;
         }
-        else if (buf.tellp() > 0) {
-            buf << line;
+        else {
+            if (got_name) {
+                buf << '[' << name << ']' << std::endl;
+                got_name = false;
+            }
+            if (buf.tellp() > 0)
+                buf << line;
         }
     }
+
+    if (got_name && buf.tellp() == 0)
+        log_error ("While parsing nut-scanner output for %s, got a section tag but no other data", name);
 
     if (buf.tellp() > 0) {
         out.push_back(buf.str());
