@@ -125,7 +125,10 @@ s_run_nut_scanner(
     std::string e;
     log_debug ("START: nut-scanner with timeout 10 ...");
     int ret = output(args, o, e, 10);
-    log_debug ("       done with code %d", ret);
+    log_debug ("       done with code %d and following stdout:\n-----\n%s\n-----\n       ...and stderr:\n-----\n%s\n-----\n", ret, o, e);
+    if (ret != 0 || !e.empty()) {
+        log_error("Execution of nut-scanner FAILED with code %d and message %s", ret, e);
+    }
 
     if (ret != 0)
         return -1;
@@ -159,6 +162,7 @@ nut_scan_snmp(
     // DMF enabled and available
     if (use_dmf || ::getenv ("BIOS_NUT_USE_DMF")) {
         Argv args = {"nut-scanner", "--community", comm, "-z", "-s", ip_address.toString()};
+        log_debug("nut-scanning SNMP device at %s using DMF support", ip_address.toString());
         r = s_run_nut_scanner(
                 args,
                 name,
@@ -170,6 +174,7 @@ nut_scan_snmp(
 
     // DMF not available
     Argv args = {"nut-scanner", "--community", comm, "-S", "-s", ip_address.toString()};
+    log_debug("nut-scanning SNMP device at %s using legacy mode", ip_address.toString());
     r = s_run_nut_scanner(
             args,
             name,
@@ -185,6 +190,7 @@ nut_scan_xml_http(
         std::vector<std::string>& out)
 {
     Argv args = {"nut-scanner", "-M", "-s", ip_address.toString()};
+    log_debug("nut-scanning NetXML device at %s", ip_address.toString());
     return s_run_nut_scanner(
             args,
             name,
