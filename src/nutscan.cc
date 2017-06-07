@@ -92,6 +92,9 @@ s_parse_nut_scanner_output(
         if (line.size() == 0)
             continue;
 
+        if (line[0] == '\n')
+            continue;
+
         if (line[0] == '[') {
             // New snippet begins, flust old data to out (if any)
             if (buf.tellp() > 0) {
