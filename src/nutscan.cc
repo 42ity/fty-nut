@@ -157,7 +157,7 @@ nut_scan_snmp(
     comm = community;
     if (comm.empty())
         comm = "public";
-    
+
     int r = -1;
     // DMF enabled and available
     if (use_dmf || ::getenv ("BIOS_NUT_USE_DMF")) {
@@ -167,7 +167,7 @@ nut_scan_snmp(
                 args,
                 name,
                 out);
-        
+
         if (r != -1)
             return r;
     }
