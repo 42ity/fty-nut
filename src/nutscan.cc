@@ -81,6 +81,7 @@ s_parse_nut_scanner_output(
         return;
 
     std::stringstream buf;
+    bool got_name = false;
 
     while (inp.good() && !inp.eof()) {
         std::string line;
@@ -91,18 +92,32 @@ s_parse_nut_scanner_output(
         if (line.size() == 0)
             continue;
 
+        if (line[0] == '\n')
+            continue;
+
         if (line[0] == '[') {
+            // New snippet begins, flust old data to out (if any)
             if (buf.tellp() > 0) {
                 out.push_back(buf.str());
                 buf.clear();
                 buf.str("");
             }
-            buf << '[' << name << ']' << std::endl;
+            // Do not flush the name into buf here just yet -
+            // do so if we have nontrivial config later on
+            got_name = true;
         }
-        else if (buf.tellp() > 0) {
-            buf << line;
+        else {
+            if (got_name) {
+                buf << '[' << name << ']' << std::endl;
+                got_name = false;
+            }
+            if (buf.tellp() > 0)
+                buf << line;
         }
     }
+
+    if (got_name && buf.tellp() == 0)
+        log_error ("While parsing nut-scanner output for %s, got a section tag but no other data", name.c_str());
 
     if (buf.tellp() > 0) {
         out.push_back(buf.str());
@@ -116,7 +131,7 @@ s_parse_nut_scanner_output(
  */
 static
 int
-s_run_nut_scaner(
+s_run_nut_scanner(
         const Argv& args,
         const std::string& name,
         std::vector<std::string>& out)
@@ -125,7 +140,10 @@ s_run_nut_scaner(
     std::string e;
     log_debug ("START: nut-scanner with timeout 10 ...");
     int ret = output(args, o, e, 10);
-    log_debug ("       done with code %d", ret);
+    log_debug ("       done with code %d and following stdout:\n-----\n%s\n-----\n       ...and stderr:\n-----\n%s\n-----\n", ret, o.c_str(), e.c_str());
+    if (ret != 0 || !e.empty()) {
+        log_error("Execution of nut-scanner FAILED with code %d and message %s", ret, e.c_str());
+    }
 
     if (ret != 0)
         return -1;
@@ -154,23 +172,25 @@ nut_scan_snmp(
     comm = community;
     if (comm.empty())
         comm = "public";
-    
+
     int r = -1;
     // DMF enabled and available
     if (use_dmf || ::getenv ("BIOS_NUT_USE_DMF")) {
         Argv args = {"nut-scanner", "--community", comm, "-z", "-s", ip_address.toString()};
-        r = s_run_nut_scaner(
+        log_debug("nut-scanning SNMP device at %s using DMF support", ip_address.toString().c_str());
+        r = s_run_nut_scanner(
                 args,
                 name,
                 out);
-        
+
         if (r != -1)
             return r;
     }
 
     // DMF not available
     Argv args = {"nut-scanner", "--community", comm, "-S", "-s", ip_address.toString()};
-    r = s_run_nut_scaner(
+    log_debug("nut-scanning SNMP device at %s using legacy mode", ip_address.toString().c_str());
+    r = s_run_nut_scanner(
             args,
             name,
             out);
@@ -185,7 +205,8 @@ nut_scan_xml_http(
         std::vector<std::string>& out)
 {
     Argv args = {"nut-scanner", "-M", "-s", ip_address.toString()};
-    return s_run_nut_scaner(
+    log_debug("nut-scanning NetXML device at %s", ip_address.toString().c_str());
+    return s_run_nut_scanner(
             args,
             name,
             out);

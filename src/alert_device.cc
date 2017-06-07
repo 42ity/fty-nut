@@ -118,7 +118,7 @@ Device::scanCapabilities (nut::TcpClient& conn)
     _alerts.clear();
     try {
         auto nutDevice = conn.getDevice(_nutName);
-        if (! nutDevice.isOk()) { throw std::runtime_error("device " + _assetName + "is not configured in NUT yet"); }
+        if (! nutDevice.isOk()) { throw std::runtime_error("device " + _assetName + " is not configured in NUT yet"); }
         auto vars = nutDevice.getVariableValues();
         if (vars.empty ()) return 0;
         if (vars.find (prefix + "ambient.temperature.status") != vars.cend()) {
