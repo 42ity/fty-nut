@@ -116,7 +116,7 @@ s_parse_nut_scanner_output(
  */
 static
 int
-s_run_nut_scaner(
+s_run_nut_scanner(
         const Argv& args,
         const std::string& name,
         std::vector<std::string>& out)
@@ -159,7 +159,7 @@ nut_scan_snmp(
     // DMF enabled and available
     if (use_dmf || ::getenv ("BIOS_NUT_USE_DMF")) {
         Argv args = {"nut-scanner", "--community", comm, "-z", "-s", ip_address.toString()};
-        r = s_run_nut_scaner(
+        r = s_run_nut_scanner(
                 args,
                 name,
                 out);
@@ -170,7 +170,7 @@ nut_scan_snmp(
 
     // DMF not available
     Argv args = {"nut-scanner", "--community", comm, "-S", "-s", ip_address.toString()};
-    r = s_run_nut_scaner(
+    r = s_run_nut_scanner(
             args,
             name,
             out);
@@ -185,7 +185,7 @@ nut_scan_xml_http(
         std::vector<std::string>& out)
 {
     Argv args = {"nut-scanner", "-M", "-s", ip_address.toString()};
-    return s_run_nut_scaner(
+    return s_run_nut_scanner(
             args,
             name,
             out);
