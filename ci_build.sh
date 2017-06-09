@@ -167,10 +167,6 @@ default|default-Werror|default-with-docs|valgrind)
         CONFIG_OPTS+=("CPP=${CPP}")
     fi
 
-    if [ -n "$ADDRESS_SANITIZER" ] && [ "$ADDRESS_SANITIZER" == "enabled" ]; then
-        CONFIG_OPTS+=("--enable-address-sanitizer=yes")
-    fi
-
     CONFIG_OPTS_COMMON=$CONFIG_OPTS
     CONFIG_OPTS+=("--with-docs=no")
 
@@ -217,7 +213,7 @@ default|default-Werror|default-with-docs|valgrind)
         echo ""
         BASE_PWD=${PWD}
         echo "`date`: INFO: Building prerequisite 'czmq' from Git repository..." >&2
-        $CI_TIME git clone --quiet --depth 1 https://github.com/zeromq/czmq.git czmq
+        $CI_TIME git clone --quiet --depth 1 -b v3.0.2 https://github.com/42ity/czmq.git czmq
         cd czmq
         CCACHE_BASEDIR=${PWD}
         export CCACHE_BASEDIR
@@ -417,6 +413,9 @@ default|default-Werror|default-with-docs|valgrind)
     if [ "$BUILD_TYPE" = "default-with-docs" ]; then
         CONFIG_OPTS=$CONFIG_OPTS_COMMON
         CONFIG_OPTS+=("--with-docs=yes")
+    fi
+    if [ -n "$ADDRESS_SANITIZER" ] && [ "$ADDRESS_SANITIZER" == "enabled" ]; then
+        CONFIG_OPTS+=("--enable-address-sanitizer=yes")
     fi
     # Only use --enable-Werror on projects that are expected to have it
     # (and it is not our duty to check prerequisite projects anyway)
