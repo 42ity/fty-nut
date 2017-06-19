@@ -149,8 +149,16 @@ s_zhash_to_map(zhash_t *hash)
 
 // see core.git/src/shared/asset_types.h
 static int
-s_operation2i (const char *operation)
+s_operation2i (fty_proto_t *msg)
 {
+    if (!msg) return -1;
+    const char *operation = fty_proto_operation (msg);
+    if (!operation) return -1;
+    const char *status = fty_proto_aux_string (msg, "status", "active");
+    if (streq (status, "nonactive")) {
+        // device is nonactive -> handle it as delete
+        return 2;
+    }
     if (streq (operation, "create"))
         return 1;
     else
@@ -179,7 +187,7 @@ void Autoconfig::onSend( zmsg_t **message )
     }
 
     // ignore non ups/epdu devices - or those with non interesting operation
-    if (!s_is_ups_epdu_or_sts (bmsg) || s_operation2i (fty_proto_operation (bmsg)) == -1) {
+    if (!s_is_ups_epdu_or_sts (bmsg) || s_operation2i (bmsg) == -1) {
         fty_proto_destroy (&bmsg);
         return;
     }
@@ -204,7 +212,7 @@ void Autoconfig::onSend( zmsg_t **message )
     addDeviceIfNeeded( device_name, 6, subtype );
     _configurableDevices[device_name].configured = false;
     _configurableDevices[device_name].attributes.clear();
-    _configurableDevices[device_name].operation = s_operation2i (fty_proto_operation (bmsg));
+    _configurableDevices[device_name].operation = s_operation2i (bmsg);
     _configurableDevices[device_name].attributes = s_zhash_to_map(fty_proto_ext (bmsg));
     fty_proto_destroy (&bmsg);
     saveState();
