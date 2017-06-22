@@ -3,35 +3,28 @@
     description = "NUT (Network UPS Tools) daemon wrapper/proxy"
     script = "zproject.gsl"
     email = "EatonIPCOpenSource@eaton.com"
-    repository = "https://github.com/42ity/fty-nut"
+    url = "https://42ity.org"
     license = "GPL-2.0+"
+    repository = "https://github.com/42ity/fty-nut"
     >
-
-    <include filename = "license.xml" />
-    <version major = "1" minor = "0" patch = "0" />
-    <!--
-        Current libtool ABI version of your project's shared library.
-        Start at 0:0:0 and see:
-        http://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html
-        for details on how/when to increment it.
-        If not defined 0:0:0 will be used.
-    -->
-    <abi current = "1" revision = "0" age = "0" />
 
     <target name = "debian" />
     <target name = "redhat" />
     <target name = "travis" />
 
-    <!-- Note that if pkg-config version attrs are specified,
-        then the "test" is not used by current zproject. -->
-    <use project = "czmq" test = "zctx_test"
-        min_major = "3" min_minor = "0" min_patch = "2"/>
-    <use project = "malamute" min_major = "1"/>
-    <use project = "fty-proto" libname = "libfty_proto" prefix="ftyproto"
-        min_major = "0" min_minor = "0" min_patch = "0"
+    <include filename = "license.xml" />
+    <version major = "1" minor = "0" patch = "0" />
+    <abi current = "1" revision = "0" age = "0" />
+
+    <use project = "czmq"
+        repository="https://github.com/42ity/czmq.git" release = "v3.0.2"
+        min_major = "3" min_minor = "0" min_patch = "2" />
+    <use project = "malamute" min_major = "1" test = "mlm_server_test" />
+    <use project = "fty-proto" libname = "libfty_proto" header="ftyproto.h" prefix="fty_proto"
+        min_major = "1" min_minor = "0" min_patch = "0"
         repository = "https://github.com/42ity/fty-proto"
         test = "fty_proto_test">
-        <use project = "malamute" />
+        <use project = "malamute"/>
     </use>
 
     <use project = "cidr" test = "cidr_alloc" header="libcidr.h"
@@ -92,4 +85,3 @@ TODO: Handle (automate) delivery of .in templates (and configure.ac translation)
 -->
 
 </project>
-
