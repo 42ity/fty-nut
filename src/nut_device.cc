@@ -531,6 +531,7 @@ void NUTDevice::NUTRealpowerFromOutput (const std::string& prefix, std::map< std
                 std::vector<std::string> value;
                 value.push_back (itof (round (power * 100)));
                 vars[prefix + "ups.realpower"] = value;
+                log_debug ("ats, realpower");
                 return;
             } catch(...) {
                 zsys_error ("Exception in power = current*voltage calculation");
@@ -553,7 +554,7 @@ void NUTDevice::NUTFixMissingLoad (const std::string& prefix, std::map< std::str
                     if (realpower_it != vars.cend ()) {
                         double realpower = std::stod (realpower_it->second[0]);
                         if (max_power > 0.1) {
-                            std::string load = std::to_string ((realpower / max_power) * 100.0);
+                            std::string load = std::to_string (round ((realpower / max_power) * 100.0));
                             vars["ups.load"] = { load };
                             return;
                         }
@@ -586,7 +587,7 @@ void NUTDevice::NUTFixMissingLoad (const std::string& prefix, std::map< std::str
                         const auto it3 = vars.find (prefix + "output.L3.realpower");
                         if ((it1 != vars.cend ()) && (it2 != vars.cend ()) && (it2 != vars.cend ())) {
                             std::string load = std::to_string(
-                                (std::stod (it1->second[0]) + std::stod (it2->second[0]) + std::stod (it3->second[0]))/max_power*100.0
+                                round ((std::stod (it1->second[0]) + std::stod (it2->second[0]) + std::stod (it3->second[0]))/max_power*100.0)
                             );
                             vars["ups.load"] = { load };
                             return;
