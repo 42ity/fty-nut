@@ -38,7 +38,7 @@ const std::map<std::string, std::string> NUTAgent::_units =
     { "load",        "%" },
     { "charge",      "%" },
     { "frequency",   "Hz"},
-    { "power",       "W" },
+    { "power",       "VA" },
     { "runtime",     "s" },
     { "timer",       "s" },
 };
