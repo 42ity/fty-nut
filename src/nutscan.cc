@@ -141,8 +141,13 @@ s_run_nut_scanner(
     log_debug ("START: nut-scanner with timeout 10 ...");
     int ret = output(args, o, e, 10);
     log_debug ("       done with code %d and following stdout:\n-----\n%s\n-----\n       ...and stderr:\n-----\n%s\n-----\n", ret, o.c_str(), e.c_str());
-    if (ret != 0 || !e.empty()) {
-        log_error("Execution of nut-scanner FAILED with code %d and message %s", ret, e.c_str());
+    if (ret != 0) {
+        log_error("Execution of nut-scanner FAILED with code %d and %s",
+            ret, e.empty() ? "no message" : ("message" + e).c_str());
+    }
+    if (ret == 0 && !e.empty()) {
+        log_debug("Execution of nut-scanner SUCCEEDED with message %s",
+            e.c_str());
     }
 
     if (ret != 0)
@@ -154,8 +159,10 @@ s_run_nut_scanner(
             inp,
             out);
 
-    if (out.empty())
+    if (out.empty()) {
+        log_info("No suggestions from nut-scanner for device %s", name.c_str());
         return -1;
+    }
 
     return 0;
 }
