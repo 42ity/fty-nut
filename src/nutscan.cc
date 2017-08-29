@@ -176,7 +176,7 @@ nut_scan_snmp(
     int r = -1;
     // DMF enabled and available
     if (use_dmf || ::getenv ("BIOS_NUT_USE_DMF")) {
-        Argv args = {"nut-scanner", "--community", comm, "-z", "-s", ip_address.toString()};
+        Argv args = {"nut-scanner", "-q", "--community", comm, "-z", "-s", ip_address.toString()};
         log_debug("nut-scanning SNMP device at %s using DMF support", ip_address.toString().c_str());
         r = s_run_nut_scanner(
                 args,
@@ -188,7 +188,7 @@ nut_scan_snmp(
     }
 
     // DMF not available
-    Argv args = {"nut-scanner", "--community", comm, "-S", "-s", ip_address.toString()};
+    Argv args = {"nut-scanner", "-q", "--community", comm, "-S", "-s", ip_address.toString()};
     log_debug("nut-scanning SNMP device at %s using legacy mode", ip_address.toString().c_str());
     r = s_run_nut_scanner(
             args,
@@ -204,7 +204,7 @@ nut_scan_xml_http(
         const CIDRAddress& ip_address,
         std::vector<std::string>& out)
 {
-    Argv args = {"nut-scanner", "-M", "-s", ip_address.toString()};
+    Argv args = {"nut-scanner", "-q", "-M", "-s", ip_address.toString()};
     log_debug("nut-scanning NetXML device at %s", ip_address.toString().c_str());
     return s_run_nut_scanner(
             args,
