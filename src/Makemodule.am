@@ -133,7 +133,10 @@ src: \
 SELFTEST_DIR_RO = src/selftest-ro
 SELFTEST_DIR_RW = src/selftest-rw
 
+# This is recreated on every invocation (as a selftest dependency),
+# so tests run in a clean environment
 $(abs_top_builddir)/$(SELFTEST_DIR_RW):
+	rm -rf "$@"
 	mkdir -p "$@"
 
 $(abs_top_builddir)/$(SELFTEST_DIR_RO): $(abs_top_srcdir)/$(SELFTEST_DIR_RO)
@@ -168,32 +171,70 @@ clean-local-selftest-rw:
 		fi; \
 	fi
 
+check-empty-selftest-rw:
+	if test -e $(abs_top_builddir)/$(SELFTEST_DIR_RW) ; then \
+		if test `find "$(abs_top_builddir)/$(SELFTEST_DIR_RW)" | wc -l` -lt 1 ; then \
+			echo "FATAL: selftest did not tidy up the data it wrote" >&2 ; \
+			find "$(abs_top_builddir)/$(SELFTEST_DIR_RW)" ; \
+			exit 2; \
+		else true ; fi; \
+	else true ; fi
+
 check-local: src/fty_nut_selftest $(abs_top_builddir)/$(SELFTEST_DIR_RW) $(abs_top_builddir)/$(SELFTEST_DIR_RO)
 	$(LIBTOOL) --mode=execute $(builddir)/src/fty_nut_selftest
+	$(MAKE) check-empty-selftest-rw
 
 check-verbose: src/fty_nut_selftest $(abs_top_builddir)/$(SELFTEST_DIR_RW) $(abs_top_builddir)/$(SELFTEST_DIR_RO)
 	$(LIBTOOL) --mode=execute $(builddir)/src/fty_nut_selftest -v
+	$(MAKE) check-empty-selftest-rw
 
 # Run the selftest binary under valgrind to check for memory leaks
 memcheck: src/fty_nut_selftest $(abs_top_builddir)/$(SELFTEST_DIR_RW) $(abs_top_builddir)/$(SELFTEST_DIR_RO)
 	$(LIBTOOL) --mode=execute valgrind --tool=memcheck \
 		--leak-check=full --show-reachable=yes --error-exitcode=1 \
 		--suppressions=$(srcdir)/src/.valgrind.supp \
+		$(VALGRIND_OPTIONS) \
 		$(builddir)/src/fty_nut_selftest
+	$(MAKE) check-empty-selftest-rw
+
+memcheck-verbose: src/fty_nut_selftest $(abs_top_builddir)/$(SELFTEST_DIR_RW) $(abs_top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=memcheck \
+		--leak-check=full --show-reachable=yes --error-exitcode=1 \
+		--suppressions=$(srcdir)/src/.valgrind.supp \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/fty_nut_selftest -v
+	$(MAKE) check-empty-selftest-rw
 
 # Run the selftest binary under valgrind to check for performance leaks
 callcheck: src/fty_nut_selftest $(abs_top_builddir)/$(SELFTEST_DIR_RW) $(abs_top_builddir)/$(SELFTEST_DIR_RO)
 	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
+		$(VALGRIND_OPTIONS) \
 		$(builddir)/src/fty_nut_selftest
+	$(MAKE) check-empty-selftest-rw
+
+callcheck-verbose: src/fty_nut_selftest $(abs_top_builddir)/$(SELFTEST_DIR_RW) $(abs_top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/fty_nut_selftest -v
+	$(MAKE) check-empty-selftest-rw
 
 # Run the selftest binary under gdb for debugging
 debug: src/fty_nut_selftest $(abs_top_builddir)/$(SELFTEST_DIR_RW) $(abs_top_builddir)/$(SELFTEST_DIR_RO)
 	$(LIBTOOL) --mode=execute gdb -q \
 		$(builddir)/src/fty_nut_selftest
+	$(MAKE) check-empty-selftest-rw
+
+debug-verbose: src/fty_nut_selftest $(abs_top_builddir)/$(SELFTEST_DIR_RW) $(abs_top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute gdb -q \
+		$(builddir)/src/fty_nut_selftest -v
+	$(MAKE) check-empty-selftest-rw
 
 # Run the selftest binary with verbose switch for tracing
 animate: src/fty_nut_selftest $(abs_top_builddir)/$(SELFTEST_DIR_RW) $(abs_top_builddir)/$(SELFTEST_DIR_RO)
 	$(LIBTOOL) --mode=execute $(builddir)/src/fty_nut_selftest -v
+	$(MAKE) check-empty-selftest-rw
+
+animate-verbose: animate
 
 if WITH_GCOV
 coverage: src/fty_nut_selftest $(abs_top_builddir)/$(SELFTEST_DIR_RW) $(abs_top_builddir)/$(SELFTEST_DIR_RO)
@@ -202,7 +243,7 @@ coverage: src/fty_nut_selftest $(abs_top_builddir)/$(SELFTEST_DIR_RW) $(abs_top_
 	$(MAKE) check
 	lcov --base-directory . --directory . --capture -o coverage.info
 	lcov --remove coverage.info "/usr*" -o coverage.info
-	lcov --remove coverage.info "fty_nut_selftest.c" -o coverage.info
+	lcov --remove coverage.info "fty_nut_selftest.cc" -o coverage.info
 	$(RM) -rf coverage/*
 	genhtml -o coverage/ -t "fty-nut test coverage" --num-spaces 4 coverage.info
 else
