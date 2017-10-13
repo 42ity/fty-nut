@@ -51,4 +51,5 @@ clean: clean-autogened
 %:
 	dh $@ \
 		--with systemd \
+		--parallel \
 		--with autoreconf
