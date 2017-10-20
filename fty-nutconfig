@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (C) 2014,2016 Eaton
+# Copyright (C) 2014-2017 Eaton
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 #  \brief   Helper script for autoconfig agent
 #  \author  Tomas Halman <TomasHalman@Eaton.com>
 #           Michal Vyskocil <MichalVyskocil@Eaton.com>
+#           Jim Klimov <EvgenyKlimov@Eaton.com>
 #  \details Helper script for autoconfig agent. It creates new NUT configuration
 #           from files stored in /var/lib/fty/fty-nut/devices.
 
@@ -46,7 +47,20 @@ mkdir -p "${BIOSCONFDIR}"
 chown -R bios:bios-infra "${BIOSCONFDIR}"
 
 TMPFILE=$(mktemp -p "${TMPDIR}" nutconfig.XXXXXXXXXX)
-if cat "${BIOSCONFDIR}"/* 2> /dev/null > "${TMPFILE}"; then
+
+cat << EOF > "${TMPFILE}"
+# Data-walks of networked devices to initialize a NUT driver state
+# can take considerable time; we should allow for that to succeed.
+maxstartdelay = 180
+
+EOF
+RES=$?
+
+if [ "$RES" = 0 ]; then
+    cat "${BIOSCONFDIR}"/* 2> /dev/null >> "${TMPFILE}" || RES=$?
+fi
+
+if [ "$RES" = 0 ] ; then
     mv "${TMPFILE}" "$NUTCONFIG"
     chmod 0640 "${NUTCONFIG}"
     chown root:nut "${NUTCONFIG}"
