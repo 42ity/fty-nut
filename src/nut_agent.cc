@@ -41,6 +41,7 @@ const std::map<std::string, std::string> NUTAgent::_units =
     { "power",       "VA" },
     { "runtime",     "s" },
     { "timer",       "s" },
+    { "delay",       "s" },
 };
 
 bool NUTAgent::loadMapping (const char *path_to_file)
