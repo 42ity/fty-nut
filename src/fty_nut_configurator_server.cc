@@ -127,9 +127,9 @@ s_is_ups_epdu_or_sts (fty_proto_t *bmsg)
 static int
 s_powerdevice_subtype_id (const char *subtype)
 {
-    if (streq (subtype, "ups")) return 1;
-    if (streq (subtype, "epdu")) return 3;
-    if (streq (subtype, "sts")) return 7;
+    if (streq (subtype, "ups")) return asset_subtype::UPS;
+    if (streq (subtype, "epdu")) return asset_subtype::EPDU;
+    if (streq (subtype, "sts")) return asset_subtype::STS;
     return -1;
 }
 
