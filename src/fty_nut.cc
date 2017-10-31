@@ -126,6 +126,7 @@ int main (int argc, char *argv [])
             case 'v':
             {
                 verbose = 1;
+                log_level = LOG_DEBUG;
                 break;
             }
             case 'p':
