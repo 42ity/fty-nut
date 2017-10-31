@@ -7,3 +7,5 @@ server
     background = 0      #   Run as background process
     workdir = .         #   Working directory for daemon
     verbose = false     #   Do verbose logging of activity?
+nut
+    polling_interval = 30 # NUT upsd polling interval

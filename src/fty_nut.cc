@@ -170,6 +170,8 @@ int main (int argc, char *argv [])
     if (streq (zconfig_get (config, "server/verbose", "false"), "true")) {
         verbose = true;
     }
+    // POLLING
+    polling = zconfig_get (config, "nut/polling_interval", "30");
 
     // log_level cascade (priority ascending)
     //  1. default value
