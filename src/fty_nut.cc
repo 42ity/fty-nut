@@ -42,6 +42,7 @@ void usage () {
     puts ("fty-nut [options] ...\n"
           "  --log-level / -l       bios log level\n"
           "                         overrides setting in env. variable BIOS_LOG_LEVEL\n"
+          "  --config / -c          path to config file\n"
           "  --mapping-file / -m    NUT-to-BIOS mapping file\n"
           "  --state-file / -s      state file\n"
           "  --polling / -p         polling interval in seconds [30]\n"
@@ -76,23 +77,26 @@ int get_log_level (const char *level) {
 int main (int argc, char *argv [])
 {
     int help = 0;
-    int verbose = 0;
+    bool verbose = false;
     int log_level = -1;
     std::string mapping_file;
     std::string state_file;
     const char* polling = NULL;
+    const char *config_file = "/etc/fty-nut/fty-nut.cfg";
+    zconfig_t *config = NULL;
 
 // Some systems define struct option with non-"const" "char *"
 #if defined(__GNUC__) || defined(__GNUG__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wwrite-strings"
 #endif
-    static const char *short_options = "hvl:m:p:";
+    static const char *short_options = "hvl:m:p:s:c:";
     static struct option long_options[] =
     {
             {"help",            no_argument,        0,  1},
             {"verbose",         no_argument,        0,  1},
             {"log-level",       required_argument,  0,  'l'},
+            {"config",          required_argument,  0,  'c'},
             {"mapping-file",    required_argument,  0,  'm'},
             {"state-file",      required_argument,  0,  's'},
             {"polling",         required_argument,  0,  'p'},
@@ -113,6 +117,11 @@ int main (int argc, char *argv [])
                 log_level = get_log_level (optarg);
                 break;
             }
+            case 'c':
+            {
+                config_file = optarg;
+                break;
+            }
             case 'm':
             {
                 mapping_file.assign (optarg);
@@ -125,7 +134,7 @@ int main (int argc, char *argv [])
             }
             case 'v':
             {
-                verbose = 1;
+                verbose = true;
                 log_level = LOG_DEBUG;
                 break;
             }
@@ -151,14 +160,15 @@ int main (int argc, char *argv [])
         return EXIT_FAILURE;
     }
 
-    // polling interval
-    if (!polling) {
-        polling = "30";
-        zconfig_t *root = zconfig_load ("/etc/fty-nut/fty-nut.cfg");
-        if (root) {
-            polling = zconfig_get (root, "nut/polling_interval", "30");
-            zconfig_destroy (&root);
-        }
+    // Process configuration file
+    config = zconfig_load (config_file);
+    if (!config) {
+        zsys_error ("Failed to load config file %s: %m", config_file);
+        exit (EXIT_FAILURE);
+    }
+    // VERBOSE
+    if (streq (zconfig_get (config, "server/verbose", "false"), "true")) {
+        verbose = true;
     }
 
     // log_level cascade (priority ascending)
@@ -241,5 +251,6 @@ int main (int argc, char *argv [])
     zactor_destroy (&nut_server);
     zactor_destroy (&nut_device_alert);
     zactor_destroy (&nut_sensor);
+    zconfig_destroy (&config);
     return 0;
 }
