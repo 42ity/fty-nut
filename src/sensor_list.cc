@@ -87,13 +87,25 @@ void Sensors::updateSensorList (nut_t *config)
 
         // is it connected to UPS/epdu?
         if ( ! zlist_exists (devices, (void *) connected_to)) {
-            log_debug ("sa: sensor %s ignored (connected to unknown location or not a power device '%s')", name, connected_to);
+            char *parent = nut_parent_sensor (config, name);
+            if (parent)
+            {
+                // give parent his child
+                char *extport = (char *) nut_asset_port (config, name);
+                if (extport)
+                    _sensors[parent].addChild (extport, name);
+            }
+
+            log_debug ("sa: sensor ignored %s (connected to unknown location, not a power device, not sensor '%s')", name, connected_to);
+
             name = (char *) zlist_next (sensors);
             continue;
         }
 
         const char* ip = nut_asset_ip (config, connected_to);
         const char* chain_str = nut_asset_daisychain (config, connected_to);
+        std::map <std::string, std::string> children;
+
         int chain = 0;
         if (chain_str) try { chain = std::stoi (chain_str); } catch(...) { };
         if (chain <= 1) {
@@ -102,7 +114,9 @@ void Sensors::updateSensorList (nut_t *config)
                 connected_to,
                 chain,
                 connected_to,
-                nut_asset_port (config, name)
+                nut_asset_port (config, name),
+                children,
+                name
             );
         } else {
             // ugh, sensor connected to daisy chain slave
@@ -114,7 +128,10 @@ void Sensors::updateSensorList (nut_t *config)
                     master_it->second,
                     chain,
                     connected_to,
-                    nut_asset_port (config, name)
+                    nut_asset_port (config, name),
+                    children,
+                    name
+
                 );
             }
         }
@@ -124,7 +141,6 @@ void Sensors::updateSensorList (nut_t *config)
     zlist_destroy (&devices);
     log_debug ("sa: loaded %zd nut sensors", _sensors.size());
 }
-
 
 void Sensors::publish (mlm_client_t *client, int ttl)
 {
@@ -187,9 +203,19 @@ sensor_list_test (bool verbose)
     fty_proto_ext_insert (asset, "port", "%s", "21");
     nut_put (config, &asset);
 
+    asset = fty_proto_new (FTY_PROTO_ASSET);
+    fty_proto_set_name (asset, "%s", "sensorgpio-1");
+    fty_proto_set_operation (asset, "%s", FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "sensorgpio");
+    fty_proto_aux_insert (asset, "parent_name.1", "%s", "sensor-2");
+    fty_proto_ext_insert (asset, "port", "%s", "1");
+    nut_put (config, &asset);
+
     Sensors list;
     list.updateSensorList (config);
     assert (list._sensors.size() == 2);
+
     assert (list._sensors["sensor-1"].sensorPrefix() == "ambient.");
     assert (list._sensors["sensor-1"].topicSuffix() == ".0@ups-1");
     assert (list._sensors["sensor-2"].sensorPrefix() == "device.2.ambient.21.");
