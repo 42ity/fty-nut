@@ -171,8 +171,8 @@ sensor_actor_test (bool verbose)
     contacts.push_back ("open");
     contacts.push_back ("close");
 
-    sensors._sensors["sensor-2"] = Sensor ("nut", 0, "PRG", "4", children, "sensor-2");
-    sensors._sensors["sensor-2"]._contacts = contacts;
+    sensors._sensors["sensor1"] = Sensor ("nut", 0, "PRG", "4", children, "sensor-2");
+    sensors._sensors["sensor1"]._contacts = contacts;
 
     sensors.publish (producer, 300);
 
@@ -182,8 +182,16 @@ sensor_actor_test (bool verbose)
     assert (bmsg);
     fty_proto_print (bmsg);
     assert (streq (fty_proto_type (bmsg), "status.GPI1.4"));
-
     fty_proto_destroy (&bmsg);
+
+    msg = mlm_client_recv (consumer);
+    assert (msg);
+    bmsg = fty_proto_decode (&msg);
+    assert (bmsg);
+    fty_proto_print (bmsg);
+    assert (streq (fty_proto_type (bmsg), "status.GPI2.4"));
+    fty_proto_destroy (&bmsg);
+
     mlm_client_destroy (&producer);
     mlm_client_destroy (&consumer);
     zactor_destroy (&malamute);

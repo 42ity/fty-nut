@@ -129,38 +129,41 @@ void Sensor::publish (mlm_client_t *client, int ttl)
         }
     }
 
-    int gpiPort = 1;
-    // gpi on EMP
-    for (auto &contact : _contacts)
+    if (!_contacts.empty ())
     {
-        std::string extport = std::to_string(gpiPort);
-        auto search  = _children.find (extport);
-        std::string sname = search->second;
+        int gpiPort = 1;
+        for (auto &contact : _contacts)
+        {
+            std::string extport = std::to_string(gpiPort);
+            auto search  = _children.find (extport);
+            std::string sname = search->second;
 
-        zhash_t *aux = zhash_new ();
-        zhash_autofree (aux);
-        zhash_insert (aux, "port", (void*) port().c_str());
-        zhash_insert (aux, "ext-port", (void *) extport.c_str());
-        zhash_insert (aux, "sname", (void *) sname.c_str ());
-        zmsg_t *msg = fty_proto_encode_metric (
-            aux,
-            time (NULL),
-            ttl,
-            ("status.GPI" + std::to_string (gpiPort) + "." + port ()).c_str (),
-            _location.c_str (),
-            contact.c_str (),
-            "NA");
-        zhash_destroy (&aux);
+            zhash_t *aux = zhash_new ();
+            zhash_autofree (aux);
+            zhash_insert (aux, "port", (void*) port().c_str());
+            zhash_insert (aux, "ext-port", (void *) extport.c_str());
+            zhash_insert (aux, "sname", (void *) sname.c_str ());
+            zmsg_t *msg = fty_proto_encode_metric (
+                aux,
+                ::time (NULL),
+                ttl,
+                ("status.GPI" + std::to_string (gpiPort) + "." + port ()).c_str (),
+                _location.c_str (),
+                contact.c_str (),
+                "");
+            zhash_destroy (&aux);
 
-        if (msg) {
-            std::string topic = "status" + topicSuffixExternal (std::to_string (gpiPort));
-            log_debug ("sending new contact status information for element_src = '%s', value = '%s'",
-            _location.c_str (), contact.c_str ());
-            int r = mlm_client_send (client, topic.c_str (), &msg);
-            if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
-            zmsg_destroy (&msg);
+            if (msg) {
+                std::string topic = "status" + topicSuffixExternal (std::to_string (gpiPort));
+                log_debug ("sending new contact status information for element_src = '%s', value = '%s'",
+                           _location.c_str (), contact.c_str ());
+                int r = mlm_client_send (client, topic.c_str (), &msg);
+                if( r != 0 )
+                    log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
+                zmsg_destroy (&msg);
+            }
+            ++gpiPort;
         }
-        ++gpiPort;
     }
 }
 
@@ -225,7 +228,6 @@ sensor_device_test(bool verbose)
     Sensor d("ups", 2, "ups2", "3", children, "");
     assert (d.sensorPrefix() == "device.2.ambient.3.");
     assert (d.topicSuffix() == ".3@ups2");
-
 
     //  @end
     printf (" OK\n");
