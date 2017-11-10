@@ -32,15 +32,18 @@
 
 class Sensor {
  public:
-    Sensor (const std::string& nutMaster, int chain, const std::string& location, std::string port) :
+    Sensor (const std::string& nutMaster, int chain, const std::string& location, std::string port, std::map <std::string, std::string>& children, std::string sname) :
         _nutMaster(nutMaster),
         _chain(chain),
         _location(location),
-        _port(port)
+        _port(port),
+        _children (children),
+        _sname (sname)
         { };
     Sensor () { };
     void update (nut::TcpClient &conn);
     void publish (mlm_client_t *client, int ttl);
+    void addChild (char* port, char *child_name);
 
     // friend functions for unit-testing
     friend void sensor_device_test (bool verbose);
@@ -51,10 +54,14 @@ class Sensor {
     int _chain = 0;
     std::string _location;
     std::string _port;
+    std::map <std::string, std::string> _children; // port | child_name
+    std::string _sname;
 
     std::string _temperature;
     std::string _humidity;
+    std::vector <std::string> _contacts;  // contact status
 
+    std::string topicSuffixExternal (std::string port) const;
     std::string sensorPrefix() const;
     std::string nutPrefix() const;
     std::string topicSuffix() const;

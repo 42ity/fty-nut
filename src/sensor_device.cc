@@ -21,6 +21,8 @@
 #include "fty_nut_library.h"
 #include "sensor_device.h"
 #include "logger.h"
+#include <vector>
+#include <string>
 
 void Sensor::update (nut::TcpClient &conn)
 {
@@ -48,22 +50,43 @@ void Sensor::update (nut::TcpClient &conn)
         } else {
             _humidity =  humidity[0];
             log_debug ("sa: %shumidity on %s is %s", prefix.c_str (), _location.c_str (), _humidity.c_str());
+
         }
+
+        _contacts.push_back (nutDevice.getVariableValue (prefix + "contacts.1.status")[0]);
+        _contacts.push_back (nutDevice.getVariableValue (prefix + "contacts.2.status")[0]);
+
+        log_debug ("sa: %scontact.status updated on %s: contact.1 %s, contact.2 %s",
+                   prefix.c_str (),
+                   _location.c_str (),
+                   nutDevice.getVariableValue (prefix + "contacts.1.status")[0].c_str (),
+                   nutDevice.getVariableValue (prefix + "contacts.2.status")[0].c_str ()
+        );
+
     } catch (...) {}
 }
 
 std::string Sensor::topicSuffix () const
 {
-        return "." + port() + "@" + _location;
+    return "." + port() + "@" + _location;
+}
+
+// topic for GPI sensors wired to EMP001
+std::string Sensor::topicSuffixExternal (std::string gpiPort) const
+{
+    // status.GPI<port>.<epmPort>@location
+    return ".GPI" + gpiPort + "." + port() + "@" + _location;
 }
 
 void Sensor::publish (mlm_client_t *client, int ttl)
 {
     log_debug ("sa: publishing temperature '%s' and humidity '%s' on '%s'", _temperature.c_str(), _humidity.c_str(),  _location.c_str());
+
     if (! _temperature.empty()) {
         zhash_t *aux = zhash_new ();
         zhash_autofree (aux);
         zhash_insert (aux, "port", (void*) port().c_str());
+        zhash_insert (aux, "sname", (void *) _sname.c_str ());
         zmsg_t *msg = fty_proto_encode_metric (
             aux,
             time (NULL),
@@ -86,6 +109,7 @@ void Sensor::publish (mlm_client_t *client, int ttl)
         zhash_t *aux = zhash_new ();
         zhash_autofree (aux);
         zhash_insert (aux, "port", (void*) port().c_str());
+        zhash_insert (aux, "sname", (void *) _sname.c_str ());
         zmsg_t *msg = fty_proto_encode_metric (
             aux,
             time (NULL),
@@ -102,6 +126,43 @@ void Sensor::publish (mlm_client_t *client, int ttl)
             int r = mlm_client_send (client, topic.c_str (), &msg);
             if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
             zmsg_destroy (&msg);
+        }
+    }
+
+    if (!_contacts.empty ())
+    {
+        int gpiPort = 1;
+        for (auto &contact : _contacts)
+        {
+            std::string extport = std::to_string(gpiPort);
+            auto search  = _children.find (extport);
+            std::string sname = search->second;
+
+            zhash_t *aux = zhash_new ();
+            zhash_autofree (aux);
+            zhash_insert (aux, "port", (void*) port().c_str());
+            zhash_insert (aux, "ext-port", (void *) extport.c_str());
+            zhash_insert (aux, "sname", (void *) sname.c_str ());
+            zmsg_t *msg = fty_proto_encode_metric (
+                aux,
+                ::time (NULL),
+                ttl,
+                ("status.GPI" + std::to_string (gpiPort) + "." + port ()).c_str (),
+                _location.c_str (),
+                contact.c_str (),
+                "");
+            zhash_destroy (&aux);
+
+            if (msg) {
+                std::string topic = "status" + topicSuffixExternal (std::to_string (gpiPort));
+                log_debug ("sending new contact status information for element_src = '%s', value = '%s'",
+                           _location.c_str (), contact.c_str ());
+                int r = mlm_client_send (client, topic.c_str (), &msg);
+                if( r != 0 )
+                    log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
+                zmsg_destroy (&msg);
+            }
+            ++gpiPort;
         }
     }
 }
@@ -134,30 +195,40 @@ std::string Sensor::port() const
     return _port;
 }
 
+void Sensor::addChild (char *child_port, char *child_name)
+{
+    if (child_name && child_port)
+    {
+        _children.emplace (child_port, child_name);
+    }
+}
+
 void
 sensor_device_test(bool verbose)
 {
     printf (" * sensor_device: ");
     //  @selftest
     // sensor connected to stanalone ups
-    Sensor a("ups", 0, "ups", "");
+    std::map <std::string, std::string> children;
+    Sensor a("ups", 0, "ups", "", children, "");
     assert (a.sensorPrefix() == "ambient.");
     assert (a.topicSuffix() == ".0@ups");
 
     // sensor 2 connected to stanalone ups
-    Sensor b("ups", 0, "ups", "2");
+    Sensor b("ups", 0, "ups", "2", children,"");
     assert (b.sensorPrefix() == "ambient.2.");
     assert (b.topicSuffix() == ".2@ups");
 
     // sensor connected to daisy-chain master
-    Sensor c("ups", 1, "ups", "");
+    Sensor c("ups", 1, "ups", "", children, "");
     assert (c.sensorPrefix() == "device.1.ambient.");
     assert (c.topicSuffix() == ".0@ups");
 
     // sensor 3 connected to daisy-chain slave 2
-    Sensor d("ups", 2, "ups2", "3");
+    Sensor d("ups", 2, "ups2", "3", children, "");
     assert (d.sensorPrefix() == "device.2.ambient.3.");
     assert (d.topicSuffix() == ".3@ups2");
+
     //  @end
     printf (" OK\n");
 }

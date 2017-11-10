@@ -85,7 +85,7 @@ filter_message (fty_proto_t *message)
     if (!type || !subtype)
         return 1;
     if (streq (type, "device") &&
-        (streq (subtype, "epdu") || streq (subtype, "ups") || streq (subtype, "sts") || streq(subtype, "sensor") ))
+        (streq (subtype, "epdu") || streq (subtype, "ups") || streq (subtype, "sts") || streq(subtype, "sensor") || streq (subtype, "sensorgpio")))
         return 0;
     return 1;
 }
@@ -291,9 +291,10 @@ nut_get_sensors (nut_t *self)
     zlist_comparefn (result, (zlist_compare_fn *) strcmp);
     char * name = (char *)zlistx_first (list);
     while (name) {
-        const char *subtype = nut_asset_subtype(self, name);
-        if (subtype && streq (subtype, "sensor")) {
-            zlist_append (result, name);
+        const char *subtype = nut_asset_subtype (self, name);
+        if (subtype)
+            if (streq (subtype, "sensor") || streq (subtype, "sensorgpio")) {
+                zlist_append (result, name);
         }
         name = (char *)zlistx_next (list);
     }
@@ -368,6 +369,34 @@ const char *
 nut_asset_port (nut_t *self, const char *asset_name)
 {
     return nut_asset_get_string (self, asset_name, "port");
+}
+
+// ---------------------------------------------------------------------------
+// returns parent of given asset
+// or NULL when asset_name does not exist
+// or "" (empty string) when given asset does not have port specified
+const char *
+nut_asset_parent (nut_t *self, const char *asset_name)
+{
+    return nut_asset_get_string (self, asset_name, "parent_name.1");
+}
+
+// ---------------------------------------------------------------------------
+// if parent of sensor is also sensor, fn returns its name
+// if parent of sensor is something else returns NULL
+char *
+nut_parent_sensor (nut_t *self, const char *asset_name)
+{
+    zlist_t *sensors = nut_get_sensors (self);
+    char* parent_name =  (char *) nut_asset_get_string (self, asset_name, "parent_name.1");
+    if (zlist_exists (sensors, parent_name))
+    {
+        zlist_destroy (&sensors);
+        return parent_name;
+    }
+
+    zlist_destroy (&sensors);
+    return NULL;
 }
 
 // ---------------------------------------------------------------------------
@@ -772,6 +801,15 @@ nut_test (bool verbose)
     nut_put (self, &asset);
     zlistx_add_end (expected, (void *) "sensor");
 
+    asset =  test_asset_new ("sensorgpio", FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert (asset, "type", "%s", "device");
+    fty_proto_aux_insert (asset, "subtype", "%s", "sensorgpio");
+    fty_proto_ext_insert (asset, "port", "%s", "1");
+    fty_proto_aux_insert (asset, "parent_name.1", "%s", "sensor");
+    fty_proto_ext_insert (asset, "logical_asset", "%s", "room01");
+    nut_put (self, &asset);
+    zlistx_add_end (expected, (void *) "sensorgpio");
+
     asset =  test_asset_new ("epdu", FTY_PROTO_ASSET_OP_CREATE);
     fty_proto_aux_insert (asset, "type", "%s", "device");
     fty_proto_aux_insert (asset, "subtype", "%s", "epdu");
@@ -895,6 +933,7 @@ nut_test (bool verbose)
     fty_proto_aux_insert (asset, "subtype", "%s", "server");
     nut_put (self, &asset);
 
+
     nut_print_zsys (self);
 
     // save/load
@@ -934,6 +973,10 @@ nut_test (bool verbose)
 
         assert (streq (nut_asset_port (self, "sensor"), "port01"));
         assert (streq (nut_asset_location (self, "sensor"), "ups"));
+
+        assert (streq (nut_asset_port (self, "sensorgpio"), "1"));
+        assert (streq (nut_asset_location (self, "sensorgpio"), "sensor"));
+
     }
 
     asset = test_asset_new ("epdu", FTY_PROTO_ASSET_OP_CREATE);
@@ -1000,7 +1043,7 @@ nut_test (bool verbose)
         assert (streq (nut_asset_port (self, "sensor"), "port00"));
 
         zlist_t *sensors = nut_get_sensors (self);
-        assert (zlist_size (sensors) == 1);
+        assert (zlist_size (sensors) == 2);
         assert (streq ((char *)zlist_first (sensors), "sensor"));
         zlist_destroy (&sensors);
     }

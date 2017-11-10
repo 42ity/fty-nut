@@ -80,6 +80,12 @@ FTY_NUT_EXPORT const char *
     nut_asset_port (nut_t *self, const char *asset_name);
 
 // ---------------------------------------------------------------------------
+// returns parent name if parent of sensor is also sensor
+// if parent of sensor is something else returns NULL
+FTY_NUT_EXPORT char *
+nut_parent_sensor (nut_t *self, const char *asset_name);
+
+// ---------------------------------------------------------------------------
 // return asset subtype string of given asset
 // or NULL when asset_name does not exist
 // or "" (empty string) when given asset does not have asset subtype specified

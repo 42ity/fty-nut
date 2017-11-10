@@ -126,7 +126,8 @@ sensor_actor_test (bool verbose)
     mlm_client_set_producer (producer, FTY_PROTO_STREAM_METRICS_SENSOR);
 
     Sensors sensors;
-    sensors._sensors["sensor1"] = Sensor ("nut", 0, "PRG", "1");
+    std::map <std::string, std::string> children;
+    sensors._sensors["sensor1"] = Sensor ("nut", 0, "PRG", "1", children, "");
     sensors._sensors["sensor1"]._humidity = "50";
 
     sensors.publish (producer, 300);
@@ -161,6 +162,34 @@ sensor_actor_test (bool verbose)
     fty_proto_print (bmsg);
     assert (streq (fty_proto_value (bmsg), "51"));
     assert (streq (fty_proto_type (bmsg), "humidity.1"));
+    fty_proto_destroy (&bmsg);
+
+    // gpio on EMP001
+    std::vector <std::string> contacts;
+    children.emplace ("1", "sensorgpio-1");
+    children.emplace ("2", "sensorgpio-2");
+    contacts.push_back ("open");
+    contacts.push_back ("close");
+
+    sensors._sensors["sensor1"] = Sensor ("nut", 0, "PRG", "4", children, "sensor-2");
+    sensors._sensors["sensor1"]._contacts = contacts;
+
+    sensors.publish (producer, 300);
+
+    msg = mlm_client_recv (consumer);
+    assert (msg);
+    bmsg = fty_proto_decode (&msg);
+    assert (bmsg);
+    fty_proto_print (bmsg);
+    assert (streq (fty_proto_type (bmsg), "status.GPI1.4"));
+    fty_proto_destroy (&bmsg);
+
+    msg = mlm_client_recv (consumer);
+    assert (msg);
+    bmsg = fty_proto_decode (&msg);
+    assert (bmsg);
+    fty_proto_print (bmsg);
+    assert (streq (fty_proto_type (bmsg), "status.GPI2.4"));
     fty_proto_destroy (&bmsg);
 
     mlm_client_destroy (&producer);
