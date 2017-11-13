@@ -1,4 +1,4 @@
-#fty-nut
+# fty-nut
 
 fty-nut is a family of agents responsible for 42ITy interaction with NUT (see
 [http://www.networkupstools.org]) including both collection of device data
@@ -12,7 +12,7 @@ and configuration of NUT to monitor new devices as assets are created.
 make
 make check # to run self-test
 ```
-Compilation of fty-nut creates two binaries - fty-nut and fty-nut-configurator, which are run by systemd service.
+Compilation of fty-nut creates two binaries _fty-nut_ and _fty-nut-configurator_, which are run by systemd service.
 
 ## How to run
 
@@ -21,7 +21,9 @@ To run fty-nut project:
 * from within the source tree, run:
 
 ```bash
-./src/fty-nut
+./src/fty-nut --mapping-file <path_to_mapping_file> --state-file <path_to_state_file>
+./src/fty-nut --mapping-file /usr/share/fty-nut/mapping.conf --state-file /var/lib/fty/fty-nut/state_file
+
 ./src/fty-nut-configurator
 ```
 
@@ -34,7 +36,7 @@ systemctl start fty-nut-configurator
 
 ### Configuration file
 
-To configure fty-nut, a two configuration files exist: fty-nut.cfg and fty-nut-configurator.cfg
+To configure fty-nut, a two configuration files exist: _fty-nut.cfg_ and _fty-nut-configurator.cfg_.
 Both contain standard configuration directives, under the server sections. Additional parameter
 
 * fty-nut.cfg
@@ -52,7 +54,6 @@ State files are located in
 
 ```
 /var/lib/fty/fty-nut/state_file  (fty-nut)
-and
 /var/lib/fty/fty-autoconfig/state (fty-nut-configurator)
 
 ```
