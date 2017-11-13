@@ -95,8 +95,8 @@ void Sensors::updateSensorList (nut_t *config)
                 if (extport)
                     _sensors[parent].addChild (extport, name);
             }
-
-            log_debug ("sa: sensor ignored %s (connected to unknown location, not a power device, not sensor '%s')", name, connected_to);
+            else
+                log_debug ("sa: sensor '%s' ignored (location is unknown/not a power device/ not a sensor '%s') ", name, connected_to);
 
             name = (char *) zlist_next (sensors);
             continue;
