@@ -65,8 +65,8 @@ State files are located in
 fty-nut is composed of three actors:
 
 * fty_nut_server - server actor
-* alert_actor - actor handling device alerts and thresholds
-* sensor_actor - actor handling sensors
+* alert_actor - actor handling device alerts and thresholds comming from NUT
+* sensor_actor - actor handling sensor measurements comming from NUT.
 
 fty-nut-configurator is composed of 1 actor:
 
@@ -76,13 +76,76 @@ fty-nut-configurator is composed of 1 actor:
 
 ### Publishing Metrics
 
-* sensor_actor produces metrics on FTY_PROTO_STREAM_METRICS_SENSOR.
+* sensor_actor produces metrics from sensors connected to power devices on FTY_PROTO_STREAM_METRICS_SENSOR.
+
+```
+stream=_METRICS_SENSOR
+sender=agent-nut-sensor
+subject=humidity.0@epdu-77
+D: 17-11-02 12:18:16 FTY_PROTO_METRIC:
+D: 17-11-02 12:18:16     aux=
+D: 17-11-02 12:18:16         port=0
+D: 17-11-02 12:18:16     time=1509625096
+D: 17-11-02 12:18:16     ttl=60
+D: 17-11-02 12:18:16     type='humidity.0'
+D: 17-11-02 12:18:16     name='epdu-77'
+D: 17-11-02 12:18:16     value='37.60'
+D: 17-11-02 12:18:16     unit='%'
+```
+
+```
+stream=_METRICS_SENSOR
+sender=agent-nut-sensor
+subject=status.GPI1.0@epdu-76
+D: 17-11-13 15:21:57 FTY_PROTO_METRIC:
+D: 17-11-13 15:21:57     aux=
+D: 17-11-13 15:21:57         sname=sensorgpio-81
+D: 17-11-13 15:21:57         port=0
+D: 17-11-13 15:21:57         ext-port=1
+D: 17-11-13 15:21:57     time=1510586517
+D: 17-11-13 15:21:57     ttl=60
+D: 17-11-13 15:21:57     type='status.GPI1.0'
+D: 17-11-13 15:21:57     name='epdu-76'
+D: 17-11-13 15:21:57     value='closed'
+D: 17-11-13 15:21:57     unit=''
+```
+alerts for sensors are managed by fty-alert-engine (environmental sensors) and fty-alert-flexible (GPI sensors)
+
 * fty_nut_server produces metrics on FTY_PROTO_STREAM_METRICS.
 
+```
+stream=METRICS
+sender=fty-nut
+subject=status.outlet.2@ups-52
+D: 17-11-13 12:53:21 FTY_PROTO_METRIC:
+D: 17-11-13 12:53:21     aux=
+D: 17-11-13 12:53:21     time=1510577601
+D: 17-11-13 12:53:21     ttl=60
+D: 17-11-13 12:53:21     type='status.outlet.2'
+D: 17-11-13 12:53:21     name='ups-52'
+D: 17-11-13 12:53:21     value='42'
+D: 17-11-13 12:53:21     unit=''
+```
 
 ### Publishing Alerts
 
 * alert_actor produces metrics on FTY_PROTO_STREAM_ALERT_SYS.
+
+```
+stream=_ALERTS_SYS
+sender=bios-nut-alert
+subject=outlet.group.1.voltage@epdu-54/OKG@epdu-54
+D: 17-11-13 15:05:57 FTY_PROTO_ALERT:
+D: 17-11-13 15:05:57     aux=
+D: 17-11-13 15:05:57     time=1510560758
+D: 17-11-13 15:05:57     ttl=90
+D: 17-11-13 15:05:57     rule='outlet.group.1.voltage@epdu-54'
+D: 17-11-13 15:05:57     name='epdu-54'
+D: 17-11-13 15:05:57     state='RESOLVED'
+D: 17-11-13 15:05:57     severity='OK'
+D: 17-11-13 15:05:57     description='outlet.group.1.voltage is resolved'
+D: 17-11-13 15:05:57     action=''
+```
 
 ### Consuming Assets
 
