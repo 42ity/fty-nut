@@ -53,10 +53,15 @@ void Sensor::update (nut::TcpClient &conn)
 
         }
 
-        _contacts.push_back (nutDevice.getVariableValue (prefix + "contacts.1.status")[0]);
-        _contacts.push_back (nutDevice.getVariableValue (prefix + "contacts.2.status")[0]);
+        std::string state = nutDevice.getVariableValue (prefix + "contacts.1.status")[0];
+        if (state != "unknown" && state != "bad")
+            _contacts.push_back (state);
 
-        log_debug ("sa: %scontact.status updated on %s: contact.1 %s, contact.2 %s",
+        state = nutDevice.getVariableValue (prefix + "contacts.2.status")[0];
+        if (state != "unknown" && state != "bad")
+            _contacts.push_back (state);
+
+        log_debug ("sa: %scontact.status on %s: contact.1 %s, contact.2 %s",
                    prefix.c_str (),
                    _location.c_str (),
                    nutDevice.getVariableValue (prefix + "contacts.1.status")[0].c_str (),
@@ -80,7 +85,8 @@ std::string Sensor::topicSuffixExternal (std::string gpiPort) const
 
 void Sensor::publish (mlm_client_t *client, int ttl)
 {
-    log_debug ("sa: publishing temperature '%s' and humidity '%s' on '%s'", _temperature.c_str(), _humidity.c_str(),  _location.c_str());
+    log_debug ("sa: publishing temperature '%s' and humidity '%s' on '%s'",
+               _temperature.c_str(), _humidity.c_str(),  _location.c_str());
 
     if (! _temperature.empty()) {
         zhash_t *aux = zhash_new ();
@@ -136,32 +142,38 @@ void Sensor::publish (mlm_client_t *client, int ttl)
         {
             std::string extport = std::to_string(gpiPort);
             auto search  = _children.find (extport);
-            std::string sname = search->second;
 
-            zhash_t *aux = zhash_new ();
-            zhash_autofree (aux);
-            zhash_insert (aux, "port", (void*) port().c_str());
-            zhash_insert (aux, "ext-port", (void *) extport.c_str());
-            zhash_insert (aux, "sname", (void *) sname.c_str ());
-            zmsg_t *msg = fty_proto_encode_metric (
-                aux,
-                ::time (NULL),
-                ttl,
-                ("status.GPI" + std::to_string (gpiPort) + "." + port ()).c_str (),
-                _location.c_str (),
-                contact.c_str (),
-                "");
-            zhash_destroy (&aux);
+            if (search != _children.end())
+            {
+                std::string sname = search->second;
 
-            if (msg) {
-                std::string topic = "status" + topicSuffixExternal (std::to_string (gpiPort));
-                log_debug ("sending new contact status information for element_src = '%s', value = '%s'",
-                           _location.c_str (), contact.c_str ());
-                int r = mlm_client_send (client, topic.c_str (), &msg);
-                if( r != 0 )
-                    log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
-                zmsg_destroy (&msg);
+                zhash_t *aux = zhash_new ();
+                zhash_autofree (aux);
+                zhash_insert (aux, "port", (void*) port().c_str ());
+                zhash_insert (aux, "ext-port", (void *) extport.c_str ());
+                zhash_insert (aux, "sname", (void *) sname.c_str ()); // sname of the child sensor if any
+                zmsg_t *msg = fty_proto_encode_metric (
+                    aux,
+                    ::time (NULL),
+                    ttl,
+                    ("status.GPI" + std::to_string (gpiPort) + "." + port ()).c_str (),
+                    _location.c_str (),
+                    contact.c_str (),
+                    "");
+                zhash_destroy (&aux);
+
+                if (msg) {
+                    std::string topic = "status" + topicSuffixExternal (std::to_string (gpiPort));
+                    log_debug ("sending new contact status information for element_src = '%s', value = '%s'",
+                               _location.c_str (), contact.c_str ());
+                    int r = mlm_client_send (client, topic.c_str (), &msg);
+                    if( r != 0 )
+                        log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
+                    zmsg_destroy (&msg);
+                }
             }
+            else
+                zsys_debug ("I did not find any child for %s in port %s", _sname.c_str (), extport.c_str ());
             ++gpiPort;
         }
     }
