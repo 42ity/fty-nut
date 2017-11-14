@@ -168,8 +168,8 @@ void Sensor::publish (mlm_client_t *client, int ttl)
 
                 if (msg) {
                     std::string topic = "status" + topicSuffixExternal (std::to_string (gpiPort));
-                    log_debug ("sending new contact status information for element_src = '%s', value = '%s'",
-                               _location.c_str (), contact.c_str ());
+                    log_debug ("sending new contact status information for element_src = '%s', value = '%s'. GPI '%s' on port '%s'.",
+                               _location.c_str (), contact.c_str (), sname.c_str (), extport.c_str ());
                     int r = mlm_client_send (client, topic.c_str (), &msg);
                     if( r != 0 )
                         log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
