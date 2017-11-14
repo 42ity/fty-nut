@@ -65,8 +65,8 @@ State files are located in
 fty-nut is composed of three actors:
 
 * fty_nut_server - server actor
-* alert_actor - actor handling device alerts and thresholds comming from NUT
-* sensor_actor - actor handling sensor measurements comming from NUT.
+* alert_actor - actor handling device alerts and thresholds coming from NUT
+* sensor_actor - actor handling sensor measurements coming from NUT.
 
 fty-nut-configurator is composed of 1 actor:
 
@@ -152,4 +152,4 @@ D: 17-11-13 15:05:57     action=''
 * fty_nut_server, sensor_actor and alert_actor listen on FTY_PROTO_STREAM_ASSETS stream.
 
 ### Mailbox Requests
-No maibox commands implemented
+No mailbox commands implemented
