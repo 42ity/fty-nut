@@ -56,10 +56,14 @@ void Sensor::update (nut::TcpClient &conn)
         std::string state = nutDevice.getVariableValue (prefix + "contacts.1.status")[0];
         if (state != "unknown" && state != "bad")
             _contacts.push_back (state);
+        else
+            zsys_debug ("sa: %scontact.1.status state %s", prefix.c_str (), state.c_str ());
 
         state = nutDevice.getVariableValue (prefix + "contacts.2.status")[0];
         if (state != "unknown" && state != "bad")
             _contacts.push_back (state);
+        else
+            zsys_debug ("sa: %scontact.2.status state %s", prefix.c_str (), state.c_str ());
 
         log_debug ("sa: %scontact.status on %s: contact.1 %s, contact.2 %s",
                    prefix.c_str (),
