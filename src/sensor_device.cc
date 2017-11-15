@@ -81,7 +81,7 @@ std::string Sensor::topicSuffix () const
 }
 
 // topic for GPI sensors wired to EMP001
-std::string Sensor::topicSuffixExternal (std::string gpiPort) const
+std::string Sensor::topicSuffixExternal (const std::string& gpiPort) const
 {
     // status.GPI<port>.<epmPort>@location
     return ".GPI" + gpiPort + "." + port() + "@" + _location;
@@ -177,7 +177,7 @@ void Sensor::publish (mlm_client_t *client, int ttl)
                 }
             }
             else
-                zsys_debug ("I did not find any child for %s in port %s", _sname.c_str (), extport.c_str ());
+                log_debug ("I did not find any child for %s on port %s", _sname.c_str (), extport.c_str ());
             ++gpiPort;
         }
     }
@@ -211,12 +211,15 @@ std::string Sensor::port() const
     return _port;
 }
 
-void Sensor::addChild (char *child_port, char *child_name)
+void Sensor::addChild (const char *child_port, const char *child_name)
 {
-    if (child_name && child_port)
-    {
-        _children.emplace (child_port, child_name);
-    }
+    _children.emplace (child_port, child_name);
+}
+
+std::map <std::string, std::string>
+Sensor::getChildren ()
+{
+    return _children;
 }
 
 void

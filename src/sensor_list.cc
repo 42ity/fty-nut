@@ -91,20 +91,22 @@ void Sensors::updateSensorList (nut_t *config)
             if (parent)
             {
                 // give parent his child
-                char *extport = (char *) nut_asset_port (config, name);
+                const char *extport =  nut_asset_port (config, name);
                 if (extport)
+                {
                     _sensors[parent].addChild (extport, name);
+                }
             }
             else
-                log_debug ("sa: sensor '%s' ignored (location is unknown/not a power device/ not a sensor '%s') ", name, connected_to);
+                log_debug ("sa: sensor '%s' ignored (location is unknown/not a power device/not a sensor '%s')", name, connected_to);
 
             name = (char *) zlist_next (sensors);
             continue;
         }
-
         const char* ip = nut_asset_ip (config, connected_to);
         const char* chain_str = nut_asset_daisychain (config, connected_to);
-        std::map <std::string, std::string> children;
+
+        std::map <std::string, std::string> children = _sensors [name].getChildren ();
 
         int chain = 0;
         if (chain_str) try { chain = std::stoi (chain_str); } catch(...) { };
@@ -140,6 +142,7 @@ void Sensors::updateSensorList (nut_t *config)
     zlist_destroy (&sensors);
     zlist_destroy (&devices);
     log_debug ("sa: loaded %zd nut sensors", _sensors.size());
+
 }
 
 void Sensors::publish (mlm_client_t *client, int ttl)
