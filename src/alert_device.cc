@@ -216,7 +216,7 @@ Device::publishAlert (mlm_client_t *client, DeviceAlert& alert, uint64_t ttl)
         state,              // state
         severity,           // severity
         description.c_str (), // description
-        ""                  // action ?email
+        NULL                // action ?email
     );
     std::string topic = rule + "/" + severity + "@" + _assetName;
     if (message) {
