@@ -290,10 +290,10 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
         "    { \"high_critical\" : \"" + alert.highCritical + "\"}"
         "    ],"
         "  \"results\"       : ["
-        "    { \"low_critical\"  : { \"action\" : [\"EMAIL\", \"SMS\"], \"severity\":\"CRITICAL\", \"description\" : \"" + alert.name + " is critically low\" }},"
-        "    { \"low_warning\"   : { \"action\" : [\"EMAIL\", \"SMS\"], \"severity\":\"WARNING\" , \"description\" : \"" + alert.name + " is low\"}},"
-        "    { \"high_warning\"  : { \"action\" : [\"EMAIL\", \"SMS\"], \"severity\":\"WARNING\" , \"description\" : \"" + alert.name + " is critically high\" }},"
-        "    { \"high_critical\" : { \"action\" : [\"EMAIL\", \"SMS\"], \"severity\":\"CRITICAL\", \"description\" : \"" + alert.name + " is high\" } }"
+        "    { \"low_critical\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : \"" + alert.name + " is critically low\" }},"
+        "    { \"low_warning\"   : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : \"" + alert.name + " is low\"}},"
+        "    { \"high_warning\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : \"" + alert.name + " is critically high\" }},"
+        "    { \"high_critical\" : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : \"" + alert.name + " is high\" } }"
         "  ] } }";
     log_debug("aa: publishing rule %s", ruleName.c_str ());
     zmsg_addstr (message, "ADD");
