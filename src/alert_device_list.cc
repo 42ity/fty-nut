@@ -114,7 +114,7 @@ void Devices::updateDeviceList(nut_t *config)
             default:
                 const auto master_it = ip2master.find (ip);
                 if (master_it == ip2master.cend()) {
-                    log_error ("Daisychain master for %s not found", name);
+                    log_error ("Daisychain host for %s not found", name);
                 } else {
                     addIfNotPresent (Device (name, master_it->second, chain));
                 }

@@ -227,23 +227,23 @@ sensor_device_test(bool verbose)
 {
     printf (" * sensor_device: ");
     //  @selftest
-    // sensor connected to stanalone ups
+    // sensor connected to standalone ups
     std::map <std::string, std::string> children;
     Sensor a("ups", 0, "ups", "", children, "");
     assert (a.sensorPrefix() == "ambient.");
     assert (a.topicSuffix() == ".0@ups");
 
-    // sensor 2 connected to stanalone ups
+    // sensor 2 connected to standalone ups
     Sensor b("ups", 0, "ups", "2", children,"");
     assert (b.sensorPrefix() == "ambient.2.");
     assert (b.topicSuffix() == ".2@ups");
 
-    // sensor connected to daisy-chain master
+    // sensor connected to daisy-chain host
     Sensor c("ups", 1, "ups", "", children, "");
     assert (c.sensorPrefix() == "device.1.ambient.");
     assert (c.topicSuffix() == ".0@ups");
 
-    // sensor 3 connected to daisy-chain slave 2
+    // sensor 3 connected to daisy-chain device 1
     Sensor d("ups", 2, "ups2", "3", children, "");
     assert (d.sensorPrefix() == "device.2.ambient.3.");
     assert (d.topicSuffix() == ".3@ups2");
