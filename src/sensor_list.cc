@@ -121,10 +121,10 @@ void Sensors::updateSensorList (nut_t *config)
                 name
             );
         } else {
-            // ugh, sensor connected to daisy chain slave
+            // ugh, sensor connected to daisy chain device
             const auto master_it = ip2master.find (ip);
             if (master_it == ip2master.cend()) {
-                log_error ("sa: daisychain master for %s not found", connected_to);
+                log_error ("sa: daisychain host for %s not found", connected_to);
             } else {
                 _sensors[name] = Sensor(
                     master_it->second,
