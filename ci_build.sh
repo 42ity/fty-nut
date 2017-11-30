@@ -245,7 +245,7 @@ default|default-Werror|default-with-docs|valgrind)
         echo ""
         BASE_PWD=${PWD}
         echo "`date`: INFO: Building prerequisite 'czmq' from Git repository..." >&2
-        $CI_TIME git clone --quiet --depth 1 -b v3.0.2-FTY-master https://github.com/42ity/czmq.git czmq
+        $CI_TIME git clone --quiet --depth 1 -b release/IPM_Infra-1.3 https://github.com/42ity/czmq.git czmq
         cd czmq
         CCACHE_BASEDIR=${PWD}
         export CCACHE_BASEDIR
@@ -277,7 +277,7 @@ default|default-Werror|default-with-docs|valgrind)
         echo ""
         BASE_PWD=${PWD}
         echo "`date`: INFO: Building prerequisite 'malamute' from Git repository..." >&2
-        $CI_TIME git clone --quiet --depth 1 -b 1.0-FTY-master https://github.com/42ity/malamute.git malamute
+        $CI_TIME git clone --quiet --depth 1 -b release/IPM_Infra-1.3 https://github.com/42ity/malamute.git malamute
         cd malamute
         CCACHE_BASEDIR=${PWD}
         export CCACHE_BASEDIR
@@ -309,7 +309,7 @@ default|default-Werror|default-with-docs|valgrind)
         echo ""
         BASE_PWD=${PWD}
         echo "`date`: INFO: Building prerequisite 'fty-proto' from Git repository..." >&2
-        $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/fty-proto.git fty-proto
+        $CI_TIME git clone --quiet --depth 1 -b release/IPM_Infra-1.3 https://github.com/42ity/fty-proto.git fty-proto
         cd fty-proto
         CCACHE_BASEDIR=${PWD}
         export CCACHE_BASEDIR
@@ -341,7 +341,7 @@ default|default-Werror|default-with-docs|valgrind)
         echo ""
         BASE_PWD=${PWD}
         echo "`date`: INFO: Building prerequisite 'cidr' from Git repository..." >&2
-        $CI_TIME git clone --quiet --depth 1 -b 1.2.3-FTY-master https://github.com/42ity/libcidr.git cidr
+        $CI_TIME git clone --quiet --depth 1 -b release/IPM_Infra-1.3 https://github.com/42ity/libcidr.git cidr
         cd cidr
         CCACHE_BASEDIR=${PWD}
         export CCACHE_BASEDIR
@@ -373,7 +373,7 @@ default|default-Werror|default-with-docs|valgrind)
         echo ""
         BASE_PWD=${PWD}
         echo "`date`: INFO: Building prerequisite 'cxxtools' from Git repository..." >&2
-        $CI_TIME git clone --quiet --depth 1 -b 2.2-FTY-master https://github.com/42ity/cxxtools.git cxxtools
+        $CI_TIME git clone --quiet --depth 1 -b release/IPM_Infra-1.3 https://github.com/42ity/cxxtools.git cxxtools
         cd cxxtools
         CCACHE_BASEDIR=${PWD}
         export CCACHE_BASEDIR
@@ -405,7 +405,7 @@ default|default-Werror|default-with-docs|valgrind)
         echo ""
         BASE_PWD=${PWD}
         echo "`date`: INFO: Building prerequisite 'libnutclient' from Git repository..." >&2
-        $CI_TIME git clone --quiet --depth 1 -b FTY https://github.com/42ity/nut.git libnutclient
+        $CI_TIME git clone --quiet --depth 1 -b release/IPM_Infra-1.3 https://github.com/42ity/nut.git libnutclient
         cd libnutclient
         CCACHE_BASEDIR=${PWD}
         export CCACHE_BASEDIR
