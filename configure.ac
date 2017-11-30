@@ -39,6 +39,9 @@ AC_SUBST(PACKAGE_VERSION)
 LTVER="1:0:0"
 AC_SUBST(LTVER)
 
+# building in a subdirectory?
+AM_CONDITIONAL([USING_VPATH], [test "x${srcdir}" != "x."])
+
 # Capture c flags
 FTY_NUT_ORIG_CFLAGS="${CFLAGS:-none}"
 
@@ -759,6 +762,9 @@ else
     AC_CHECK_PROG(fty_nut_have_asciidoc, asciidoc, yes, no)
     AC_CHECK_PROG(fty_nut_have_xmlto, xmlto, yes, no)
     if test "x$fty_nut_have_asciidoc" = "xno" -o "x$fty_nut_have_xmlto" = "xno"; then
+        if test "x$with_docs" = "xyes" ; then
+            AC_MSG_ERROR([Build with docs was explicitly requested, but tools are not available])
+        fi
         fty_nut_build_doc="no"
         # Tarballs built with 'make dist' ship with prebuilt documentation.
         if ! test -f doc/fty-nut.7; then

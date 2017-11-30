@@ -89,7 +89,7 @@ fty-nut-configurator.txt: $(top_srcdir)/src/fty_nut_configurator.cc
 	"$(srcdir)/mkman" "fty_nut_configurator" "$(builddir)/fty-nut-configurator.txt" "$(srcdir)/.."
 
 
-clean:
+clean-local:
 	rm -f *.1 *.3 *.7 $(GENERATED_DOCS)
 
 doc: $(GENERATED_DOCS)

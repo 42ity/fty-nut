@@ -62,6 +62,9 @@
 #       define FTY_NUT_EXPORT __declspec(dllimport)
 #   endif
 #   define FTY_NUT_PRIVATE
+#elif defined (__CYGWIN__)
+#   define FTY_NUT_EXPORT
+#   define FTY_NUT_PRIVATE
 #else
 #   define FTY_NUT_EXPORT
 #   if (defined __GNUC__ && __GNUC__ >= 4) || defined __INTEL_COMPILER
