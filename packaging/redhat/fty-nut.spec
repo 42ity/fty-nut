@@ -51,6 +51,7 @@ BuildRequires:  systemd
 %{?systemd_requires}
 BuildRequires:  xmlto
 BuildRequires:  gcc-c++
+BuildRequires:  libsodium-devel
 BuildRequires:  zeromq-devel
 BuildRequires:  czmq-devel
 BuildRequires:  malamute-devel
@@ -81,6 +82,7 @@ This package contains shared library for fty-nut: nut (network ups tools) daemon
 Summary:        nut (network ups tools) daemon wrapper/proxy
 Group:          System/Libraries
 Requires:       libfty_nut1 = %{version}
+Requires:       libsodium-devel
 Requires:       zeromq-devel
 Requires:       czmq-devel
 Requires:       malamute-devel
