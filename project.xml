@@ -15,6 +15,10 @@
         <option name = "agent_label" value = "devel-image-ipm_1.3 &amp;&amp; x86_64" />
         <option name = "triggers_pollSCM" value = "H/2 * * * *" />
         <option name = "test_cppcheck" value = "1" />
+<!-- Some issue with mapping.conf redistribution -->
+        <option name = "test_check" value = "0" />
+        <option name = "test_distcheck" value = "0" />
+        <option name = "test_memcheck" value = "0" />
         <option name = "build_docs" value = "1" />
     </target>
 
