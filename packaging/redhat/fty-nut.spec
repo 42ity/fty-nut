@@ -28,6 +28,7 @@
 %else
 %define DRAFTS no
 %endif
+%define SYSTEMD_UNIT_DIR %(pkg-config --variable=systemdsystemunitdir systemd)
 Name:           fty-nut
 Version:        1.0.0
 Release:        1
@@ -50,6 +51,7 @@ BuildRequires:  systemd
 %{?systemd_requires}
 BuildRequires:  xmlto
 BuildRequires:  gcc-c++
+BuildRequires:  libsodium-devel
 BuildRequires:  zeromq-devel
 BuildRequires:  czmq-devel
 BuildRequires:  malamute-devel
@@ -80,6 +82,7 @@ This package contains shared library for fty-nut: nut (network ups tools) daemon
 Summary:        nut (network ups tools) daemon wrapper/proxy
 Group:          System/Libraries
 Requires:       libfty_nut1 = %{version}
+Requires:       libsodium-devel
 Requires:       zeromq-devel
 Requires:       czmq-devel
 Requires:       malamute-devel
@@ -126,9 +129,9 @@ find %{buildroot} -name '*.la' | xargs rm -f
 %{_bindir}/fty-nutconfig
 %{_bindir}/fty-dmf
 %config(noreplace) %{_sysconfdir}/fty-nut/fty-nut.cfg
-/usr/lib/systemd/system/fty-nut.service
+%{SYSTEMD_UNIT_DIR}/fty-nut.service
 %config(noreplace) %{_sysconfdir}/fty-nut/fty-nut-configurator.cfg
-/usr/lib/systemd/system/fty-nut-configurator.service
+%{SYSTEMD_UNIT_DIR}/fty-nut-configurator.service
 %dir %{_sysconfdir}/fty-nut
 %if 0%{?suse_version} > 1315
 %post
