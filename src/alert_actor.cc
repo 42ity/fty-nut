@@ -61,7 +61,7 @@ alert_actor_commands (
         verbose = true;
     }
     else
-    if (streq (cmd, "CONNECT")) {
+    if (streq (cmd, ACTION_CONNECT)) {
         char *endpoint = zmsg_popstr (message);
         if (!endpoint) {
             log_error (
@@ -91,7 +91,7 @@ alert_actor_commands (
         zstr_free (&name);
     }
     else
-    if (streq (cmd, "PRODUCER")) {
+    if (streq (cmd, ACTION_PRODUCER)) {
         char *stream = zmsg_popstr (message);
         if (!stream) {
             log_error (
@@ -109,7 +109,7 @@ alert_actor_commands (
         zstr_free (&stream);
     }
     else
-    if (streq (cmd, "CONSUMER")) {
+    if (streq (cmd, ACTION_CONSUMER)) {
         char *stream = zmsg_popstr (message);
         char *pattern = zmsg_popstr (message);
         if (!stream || !pattern) {
@@ -130,7 +130,7 @@ alert_actor_commands (
         zstr_free (&pattern);
     }
     else
-    if (streq (cmd, "POLLING")) {
+    if (streq (cmd, ACTION_POLLING)) {
         char *polling = zmsg_popstr (message);
         if (!polling) {
             log_error (
