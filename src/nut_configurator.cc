@@ -160,7 +160,7 @@ std::string NUTConfigurator::makeRule(std::string const &alert, std::string cons
         "    \"rule_name\"     :   \"" + alert + "-" + device + "\",\n"
         "    \"target\"        :   [\"status.ups@" + device + "\"],\n"
         "    \"element\"       :   \"" + device + "\",\n"
-        "    \"results\"       :   [ {\"high_critical\"  : { \"action\" : [ \"EMAIL\" ], \"description\" : \""+description+"\" }} ],\n"
+        "    \"results\"       :   [ {\"high_critical\"  : { \"action\" : [{\"action\": \"EMAIL\" }], \"description\" : \""+description+"\" }} ],\n"
         "    \"evaluation\"    : \""
         " function has_bit(x,bit)"
         "     local mask = 2 ^ (bit - 1)"
