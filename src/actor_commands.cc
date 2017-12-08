@@ -62,7 +62,7 @@ actor_commands (
         verbose = true;
     }
     else
-    if (streq (cmd, "CONNECT")) {
+    if (streq (cmd, ACTION_CONNECT)) {
         char *endpoint = zmsg_popstr (message);
         if (!endpoint) {
             log_error (
@@ -179,7 +179,7 @@ actor_commands (
         zstr_free (&state_file);
     }
     else
-    if (streq (cmd, "POLLING")) {
+    if (streq (cmd, ACTION_POLLING)) {
         char *polling = zmsg_popstr (message);
         if (!polling) {
             log_error (
@@ -312,7 +312,7 @@ actor_commands_test (bool verbose)
     // CONFIGURE - expected fail
     message = zmsg_new ();
     assert (message);
-    zmsg_addstr (message, "CONFIGURE");
+    zmsg_addstr (message, ACTION_CONFIGURE);
     // missing mapping_file here
     // missing state_file here
     rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
@@ -332,7 +332,7 @@ actor_commands_test (bool verbose)
     // CONFIGURE - expected fail
     message = zmsg_new ();
     assert (message);
-    zmsg_addstr (message, "CONFIGURE");
+    zmsg_addstr (message, ACTION_CONFIGURE);
     zmsg_addstr (message, "sdfwwed");
     // missing state_file here
     rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
@@ -352,7 +352,7 @@ actor_commands_test (bool verbose)
     // CONNECT - expected fail
     message = zmsg_new ();
     assert (message);
-    zmsg_addstr (message, "CONNECT");
+    zmsg_addstr (message, ACTION_CONNECT);
     zmsg_addstr (message, endpoint);
     // missing name here
     rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
@@ -372,7 +372,7 @@ actor_commands_test (bool verbose)
     // CONNECT - expected fail
     message = zmsg_new ();
     assert (message);
-    zmsg_addstr (message, "CONNECT");
+    zmsg_addstr (message, ACTION_CONNECT);
     // missing endpoint here
     // missing name here
     rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
@@ -392,7 +392,7 @@ actor_commands_test (bool verbose)
     // CONNECT - expected fail; bad endpoint
     message = zmsg_new ();
     assert (message);
-    zmsg_addstr (message, "CONNECT");
+    zmsg_addstr (message, ACTION_CONNECT);
     zmsg_addstr (message, "ipc://fty-nut-server-BAD");
     zmsg_addstr (message, "test-agent");
     rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
@@ -412,7 +412,7 @@ actor_commands_test (bool verbose)
     // PRODUCER - expected fail
     message = zmsg_new ();
     assert (message);
-    zmsg_addstr (message, "PRODUCER");
+    zmsg_addstr (message, ACTION_PRODUCER);
     // missing stream here
     rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
     assert (rv == 0);
@@ -431,7 +431,7 @@ actor_commands_test (bool verbose)
     // CONSUMER - expected fail
     message = zmsg_new ();
     assert (message);
-    zmsg_addstr (message, "CONSUMER");
+    zmsg_addstr (message, ACTION_CONSUMER);
     zmsg_addstr (message, "some-stream");
     // missing pattern here
     rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
@@ -451,7 +451,7 @@ actor_commands_test (bool verbose)
     // CONSUMER - expected fail
     message = zmsg_new ();
     assert (message);
-    zmsg_addstr (message, "CONSUMER");
+    zmsg_addstr (message, ACTION_CONSUMER);
     // missing stream here
     // missing pattern here
     rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
@@ -471,7 +471,7 @@ actor_commands_test (bool verbose)
     // POLLING - expected fail
     message = zmsg_new ();
     assert (message);
-    zmsg_addstr (message, "POLLING");
+    zmsg_addstr (message, ACTION_POLLING);
     // missing value here
     rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
     assert (rv == 0);
@@ -490,7 +490,7 @@ actor_commands_test (bool verbose)
     // POLLING - expected fail (in a sense)
     message = zmsg_new ();
     assert (message);
-    zmsg_addstr (message, "POLLING");
+    zmsg_addstr (message, ACTION_POLLING);
     zmsg_addstr (message, "a14s2"); // Bad value
     rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
     assert (rv == 0);
@@ -539,7 +539,7 @@ actor_commands_test (bool verbose)
     // CONFIGURE
     message = zmsg_new ();
     assert (message);
-    zmsg_addstr (message, "CONFIGURE");
+    zmsg_addstr (message, ACTION_CONFIGURE);
     zmsg_addstr (message, "src/mapping.conf");
     zmsg_addstr (message, "src/selftest_state_file");
     rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
@@ -568,7 +568,7 @@ actor_commands_test (bool verbose)
     // CONNECT
     message = zmsg_new ();
     assert (message);
-    zmsg_addstr (message, "CONNECT");
+    zmsg_addstr (message, ACTION_CONNECT);
     zmsg_addstr (message, endpoint);
     zmsg_addstr (message, "test-agent");
     rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
@@ -583,7 +583,7 @@ actor_commands_test (bool verbose)
     // CONSUMER
     message = zmsg_new ();
     assert (message);
-    zmsg_addstr (message, "CONSUMER");
+    zmsg_addstr (message, ACTION_CONSUMER);
     zmsg_addstr (message, "some-stream");
     zmsg_addstr (message, ".+@.+");
     rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
@@ -598,7 +598,7 @@ actor_commands_test (bool verbose)
     // PRODUCER
     message = zmsg_new ();
     assert (message);
-    zmsg_addstr (message, "PRODUCER");
+    zmsg_addstr (message, ACTION_PRODUCER);
     zmsg_addstr (message, "some-stream");
     rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
     assert (rv == 0);
@@ -612,7 +612,7 @@ actor_commands_test (bool verbose)
     // POLLING
     message = zmsg_new ();
     assert (message);
-    zmsg_addstr (message, "POLLING");
+    zmsg_addstr (message, ACTION_POLLING);
     zmsg_addstr (message, "150");
     rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
     assert (rv == 0);
