@@ -205,14 +205,20 @@ alert_actor (zsock_t *pipe, void *args)
     if (rv != 0) {
         log_warning ("Could not load state file '%s'.", STATE);
     }
+    uint64_t last = zclock_mono ();
     devices.updateDeviceList (stateData);
     while (!zsys_interrupted) {
         void *which = zpoller_wait (poller, polling);
-        if (which == NULL) {
-            log_debug ("aa: alert update");
+        uint64_t now = zclock_mono ();
+        if (now - last >= polling) {
+            last = now;
+            zsys_debug ("Polling data now");
             devices.updateFromNUT ();
             devices.publishRules (client);
             devices.publishAlerts (client);
+        }
+        if (which == NULL) {
+            log_debug ("aa: alert update - noop");
         }
         else if (which == pipe) {
             zmsg_t *msg = zmsg_recv (pipe);
