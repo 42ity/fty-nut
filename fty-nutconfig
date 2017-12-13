@@ -60,6 +60,21 @@ if [ "$RES" = 0 ]; then
     cat "${BIOSCONFDIR}"/* 2> /dev/null >> "${TMPFILE}" || RES=$?
 fi
 
+if [ "$RES" = 0 ] && [ ! -s /etc/systemd/system/nut-driver@.service.d/timeout.conf ] ; then
+    # Use drop-in configuration to override settings of a bundled service file
+    mkdir -p /etc/systemd/system/nut-driver@.service.d/
+    cat << EOF > /etc/systemd/system/nut-driver@.service.d/timeout.conf
+[Service]
+# For 42ity: align with "maxstartdelay = 180" in /etc/nut/ups.conf
+TimeoutStartSec=190s
+EOF
+RES=$?
+    if [ "$RES" = 0 ] ; then
+        chown -R root:root /etc/systemd/system/nut-driver@.service.d/
+        /bin/systemctl daemon-reload
+    fi
+fi
+
 if [ "$RES" = 0 ] ; then
     mv "${TMPFILE}" "$NUTCONFIG"
     chmod 0640 "${NUTCONFIG}"
