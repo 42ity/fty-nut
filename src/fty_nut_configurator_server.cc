@@ -350,15 +350,22 @@ fty_nut_configurator_server (zsock_t *pipe, void *args)
     zpoller_t *poller = zpoller_new (pipe, mlm_client_msgpipe (agent.client()), NULL);
 
     zsock_signal (pipe, 0);
+    uint64_t last = zclock_mono ();
     while (!zsys_interrupted)
     {
         void *which = zpoller_wait (poller, agent.timeout());
+
+        uint64_t now = zclock_mono();
+        if (now - last >= static_cast<uint64_t>(agent.timeout())) {
+            last = now;
+            zsys_debug("Periodic polling");
+            agent.onPoll ();
+        }
 
         if (which == pipe || zsys_interrupted)
             break;
 
         if (!which) {
-            agent.onPoll ();
             continue;
         }
 

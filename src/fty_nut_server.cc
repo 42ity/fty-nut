@@ -148,8 +148,15 @@ fty_nut_server (zsock_t *pipe, void *args)
     uint64_t timestamp = static_cast<uint64_t> (zclock_mono ());
     uint64_t timeout = 30000;
 
+    uint64_t last = zclock_mono ();
     while (!zsys_interrupted) {
         void *which = zpoller_wait (poller, polling_timeout (timestamp, timeout));
+        uint64_t now = zclock_mono();
+        if (now - last >= timeout) {
+            last = now;
+            zsys_debug("Periodic polling");
+            s_handle_poll (nut_agent, data);
+        }
         if (nut_changed (data)) {
             r = nut_save (data, state_file.c_str ());
             if (r != 0) {
@@ -163,7 +170,6 @@ fty_nut_server (zsock_t *pipe, void *args)
             }
             if (zpoller_expired (poller)) {
                 timestamp = static_cast<uint64_t> (zclock_mono ());
-                s_handle_poll (nut_agent, data);
             }
             continue;
         }
