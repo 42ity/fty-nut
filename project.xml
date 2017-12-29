@@ -20,6 +20,7 @@
         <option name = "test_distcheck" value = "0" />
         <option name = "test_memcheck" value = "0" />
         <option name = "build_docs" value = "1" />
+        <option name = "dist_docs" value = "1" />
     </target>
 
     <include filename = "license.xml" />
