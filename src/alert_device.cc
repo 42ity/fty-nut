@@ -299,7 +299,14 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
     zmsg_addstr (message, "ADD");
     zmsg_addstr (message, rule.c_str ());
     if (mlm_client_sendto (client, "fty-alert-engine", "rfc-evaluator-rules", NULL, 1000, &message) == 0) {
-        alert.rulePublished = true;
+        zmsg_t *resp = mlm_client_recv (client);
+        char *result = zmsg_popstr (resp);
+        if (streq (result, "OK"))
+                alert.rulePublished = true;
+        else
+                zsys_error ("Error requesting fty-alert-engine to ADD rule %s", rule.c_str ());
+        zstr_free (&result);
+        zmsg_destroy (&resp);
     };
     zmsg_destroy (&message);
 }
