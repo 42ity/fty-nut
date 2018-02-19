@@ -331,7 +331,6 @@ alert_actor_test (bool verbose)
         zstr_free (&item);
 
         zmsg_destroy (&msg);
-
     }
     // check alert message
     devs.publishAlerts (client);
