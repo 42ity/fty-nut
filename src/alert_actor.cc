@@ -188,6 +188,12 @@ alert_actor (zsock_t *pipe, void *args)
         log_critical ("mlm_client_new () failed");
         return;
     }
+     mlm_client_t *mb_client = mlm_client_new ();
+     if (!mb_client) {
+        log_critical ("mlm_client_new () failed");
+        return;
+     }
+
     Devices devices;
     devices.setPollingMs (polling);
 
@@ -214,7 +220,7 @@ alert_actor (zsock_t *pipe, void *args)
             last = now;
             zsys_debug ("Polling data now");
             devices.updateFromNUT ();
-            devices.publishRules (client);
+            devices.publishRules (mb_client);
             devices.publishAlerts (client);
         }
         if (which == NULL) {
@@ -243,6 +249,7 @@ alert_actor (zsock_t *pipe, void *args)
         }
     }
     zpoller_destroy (&poller);
+    mlm_client_destroy (&mb_client);
     mlm_client_destroy (&client);
 }
 
@@ -299,8 +306,8 @@ alert_actor_test (bool verbose)
         NULL);
     assert (poller);
 
+    mlm_client_sendtox (rfc_evaluator, "agent-nut-alert", "rfc-evaluator-rules", "OK", NULL);
     devs.publishRules (client);
-    devs.publishAlerts (client);
 
     // check rule message
     {
@@ -326,6 +333,7 @@ alert_actor_test (bool verbose)
         zmsg_destroy (&msg);
     }
     // check alert message
+    devs.publishAlerts (client);
     {
         verbose_printf ("    receive alert\n");
         void *which = zpoller_wait (poller, 1000);
