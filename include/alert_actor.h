@@ -32,6 +32,7 @@ extern "C" {
 FTY_NUT_EXPORT int
 alert_actor_commands (
     mlm_client_t *client,
+    mlm_client_t *mb_client,
     zmsg_t **message,
     bool& verbose,
     uint64_t& timeout

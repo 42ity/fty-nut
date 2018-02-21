@@ -33,6 +33,7 @@ static const char* STATE = "/var/lib/fty/fty-nut/state_file";
 int
 alert_actor_commands (
     mlm_client_t *client,
+    mlm_client_t *mb_client,
     zmsg_t **message_p,
     bool& verbose,
     uint64_t& timeout
@@ -86,6 +87,16 @@ alert_actor_commands (
             log_error (
                     "aa: mlm_client_connect (endpoint = '%s', timeout = '%d', address = '%s') failed",
                     endpoint, 1000, name);
+        }
+        if (mb_client != NULL) {
+            char *mb_name = zsys_sprintf ("%s-mb", name);
+            rv = mlm_client_connect (mb_client, endpoint, 1000, mb_name);
+            if (rv == -1) {
+                log_error (
+                        "aa: mlm_client_connect (endpoint = '%s', timeout = '%d', address = '%s') failed",
+                        endpoint, 1000, mb_name);
+            }
+            zstr_free (&mb_name);
         }
         zstr_free (&endpoint);
         zstr_free (&name);
@@ -229,7 +240,7 @@ alert_actor (zsock_t *pipe, void *args)
         else if (which == pipe) {
             zmsg_t *msg = zmsg_recv (pipe);
             if (msg) {
-                int quit = alert_actor_commands (client, &msg, verbose, polling);
+                int quit = alert_actor_commands (client, mb_client, &msg, verbose, polling);
                 devices.setPollingMs (polling);
                 zmsg_destroy (&msg);
                 if (quit) break;
