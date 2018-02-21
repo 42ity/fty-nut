@@ -74,7 +74,7 @@ sensor_actor (zsock_t *pipe, void *args)
         else if (which == pipe) {
             zmsg_t *msg = zmsg_recv (pipe);
             if (msg) {
-                int quit = alert_actor_commands (client, &msg, verbose, polling);
+                int quit = alert_actor_commands (client, NULL, &msg, verbose, polling);
                 zmsg_destroy (&msg);
                 if (quit) break;
             }
