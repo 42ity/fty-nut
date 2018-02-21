@@ -123,18 +123,22 @@ Device::scanCapabilities (nut::TcpClient& conn)
         if (vars.empty ()) return 0;
         if (vars.find (prefix + "ambient.temperature.status") != vars.cend()) {
             addAlert ("ambient.temperature", vars);
+            _scanned = true;
         }
         if (vars.find (prefix + "ambient.humidity.status") != vars.cend()) {
             addAlert ("ambient.humidity", vars);
+            _scanned = true;
         }
         for (int a=1; a<=3; a++) {
             std::string q = "input.L" + std::to_string(a) + ".current";
             if (vars.find (prefix + q + ".status") != vars.cend()) {
                 addAlert (q, vars);
+                _scanned = true;
             }
             q = "input.L" + std::to_string(a) + ".voltage";
             if (vars.find (prefix + q + ".status") != vars.cend()) {
                 addAlert (q, vars);
+                _scanned = true;
             }
         }
         for (int a=1; a<=1000; a++) {
@@ -143,11 +147,13 @@ Device::scanCapabilities (nut::TcpClient& conn)
             if (vars.find (prefix + q + ".status") != vars.cend()) {
                 addAlert (q, vars);
                 ++found;
+                _scanned = true;
             }
             q = "outlet.group." + std::to_string(a) + ".voltage";
             if (vars.find (prefix + q + ".status") != vars.cend()) {
                 addAlert (q, vars);
                 ++found;
+                _scanned = true;
             }
             if (!found) break;
         }
@@ -155,7 +161,6 @@ Device::scanCapabilities (nut::TcpClient& conn)
         log_error("aa: Communication problem with %s (%s)", _assetName.c_str(), e.what() );
         return 0;
     }
-    _scanned = true;
     return 1;
 }
 
