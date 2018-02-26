@@ -46,7 +46,7 @@ static const char * NUTConfigXMLPattern = "[[:blank:]]driver[[:blank:]]+=[[:blan
  * As we integrate DMF support, consider also/instead using mapping names from
  * there, if applicable.
  */
-static const char * NUTConfigEpduPattern = "[[:blank:]](mibs[[:blank:]]+=[[:blank:]]+\"(eaton_epdu|aphel_genesisII|aphel_revelation|pulizzi_switched1|pulizzi_switched2)\"|"
+static const char * NUTConfigEpduPattern = "[[:blank:]](mibs[[:blank:]]+=[[:blank:]]+\"(eaton_epdu|aphel_genesisII|aphel_revelation|pulizzi_switched1|pulizzi_switched2|emerson_avocent_pdu)\"|"
                                            "desc[[:blank:]]+=[[:blank:]]+\"[^\"]+ epdu [^\"]+\")";
 static const char * NUTConfigCanSnmpPattern = "[[:blank:]]driver[[:blank:]]+=[[:blank:]]+\"snmp-ups(-old|-dmf)?\"";
 
