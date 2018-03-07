@@ -306,10 +306,13 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
     if (mlm_client_sendto (client, "fty-alert-engine", "rfc-evaluator-rules", NULL, 1000, &message) == 0) {
         zmsg_t *resp = mlm_client_recv (client);
         char *result = zmsg_popstr (resp);
-        if (streq (result, "OK"))
-                alert.rulePublished = true;
+        char *reason = zmsg_popstr (resp);
+
+        if (streq (result, "OK") || streq (reason, "ALREADY_EXISTS"))
+            alert.rulePublished = true;
         else
-                zsys_error ("Error requesting fty-alert-engine to ADD rule %s", rule.c_str ());
+            zsys_error ("Error %s when requesting %s to ADD rule \n%s.", reason, mlm_client_sender (client), rule.c_str ());
+
         zstr_free (&result);
         zmsg_destroy (&resp);
     };
