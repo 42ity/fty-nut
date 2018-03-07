@@ -311,7 +311,7 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
         if (streq (result, "OK") || streq (reason, "ALREADY_EXISTS"))
             alert.rulePublished = true;
         else
-            zsys_error ("Error requesting %s to ADD rule \n%s.", mlm_client_sender (client), rule.c_str ());
+            zsys_error ("Error %s when requesting %s to ADD rule \n%s.", reason, mlm_client_sender (client), rule.c_str ());
 
         zstr_free (&result);
         zmsg_destroy (&resp);
