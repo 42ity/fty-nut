@@ -177,6 +177,15 @@ nut_put (nut_t *self, fty_proto_t **message_p)
         fty_proto_destroy (message_p);
         return;
     }
+    const char *operation = fty_proto_operation(message);
+    if (streq (operation, FTY_PROTO_ASSET_OP_DELETE) ||
+        streq (operation, FTY_PROTO_ASSET_OP_RETIRE)) {
+        zhashx_delete (self->assets, fty_proto_name (message));
+        self->changed = true;
+        fty_proto_destroy (message_p);
+        return;
+    }
+
     // copy from aux to ext what we need
     const char *tmp = fty_proto_aux_string (message,"subtype", NULL);
     if (tmp) fty_proto_ext_insert (message, "subtype", "%s", tmp);
@@ -195,10 +204,10 @@ nut_put (nut_t *self, fty_proto_t **message_p)
         return;
     }
 
-    if (streq (fty_proto_operation (message), FTY_PROTO_ASSET_OP_CREATE) ||
-        streq (fty_proto_operation (message), FTY_PROTO_ASSET_OP_UPDATE)) {
+    if (streq (operation, FTY_PROTO_ASSET_OP_CREATE) ||
+        streq (operation, FTY_PROTO_ASSET_OP_UPDATE)) {
 
-        fty_proto_set_operation (asset, "%s", fty_proto_operation (message));
+        fty_proto_set_operation (asset, "%s", operation);
         if (!nut_ext_value_is_the_same (asset, message, "ip.1")) {
             self->changed = true;
             fty_proto_ext_insert (asset, "ip.1", "%s", fty_proto_ext_string (message, "ip.1", ""));
@@ -248,14 +257,6 @@ nut_put (nut_t *self, fty_proto_t **message_p)
             fty_proto_ext_insert (asset, "max_power", "%s", fty_proto_ext_string (message, "max_power",""));
         }
 
-        fty_proto_destroy (message_p);
-    }
-    else
-    if (streq (fty_proto_operation (message), FTY_PROTO_ASSET_OP_DELETE) ||
-        streq (fty_proto_operation (message), FTY_PROTO_ASSET_OP_RETIRE)) {
-
-        zhashx_delete (self->assets, fty_proto_name (message));
-        self->changed = true;
         fty_proto_destroy (message_p);
     }
     else {
@@ -933,6 +934,11 @@ nut_test (bool verbose)
     fty_proto_aux_insert (asset, "subtype", "%s", "server");
     nut_put (self, &asset);
 
+    // This one should not be recorded
+    asset = test_asset_new ("spurious_delete", FTY_PROTO_ASSET_OP_DELETE);
+    fty_proto_aux_insert (asset, "type", "device");
+    fty_proto_aux_insert (asset, "subtype", "ups");
+    nut_put (self, &asset);
 
     nut_print_zsys (self);
 
