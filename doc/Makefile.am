@@ -42,9 +42,9 @@ SUFFIXES=.txt .adoc .xml .xml7 .1 .3 .7
 	asciidoc -d manpage -b docbook -f $(srcdir)/asciidoc.conf \
         -afty-nut_version=@PACKAGE_VERSION@ -o$@ $<
 .xml.1:
-	xmlto man $<
+	xmlto -o $(@D) man $<
 .xml.3:
-	xmlto man $<
+	xmlto -o $(@D) man $<
 
 # Special handling for project overview whose basename may collide
 # with a main or class name
@@ -52,7 +52,7 @@ SUFFIXES=.txt .adoc .xml .xml7 .1 .3 .7
 	asciidoc -d manpage -b docbook -f $(srcdir)/asciidoc.conf \
         -afty-nut_version=@PACKAGE_VERSION@ -o$@ $<
 .xml7.7:
-	xmlto man $<
+	xmlto -o $(@D) man $<
 
 # List of *.txt and *.doc files generated during build from comments
 # in project program source files and further processed into manpages.
@@ -80,12 +80,17 @@ GENERATED_DOCS += sensor_actor.txt sensor_actor.doc
 sensor_actor.txt: $(top_srcdir)/src/sensor_actor.cc
 	"$(srcdir)/mkman" "sensor_actor" "$(builddir)/sensor_actor.txt" "$(srcdir)/.."
 
+### Note: for mains, we keep the source name rather than flattened name:c
+### so that the manpages for binary programs match their name, at expense
+### of perhaps being built in a subdirectory under doc/.
 GENERATED_DOCS += fty-nut.txt fty-nut.doc
 fty-nut.txt: $(top_srcdir)/src/fty_nut.cc
+	mkdir -p "$(builddir)/$(@D)"
 	"$(srcdir)/mkman" "fty_nut" "$(builddir)/fty-nut.txt" "$(srcdir)/.."
 
 GENERATED_DOCS += fty-nut-configurator.txt fty-nut-configurator.doc
 fty-nut-configurator.txt: $(top_srcdir)/src/fty_nut_configurator.cc
+	mkdir -p "$(builddir)/$(@D)"
 	"$(srcdir)/mkman" "fty_nut_configurator" "$(builddir)/fty-nut-configurator.txt" "$(srcdir)/.."
 
 

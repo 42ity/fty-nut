@@ -204,7 +204,7 @@ FTY_NUT_PRIVATE void
 
 //  Self test for private classes
 FTY_NUT_PRIVATE void
-    fty_nut_private_selftest (bool verbose);
+    fty_nut_private_selftest (bool verbose, const char *subtest);
 
 #endif // FTY_NUT_BUILD_DRAFT_API
 
