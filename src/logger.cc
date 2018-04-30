@@ -26,9 +26,14 @@
 @end
 */
 
-#include <cerrno>
+#include "logger.h"
 
-#include "fty_nut_classes.h"
+#include <assert.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <cerrno>
 
 #define ASSERT_LEVEL \
     assert(level == LOG_DEBUG   || \

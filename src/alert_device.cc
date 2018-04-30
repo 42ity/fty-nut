@@ -20,8 +20,9 @@
 */
 
 #include "alert_device.h"
-#include "fty_nut_library.h"
 #include "logger.h"
+
+#include <ftyproto.h>
 
 void
 Device::fixAlertLimits (DeviceAlert& alert) {

@@ -25,9 +25,18 @@
 @discuss
 @end
  */
-#include <getopt.h>
 
-#include "fty_nut_classes.h"
+#include "fty_nut_server.h"
+#include "sensor_actor.h"
+#include "alert_actor.h"
+#include "ftyproto.h"
+#include "fty_nut.h"
+#include "logger.h"
+
+#include <getopt.h>
+#include <stdio.h>
+#include <czmq.h>
+#include <string>
 
 #define str(x) #x
 

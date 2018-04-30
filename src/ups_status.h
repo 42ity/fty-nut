@@ -22,6 +22,9 @@
 #ifndef UPS_STATUS_H_INCLUDED
 #define UPS_STATUS_H_INCLUDED
 
+#include <stdint.h>
+#include <string>
+
 // Original author: Tomas Halman
 // functions to work with ups status string representation as it is used in
 // networkupstools
@@ -43,26 +46,21 @@
 #define STATUS_FSD             (1 << 13)       /* Forced Shutdown */
 
 // converts status from char* format (e.g. "OL CHRG") to bitmap representation
-FTY_NUT_EXPORT uint16_t
-    upsstatus_to_int (const char *status);
+uint16_t upsstatus_to_int (const char *status);
 
 // std::string wrapper for upsstatus_to_int
-FTY_NUT_EXPORT uint16_t
-    upsstatus_to_int (const std::string& status);
+uint16_t upsstatus_to_int (const std::string& status);
 
 // converts status from uint16_t bitmap (e.g. STATUS_CHRG|STATUS_OL) to text
 // representation (e.g. "OL CHRG")
-FTY_NUT_EXPORT std::string
-    upsstatus_to_string (uint16_t status);
+std::string upsstatus_to_string (uint16_t status);
 
 // converts status from std::string bitmap (e.g. "12") to text representation
 // (e.g. "OL CHRG")
-FTY_NUT_EXPORT std::string
-    upsstatus_to_string (const std::string& status);
+std::string upsstatus_to_string (const std::string& status);
 
 //  Self test of this class
-FTY_NUT_EXPORT void
-    ups_status_test (bool verbose);
+void ups_status_test (bool verbose);
 //  @end
 
 #endif

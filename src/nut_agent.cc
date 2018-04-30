@@ -25,9 +25,11 @@
 @discuss
 @end
 */
-#include <cmath>
+#include "ups_status.h"
+#include "nut_agent.h"
+#include "logger.h"
 
-#include "fty_nut_classes.h"
+#include <cmath>
 
 const std::map<std::string, std::string> NUTAgent::_units =
 {

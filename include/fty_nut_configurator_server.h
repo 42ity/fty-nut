@@ -22,8 +22,10 @@
 #ifndef FTY_NUT_CONFIGURATOR_SERVER_H_INCLUDED
 #define FTY_NUT_CONFIGURATOR_SERVER_H_INCLUDED
 
+#include <malamute.h>
 #include <string>
 #include <vector>
+
 #include "nut_configurator.h"
 
 class Autoconfig {
@@ -66,12 +68,10 @@ extern "C" {
 
 //  @interface
 //  Create a fty_nut_configurator_server
-FTY_NUT_EXPORT void
-    fty_nut_configurator_server (zsock_t *pipe, void *args);
+void fty_nut_configurator_server (zsock_t *pipe, void *args);
 
 //  Self test of this class
-FTY_NUT_EXPORT void
-    fty_nut_configurator_server_test (bool verbose);
+void fty_nut_configurator_server_test (bool verbose);
 
 //  @end
 

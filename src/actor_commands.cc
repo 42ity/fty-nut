@@ -26,7 +26,10 @@
 @end
 */
 
-#include "fty_nut_classes.h"
+#include "actor_commands.h"
+#include "nut_agent.h"
+#include "fty_nut.h"
+#include "logger.h"
 
 int
 actor_commands (

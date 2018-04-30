@@ -27,7 +27,6 @@
 #include <nutclient.h>
 #include <malamute.h>
 
-#include "fty_nut_library.h"
 #include "alert_device_alert.h"
 
 class Sensor {
@@ -69,8 +68,7 @@ class Sensor {
     std::string port() const;
 };
 
-FTY_NUT_EXPORT void
-sensor_device_test(bool verbose);
+void sensor_device_test(bool verbose);
 
 
 #endif // __ALERT_DEVICE

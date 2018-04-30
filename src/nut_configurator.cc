@@ -26,15 +26,21 @@
 @end
 */
 
-#include "fty_nut_classes.h"
+#include "nut_configurator.h"
+#include "subprocess.h"
+#include "fsutils.h"
+#include "nutscan.h"
+#include "logger.h"
+#include "cidr.h"
 
-#include <string>
+#include <cxxtools/jsondeserializer.h>
+#include <cxxtools/regex.h>
 #include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <cxxtools/regex.h>
-#include <cxxtools/jsondeserializer.h>
+#include <czmq.h>
+#include <string>
 
 using namespace shared;
 

@@ -201,7 +201,6 @@ output(
 
 
 //  Self test of this class
-FTY_NUT_EXPORT void
-    subprocess_test (bool verbose);
+void subprocess_test (bool verbose);
 
 #endif

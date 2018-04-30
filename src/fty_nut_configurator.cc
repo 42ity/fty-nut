@@ -26,7 +26,9 @@
 @end
 */
 
-#include "fty_nut_classes.h"
+#include "fty_nut_configurator_server.h"
+
+#include <czmq.h>
 
 int main (int argc, char *argv [])
 {

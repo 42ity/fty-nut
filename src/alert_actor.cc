@@ -18,12 +18,12 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     =========================================================================
 */
-#include <malamute.h>
-#include "fty_nut_classes.h"
-#include "fty_nut_library.h"
-#include "alert_actor.h"
 #include "alert_device_list.h"
+#include "alert_actor.h"
+#include "fty_nut.h"
 #include "logger.h"
+
+#include <malamute.h>
 
 /* No consumers for PATH at this time:
 static const char* PATH = "/var/lib/fty/fty-nut";

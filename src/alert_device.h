@@ -22,13 +22,13 @@
 #ifndef __ALERT_DEVICE
 #define __ALERT_DEVICE
 
-#include <map>
-#include <string>
+#include "alert_device_alert.h"
+#include "alert_actor.h"
+
 #include <nutclient.h>
 #include <malamute.h>
-
-#include "fty_nut_library.h"
-#include "alert_device_alert.h"
+#include <string>
+#include <map>
 
 class Device {
  public:
@@ -81,7 +81,6 @@ class Device {
 };
 
 //  Self test of this class
-FTY_NUT_EXPORT void
-    alert_device_test (bool verbose);
+void alert_device_test (bool verbose);
 
 #endif // __ALERT_DEVICE

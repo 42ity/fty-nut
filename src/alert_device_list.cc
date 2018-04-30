@@ -18,13 +18,12 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     =========================================================================
 */
+#include "alert_device_list.h"
+#include "logger.h"
+
 #include <malamute.h>
 #include <nutclient.h>
 #include <exception>
-
-#include "alert_device_list.h"
-#include "fty_nut_library.h"
-#include "logger.h"
 
 void Devices::updateFromNUT ()
 {

@@ -26,15 +26,16 @@
 @end
 */
 
-#include <iostream>
-#include <fstream>
+#include "nut_device.h"
+#include "fsutils.h"
+#include "logger.h"
+
+#include <cxxtools/serializationerror.h>
+#include <cxxtools/jsondeserializer.h>
 #include <algorithm>
 #include <exception>
-#include <cxxtools/jsondeserializer.h>
-#include <cxxtools/serializationerror.h>
-
-
-#include "fty_nut_classes.h"
+#include <iostream>
+#include <fstream>
 
 #define NUT_MEASUREMENT_REPEAT_AFTER    300     //!< (once in 5 minutes now (300s))
 
