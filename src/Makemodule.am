@@ -33,6 +33,7 @@ src_libfty_nut_la_SOURCES = \
     src/fty_nut_configurator_server.cc \
     src/alert_actor.cc \
     src/sensor_actor.cc \
+    src/state_manager.cc \
     src/platform.h
 
 if ENABLE_DRAFTS

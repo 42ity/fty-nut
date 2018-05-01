@@ -66,6 +66,7 @@ all_tests [] = {
     { "stream", NULL, true, false, "stream_test" },
     { "sensor_device", NULL, true, false, "sensor_device_test" },
     { "sensor_list", NULL, true, false, "sensor_list_test" },
+    { "state_manager", NULL, true, false, "state_manager_test" },
     { "private_classes", NULL, false, false, "$ALL" }, // compat option for older projects
 #endif // FTY_NUT_BUILD_DRAFT_API
     {NULL, NULL, 0, 0, NULL}          //  Sentinel

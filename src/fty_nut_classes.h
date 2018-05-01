@@ -99,6 +99,10 @@ typedef struct _sensor_device_t sensor_device_t;
 typedef struct _sensor_list_t sensor_list_t;
 #define SENSOR_LIST_T_DEFINED
 #endif
+#ifndef STATE_MANAGER_T_DEFINED
+typedef struct _state_manager_t state_manager_t;
+#define STATE_MANAGER_T_DEFINED
+#endif
 
 //  Internal API
 
@@ -118,6 +122,7 @@ typedef struct _sensor_list_t sensor_list_t;
 #include "stream.h"
 #include "sensor_device.h"
 #include "sensor_list.h"
+#include "state_manager.h"
 
 //  *** To avoid double-definitions, only define if building without draft ***
 #ifndef FTY_NUT_BUILD_DRAFT_API
@@ -201,6 +206,11 @@ FTY_NUT_PRIVATE void
 //  Self test of this class.
 FTY_NUT_PRIVATE void
     sensor_list_test (bool verbose);
+
+//  *** Draft method, defined for internal use only ***
+//  Self test of this class.
+FTY_NUT_PRIVATE void
+    state_manager_test (bool verbose);
 
 //  Self test for private classes
 FTY_NUT_PRIVATE void

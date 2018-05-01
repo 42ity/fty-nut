@@ -97,6 +97,8 @@
     <class name = "alert actor" state = "stable">actor handling device alerts and thresholds</class>
     <class name = "sensor actor" state = "stable">actor handling sensors attached to UPS/ePDU</class>
 
+    <class name = "state manager" private = "1">Class maintaining the asset list</class>
+
     <main name = "fty-nut" service = "1" />
     <main name = "fty-nut-configurator" service = "1" />
     <bin name = "fty-nutconfig" />

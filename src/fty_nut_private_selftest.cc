@@ -70,6 +70,8 @@ fty_nut_private_selftest (bool verbose, const char *subtest)
         sensor_device_test (verbose);
     if (streq (subtest, "$ALL") || streq (subtest, "sensor_list_test"))
         sensor_list_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "state_manager_test"))
+        state_manager_test (verbose);
 }
 /*
 ################################################################################
