@@ -20,7 +20,7 @@
 */
 #include "alert_device_list.h"
 #include "alert_actor.h"
-#include "fty_nut.h"
+#include "nut_mlm.h"
 #include "logger.h"
 
 #include <malamute.h>
@@ -60,85 +60,6 @@ alert_actor_commands (
     else
     if (streq (cmd, "VERBOSE")) {
         verbose = true;
-    }
-    else
-    if (streq (cmd, ACTION_CONNECT)) {
-        char *endpoint = zmsg_popstr (message);
-        if (!endpoint) {
-            log_error (
-                    "aa: Expected multipart string format: CONNECT/endpoint/name. "
-                    "Received CONNECT/nullptr");
-            zstr_free (&cmd);
-            zmsg_destroy (message_p);
-            return 0;
-        }
-        char *name = zmsg_popstr (message);
-        if (!name) {
-            log_error (
-                    "aa: Expected multipart string format: CONNECT/endpoint/name. "
-                    "Received CONNECT/endpoint/nullptr");
-            zstr_free (&endpoint);
-            zstr_free (&cmd);
-            zmsg_destroy (message_p);
-            return 0;
-        }
-        int rv = mlm_client_connect (client, endpoint, 1000, name);
-        if (rv == -1) {
-            log_error (
-                    "aa: mlm_client_connect (endpoint = '%s', timeout = '%d', address = '%s') failed",
-                    endpoint, 1000, name);
-        }
-        if (mb_client != NULL) {
-            char *mb_name = zsys_sprintf ("%s-mb", name);
-            rv = mlm_client_connect (mb_client, endpoint, 1000, mb_name);
-            if (rv == -1) {
-                log_error (
-                        "aa: mlm_client_connect (endpoint = '%s', timeout = '%d', address = '%s') failed",
-                        endpoint, 1000, mb_name);
-            }
-            zstr_free (&mb_name);
-        }
-        zstr_free (&endpoint);
-        zstr_free (&name);
-    }
-    else
-    if (streq (cmd, ACTION_PRODUCER)) {
-        char *stream = zmsg_popstr (message);
-        if (!stream) {
-            log_error (
-                    "aa: Expected multipart string format: PRODUCER/stream. "
-                    "Received PRODUCER/nullptr");
-            zstr_free (&stream);
-            zstr_free (&cmd);
-            zmsg_destroy (message_p);
-            return 0;
-        }
-        int rv = mlm_client_set_producer (client, stream);
-        if (rv == -1) {
-            log_error ("mlm_client_set_producer (stream = '%s') failed", stream);
-        }
-        zstr_free (&stream);
-    }
-    else
-    if (streq (cmd, ACTION_CONSUMER)) {
-        char *stream = zmsg_popstr (message);
-        char *pattern = zmsg_popstr (message);
-        if (!stream || !pattern) {
-            log_error (
-                    "aa: Expected multipart string format: CONSUMER/stream/pattern. "
-                    "Received PRODUCER/%s/%s", stream ? stream : "nullptr", pattern ? pattern : "nullptr");
-            zstr_free (&stream);
-            zstr_free (&pattern);
-            zstr_free (&cmd);
-            zmsg_destroy (message_p);
-            return 0;
-        }
-        int rv = mlm_client_set_consumer (client, stream, pattern);
-        if (rv == -1) {
-            log_error ("mlm_client_set_consumer (stream = '%s', pattern = '%s') failed", stream, pattern);
-        }
-        zstr_free (&stream);
-        zstr_free (&pattern);
     }
     else
     if (streq (cmd, ACTION_POLLING)) {
@@ -193,25 +114,40 @@ alert_actor (zsock_t *pipe, void *args)
 
     uint64_t polling = 30000;
     bool verbose = false;
+    const char *endpoint = static_cast<const char *>(args);
 
-    mlm_client_t *client = mlm_client_new ();
+    MlmClientGuard client(mlm_client_new());
     if (!client) {
         log_critical ("mlm_client_new () failed");
         return;
     }
-     mlm_client_t *mb_client = mlm_client_new ();
-     if (!mb_client) {
-        log_critical ("mlm_client_new () failed");
+    if (mlm_client_connect(client, endpoint, 5000, ACTOR_ALERT_NAME) < 0) {
+        log_error("client %s failed to connect", ACTOR_ALERT_NAME);
         return;
-     }
+    }
+    if (mlm_client_set_producer(client, FTY_PROTO_STREAM_ALERTS_SYS) < 0) {
+        log_error("mlm_client_set_producer (stream = '%s') failed",
+                FTY_PROTO_STREAM_ALERTS_SYS);
+        return;
+    }
+    if (mlm_client_set_consumer(client, FTY_PROTO_STREAM_ASSETS, ".*") < 0) {
+        log_error("mlm_client_set_consumer (stream = '%s', pattern = '.*') failed",
+                FTY_PROTO_STREAM_ASSETS);
+        return;
+    }
+
+    MlmClientGuard mb_client(mlm_client_new());
+    if (!mb_client) {
+       log_critical ("mlm_client_new () failed");
+       return;
+    }
 
     Devices devices;
     devices.setPollingMs (polling);
 
-    zpoller_t *poller = zpoller_new (pipe, mlm_client_msgpipe (client), NULL);
+    ZpollerGuard poller(zpoller_new(pipe, mlm_client_msgpipe(client), NULL));
     if (!poller) {
         log_critical ("zpoller_new () failed");
-        mlm_client_destroy (&client);
         return;
     }
     zsock_signal (pipe, 0);
@@ -259,9 +195,6 @@ alert_actor (zsock_t *pipe, void *args)
             zmsg_destroy (&msg);
         }
     }
-    zpoller_destroy (&poller);
-    mlm_client_destroy (&mb_client);
-    mlm_client_destroy (&client);
 }
 
 //  --------------------------------------------------------------------------

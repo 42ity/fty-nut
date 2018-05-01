@@ -74,6 +74,7 @@
             <add_config_opts>--with-dmfsnmp-regenerate=no</add_config_opts>
     </use>
 
+    <header name = "nut_mlm" private = "1">Malamute connection helpers</header>
     <class name = "logger"          private = "1">logging api</class>
     <class name = "fsutils"         private = "1">filesystem utils</class>
     <class name = "cidr"            private = "1">C++ Wrapper around libcidr</class>

@@ -75,6 +75,7 @@ EXTRA_DIST += \
     src/sensor_device.h \
     src/sensor_list.h \
     src/state_manager.h \
+    src/nut_mlm.h \
     LICENSE \
     README.md \
     CONTRIBUTING.md \

@@ -33,6 +33,7 @@
 #include "../include/fty_nut.h"
 
 //  Extra headers
+#include "nut_mlm.h"
 
 //  Opaque class structures to allow forward references
 #ifndef LOGGER_T_DEFINED

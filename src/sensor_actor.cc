@@ -22,6 +22,7 @@
 #include "sensor_actor.h"
 #include "alert_actor.h"
 #include "sensor_list.h"
+#include "nut_mlm.h"
 #include "logger.h"
 #include "nut.h"
 
@@ -42,18 +43,32 @@ sensor_actor (zsock_t *pipe, void *args)
 
     uint64_t polling = 30000;
     bool verbose = false;
+    const char *endpoint = static_cast<const char *>(args);
     Sensors sensors;
 
-    mlm_client_t *client = mlm_client_new ();
+    MlmClientGuard client(mlm_client_new());
     if (!client) {
         log_critical ("mlm_client_new () failed");
         return;
     }
+    if (mlm_client_connect(client, endpoint, 5000, ACTOR_SENSOR_NAME) < 0) {
+        log_error("client %s failed to connect", ACTOR_SENSOR_NAME);
+        return;
+    }
+    if (mlm_client_set_producer(client, FTY_PROTO_STREAM_METRICS_SENSOR) < 0) {
+        log_error("mlm_client_set_producer (stream = '%s') failed",
+                FTY_PROTO_STREAM_METRICS_SENSOR);
+        return;
+    }
+    if (mlm_client_set_consumer(client, FTY_PROTO_STREAM_ASSETS, ".*") < 0) {
+        log_error("mlm_client_set_consumer (stream = '%s', pattern = '.*') failed",
+                FTY_PROTO_STREAM_ASSETS);
+        return;
+    }
 
-    zpoller_t *poller = zpoller_new (pipe, mlm_client_msgpipe (client), NULL);
+    ZpollerGuard poller(zpoller_new(pipe, mlm_client_msgpipe(client), NULL));
     if (!poller) {
         log_critical ("zpoller_new () failed");
-        mlm_client_destroy (&client);
         return;
     }
     zsock_signal (pipe, 0);
@@ -95,8 +110,6 @@ sensor_actor (zsock_t *pipe, void *args)
             zmsg_destroy (&msg);
         }
     }
-    zpoller_destroy (&poller);
-    mlm_client_destroy (&client);
 }
 
 //  --------------------------------------------------------------------------

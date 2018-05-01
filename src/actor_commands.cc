@@ -28,7 +28,7 @@
 
 #include "actor_commands.h"
 #include "nut_agent.h"
-#include "fty_nut.h"
+#include "nut_mlm.h"
 #include "logger.h"
 
 int
@@ -63,87 +63,6 @@ actor_commands (
     else
     if (streq (cmd, "VERBOSE")) {
         verbose = true;
-    }
-    else
-    if (streq (cmd, ACTION_CONNECT)) {
-        char *endpoint = zmsg_popstr (message);
-        if (!endpoint) {
-            log_error (
-                    "Expected multipart string format: CONNECT/endpoint/name. "
-                    "Received CONNECT/nullptr");
-            zstr_free (&cmd);
-            zmsg_destroy (message_p);
-            return 0;
-        }
-        char *name = zmsg_popstr (message);
-        if (!name) {
-            log_error (
-                    "Expected multipart string format: CONNECT/endpoint/name. "
-                    "Received CONNECT/endpoint/nullptr");
-            zstr_free (&endpoint);
-            zstr_free (&cmd);
-            zmsg_destroy (message_p);
-            return 0;
-        }
-        int rv = mlm_client_connect (client, endpoint, 1000, name);
-        if (rv == -1) {
-            log_error (
-                    "mlm_client_connect (endpoint = '%s', timeout = '%d', address = '%s') failed",
-                    endpoint, 1000, name);
-        }
-        else {
-            nut_agent.setClient (client);
-        }
-        zstr_free (&endpoint);
-        zstr_free (&name);
-    }
-    else
-    if (streq (cmd, "PRODUCER")) {
-        char *stream = zmsg_popstr (message);
-        if (!stream) {
-            log_error (
-                    "Expected multipart string format: PRODUCER/stream. "
-                    "Received PRODUCER/nullptr");
-            zstr_free (&stream);
-            zstr_free (&cmd);
-            zmsg_destroy (message_p);
-            return 0;
-        }
-        int rv = mlm_client_set_producer (client, stream);
-        if (rv == -1) {
-            log_error ("mlm_client_set_producer (stream = '%s') failed", stream);
-        }
-        zstr_free (&stream);
-    }
-    else
-    if (streq (cmd, "CONSUMER")) {
-        char *stream = zmsg_popstr (message);
-        if (!stream) {
-            log_error (
-                    "Expected multipart string format: CONSUMER/stream/pattern. "
-                    "Received CONSUMER/nullptr");
-            zstr_free (&cmd);
-            zmsg_destroy (message_p);
-            return 0;
-        }
-        char *pattern = zmsg_popstr (message);
-        if (!pattern) {
-            log_error (
-                    "Expected multipart string format: CONSUMER/stream/pattern. "
-                    "Received CONSUMER/stream/nullptr");
-            zstr_free (&stream);
-            zstr_free (&cmd);
-            zmsg_destroy (message_p);
-            return 0;
-        }
-        int rv = mlm_client_set_consumer (client, stream, pattern);
-        if (rv == -1) {
-            log_error (
-                    "mlm_client_set_consumer (stream = '%s', pattern = '%s') failed",
-                    stream, pattern);
-        }
-        zstr_free (&pattern);
-        zstr_free (&stream);
     }
     else
     if (streq (cmd, "CONFIGURE")) {
@@ -248,6 +167,7 @@ actor_commands_test (bool verbose)
 
     mlm_client_t *client = mlm_client_new ();
     assert (client);
+    assert(mlm_client_connect(client, endpoint, 5000, "test-agent") == 0);
 
     zmsg_t *message = NULL;
     bool actor_verbose = false;
@@ -268,7 +188,6 @@ actor_commands_test (bool verbose)
     assert (actor_verbose == false);
     assert (actor_polling == 0);
     assert (nut_agent.isMappingLoaded () == false);
-    assert (nut_agent.isClientSet () == false);
     assert (nut_agent.TTL () == 60);
     assert (state_file.empty ());
 
@@ -286,7 +205,6 @@ actor_commands_test (bool verbose)
     assert (actor_verbose == false);
     assert (actor_polling == 0);
     assert (nut_agent.isMappingLoaded () == false);
-    assert (nut_agent.isClientSet () == false);
     assert (nut_agent.TTL () == 60);
     assert (state_file.empty ());
 
@@ -304,7 +222,6 @@ actor_commands_test (bool verbose)
     assert (actor_verbose == false);
     assert (actor_polling == 0);
     assert (nut_agent.isMappingLoaded () == false);
-    assert (nut_agent.isClientSet () == false);
     assert (nut_agent.TTL () == 60);
     assert (state_file.empty ());
 
@@ -324,7 +241,6 @@ actor_commands_test (bool verbose)
     assert (actor_verbose == false);
     assert (actor_polling == 0);
     assert (nut_agent.isMappingLoaded () == false);
-    assert (nut_agent.isClientSet () == false);
     assert (nut_agent.TTL () == 60);
     assert (state_file.empty ());
 
@@ -344,126 +260,6 @@ actor_commands_test (bool verbose)
     assert (actor_verbose == false);
     assert (actor_polling == 0);
     assert (nut_agent.isMappingLoaded () == false);
-    assert (nut_agent.isClientSet () == false);
-    assert (nut_agent.TTL () == 60);
-    assert (state_file.empty ());
-
-    STDERR_NON_EMPTY
-
-    // --------------------------------------------------------------
-    fp = freopen ("stderr.txt", "w+", stderr);
-    // CONNECT - expected fail
-    message = zmsg_new ();
-    assert (message);
-    zmsg_addstr (message, ACTION_CONNECT);
-    zmsg_addstr (message, endpoint);
-    // missing name here
-    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
-    assert (rv == 0);
-    assert (message == NULL);
-    assert (actor_verbose == false);
-    assert (actor_polling == 0);
-    assert (nut_agent.isMappingLoaded () == false);
-    assert (nut_agent.isClientSet () == false);
-    assert (nut_agent.TTL () == 60);
-    assert (state_file.empty ());
-
-    STDERR_NON_EMPTY
-
-    // --------------------------------------------------------------
-    fp = freopen ("stderr.txt", "w+", stderr);
-    // CONNECT - expected fail
-    message = zmsg_new ();
-    assert (message);
-    zmsg_addstr (message, ACTION_CONNECT);
-    // missing endpoint here
-    // missing name here
-    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
-    assert (rv == 0);
-    assert (message == NULL);
-    assert (actor_verbose == false);
-    assert (actor_polling == 0);
-    assert (nut_agent.isMappingLoaded () == false);
-    assert (nut_agent.isClientSet () == false);
-    assert (nut_agent.TTL () == 60);
-    assert (state_file.empty ());
-
-    STDERR_NON_EMPTY
-
-    // --------------------------------------------------------------
-    fp = freopen ("stderr.txt", "w+", stderr);
-    // CONNECT - expected fail; bad endpoint
-    message = zmsg_new ();
-    assert (message);
-    zmsg_addstr (message, ACTION_CONNECT);
-    zmsg_addstr (message, "ipc://fty-nut-server-BAD");
-    zmsg_addstr (message, "test-agent");
-    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
-    assert (rv == 0);
-    assert (message == NULL);
-    assert (actor_verbose == false);
-    assert (actor_polling == 0);
-    assert (nut_agent.isMappingLoaded () == false);
-    assert (nut_agent.isClientSet () == false);
-    assert (nut_agent.TTL () == 60);
-    assert (state_file.empty ());
-
-    STDERR_NON_EMPTY
-
-    // --------------------------------------------------------------
-    fp = freopen ("stderr.txt", "w+", stderr);
-    // PRODUCER - expected fail
-    message = zmsg_new ();
-    assert (message);
-    zmsg_addstr (message, ACTION_PRODUCER);
-    // missing stream here
-    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
-    assert (rv == 0);
-    assert (message == NULL);
-    assert (actor_verbose == false);
-    assert (actor_polling == 0);
-    assert (nut_agent.isMappingLoaded () == false);
-    assert (nut_agent.isClientSet () == false);
-    assert (nut_agent.TTL () == 60);
-    assert (state_file.empty ());
-
-    STDERR_NON_EMPTY
-
-    // --------------------------------------------------------------
-    fp = freopen ("stderr.txt", "w+", stderr);
-    // CONSUMER - expected fail
-    message = zmsg_new ();
-    assert (message);
-    zmsg_addstr (message, ACTION_CONSUMER);
-    zmsg_addstr (message, "some-stream");
-    // missing pattern here
-    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
-    assert (rv == 0);
-    assert (message == NULL);
-    assert (actor_verbose == false);
-    assert (actor_polling == 0);
-    assert (nut_agent.isMappingLoaded () == false);
-    assert (nut_agent.isClientSet () == false);
-    assert (nut_agent.TTL () == 60);
-    assert (state_file.empty ());
-
-    STDERR_NON_EMPTY
-
-    // --------------------------------------------------------------
-    fp = freopen ("stderr.txt", "w+", stderr);
-    // CONSUMER - expected fail
-    message = zmsg_new ();
-    assert (message);
-    zmsg_addstr (message, ACTION_CONSUMER);
-    // missing stream here
-    // missing pattern here
-    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
-    assert (rv == 0);
-    assert (message == NULL);
-    assert (actor_verbose == false);
-    assert (actor_polling == 0);
-    assert (nut_agent.isMappingLoaded () == false);
-    assert (nut_agent.isClientSet () == false);
     assert (nut_agent.TTL () == 60);
     assert (state_file.empty ());
 
@@ -482,7 +278,6 @@ actor_commands_test (bool verbose)
     assert (actor_verbose == false);
     assert (actor_polling == 0);
     assert (nut_agent.isMappingLoaded () == false);
-    assert (nut_agent.isClientSet () == false);
     assert (nut_agent.TTL () == 60);
     assert (state_file.empty ());
 
@@ -501,7 +296,6 @@ actor_commands_test (bool verbose)
     assert (actor_verbose == false);
     assert (actor_polling == 30000);
     assert (nut_agent.isMappingLoaded () == false);
-    assert (nut_agent.isClientSet () == false);
     assert (nut_agent.TTL () == 60);
     assert (state_file.empty ());
 
@@ -535,7 +329,6 @@ actor_commands_test (bool verbose)
     assert (actor_verbose == true);
     assert (actor_polling == 0);
     assert (nut_agent.isMappingLoaded () == false);
-    assert (nut_agent.isClientSet () == false);
     assert (nut_agent.TTL () == 60);
     assert (state_file.empty ());
 
@@ -551,7 +344,6 @@ actor_commands_test (bool verbose)
     assert (actor_verbose == true);
     assert (actor_polling == 0);
     assert (nut_agent.isMappingLoaded () == true);
-    assert (nut_agent.isClientSet () == false);
     assert (nut_agent.TTL () == 60);
     assert (state_file == "src/selftest_state_file");
 
@@ -565,51 +357,6 @@ actor_commands_test (bool verbose)
     assert (actor_verbose == true);
     assert (actor_polling == 0);
     assert (nut_agent.isMappingLoaded () == true);
-    assert (nut_agent.isClientSet () == false);
-    assert (nut_agent.TTL () == 60);
-
-    // CONNECT
-    message = zmsg_new ();
-    assert (message);
-    zmsg_addstr (message, ACTION_CONNECT);
-    zmsg_addstr (message, endpoint);
-    zmsg_addstr (message, "test-agent");
-    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
-    assert (rv == 0);
-    assert (message == NULL);
-    assert (actor_verbose == true);
-    assert (actor_polling == 0);
-    assert (nut_agent.isMappingLoaded () == true);
-    assert (nut_agent.isClientSet () == true);
-    assert (nut_agent.TTL () == 60);
-
-    // CONSUMER
-    message = zmsg_new ();
-    assert (message);
-    zmsg_addstr (message, ACTION_CONSUMER);
-    zmsg_addstr (message, "some-stream");
-    zmsg_addstr (message, ".+@.+");
-    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
-    assert (rv == 0);
-    assert (message == NULL);
-    assert (actor_verbose == true);
-    assert (actor_polling == 0);
-    assert (nut_agent.isMappingLoaded () == true);
-    assert (nut_agent.isClientSet () == true);
-    assert (nut_agent.TTL () == 60);
-
-    // PRODUCER
-    message = zmsg_new ();
-    assert (message);
-    zmsg_addstr (message, ACTION_PRODUCER);
-    zmsg_addstr (message, "some-stream");
-    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent, data, state_file);
-    assert (rv == 0);
-    assert (message == NULL);
-    assert (actor_verbose == true);
-    assert (actor_polling == 0);
-    assert (nut_agent.isMappingLoaded () == true);
-    assert (nut_agent.isClientSet () == true);
     assert (nut_agent.TTL () == 60);
 
     // POLLING
@@ -623,7 +370,6 @@ actor_commands_test (bool verbose)
     assert (actor_verbose == true);
     assert (actor_polling == 150000);
     assert (nut_agent.isMappingLoaded () == true);
-    assert (nut_agent.isClientSet () == true);
     assert (nut_agent.TTL () == 300);
 
     STDERR_EMPTY

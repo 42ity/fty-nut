@@ -25,11 +25,4 @@
 //  Include the project library file
 #include "fty_nut_library.h"
 
-// TODO: Move this to more specific header files
-#define CONFIG_POLLING "nut/polling_interval"
-#define ACTION_POLLING "POLLING"
-#define ACTION_CONNECT "CONNECT"
-#define ACTION_PRODUCER "PRODUCER"
-#define ACTION_CONSUMER "CONSUMER"
-#define ACTION_CONFIGURE "CONFIGURE"
 #endif

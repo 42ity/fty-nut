@@ -29,6 +29,7 @@
 #include "actor_commands.h"
 #include "fty_nut_server.h"
 #include "nut_agent.h"
+#include "nut_mlm.h"
 #include "logger.h"
 #include "stream.h"
 #include "nut.h"
@@ -88,42 +89,54 @@ void
 fty_nut_server (zsock_t *pipe, void *args)
 {
     bool verbose = false;
+    const char *endpoint = static_cast<const char *>(args);
 
-    mlm_client_t *client = mlm_client_new ();
+    MlmClientGuard client(mlm_client_new());
     if (!client) {
         log_critical ("mlm_client_new () failed");
         return;
     }
+    if (mlm_client_connect(client, endpoint, 5000, ACTOR_NUT_NAME) < 0) {
+        log_error("client %s failed to connect", ACTOR_NUT_NAME);
+        return;
+    }
+    if (mlm_client_set_producer(client, FTY_PROTO_STREAM_METRICS) < 0) {
+        log_error("mlm_client_set_producer (stream = '%s') failed",
+                FTY_PROTO_STREAM_METRICS);
+        return;
+    }
+    if (mlm_client_set_consumer(client, FTY_PROTO_STREAM_ASSETS, ".*") < 0) {
+        log_error("mlm_client_set_consumer (stream = '%s', pattern = '.*') failed",
+                FTY_PROTO_STREAM_ASSETS);
+        return;
+    }
 
     // inventory client
-    mlm_client_t *iclient = mlm_client_new ();
+    MlmClientGuard iclient(mlm_client_new());
     if (!iclient) {
         log_critical ("mlm_client_new () failed");
         return;
     }
-    int r = mlm_client_connect (iclient, "ipc://@/malamute", 5000, "bios-agent-nut-inventory");
+    int r = mlm_client_connect (iclient, endpoint, 5000, "bios-agent-nut-inventory");
     if (r == -1) {
         log_error ("connect of iclient failed");
+        return;
     }
     r = mlm_client_set_producer (iclient, FTY_PROTO_STREAM_ASSETS);
     if (r == -1) {
         log_error ("iclient set_producer failed");
+        return;
     }
 
-    zpoller_t *poller = zpoller_new (pipe, mlm_client_msgpipe (client), NULL);
+    ZpollerGuard poller(zpoller_new (pipe, mlm_client_msgpipe (client), NULL));
     if (!poller) {
         log_critical ("zpoller_new () failed");
-        mlm_client_destroy (&client);
-        mlm_client_destroy (&iclient);
         return;
     }
 
     nut_t *data = nut_new ();
     if (!data) {
-        zpoller_destroy (&poller);
         log_critical ("nut_new () failed");
-        mlm_client_destroy (&client);
-        mlm_client_destroy (&iclient);
         return;
     }
     NUTAgent nut_agent;
@@ -138,6 +151,7 @@ fty_nut_server (zsock_t *pipe, void *args)
     nut_agent.updateDeviceList (data);
 */
 
+    nut_agent.setClient (client);
     nut_agent.setiClient (iclient);
 
     uint64_t timestamp = static_cast<uint64_t> (zclock_mono ());
@@ -220,9 +234,6 @@ fty_nut_server (zsock_t *pipe, void *args)
         }
     }
     nut_destroy (&data);
-    zpoller_destroy (&poller);
-    mlm_client_destroy (&client);
-    mlm_client_destroy (&iclient);
 }
 
 
