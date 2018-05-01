@@ -31,7 +31,6 @@
 #include "nut_agent.h"
 #include "nut_mlm.h"
 #include "logger.h"
-#include "stream.h"
 #include "nut.h"
 
 /* Consumers of these vars are currently commented away below
@@ -45,6 +44,35 @@ s_handle_poll (NUTAgent& nut_agent, nut_t *data)
     assert (data);
     nut_agent.onPoll (data);
 }
+
+static void
+s_stream_deliver_handle (
+        mlm_client_t *client,
+        NUTAgent& nut_agent,
+        nut_t *data,
+        zmsg_t **message_p)
+{
+    assert (client);
+    assert (data);
+    assert (message_p && *message_p);
+
+    if (!is_fty_proto (*message_p)) {
+        log_warning (
+                "Message received is not fty_proto; sender = '%s', subject = '%s'",
+                mlm_client_sender (client), mlm_client_subject (client));
+        zmsg_destroy (message_p);
+        return;
+    }
+    fty_proto_t *proto = fty_proto_decode (message_p);
+    if (!proto) {
+        log_critical ("fty_proto_decode () failed.");
+        zmsg_destroy (message_p);
+        return;
+    }
+    nut_put (data, &proto);
+    nut_agent.updateDeviceList (data);
+}
+
 
 static void
 s_handle_service (mlm_client_t *client, zmsg_t **message_p)
@@ -211,7 +239,7 @@ fty_nut_server (zsock_t *pipe, void *args)
 
         const char *command = mlm_client_command (client);
         if (streq (command, "STREAM DELIVER")) {
-            stream_deliver_handle (client, nut_agent, data, &message);
+            s_stream_deliver_handle (client, nut_agent, data, &message);
         }
         else
         if (streq (command, "MAILBOX DELIVER")) {

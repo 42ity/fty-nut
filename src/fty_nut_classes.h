@@ -88,10 +88,6 @@ typedef struct _alert_device_list_t alert_device_list_t;
 typedef struct _nut_t nut_t;
 #define NUT_T_DEFINED
 #endif
-#ifndef STREAM_T_DEFINED
-typedef struct _stream_t stream_t;
-#define STREAM_T_DEFINED
-#endif
 #ifndef SENSOR_DEVICE_T_DEFINED
 typedef struct _sensor_device_t sensor_device_t;
 #define SENSOR_DEVICE_T_DEFINED
@@ -120,7 +116,6 @@ typedef struct _state_manager_t state_manager_t;
 #include "alert_device.h"
 #include "alert_device_list.h"
 #include "nut.h"
-#include "stream.h"
 #include "sensor_device.h"
 #include "sensor_list.h"
 #include "state_manager.h"
@@ -192,11 +187,6 @@ FTY_NUT_PRIVATE void
 //  Self test of this class.
 FTY_NUT_PRIVATE void
     nut_test (bool verbose);
-
-//  *** Draft method, defined for internal use only ***
-//  Self test of this class.
-FTY_NUT_PRIVATE void
-    stream_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.

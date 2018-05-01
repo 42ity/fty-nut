@@ -63,7 +63,6 @@ all_tests [] = {
     { "alert_device", NULL, true, false, "alert_device_test" },
     { "alert_device_list", NULL, true, false, "alert_device_list_test" },
     { "nut", NULL, true, false, "nut_test" },
-    { "stream", NULL, true, false, "stream_test" },
     { "sensor_device", NULL, true, false, "sensor_device_test" },
     { "sensor_list", NULL, true, false, "sensor_list_test" },
     { "state_manager", NULL, true, false, "state_manager_test" },

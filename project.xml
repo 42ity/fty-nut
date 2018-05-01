@@ -89,7 +89,6 @@
     <class name = "alert device"        private = "1">device producing alerts</class>
     <class name = "alert device list"   private = "1">collection of alerts</class>
     <class name = "nut"                 private = "1">agent nut structure</class>
-    <class name = "stream"              private = "1">stream deliver command</class>
     <class name = "sensor device"       private = "1">sensor attached to UPS</class>
     <class name = "sensor list"         private = "1">list of sensor attached to UPSes</class>
 
