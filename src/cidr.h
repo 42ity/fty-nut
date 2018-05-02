@@ -26,6 +26,9 @@ extern "C" {
 #include <libcidr.h>
 }
 
+#include <string>
+#include <vector>
+
 /**
  * \enum CIDROptions
  * \brief Formating options for CIDRAddress
@@ -527,7 +530,6 @@ private:
 
 
 //  Self test of this class
-FTY_NUT_EXPORT void
-    cidr_test (bool verbose);
+void cidr_test (bool verbose);
 
 #endif

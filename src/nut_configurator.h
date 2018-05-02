@@ -108,7 +108,6 @@ class ConfigFactory {
 };
 
 //  Self test of this class
-FTY_NUT_EXPORT void
-    nut_configurator_test (bool verbose);
+void nut_configurator_test (bool verbose);
 
 #endif

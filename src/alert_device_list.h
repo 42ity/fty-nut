@@ -21,7 +21,6 @@
 #ifndef __ALERT_DEVICE_LIST
 #define __ALERT_DEVICE_LIST
 
-#include "fty_nut_library.h"
 #include "alert_device.h"
 #include "nut.h"
 
@@ -48,7 +47,6 @@ class Devices {
 
 
 //  Self test of this class
-FTY_NUT_EXPORT void
-    alert_device_list_test (bool verbose);
+void alert_device_list_test (bool verbose);
 
 #endif // __ALERT_DEVICE_LIST

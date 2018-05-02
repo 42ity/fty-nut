@@ -21,7 +21,8 @@
 
 #ifndef NUT_FTY_H_INCLUDED
 #define NUT_FTY_H_INCLUDED
-#include "nut.h"
+
+#include "nut_device.h"
 
 #define NUT_INVENTORY_REPEAT_AFTER_MS      3600000
 
@@ -61,8 +62,7 @@ class NUTAgent {
 };
 
 //  Self test of this class
-FTY_NUT_EXPORT void
-    nut_agent_test (bool verbose);
+void nut_agent_test (bool verbose);
 //  @end
 
 #endif

@@ -22,18 +22,18 @@
 #ifndef FTY_NUT_SERVER_H_INCLUDED
 #define FTY_NUT_SERVER_H_INCLUDED
 
+#include <czmq.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 //  @interface
 //  Create a new fty_nut_server
-FTY_NUT_EXPORT void
-    fty_nut_server (zsock_t *pipe, void *args);
+void fty_nut_server (zsock_t *pipe, void *args);
 
 //  Self test of this class
-FTY_NUT_EXPORT void
-    fty_nut_server_test (bool verbose);
+void fty_nut_server_test (bool verbose);
 
 //  @end
 

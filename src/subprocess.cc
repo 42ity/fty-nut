@@ -26,7 +26,11 @@
 @end
 */
 
-#include "fty_nut_classes.h"
+#include <assert.h>
+#include <fcntl.h>
+#include <czmq.h>
+
+#include "subprocess.h"
 
 // forward declaration of helper functions
 // TODO: move somewhere else

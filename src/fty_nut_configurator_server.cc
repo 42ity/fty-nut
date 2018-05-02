@@ -26,11 +26,14 @@
 @end
 */
 
-#include "fty_nut_classes.h"
+#include "fty_nut_configurator_server.h"
+#include "fsutils.h"
+#include "logger.h"
 
-#include <fstream>
-#include <cxxtools/jsonserializer.h>
 #include <cxxtools/jsondeserializer.h>
+#include <cxxtools/jsonserializer.h>
+#include <ftyproto.h>
+#include <fstream>
 
 #define MLM_ENDPOINT "ipc://@/malamute"
 

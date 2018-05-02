@@ -22,22 +22,25 @@
 #ifndef STREAM_H_INCLUDED
 #define STREAM_H_INCLUDED
 
+#include <malamute.h>
+
+#include "nut_agent.h"
+#include "nut.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 //  @interface
 //  Handle stream deliver command
-FTY_NUT_EXPORT void
-    stream_deliver_handle (
+void stream_deliver_handle (
             mlm_client_t *client,
             NUTAgent& nut_agent,
             nut_t *data,
             zmsg_t **message_p);
 
 //  Self test of this class
-FTY_NUT_EXPORT void
-    stream_test (bool verbose);
+void stream_test (bool verbose);
 
 //  @end
 

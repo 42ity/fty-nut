@@ -86,6 +86,7 @@ fty-proto/
 cidr/
 cxxtools/
 libnutclient/
+/libsodium/
 
 # Travis build area
 tmp/

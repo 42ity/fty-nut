@@ -22,6 +22,9 @@
 #ifndef SENSOR_LIST_H_INCLUDED
 #define SENSOR_LIST_H_INCLUDED
 
+#include "sensor_device.h"
+#include "nut.h"
+
 class Sensors {
  public:
     void updateFromNUT ();
@@ -36,7 +39,6 @@ class Sensors {
 };
 
 //  Self test of this class
-FTY_NUT_EXPORT void
-    sensor_list_test (bool verbose);
+void sensor_list_test (bool verbose);
 
 #endif

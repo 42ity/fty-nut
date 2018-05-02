@@ -26,7 +26,8 @@
 @end
 */
 
-#include "fty_nut_classes.h"
+#include "logger.h"
+#include "stream.h"
 
 
 //  --------------------------------------------------------------------------

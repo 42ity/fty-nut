@@ -23,6 +23,9 @@
 #define ACTOR_COMMANDS_H_INCLUDED
 
 #include "nut.h"
+
+#include <string>
+
 class NUTAgent;
 
 
@@ -57,8 +60,7 @@ class NUTAgent;
 // Performs the actor commands logic
 // Destroys the message
 // Returns 1 for $TERM (means exit), 0 otherwise
-FTY_NUT_EXPORT int
-    actor_commands (
+int actor_commands (
             mlm_client_t *client,
             zmsg_t **message_p,
             bool& verbose,
@@ -68,8 +70,7 @@ FTY_NUT_EXPORT int
             std::string& state_fullpath);
 
 //  Self test of this class
-FTY_NUT_EXPORT void
-    actor_commands_test (bool verbose);
+void actor_commands_test (bool verbose);
 //  @end
 
 #endif

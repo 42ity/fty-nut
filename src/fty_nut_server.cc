@@ -26,7 +26,12 @@
 @end
 */
 
-#include "fty_nut_classes.h"
+#include "actor_commands.h"
+#include "fty_nut_server.h"
+#include "nut_agent.h"
+#include "logger.h"
+#include "stream.h"
+#include "nut.h"
 
 /* Consumers of these vars are currently commented away below
 static const char* PATH = "/var/lib/fty/fty-nut";

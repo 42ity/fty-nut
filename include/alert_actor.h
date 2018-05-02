@@ -22,15 +22,13 @@
 #ifndef ALERT_ACTOR_H_INCLUDED
 #define ALERT_ACTOR_H_INCLUDED
 
+#include <malamute.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-
-#include "malamute.h"
-
-FTY_NUT_EXPORT int
-alert_actor_commands (
+int alert_actor_commands (
     mlm_client_t *client,
     mlm_client_t *mb_client,
     zmsg_t **message,
@@ -38,11 +36,9 @@ alert_actor_commands (
     uint64_t& timeout
 );
 
-FTY_NUT_EXPORT void
-alert_actor (zsock_t *pipe, void *args);
+void alert_actor (zsock_t *pipe, void *args);
 
-FTY_NUT_EXPORT void
-alert_actor_test (bool verbose);
+void alert_actor_test (bool verbose);
 
 #ifdef __cplusplus
 }

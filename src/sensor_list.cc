@@ -26,7 +26,8 @@
 @end
 */
 
-#include "fty_nut_classes.h"
+#include "sensor_list.h"
+#include "logger.h"
 
 //  Structure of our class
 

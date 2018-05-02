@@ -19,10 +19,13 @@
     =========================================================================
 */
 
-#include "fty_nut_classes.h"
-#include "fty_nut_library.h"
-#include "malamute.h"
+#include "sensor_actor.h"
+#include "alert_actor.h"
+#include "sensor_list.h"
 #include "logger.h"
+#include "nut.h"
+
+#include <malamute.h>
 
 /* No consumers for PATH at this time:
 static const char* PATH = "/var/lib/fty/fty-nut";

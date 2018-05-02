@@ -35,25 +35,41 @@
 //
 
 void
-fty_nut_private_selftest (bool verbose)
+fty_nut_private_selftest (bool verbose, const char *subtest)
 {
 // Tests for stable private classes:
-    logger_test (verbose);
-    fsutils_test (verbose);
-    cidr_test (verbose);
-    nutscan_test (verbose);
-    subprocess_test (verbose);
-    actor_commands_test (verbose);
-    ups_status_test (verbose);
-    nut_device_test (verbose);
-    nut_agent_test (verbose);
-    nut_configurator_test (verbose);
-    alert_device_test (verbose);
-    alert_device_list_test (verbose);
-    nut_test (verbose);
-    stream_test (verbose);
-    sensor_device_test (verbose);
-    sensor_list_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "logger_test"))
+        logger_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "fsutils_test"))
+        fsutils_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "cidr_test"))
+        cidr_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "nutscan_test"))
+        nutscan_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "subprocess_test"))
+        subprocess_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "actor_commands_test"))
+        actor_commands_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "ups_status_test"))
+        ups_status_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "nut_device_test"))
+        nut_device_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "nut_agent_test"))
+        nut_agent_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "nut_configurator_test"))
+        nut_configurator_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "alert_device_test"))
+        alert_device_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "alert_device_list_test"))
+        alert_device_list_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "nut_test"))
+        nut_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "stream_test"))
+        stream_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "sensor_device_test"))
+        sensor_device_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "sensor_list_test"))
+        sensor_list_test (verbose);
 }
 /*
 ################################################################################
