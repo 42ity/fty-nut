@@ -71,20 +71,15 @@
 #include <memory>
 #include <mutex>
 #include <list>
-#include <map>
 #include <set>
 
-struct Asset {
-    std::string property;
-};
-
-typedef std::map<std::string, std::shared_ptr<Asset> > AssetsState;
+#include "asset_state.h"
 
 class StateManagerTest;
 
 class StateManager {
 private:
-    typedef std::list<AssetsState> StatesList;
+    typedef std::list<AssetState> StatesList;
     typedef unsigned int CounterInt;
     typedef std::atomic<CounterInt> Counter;
 public:
@@ -96,7 +91,7 @@ public:
             manager_.putReader(this);
         }
         bool refresh();
-        const AssetsState& getState() const
+        const AssetState& getState() const
         {
             return *current_view_;
         }
@@ -116,7 +111,7 @@ public:
         {
             manager_.commit();
         }
-        AssetsState& getState()
+        AssetState& getState()
         {
             return manager_.getUncommittedAssets();
         }
@@ -135,13 +130,13 @@ public:
     Reader* getReader();
     void putReader(Reader* reader);
 private:
-    AssetsState& getUncommittedAssets()
+    AssetState& getUncommittedAssets()
     {
         return uncommitted_;
     }
     void commit();
     void cleanup();
-    AssetsState uncommitted_;
+    AssetState uncommitted_;
     StatesList states_;
     Writer writer_;
     std::mutex readers_mutex_;

@@ -73,11 +73,6 @@ void NUTAgent::setiClient (mlm_client_t *client)
     }
 }
 
-bool NUTAgent::isClientSet () const
-{
-    return _client != NULL;
-}
-
 void NUTAgent::onPoll (nut_t *data)
 {
     if (_client)

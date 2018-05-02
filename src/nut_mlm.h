@@ -59,5 +59,6 @@ private:
 
 typedef MlmObjGuard<mlm_client_t, mlm_client_destroy> MlmClientGuard;
 typedef MlmObjGuard<zpoller_t, zpoller_destroy> ZpollerGuard;
+typedef MlmObjGuard<zmsg_t, zmsg_destroy> ZmsgGuard;
 
 #endif

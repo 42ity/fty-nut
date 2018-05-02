@@ -28,6 +28,7 @@
 
 #include "actor_commands.h"
 #include "fty_nut_server.h"
+#include "state_manager.h"
 #include "nut_agent.h"
 #include "nut_mlm.h"
 #include "logger.h"
@@ -38,6 +39,8 @@ static const char* PATH = "/var/lib/fty/fty-nut";
 static const char* STATE = "/var/lib/fty/fty-nut/state_file";
  */
 
+StateManager NutStateManager;
+
 static void
 s_handle_poll (NUTAgent& nut_agent, nut_t *data)
 {
@@ -46,54 +49,77 @@ s_handle_poll (NUTAgent& nut_agent, nut_t *data)
 }
 
 static void
-s_stream_deliver_handle (
+s_handle_fty_proto (
         mlm_client_t *client,
         NUTAgent& nut_agent,
+        StateManager::Writer& state_writer,
         nut_t *data,
-        zmsg_t **message_p)
+        zmsg_t *message)
 {
     assert (client);
     assert (data);
-    assert (message_p && *message_p);
+    assert (message);
 
-    if (!is_fty_proto (*message_p)) {
+    if (!is_fty_proto (message)) {
         log_warning (
                 "Message received is not fty_proto; sender = '%s', subject = '%s'",
                 mlm_client_sender (client), mlm_client_subject (client));
-        zmsg_destroy (message_p);
+        zmsg_destroy (&message);
         return;
     }
-    fty_proto_t *proto = fty_proto_decode (message_p);
+    fty_proto_t *proto = fty_proto_decode (&message);
     if (!proto) {
         log_critical ("fty_proto_decode () failed.");
-        zmsg_destroy (message_p);
+        zmsg_destroy (&message);
         return;
     }
+    state_writer.getState().updateFromProto(proto);
+    state_writer.commit();
     nut_put (data, &proto);
     nut_agent.updateDeviceList (data);
 }
 
 
+// Handle response to the initial ASSETS request
 static void
-s_handle_service (mlm_client_t *client, zmsg_t **message_p)
+s_handle_ASSETS (mlm_client_t *client, zmsg_t *message, zuuid_t **uuid_p)
 {
     assert (client);
-    assert (message_p && *message_p);
+    assert (message);
+    ZmsgGuard msg(message);
+    zuuid_t *uuid_request = *uuid_p;
 
-    log_error ("Service deliver is not implemented.");
+    if (!uuid_request) {
+        log_warning("Spurious response to an ASSETS request");
+        return;
+    }
+    char *uuid = zmsg_popstr(msg);
+    if (strcmp(uuid, zuuid_str_canonical(uuid_request)) != 0) {
+        log_warning ("Mismatching response to an ASSETS request");
+        return;
+    }
+    zuuid_destroy(uuid_p);
+    zstr_free(&uuid);
+    char *status = zmsg_popstr(msg);
+    if (strcmp(status, "OK") != 0) {
+        log_warning("Got %s response to an ASSETS request", status);
+        zmsg_print(msg);
+    }
+    zstr_free(&status);
 
-    zmsg_destroy (message_p);
-}
-
-static void
-s_handle_mailbox (mlm_client_t *client, zmsg_t **message_p)
-{
-   assert (client);
-   assert (message_p && *message_p);
-
-   log_error ("Mailbox command is not implemented.");
-
-   zmsg_destroy (message_p);
+    char *asset = zmsg_popstr(msg);
+    while (asset) {
+        zuuid_t *uuid = zuuid_new();
+        zmsg_t *req = zmsg_new();
+        zmsg_addstr(req, "GET");
+        zmsg_addstr(req, zuuid_str_canonical(uuid));
+        zmsg_addstr(req, asset);
+        if (mlm_client_sendto(client, "asset-agent", "ASSET_DETAIL", NULL, 5000, &req) < 0) {
+            log_error ("Sending ASSET_DETAIL message for %s failed", asset);
+        }
+        asset = zmsg_popstr(msg);
+        zuuid_destroy(&uuid);
+    }
 }
 
 uint64_t
@@ -182,6 +208,37 @@ fty_nut_server (zsock_t *pipe, void *args)
     nut_agent.setClient (client);
     nut_agent.setiClient (iclient);
 
+    // Query fty-asset about existing devices. This has to be done after
+    // subscribing ourselves to the ASSETS stream, to make sure that we do not
+    // miss assets created between the mailbox request and the subscription to
+    // the stream.
+    zuuid_t *uuid_assets_request;
+    {
+        zmsg_t *msg = zmsg_new();
+        if (!msg) {
+            log_error ("Creating ASSETS message failed");
+            return;
+        }
+        uuid_assets_request = zuuid_new();
+        if (!uuid_assets_request) {
+            zmsg_destroy(&msg);
+            log_error("Creating UUID for the ASSETS message failed");
+            return;
+        }
+        zmsg_addstr(msg, "GET");
+        zmsg_addstr(msg, zuuid_str_canonical(uuid_assets_request));
+        zmsg_addstr(msg, "ups");
+        zmsg_addstr(msg, "epdu");
+        zmsg_addstr(msg, "sts");
+        if (mlm_client_sendto(client, "asset-agent", "ASSETS", NULL, 5000, &msg) < 0) {
+            log_error("Sending ASSETS message failed");
+            zuuid_destroy(&uuid_assets_request);
+            return;
+        }
+    }
+
+    StateManager::Writer& state_writer = NutStateManager.getWriter();
+
     uint64_t timestamp = static_cast<uint64_t> (zclock_mono ());
     uint64_t timeout = 30000;
 
@@ -238,21 +295,25 @@ fty_nut_server (zsock_t *pipe, void *args)
         }
 
         const char *command = mlm_client_command (client);
-        if (streq (command, "STREAM DELIVER")) {
-            s_stream_deliver_handle (client, nut_agent, data, &message);
-        }
-        else
+        const char *subject = mlm_client_subject (client);
         if (streq (command, "MAILBOX DELIVER")) {
-            s_handle_mailbox (client, &message);
+            if (strcmp(subject, "ASSETS") == 0) {
+                s_handle_ASSETS (client, message, &uuid_assets_request);
+                continue;
+            }
+            // Assume that this is a response to an ASSET_DETAIL message,
+            // which contains the UUID and a proto message. Just discard the
+            // UUID for now
+            free(zmsg_popstr(message));
         }
-        else
-        if (streq (command, "SERVICE DELIVER")) {
-            s_handle_service (client, &message);
+        if (is_fty_proto(message)) {
+            // fty_proto messages are received over the ASSETS stream and as
+            // responses to the ASSET_DETAIL mailbox request
+            s_handle_fty_proto (client, nut_agent, state_writer, data, message);
+            continue;
         }
-        else {
-            log_error ("Unrecognized mlm_client_command () = '%s'", command ? command : "(null)");
-        }
-
+        log_error ("Unhandled message (%s/%s)", command, subject);
+        zmsg_print (message);
         zmsg_destroy (&message);
     } // while (!zsys_interrupted)
     if (nut_changed (data)) {

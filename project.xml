@@ -98,6 +98,8 @@
     <class name = "sensor actor" state = "stable">actor handling sensors attached to UPS/ePDU</class>
 
     <class name = "state manager" private = "1">Class maintaining the asset list</class>
+    <!-- StateManager unit test also tests AssetState -->
+    <class name = "asset state" private = "1" selftest = "0">list of known assets</class>
 
     <main name = "fty-nut" service = "1" />
     <main name = "fty-nut-configurator" service = "1" />

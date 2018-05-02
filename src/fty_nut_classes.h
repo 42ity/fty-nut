@@ -100,6 +100,10 @@ typedef struct _sensor_list_t sensor_list_t;
 typedef struct _state_manager_t state_manager_t;
 #define STATE_MANAGER_T_DEFINED
 #endif
+#ifndef ASSET_STATE_T_DEFINED
+typedef struct _asset_state_t asset_state_t;
+#define ASSET_STATE_T_DEFINED
+#endif
 
 //  Internal API
 
@@ -119,6 +123,7 @@ typedef struct _state_manager_t state_manager_t;
 #include "sensor_device.h"
 #include "sensor_list.h"
 #include "state_manager.h"
+#include "asset_state.h"
 
 //  *** To avoid double-definitions, only define if building without draft ***
 #ifndef FTY_NUT_BUILD_DRAFT_API

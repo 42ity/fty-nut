@@ -33,7 +33,6 @@ class NUTAgent {
 
     void setClient (mlm_client_t *client);
     void setiClient (mlm_client_t *client);
-    bool isClientSet () const;
 
     void onPoll (nut_t *data);
     void updateDeviceList (nut_t *state);
