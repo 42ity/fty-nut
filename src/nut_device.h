@@ -25,11 +25,12 @@
 // Taken from 'core' repo, src/agents/nut/nut-driver.(h|c)
 // Original authors: Tomas Halman, Karol Hrdina, Alena Chernikava
 
+#include "asset_state.h"
+
 #include <map>
 #include <vector>
 #include <functional>
 #include <nutclient.h>
-#include <nut.h>
 
 namespace nutclient = nut;
 
@@ -54,15 +55,13 @@ struct NUTPhysicalValue {
 class NUTDevice {
     friend class NUTDeviceList;
  public:
-    // Creates new NUTDevice with empty set of values without name.
+    // Creates new NUTDevice with empty set of values without name and no
+    // asset information
     NUTDevice();
 
-    // Creates new NUTDevice with empty set of values with name (name
-    // corresponds with NUTs /etc/ups/ups.conf)
-    NUTDevice(const char* name);
-    NUTDevice(const std::string& name);
-    NUTDevice(const char *asset_name, const char* nut_name, int daisy_chain_index);
-    NUTDevice(const std::string& asset_name, const std::string& nut_name, int daisy_chain_index);
+    // Creates new NUTDevice linked to given asset
+    explicit NUTDevice(const AssetState::Asset *asset);
+    NUTDevice(const AssetState::Asset *asset, const std::string& nut_name);
 
     // Returns true if there are some changes in device since last
     // statusMessage has been called.
@@ -154,30 +153,58 @@ class NUTDevice {
     time_t lastUpdate() const { return _lastUpdate; }
 
     /**
-     * \brief get/set the device name like it is in assets
+     * \brief get the device name like it is in assets
      */
-    void assetName (const std::string& name);
-    std::string assetName () const;
-    /**
-     * \brief get/set the device name like it is in nut
-     */
-    void nutName (const std::string& name);
-    std::string nutName () const ;
-    /**
-     * \brief get/set the daisy-chain index
-     */
-    void daisyChainIndex(int index);
-    int daisyChainIndex() const;
+    std::string assetName () const
+    {
+        return  _asset ? _asset->name() : std::string();
+    }
 
-    void assetExtAttribute (const std::string name, const std::string value);
-    std::string assetExtAttribute (const std::string name) const;
+    /**
+     * \brief get the device name like it is in nut
+     */
+    std::string nutName () const { return _nutName; }
+
+    /**
+     * \brief get the asset subtype
+     */
+    std::string subtype () const
+    {
+        return _asset ? _asset->subtype() : std::string();
+    }
+
+    /**
+     * \brief get the daisy-chain index
+     */
+    int daisyChainIndex() const
+    {
+        return _asset ? _asset->daisychain() : 0;
+    }
+
+    /**
+     * \bried get max_current as configured in the asset or NAN
+     */
+    double maxCurrent() const
+    {
+        return _asset ? _asset->maxCurrent() : NAN;
+    }
+
+    /**
+     * \bried get max_power as configured in the asset or NAN
+     */
+    double maxPower() const
+    {
+        return _asset ? _asset->maxPower() : NAN;
+    }
+
     ~NUTDevice();
  private:
     /**
-     * \brief array for keeping interesting extended attributes from assets
+     * \brief the respective asset element, if known (owned by the state
+     * manager)
      */
-    std::map <std::string, std::string> _assetExtAttributes;
-    
+    const AssetState::Asset *_asset;
+
     /**
      * \brief Updates physical or measurement value (like current or load) from float.
      *
@@ -238,12 +265,8 @@ class NUTDevice {
     //! \brief map of inventory values
     std::map<std::string, NUTInventoryValue> _inventory;
 
-    //! \brief device name from assets
-    std::string _assetName;
     //! \brief device name in nut
     std::string _nutName;
-    //! \brief daisy-chain index
-    int _daisyChainIndex;
 
     //! \brief Transformation of our integer (x100) back
     std::string itof(const long int) const;
@@ -305,7 +328,7 @@ class NUTDeviceList {
     std::map<std::string, NUTDevice>::iterator end();
 
     //! \brief update list of NUT devices
-    void updateDeviceList(nut_t * deviceState);
+    void updateDeviceList(const AssetState& state);
 
     ~NUTDeviceList();
 

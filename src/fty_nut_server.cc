@@ -42,13 +42,6 @@ static const char* STATE = "/var/lib/fty/fty-nut/state_file";
 StateManager NutStateManager;
 
 static void
-s_handle_poll (NUTAgent& nut_agent, nut_t *data)
-{
-    assert (data);
-    nut_agent.onPoll (data);
-}
-
-static void
 s_handle_fty_proto (
         mlm_client_t *client,
         NUTAgent& nut_agent,
@@ -76,7 +69,7 @@ s_handle_fty_proto (
     state_writer.getState().updateFromProto(proto);
     state_writer.commit();
     nut_put (data, &proto);
-    nut_agent.updateDeviceList (data);
+    nut_agent.updateDeviceList();
 }
 
 
@@ -193,7 +186,7 @@ fty_nut_server (zsock_t *pipe, void *args)
         log_critical ("nut_new () failed");
         return;
     }
-    NUTAgent nut_agent;
+    NUTAgent nut_agent(NutStateManager.getReader());
     std::string state_file;
 
     zsock_signal (pipe, 0);
@@ -249,7 +242,7 @@ fty_nut_server (zsock_t *pipe, void *args)
         if (now - last >= timeout) {
             last = now;
             zsys_debug("Periodic polling");
-            s_handle_poll (nut_agent, data);
+            nut_agent.onPoll();
         }
         if (nut_changed (data)) {
             r = nut_save (data, state_file.c_str ());

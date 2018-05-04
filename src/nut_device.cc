@@ -47,84 +47,25 @@ namespace nut
 {
 
 NUTDevice::NUTDevice() :
-    _daisyChainIndex (0)
+    _asset(nullptr)
 {
 }
 
-NUTDevice::NUTDevice(const char *name) :
-    _assetName (name),
-    _nutName (name),
-    _daisyChainIndex (0)
+NUTDevice::NUTDevice(const AssetState::Asset *asset) :
+    _asset (asset),
+    _nutName (asset->name())
 {
 }
 
-NUTDevice::NUTDevice(const std::string& name) :
-    _assetName (name),
-    _nutName (name),
-    _daisyChainIndex (0)
+NUTDevice::NUTDevice(const AssetState::Asset *asset, const std::string& nut_name):
+    _asset (asset),
+    _nutName (nut_name)
 {
 }
-
-NUTDevice::NUTDevice(const char *asset_name, const char* nut_name, int daisy_chain_index) :
-    _assetName (asset_name),
-    _nutName (nut_name),
-    _daisyChainIndex (daisy_chain_index)
-{
-}
-
-NUTDevice::NUTDevice(const std::string& asset_name, const std::string& nut_name, int daisy_chain_index):
-    _assetName (asset_name),
-    _nutName (nut_name),
-    _daisyChainIndex (daisy_chain_index)
-{
-}
-
-void NUTDevice::nutName(const std::string& name) {
-    _nutName = name;
-}
-
-std::string NUTDevice::nutName() const {
-    return _nutName;
-}
-
-void NUTDevice::assetName(const std::string& name) {
-    _assetName = name;
-}
-
-std::string NUTDevice::assetName() const {
-    return _assetName;
-}
-
-void NUTDevice::daisyChainIndex (int index) {
-    _daisyChainIndex = index;
-}
-
-int NUTDevice::daisyChainIndex () const {
-    return _daisyChainIndex;
-}
-
-void NUTDevice::assetExtAttribute (const std::string name, const std::string value)
-{
-    if (value.empty ()) {
-        _assetExtAttributes.erase (name);
-    } else {
-        _assetExtAttributes [name] = value;
-    }
-}
-
-std::string NUTDevice::assetExtAttribute (const std::string name) const
-{
-    const auto a = _assetExtAttributes.find (name);
-    if (a != _assetExtAttributes.cend ()) {
-        return a->second;
-    }
-    return "";
-}
-
 
 std::string NUTDevice::daisyPrefix() const {
-    if (_daisyChainIndex) {
-        return "device." + std::to_string (_daisyChainIndex) + ".";
+    if (daisyChainIndex()) {
+        return "device." + std::to_string (daisyChainIndex()) + ".";
     }
     return "";
 }
@@ -458,7 +399,7 @@ void NUTDevice::NUTRealpowerFromOutput (const std::string& prefix, std::map< std
     // use outlet.realpower if exists
     if (vars.find (prefix + "outlet.realpower") != vars.end()) {
         NUTSetIfNotPresent (prefix, vars, "ups.realpower", "outlet.realpower");
-        log_debug("realpower of %s taken from outlet.realpower", _assetName.c_str ());
+        log_debug("realpower of %s taken from outlet.realpower", assetName().c_str ());
         return;
     }
     // sum the output.Lx.realpower
@@ -488,7 +429,7 @@ void NUTDevice::NUTRealpowerFromOutput (const std::string& prefix, std::map< std
             }
         }
         // we have sum
-        log_debug("realpower of %s calculated as sum of output.Lx.realpower", _assetName.c_str ());
+        log_debug("realpower of %s calculated as sum of output.Lx.realpower", assetName().c_str ());
         std::vector<std::string> value;
         value.push_back (itof (round (sum * 100)));
         vars[prefix + "ups.realpower"] = value;
@@ -515,7 +456,7 @@ void NUTDevice::NUTRealpowerFromOutput (const std::string& prefix, std::map< std
                 sum += std::stod (it->second[0]);
             } catch(...) {}
         }
-        log_debug("realpower of %s calculated as sum of outlet.X.realpower", _assetName.c_str ());
+        log_debug("realpower of %s calculated as sum of outlet.X.realpower", assetName().c_str ());
         std::vector<std::string> value;
         value.push_back (itof (round (sum * 100)));
         vars[prefix + "ups.realpower"] = value;
@@ -548,9 +489,9 @@ void NUTDevice::NUTFixMissingLoad (const std::string& prefix, std::map< std::str
             // 1 phase ups
             {
                 // try realpower/max_power*100
-                const auto max_power_it = _assetExtAttributes.find ("max_power");
-                if (max_power_it != _assetExtAttributes.cend ()) {
-                    double max_power = stod (max_power_it->second) * 1000;
+                double max_power = maxPower();
+                if (!std::isnan(max_power)) {
+                    max_power *= 1000;
                     const auto realpower_it = vars.find (prefix + "ups.realpower");
                     if (realpower_it != vars.cend ()) {
                         double realpower = std::stod (realpower_it->second[0]);
@@ -579,9 +520,9 @@ void NUTDevice::NUTFixMissingLoad (const std::string& prefix, std::map< std::str
             }
             {
                 // try sum(realpower_i)/max_power*100
-                const auto max_power_it = _assetExtAttributes.find ("max_power");
-                if (max_power_it != _assetExtAttributes.cend ()) {
-                    double max_power = stod (max_power_it->second) * 1000;
+                double max_power = maxPower();
+                if (!std::isnan(max_power)) {
+                    max_power *= 1000;
                     if (max_power > 0.1) {
                         const auto it1 = vars.find (prefix + "output.L1.realpower");
                         const auto it2 = vars.find (prefix + "output.L2.realpower");
@@ -598,7 +539,7 @@ void NUTDevice::NUTFixMissingLoad (const std::string& prefix, std::map< std::str
             }
         }
     } catch (...) {
-        zsys_error ("failed to calculate load for %s", _assetName.c_str ());
+        zsys_error ("failed to calculate load for %s", assetName().c_str ());
     }
 }
 
@@ -656,7 +597,7 @@ void NUTDevice::clear() {
     if( ! _inventory.empty() || ! _physics.empty() ) {
         _inventory.clear();
         _physics.clear();
-        log_error("Dropping all measurement/inventory data for %s", _assetName.c_str() );
+        log_error("Dropping all measurement/inventory data for %s", assetName().c_str() );
     }
 }
 
@@ -668,73 +609,46 @@ NUTDeviceList::NUTDeviceList() {
 
 }
 
-void NUTDeviceList::updateDeviceList(nut_t * deviceState) {
+void NUTDeviceList::updateDeviceList(const AssetState& deviceState) {
     try {
-        if (!deviceState) return;
-        zlist_t *devices = nut_get_powerdevices (deviceState);
-        if (!devices) return;
+        auto& devices = deviceState.getPowerDevices();
 
         _devices.clear();
         std::map<std::string, std::string> ip2master;
-        {
-            // make ip->master map
-            const char *name = (char *)zlist_first(devices);
-            while (name) {
-                const char* ip = nut_asset_ip (deviceState, name);
-                const char* chain = nut_asset_daisychain (deviceState, name);
-                if (ip == NULL || chain == NULL || streq (ip, "") ) {
-                    // this is strange. No IP?
-                    name = (char *)zlist_next(devices);
-                    continue;
-                }
-                if (streq (chain,"") || streq (chain,"1")) {
-                    // this is master
-                    ip2master[ip] = name;
-                }
-                name = (char *)zlist_next(devices);
+        // make ip->master map
+        for (auto i : devices) {
+            const std::string& ip = i.second->IP();
+            if (ip == "") {
+                // this is strange. No IP?
+                continue;
+            }
+            if (i.second->daisychain() <= 1) {
+                // this is master
+                ip2master[ip] = i.first;
             }
         }
-        {
-            const char *name = (char *)zlist_first(devices);
-            while (name) {
-                const char* ip = nut_asset_ip (deviceState, name);
-                if (!ip || streq (ip, "")) {
-                    // this is strange. No IP?
-                    name = (char *)zlist_next(devices);
-                    continue;
+        for (auto i : devices) {
+            const std::string& ip = i.second->IP();
+            if (ip.empty()) {
+                // this is strange. No IP?
+                continue;
+            }
+            const std::string& name = i.first;
+            switch(i.second->daisychain()) {
+            case 0:
+            case 1:
+                _devices[name] = NUTDevice(i.second.get());
+                break;
+            default:
+                const auto master_it = ip2master.find (ip);
+                if (master_it == ip2master.cend()) {
+                    log_error("Daisychain host for %s not found", name.c_str());
+                } else {
+                    _devices[name] = NUTDevice(i.second.get(), master_it->second.c_str());
                 }
-                const char* chain_str = nut_asset_daisychain (deviceState, name);
-                int chain = 0;
-                if (chain_str) try { chain = std::stoi (chain_str); } catch(...) {};
-                switch(chain) {
-                case 0:
-                    _devices[name] = NUTDevice(name);
-                    break;
-                case 1:
-                    _devices[name] = NUTDevice(name, name, 1);
-                    break;
-                default:
-                    const auto master_it = ip2master.find (ip);
-                    if (master_it == ip2master.cend()) {
-                        log_error ("Daisychain host for %s not found", name);
-                    } else {
-                        _devices[name] = NUTDevice(name, master_it->second.c_str (), chain);
-                    }
-                    break;
-                }
-                // other ext attributes
-                for (const auto attr : {"max_current", "max_power"}) {
-                    const char *p = nut_asset_get_string (deviceState, name, attr);
-                    if (p) {
-                        _devices[name].assetExtAttribute (attr, p);
-                    } else {
-                        _devices[name].assetExtAttribute (attr, "");
-                    }
-                }
-                name = (char *)zlist_next(devices);
+                break;
             }
         }
-        zlist_destroy (&devices);
     } catch (const std::exception& e) {
         log_error ("exception while configuring device: %s", e.what ());
     }

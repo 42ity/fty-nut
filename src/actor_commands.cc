@@ -96,7 +96,6 @@ actor_commands (
         if (r != 0) {
             log_warning ("Could not load state file '%s'.", state_file);
         }
-        nut_agent.updateDeviceList (data);
         zstr_free (&mapping);
         zstr_free (&state_file);
     }
@@ -172,7 +171,8 @@ actor_commands_test (bool verbose)
     zmsg_t *message = NULL;
     bool actor_verbose = false;
 
-    NUTAgent nut_agent;
+    StateManager manager;
+    NUTAgent nut_agent(manager.getReader());
     nut_t *data = nut_new ();
     std::string state_file;
     uint64_t actor_polling = 0;
