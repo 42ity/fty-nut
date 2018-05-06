@@ -83,3 +83,29 @@ void AssetState::updateFromProto(fty_proto_t* message)
     }
     (*map)[name] = std::shared_ptr<Asset>(new Asset(message));
 }
+
+void AssetState::recompute()
+{
+    ip2master_.clear();
+    for (auto i : powerdevices_) {
+        const std::string& ip = i.second->IP();
+        if (ip == "") {
+            // this is strange. No IP?
+            continue;
+        }
+        if (i.second->daisychain() <= 1) {
+            // this is master
+            ip2master_[ip] = i.first;
+        }
+    }
+}
+
+const std::string& AssetState::ip2master(const std::string& ip) const
+{
+    static const std::string empty;
+
+    const auto i = ip2master_.find(ip);
+    if (i == ip2master_.cend())
+        return empty;
+    return i->second;
+}

@@ -22,6 +22,7 @@
 #ifndef ASSET_STATE_H_INCLUDED
 #define ASSET_STATE_H_INCLUDED
 
+#include <unordered_map>
 #include <ftyproto.h>
 #include <memory>
 #include <map>
@@ -78,6 +79,8 @@ public:
     };
     // Update the state from a received fty_proto message
     void updateFromProto(fty_proto_t* message);
+    // Build the ip2master map
+    void recompute();
     // Use a std::map to process the assets in a defined order each time
     // Additions and removals do not happen _that_ often to worry about
     typedef std::map<std::string, std::shared_ptr<Asset> > AssetMap;
@@ -89,9 +92,12 @@ public:
     {
         return sensors_;
     }
+    // Return the name of the asset with given IP address
+    const std::string& ip2master(const std::string& ip) const;
 private:
     AssetMap powerdevices_;
     AssetMap sensors_;
+    std::unordered_map<std::string, std::string> ip2master_;
 };
 
 #endif

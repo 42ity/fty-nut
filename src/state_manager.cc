@@ -154,6 +154,7 @@ void StateManager::commit()
     // it would have no effect in practice.
     std::lock_guard<std::mutex> lock(readers_mutex_);
     states_.push_back(uncommitted_);
+    states_.back().recompute();
     ++write_counter_;
 }
 
@@ -225,6 +226,7 @@ public:
             assert(devs1.size() == 1);
             assert(devs1.count("ups-1") == 1);
             assert(devs1.at("ups-1")->IP() == "192.0.2.1");
+            assert(reader1->getState().ip2master("192.0.2.1") == "ups-1");
             assert(reader1->getState().getSensors().empty());
             // reader2 did not update yet
             assert(reader2->getState().getPowerDevices().empty());
@@ -248,8 +250,10 @@ public:
             assert(devs1.size() == 2);
             assert(devs1.count("ups-1") == 1);
             assert(devs1.at("ups-1")->IP() == "192.0.2.1");
+            assert(reader1->getState().ip2master("192.0.2.1") == "ups-1");
             assert(devs1.count("epdu-2") == 1);
             assert(devs1.at("epdu-2")->IP() == "192.0.2.2");
+            assert(reader1->getState().ip2master("192.0.2.2") == "epdu-2");
             assert(reader1->getState().getSensors().empty());
             // reader2 is two steps behind
             assert(reader2->getState().getPowerDevices().empty());
@@ -260,8 +264,10 @@ public:
             assert(devs2.size() == 2);
             assert(devs2.count("ups-1") == 1);
             assert(devs2.at("ups-1")->IP() == "192.0.2.1");
+            assert(reader2->getState().ip2master("192.0.2.1") == "ups-1");
             assert(devs2.count("epdu-2") == 1);
             assert(devs2.at("epdu-2")->IP() == "192.0.2.2");
+            assert(reader2->getState().ip2master("192.0.2.2") == "epdu-2");
             assert(reader2->getState().getSensors().empty());
         }
 
@@ -286,14 +292,18 @@ public:
             assert(devs1.size() == 1);
             assert(devs1.count("ups-1") == 1);
             assert(devs1.at("ups-1")->IP() == "192.0.2.1");
+            assert(reader1->getState().ip2master("192.0.2.1") == "ups-1");
+            assert(reader1->getState().ip2master("192.0.2.2") == "");
             assert(reader1->getState().getSensors().empty());
             // reader2 still sees epdu-2
             auto& devs2 = reader2->getState().getPowerDevices();
             assert(devs2.size() == 2);
             assert(devs2.count("ups-1") == 1);
             assert(devs2.at("ups-1")->IP() == "192.0.2.1");
+            assert(reader2->getState().ip2master("192.0.2.1") == "ups-1");
             assert(devs2.count("epdu-2") == 1);
             assert(devs2.at("epdu-2")->IP() == "192.0.2.2");
+            assert(reader2->getState().ip2master("192.0.2.2") == "epdu-2");
             assert(reader2->getState().getSensors().empty());
 
             // reader3 is late to the party but should see the latest state
@@ -302,6 +312,7 @@ public:
             assert(devs3.size() == 1);
             assert(devs3.count("ups-1") == 1);
             assert(devs3.at("ups-1")->IP() == "192.0.2.1");
+            assert(reader3->getState().ip2master("192.0.2.1") == "ups-1");
             assert(reader3->getState().getSensors().empty());
             // First refresh() call must always return true
             assert(reader3->refresh());
@@ -325,6 +336,8 @@ public:
             assert(devs1.size() == 1);
             assert(devs1.count("ups-1") == 1);
             assert(devs1.at("ups-1")->IP() == "192.0.2.1");
+            assert(reader1->getState().ip2master("192.0.2.1") == "ups-1");
+            assert(reader2->getState().ip2master("192.0.2.3") == "");
             assert(reader1->getState().getSensors().empty());
             // reader2 catches up and sees the new IP
             assert(reader2->refresh());
@@ -332,6 +345,8 @@ public:
             assert(devs2.size() == 1);
             assert(devs2.count("ups-1") == 1);
             assert(devs2.at("ups-1")->IP() == "192.0.2.3");
+            assert(reader2->getState().ip2master("192.0.2.1") == "");
+            assert(reader2->getState().ip2master("192.0.2.3") == "ups-1");
             assert(reader2->getState().getSensors().empty());
         }
 	{

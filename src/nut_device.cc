@@ -614,19 +614,6 @@ void NUTDeviceList::updateDeviceList(const AssetState& deviceState) {
         auto& devices = deviceState.getPowerDevices();
 
         _devices.clear();
-        std::map<std::string, std::string> ip2master;
-        // make ip->master map
-        for (auto i : devices) {
-            const std::string& ip = i.second->IP();
-            if (ip == "") {
-                // this is strange. No IP?
-                continue;
-            }
-            if (i.second->daisychain() <= 1) {
-                // this is master
-                ip2master[ip] = i.first;
-            }
-        }
         for (auto i : devices) {
             const std::string& ip = i.second->IP();
             if (ip.empty()) {
@@ -640,11 +627,11 @@ void NUTDeviceList::updateDeviceList(const AssetState& deviceState) {
                 _devices[name] = NUTDevice(i.second.get());
                 break;
             default:
-                const auto master_it = ip2master.find (ip);
-                if (master_it == ip2master.cend()) {
+                auto master = deviceState.ip2master(ip);
+                if (master.empty()) {
                     log_error("Daisychain host for %s not found", name.c_str());
                 } else {
-                    _devices[name] = NUTDevice(i.second.get(), master_it->second.c_str());
+                    _devices[name] = NUTDevice(i.second.get(), master);
                 }
                 break;
             }
