@@ -23,7 +23,6 @@
 #include "asset_state.h"
 #include "nut_mlm.h"
 #include "logger.h"
-#include "nut.h"
 
 #include <ftyproto.h>
 #include <malamute.h>
@@ -84,26 +83,6 @@ alert_actor_commands (
     zstr_free (&cmd);
     zmsg_destroy (message_p);
     return ret;
-}
-
-int
-handle_asset_message (mlm_client_t *client, nut_t *data, zmsg_t **message_p) {
-    if (!client || !data || !message_p || !*message_p) return 0;
-    if (!is_fty_proto (*message_p)) {
-        log_warning (
-            "Message received is not fty_proto; sender = '%s', subject = '%s'",
-            mlm_client_sender (client), mlm_client_subject (client));
-        zmsg_destroy (message_p);
-        return 0;
-    }
-    fty_proto_t *proto = fty_proto_decode (message_p);
-    if (!proto) {
-        log_critical ("fty_proto_decode () failed.");
-        zmsg_destroy (message_p);
-        return 0;
-    }
-    nut_put (data, &proto);
-    return 1;
 }
 
 void
