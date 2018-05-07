@@ -25,6 +25,11 @@
 #include <nutclient.h>
 #include <exception>
 
+Devices::Devices (StateManager::Reader *reader)
+    : _state_reader(reader)
+{
+}
+
 void Devices::updateFromNUT ()
 {
     try {
@@ -64,78 +69,49 @@ void Devices::addIfNotPresent (Device dev) {
     }
 }
 
-void Devices::updateDeviceList(nut_t *config)
+void Devices::updateDeviceList()
 {
-    if (!config) return;
-    zlist_t *devices = nut_get_powerdevices (config);
-    if (!devices) return;
+    if (!_state_reader->refresh())
+        return;
+    const AssetState& deviceState = _state_reader->getState();
+    auto& devices = deviceState.getPowerDevices();
 
     log_debug("aa: updating device list");
-    std::map<std::string, std::string> ip2master;
-    {
-        // make ip->master map
-        const char *name = (char *)zlist_first(devices);
-        while (name) {
-            const char* ip = nut_asset_ip (config, name);
-            const char* chain = nut_asset_daisychain (config, name);
-            if (ip == NULL || chain == NULL || streq (ip, "") ) {
-                // this is strange. No IP?
-                name = (char *)zlist_next(devices);
-                continue;
-            }
-            if (streq (chain,"") || streq (chain,"1")) {
-                // this is master
-                ip2master[ip] = name;
-            }
-            name = (char *)zlist_next(devices);
+    for (auto i : devices) {
+        const std::string& ip = i.second->IP();
+        if (ip.empty()) {
+            // this is strange. No IP?
+            continue;
         }
-    }
-    {
-        // add new/changed devices
-        const char *name = (char *)zlist_first(devices);
-        while (name) {
-            const char* ip = nut_asset_ip (config, name);
-            if (!ip || streq (ip, "")) {
-                // this is strange. No IP?
-                name = (char *)zlist_next(devices);
-                continue;
-            }
-            const char* chain_str = nut_asset_daisychain (config, name);
-            int chain = 0;
-            if (chain_str) try { chain = std::stoi (chain_str); } catch(...) { };
-            switch(chain) {
-            case 0:
-                addIfNotPresent (Device (name));
-                break;
-            case 1:
-                addIfNotPresent (Device (name, name, 1));
-                break;
-            default:
-                const auto master_it = ip2master.find (ip);
-                if (master_it == ip2master.cend()) {
-                    log_error ("Daisychain host for %s not found", name);
-                } else {
-                    addIfNotPresent (Device (name, master_it->second, chain));
-                }
-                break;
-            }
-            name = (char *)zlist_next(devices);
-        }
-    }
-    {
-        // remove devices
-        auto it = _devices.begin();
-        while ( it != _devices.end ()) {
-            if (nut_asset_ip(config, it->first.c_str ()) == NULL) {
-                auto tbd = it;
-                ++it;
-                _devices.erase (tbd);
+        const std::string& name = i.first;
+        switch(i.second->daisychain()) {
+        case 0:
+            addIfNotPresent(Device(i.second.get()));
+            break;
+        default:
+            auto master = deviceState.ip2master(ip);
+            if (master.empty()) {
+                log_error("Daisychain host for %s not found", name.c_str());
             } else {
-                ++it;
+                addIfNotPresent(Device(i.second.get(), master));
             }
+            break;
         }
     }
-    zlist_destroy (&devices);
+    // remove devices
+    auto it = _devices.begin();
+    while ( it != _devices.end ()) {
+        // XXX: Instead of doing these lookups, we could color the elements
+        // in _devices with alternating colors and simply erase elements with
+        // the old color here
+        if (devices.count(it->first) == 0) {
+            auto tbd = it;
+            ++it;
+            _devices.erase (tbd);
+        } else {
+            ++it;
+        }
+    }
 }
 
 void Devices::publishAlerts (mlm_client_t *client)

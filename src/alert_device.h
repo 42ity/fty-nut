@@ -24,6 +24,7 @@
 
 #include "alert_device_alert.h"
 #include "alert_actor.h"
+#include "asset_state.h"
 
 #include <nutclient.h>
 #include <malamute.h>
@@ -32,26 +33,28 @@
 
 class Device {
  public:
-    Device () : _chain(0), _scanned(false) { };
-    Device (const std::string& name) :
-        _nutName(name),
-        _assetName(name),
-        _chain(0),
+    Device () : _asset(nullptr), _scanned(false) { };
+    Device (const AssetState::Asset *asset) :
+        _asset(asset),
+        _nutName(asset->name()),
         _scanned(false)
     { };
-    Device (const std::string& asset, const std::string& nut, int chain) :
+    Device (const AssetState::Asset *asset, const std::string& nut) :
+        _asset(asset),
         _nutName(nut),
-        _assetName(asset),
-        _chain(chain),
         _scanned(false)
     { };
 
     void nutName (const std::string& aName) { _nutName = aName; };
     std::string nutName () const { return _nutName; }
-    void assetName (const std::string& aName) { _assetName = aName; };
-    std::string assetName () const { return _assetName; }
-    void chain (int index) { _chain = index; };
-    int chain () const { return _chain; }
+    std::string assetName () const
+    {
+        return _asset ? _asset->name() : std::string();
+    }
+    int chain () const
+    {
+        return _asset ? _asset->daisychain() : 0;
+    }
     int scanned () const { return _scanned; }
 
     void update (nut::TcpClient &conn);
@@ -63,9 +66,8 @@ class Device {
     friend void alert_device_test (bool verbose);
     friend void alert_actor_test (bool verbose);
  private:
+    const AssetState::Asset *_asset;
     std::string _nutName;
-    std::string _assetName;
-    int _chain;
     bool _scanned;
 
     std::map <std::string, DeviceAlert> _alerts;

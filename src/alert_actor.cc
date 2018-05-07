@@ -20,15 +20,13 @@
 */
 #include "alert_device_list.h"
 #include "alert_actor.h"
+#include "asset_state.h"
 #include "nut_mlm.h"
 #include "logger.h"
+#include "nut.h"
 
+#include <ftyproto.h>
 #include <malamute.h>
-
-/* No consumers for PATH at this time:
-static const char* PATH = "/var/lib/fty/fty-nut";
- */
-static const char* STATE = "/var/lib/fty/fty-nut/state_file";
 
 int
 alert_actor_commands (
@@ -130,11 +128,6 @@ alert_actor (zsock_t *pipe, void *args)
                 FTY_PROTO_STREAM_ALERTS_SYS);
         return;
     }
-    if (mlm_client_set_consumer(client, FTY_PROTO_STREAM_ASSETS, ".*") < 0) {
-        log_error("mlm_client_set_consumer (stream = '%s', pattern = '.*') failed",
-                FTY_PROTO_STREAM_ASSETS);
-        return;
-    }
 
     MlmClientGuard mb_client(mlm_client_new());
     if (!mb_client) {
@@ -142,7 +135,7 @@ alert_actor (zsock_t *pipe, void *args)
        return;
     }
 
-    Devices devices;
+    Devices devices(NutStateManager.getReader());
     devices.setPollingMs (polling);
 
     ZpollerGuard poller(zpoller_new(pipe, mlm_client_msgpipe(client), NULL));
@@ -153,19 +146,14 @@ alert_actor (zsock_t *pipe, void *args)
     zsock_signal (pipe, 0);
     log_debug ("alert actor started");
 
-    nut_t *stateData = nut_new ();
-    int rv = nut_load (stateData, STATE);
-    if (rv != 0) {
-        log_warning ("Could not load state file '%s'.", STATE);
-    }
     uint64_t last = zclock_mono ();
-    devices.updateDeviceList (stateData);
     while (!zsys_interrupted) {
         void *which = zpoller_wait (poller, polling);
         uint64_t now = zclock_mono ();
         if (now - last >= polling) {
             last = now;
             zsys_debug ("Polling data now");
+            devices.updateDeviceList ();
             devices.updateFromNUT ();
             devices.publishRules (mb_client);
             devices.publishAlerts (client);
@@ -181,14 +169,6 @@ alert_actor (zsock_t *pipe, void *args)
                 zmsg_destroy (&msg);
                 if (quit) break;
             }
-        }
-        else if (which == mlm_client_msgpipe (client)) {
-            // should be asset message
-            zmsg_t *msg = mlm_client_recv (client);
-            if (handle_asset_message (client, stateData, &msg)) {
-                devices.updateDeviceList (stateData);
-            }
-            zmsg_destroy (&msg);
         }
         else {
             zmsg_t *msg = zmsg_recv (which);
@@ -216,7 +196,17 @@ alert_actor_test (bool verbose)
         zstr_send (malamute, "VERBOSE");
     zstr_sendx (malamute, "BIND", endpoint, NULL);
 
-    Device dev("mydevice");
+    fty_proto_t *msg = fty_proto_new(FTY_PROTO_ASSET);
+    assert(msg);
+    fty_proto_set_name(msg, "mydevice");
+    fty_proto_set_operation(msg, FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert(msg, "type", "device");
+    fty_proto_aux_insert(msg, "subtype", "ups");
+    fty_proto_ext_insert(msg, "ip.1", "192.0.2.1");
+    AssetState::Asset asset(msg);
+    fty_proto_destroy(&msg);
+
+    Device dev(&asset);
     std::map<std::string,std::vector<std::string> > alerts = {
         { "ambient.temperature.status", {"critical-high", "", ""} },
         { "ambient.temperature.high.warning", {"80", "", ""} },
@@ -226,7 +216,8 @@ alert_actor_test (bool verbose)
     };
     dev.addAlert("ambient.temperature", alerts);
     dev._alerts["ambient.temperature"].status = "critical-high";
-    Devices devs;
+    StateManager manager;
+    Devices devs(manager.getReader());
     devs._devices["mydevice"] = dev;
 
     mlm_client_t *client = mlm_client_new ();
