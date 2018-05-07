@@ -141,8 +141,6 @@ bindings/qt/selftest/selftest
 *~
 
 # Test artifacts
-src/selftest_state_file
-test_state_file
 .testdir/
 stderr.txt
 

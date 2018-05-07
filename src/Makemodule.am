@@ -25,7 +25,6 @@ src_libfty_nut_la_SOURCES = \
     src/nut_configurator.cc \
     src/alert_device.cc \
     src/alert_device_list.cc \
-    src/nut.cc \
     src/sensor_device.cc \
     src/sensor_list.cc \
     src/fty_nut_server.cc \

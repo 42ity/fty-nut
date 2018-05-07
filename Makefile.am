@@ -70,7 +70,6 @@ EXTRA_DIST += \
     src/nut_configurator.h \
     src/alert_device.h \
     src/alert_device_list.h \
-    src/nut.h \
     src/sensor_device.h \
     src/sensor_list.h \
     src/state_manager.h \

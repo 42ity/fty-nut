@@ -32,12 +32,6 @@
 #include "nut_agent.h"
 #include "nut_mlm.h"
 #include "logger.h"
-#include "nut.h"
-
-/* Consumers of these vars are currently commented away below
-static const char* PATH = "/var/lib/fty/fty-nut";
-static const char* STATE = "/var/lib/fty/fty-nut/state_file";
- */
 
 StateManager NutStateManager;
 
@@ -46,11 +40,9 @@ s_handle_fty_proto (
         mlm_client_t *client,
         NUTAgent& nut_agent,
         StateManager::Writer& state_writer,
-        nut_t *data,
         zmsg_t *message)
 {
     assert (client);
-    assert (data);
     assert (message);
 
     if (!is_fty_proto (message)) {
@@ -67,8 +59,8 @@ s_handle_fty_proto (
         return;
     }
     state_writer.getState().updateFromProto(proto);
+    fty_proto_destroy(&proto);
     state_writer.commit();
-    nut_put (data, &proto);
     nut_agent.updateDeviceList();
 }
 
@@ -181,22 +173,9 @@ fty_nut_server (zsock_t *pipe, void *args)
         return;
     }
 
-    nut_t *data = nut_new ();
-    if (!data) {
-        log_critical ("nut_new () failed");
-        return;
-    }
     NUTAgent nut_agent(NutStateManager.getReader());
-    std::string state_file;
 
     zsock_signal (pipe, 0);
-/*
-    r = nut_load (data, STATE);
-    if (r != 0) {
-        log_warning ("Could not load state file '%s'.", STATE);
-    }
-    nut_agent.updateDeviceList (data);
-*/
 
     nut_agent.setClient (client);
     nut_agent.setiClient (iclient);
@@ -244,12 +223,6 @@ fty_nut_server (zsock_t *pipe, void *args)
             zsys_debug("Periodic polling");
             nut_agent.onPoll();
         }
-        if (nut_changed (data)) {
-            r = nut_save (data, state_file.c_str ());
-            if (r != 0) {
-                log_warning ("Could not save state file '%s'.", state_file.c_str ());
-            }
-        }
         if (which == NULL) {
             if (zpoller_terminated (poller) || zsys_interrupted) {
                 log_warning ("zpoller_terminated () or zsys_interrupted");
@@ -267,7 +240,7 @@ fty_nut_server (zsock_t *pipe, void *args)
                 log_error ("Given `which == pipe`, function `zmsg_recv (pipe)` returned NULL");
                 continue;
             }
-            if (actor_commands (client, &message, verbose, timeout, nut_agent, data, state_file) == 1) {
+            if (actor_commands (client, &message, verbose, timeout, nut_agent) == 1) {
                 break;
             }
             continue;
@@ -302,20 +275,13 @@ fty_nut_server (zsock_t *pipe, void *args)
         if (is_fty_proto(message)) {
             // fty_proto messages are received over the ASSETS stream and as
             // responses to the ASSET_DETAIL mailbox request
-            s_handle_fty_proto (client, nut_agent, state_writer, data, message);
+            s_handle_fty_proto (client, nut_agent, state_writer, message);
             continue;
         }
         log_error ("Unhandled message (%s/%s)", command, subject);
         zmsg_print (message);
         zmsg_destroy (&message);
     } // while (!zsys_interrupted)
-    if (nut_changed (data)) {
-        r = nut_save (data, state_file.c_str ());
-        if (r != 0) {
-            log_warning ("Could not save state file '%s'.", state_file.c_str ());
-        }
-    }
-    nut_destroy (&data);
 }
 
 

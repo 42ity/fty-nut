@@ -48,7 +48,6 @@ void usage() {
             "                         overrides setting in env. variable BIOS_LOG_LEVEL\n"
             "  --config / -c          path to config file\n"
             "  --mapping-file / -m    NUT-to-BIOS mapping file\n"
-            "  --state-file / -s      state file\n"
             "  --polling / -p         polling interval in seconds [30]\n"
             "  --verbose / -v         verbose test output\n"
             "  --help / -h            this information\n"
@@ -79,7 +78,6 @@ int main(int argc, char *argv []) {
     bool verbose = false;
     int log_level = -1;
     std::string mapping_file;
-    std::string state_file;
     const char* polling = NULL;
     const char *config_file = "/etc/fty-nut/fty-nut.cfg";
     zconfig_t *config = NULL;
@@ -127,7 +125,7 @@ int main(int argc, char *argv []) {
             }
             case 's':
             {
-                state_file.assign(optarg);
+                fprintf(stderr, "The --state-file option is obsolete\n");
                 break;
             }
             case 'v':
@@ -213,7 +211,7 @@ int main(int argc, char *argv []) {
         zstr_sendx(nut_device_alert, "VERBOSE", NULL);
         zstr_sendx(nut_sensor, "VERBOSE", NULL);
     }
-    zstr_sendx(nut_server, ACTION_CONFIGURE, mapping_file.c_str(), state_file.c_str(), NULL);
+    zstr_sendx(nut_server, ACTION_CONFIGURE, mapping_file.c_str(), NULL);
     zstr_sendx(nut_server, ACTION_POLLING, polling, NULL);
 
     zstr_sendx(nut_device_alert, ACTION_POLLING, polling, NULL);
