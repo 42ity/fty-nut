@@ -54,12 +54,12 @@ AssetState::Asset::Asset(fty_proto_t* message)
     } catch (...) { }
 }
 
-void AssetState::updateFromProto(fty_proto_t* message)
+bool AssetState::updateFromProto(fty_proto_t* message)
 {
     std::string type(fty_proto_aux_string (message, "type", ""));
 
     if (type != "device")
-        return;
+        return false;
     std::string subtype(fty_proto_aux_string (message, "subtype", ""));
     AssetMap* map;
     if (subtype == "epdu" || subtype == "ups" || subtype == "sts")
@@ -67,21 +67,21 @@ void AssetState::updateFromProto(fty_proto_t* message)
     else if (subtype == "sensor" || subtype == "sensorgpio")
         map = &sensors_;
     else
-        return;
+        return false;
     std::string name(fty_proto_name(message));
     std::string operation(fty_proto_operation(message));
     if (operation == FTY_PROTO_ASSET_OP_DELETE ||
             operation == FTY_PROTO_ASSET_OP_RETIRE) {
-        map->erase(name);
-        return;
+        return (map->erase(name) > 0);
     }
     if (operation != FTY_PROTO_ASSET_OP_CREATE &&
             operation != FTY_PROTO_ASSET_OP_UPDATE) {
         log_error("unknown asset operation '%s'. Skipping.",
                 operation.c_str());
-        return;
+        return false;
     }
     (*map)[name] = std::shared_ptr<Asset>(new Asset(message));
+    return true;
 }
 
 void AssetState::recompute()

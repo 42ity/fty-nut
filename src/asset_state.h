@@ -77,8 +77,9 @@ public:
         double max_power_;
         int daisychain_;
     };
-    // Update the state from a received fty_proto message
-    void updateFromProto(fty_proto_t* message);
+    // Update the state from a received fty_proto message. Return true if an
+    // update has actually been performed, false if the message was skipped
+    bool updateFromProto(fty_proto_t* message);
     // Build the ip2master map
     void recompute();
     // Use a std::map to process the assets in a defined order each time

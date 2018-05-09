@@ -58,9 +58,9 @@ s_handle_fty_proto (
         zmsg_destroy (&message);
         return;
     }
-    state_writer.getState().updateFromProto(proto);
+    if (state_writer.getState().updateFromProto(proto))
+        state_writer.commit();
     fty_proto_destroy(&proto);
-    state_writer.commit();
     nut_agent.updateDeviceList();
 }
 
