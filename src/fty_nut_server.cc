@@ -36,22 +36,10 @@
 StateManager NutStateManager;
 
 static void
-s_handle_fty_proto (
-        mlm_client_t *client,
-        NUTAgent& nut_agent,
-        StateManager::Writer& state_writer,
-        zmsg_t *message)
+s_handle_fty_proto (StateManager::Writer& state_writer, zmsg_t *message)
 {
-    assert (client);
     assert (message);
 
-    if (!is_fty_proto (message)) {
-        log_warning (
-                "Message received is not fty_proto; sender = '%s', subject = '%s'",
-                mlm_client_sender (client), mlm_client_subject (client));
-        zmsg_destroy (&message);
-        return;
-    }
     fty_proto_t *proto = fty_proto_decode (&message);
     if (!proto) {
         log_critical ("fty_proto_decode () failed.");
@@ -61,7 +49,6 @@ s_handle_fty_proto (
     if (state_writer.getState().updateFromProto(proto))
         state_writer.commit();
     fty_proto_destroy(&proto);
-    nut_agent.updateDeviceList();
 }
 
 
@@ -221,6 +208,7 @@ fty_nut_server (zsock_t *pipe, void *args)
         if (now - last >= timeout) {
             last = now;
             zsys_debug("Periodic polling");
+            nut_agent.updateDeviceList();
             nut_agent.onPoll();
         }
         if (which == NULL) {
@@ -275,7 +263,7 @@ fty_nut_server (zsock_t *pipe, void *args)
         if (is_fty_proto(message)) {
             // fty_proto messages are received over the ASSETS stream and as
             // responses to the ASSET_DETAIL mailbox request
-            s_handle_fty_proto (client, nut_agent, state_writer, message);
+            s_handle_fty_proto (state_writer, message);
             continue;
         }
         log_error ("Unhandled message (%s/%s)", command, subject);
