@@ -113,6 +113,10 @@ alert_actor (zsock_t *pipe, void *args)
        log_critical ("mlm_client_new () failed");
        return;
     }
+    if (mlm_client_connect(mb_client, endpoint, 5000, ACTOR_ALERT_MB_NAME) < 0) {
+        log_error("client %s failed to connect", ACTOR_ALERT_MB_NAME);
+        return;
+    }
 
     Devices devices(NutStateManager.getReader());
     devices.setPollingMs (polling);
