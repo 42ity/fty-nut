@@ -30,6 +30,7 @@
 #define MLM_ENDPOINT_VOID (const_cast<void *>(static_cast<const void *>(MLM_ENDPOINT)))
 #define ACTOR_NUT_NAME "fty-nut"
 #define ACTOR_ALERT_NAME "bios-nut-alert"
+#define ACTOR_ALERT_MB_NAME ACTOR_ALERT_NAME "-mb"
 #define ACTOR_SENSOR_NAME "agent-nut-sensor"
 
 #define CONFIG_POLLING "nut/polling_interval"
