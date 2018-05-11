@@ -30,7 +30,7 @@
 #include "sensor_actor.h"
 #include "alert_actor.h"
 #include "ftyproto.h"
-#include "fty_nut.h"
+#include "nut_mlm.h"
 #include "logger.h"
 
 #include <getopt.h>
@@ -40,11 +40,6 @@
 
 #define str(x) #x
 
-static const char *ACTOR_NUT_NAME = "fty-nut";
-static const char *ACTOR_ALERT_NAME = "bios-nut-alert";
-static const char *ACTOR_SENSOR_NAME = "agent-nut-sensor";
-static const char *ENDPOINT = "ipc://@/malamute";
-
 #define DEFAULT_LOG_LEVEL LOG_WARNING
 
 void usage() {
@@ -53,7 +48,6 @@ void usage() {
             "                         overrides setting in env. variable BIOS_LOG_LEVEL\n"
             "  --config / -c          path to config file\n"
             "  --mapping-file / -m    NUT-to-BIOS mapping file\n"
-            "  --state-file / -s      state file\n"
             "  --polling / -p         polling interval in seconds [30]\n"
             "  --verbose / -v         verbose test output\n"
             "  --help / -h            this information\n"
@@ -84,7 +78,6 @@ int main(int argc, char *argv []) {
     bool verbose = false;
     int log_level = -1;
     std::string mapping_file;
-    std::string state_file;
     const char* polling = NULL;
     const char *config_file = "/etc/fty-nut/fty-nut.cfg";
     zconfig_t *config = NULL;
@@ -132,7 +125,7 @@ int main(int argc, char *argv []) {
             }
             case 's':
             {
-                state_file.assign(optarg);
+                fprintf(stderr, "The --state-file option is obsolete\n");
                 break;
             }
             case 'v':
@@ -195,19 +188,19 @@ int main(int argc, char *argv []) {
 
     log_info("fty_nut - NUT (Network UPS Tools) wrapper/daemon");
 
-    zactor_t *nut_server = zactor_new(fty_nut_server, (void *) NULL);
+    zactor_t *nut_server = zactor_new(fty_nut_server, MLM_ENDPOINT_VOID);
     if (!nut_server) {
         log_critical("zactor_new (task = 'fty_nut_server', args = 'NULL') failed");
         return -1;
     }
 
-    zactor_t *nut_device_alert = zactor_new(alert_actor, (void *) NULL);
+    zactor_t *nut_device_alert = zactor_new(alert_actor, MLM_ENDPOINT_VOID);
     if (!nut_device_alert) {
         log_critical("zactor_new (task = 'nut_device_server', args = 'NULL') failed");
         return -1;
     }
 
-    zactor_t *nut_sensor = zactor_new(sensor_actor, (void *) NULL);
+    zactor_t *nut_sensor = zactor_new(sensor_actor, MLM_ENDPOINT_VOID);
     if (!nut_sensor) {
         log_critical("zactor_new (task = 'nut_sensor', args = 'NULL') failed");
         return -1;
@@ -218,21 +211,12 @@ int main(int argc, char *argv []) {
         zstr_sendx(nut_device_alert, "VERBOSE", NULL);
         zstr_sendx(nut_sensor, "VERBOSE", NULL);
     }
-    zstr_sendx(nut_server, ACTION_CONFIGURE, mapping_file.c_str(), state_file.c_str(), NULL);
+    zstr_sendx(nut_server, ACTION_CONFIGURE, mapping_file.c_str(), NULL);
     zstr_sendx(nut_server, ACTION_POLLING, polling, NULL);
-    zstr_sendx(nut_server, ACTION_CONNECT, ENDPOINT, ACTOR_NUT_NAME, NULL);
-    zstr_sendx(nut_server, ACTION_PRODUCER, FTY_PROTO_STREAM_METRICS, NULL);
-    zstr_sendx(nut_server, ACTION_CONSUMER, FTY_PROTO_STREAM_ASSETS, ".*", NULL);
 
     zstr_sendx(nut_device_alert, ACTION_POLLING, polling, NULL);
-    zstr_sendx(nut_device_alert, ACTION_CONNECT, ENDPOINT, ACTOR_ALERT_NAME, NULL);
-    zstr_sendx(nut_device_alert, ACTION_PRODUCER, FTY_PROTO_STREAM_ALERTS_SYS, NULL);
-    zstr_sendx(nut_device_alert, ACTION_CONSUMER, FTY_PROTO_STREAM_ASSETS, ".*", NULL);
 
     zstr_sendx(nut_sensor, ACTION_POLLING, polling, NULL);
-    zstr_sendx(nut_sensor, ACTION_CONNECT, ENDPOINT, ACTOR_SENSOR_NAME, NULL);
-    zstr_sendx(nut_sensor, ACTION_PRODUCER, FTY_PROTO_STREAM_METRICS_SENSOR, NULL);
-    zstr_sendx(nut_sensor, ACTION_CONSUMER, FTY_PROTO_STREAM_ASSETS, ".*", NULL);
 
     zpoller_t *poller = zpoller_new(nut_server, nut_device_alert, nut_sensor, NULL);
     assert(poller);

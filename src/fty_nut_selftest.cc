@@ -62,10 +62,9 @@ all_tests [] = {
     { "nut_configurator", NULL, true, false, "nut_configurator_test" },
     { "alert_device", NULL, true, false, "alert_device_test" },
     { "alert_device_list", NULL, true, false, "alert_device_list_test" },
-    { "nut", NULL, true, false, "nut_test" },
-    { "stream", NULL, true, false, "stream_test" },
     { "sensor_device", NULL, true, false, "sensor_device_test" },
     { "sensor_list", NULL, true, false, "sensor_list_test" },
+    { "state_manager", NULL, true, false, "state_manager_test" },
     { "private_classes", NULL, false, false, "$ALL" }, // compat option for older projects
 #endif // FTY_NUT_BUILD_DRAFT_API
     {NULL, NULL, 0, 0, NULL}          //  Sentinel

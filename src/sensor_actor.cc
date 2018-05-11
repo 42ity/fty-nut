@@ -22,19 +22,10 @@
 #include "sensor_actor.h"
 #include "alert_actor.h"
 #include "sensor_list.h"
+#include "nut_mlm.h"
 #include "logger.h"
-#include "nut.h"
 
 #include <malamute.h>
-
-/* No consumers for PATH at this time:
-static const char* PATH = "/var/lib/fty/fty-nut";
- */
-static const char* STATE = "/var/lib/fty/fty-nut/state_file";
-
-// ugly, declared in actor_commands, TODO: move it to some common
-int
-handle_asset_message (mlm_client_t *client, nut_t *data, zmsg_t **message_p);
 
 void
 sensor_actor (zsock_t *pipe, void *args)
@@ -42,34 +33,38 @@ sensor_actor (zsock_t *pipe, void *args)
 
     uint64_t polling = 30000;
     bool verbose = false;
-    Sensors sensors;
+    const char *endpoint = static_cast<const char *>(args);
+    Sensors sensors(NutStateManager.getReader());
 
-    mlm_client_t *client = mlm_client_new ();
+    MlmClientGuard client(mlm_client_new());
     if (!client) {
         log_critical ("mlm_client_new () failed");
         return;
     }
+    if (mlm_client_connect(client, endpoint, 5000, ACTOR_SENSOR_NAME) < 0) {
+        log_error("client %s failed to connect", ACTOR_SENSOR_NAME);
+        return;
+    }
+    if (mlm_client_set_producer(client, FTY_PROTO_STREAM_METRICS_SENSOR) < 0) {
+        log_error("mlm_client_set_producer (stream = '%s') failed",
+                FTY_PROTO_STREAM_METRICS_SENSOR);
+        return;
+    }
 
-    zpoller_t *poller = zpoller_new (pipe, mlm_client_msgpipe (client), NULL);
+    ZpollerGuard poller(zpoller_new(pipe, mlm_client_msgpipe(client), NULL));
     if (!poller) {
         log_critical ("zpoller_new () failed");
-        mlm_client_destroy (&client);
         return;
     }
     zsock_signal (pipe, 0);
     log_debug ("sa: sensor actor started");
 
-    nut_t *stateData = nut_new ();
-    int rv = nut_load (stateData, STATE);
-    if (rv != 0) {
-        log_warning ("Could not load state file '%s'.", STATE);
-    }
-    sensors.updateSensorList (stateData);
     int64_t publishtime = zclock_mono();
     while (!zsys_interrupted) {
         void *which = zpoller_wait (poller, polling);
         if (which == NULL || zclock_mono() - publishtime > (int64_t)polling) {
             log_debug ("sa: sensor update");
+            sensors.updateSensorList ();
             sensors.updateFromNUT ();
             sensors.publish (client, polling*2/1000);
             publishtime = zclock_mono();
@@ -82,21 +77,11 @@ sensor_actor (zsock_t *pipe, void *args)
                 if (quit) break;
             }
         }
-        else if (which == mlm_client_msgpipe (client)) {
-            // should be asset message
-            zmsg_t *msg = mlm_client_recv (client);
-            if (handle_asset_message (client, stateData, &msg)) {
-                sensors.updateSensorList (stateData);
-            }
-            zmsg_destroy (&msg);
-        }
         else {
             zmsg_t *msg = zmsg_recv (which);
             zmsg_destroy (&msg);
         }
     }
-    zpoller_destroy (&poller);
-    mlm_client_destroy (&client);
 }
 
 //  --------------------------------------------------------------------------
@@ -128,9 +113,20 @@ sensor_actor_test (bool verbose)
     mlm_client_connect (producer, endpoint, 1000, "sensor-producer");
     mlm_client_set_producer (producer, FTY_PROTO_STREAM_METRICS_SENSOR);
 
-    Sensors sensors;
+    StateManager manager;
+    Sensors sensors(manager.getReader());
     std::map <std::string, std::string> children;
-    sensors._sensors["sensor1"] = Sensor ("nut", 0, "PRG", "1", children, "");
+    fty_proto_t *proto = fty_proto_new(FTY_PROTO_ASSET);
+    assert(proto);
+    fty_proto_set_name(proto, "sensor-1");
+    fty_proto_set_operation(proto, FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert(proto, "type", "device");
+    fty_proto_aux_insert(proto, "subtype", "sensor");
+    fty_proto_aux_insert(proto, "parent_name.1", "PRG");
+    fty_proto_ext_insert(proto, "port", "1");
+    AssetState::Asset asset1(proto);
+    fty_proto_destroy(&proto);
+    sensors._sensors["sensor1"] = Sensor (&asset1, nullptr, children, "nut");
     sensors._sensors["sensor1"]._humidity = "50";
 
     sensors.publish (producer, 300);
@@ -174,7 +170,17 @@ sensor_actor_test (bool verbose)
     contacts.push_back ("open");
     contacts.push_back ("close");
 
-    sensors._sensors["sensor1"] = Sensor ("nut", 0, "PRG", "4", children, "sensor-2");
+    proto = fty_proto_new(FTY_PROTO_ASSET);
+    assert(proto);
+    fty_proto_set_name(proto, "sensor-2");
+    fty_proto_set_operation(proto, FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert(proto, "type", "device");
+    fty_proto_aux_insert(proto, "subtype", "sensor");
+    fty_proto_aux_insert(proto, "parent_name.1", "PRG");
+    fty_proto_ext_insert(proto, "port", "4");
+    AssetState::Asset asset2(proto);
+    fty_proto_destroy(&proto);
+    sensors._sensors["sensor1"] = Sensor (&asset2, nullptr, children, "nut");
     sensors._sensors["sensor1"]._contacts = contacts;
 
     sensors.publish (producer, 300);

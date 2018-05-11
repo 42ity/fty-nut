@@ -74,6 +74,7 @@
             <add_config_opts>--with-dmfsnmp-regenerate=no</add_config_opts>
     </use>
 
+    <header name = "nut_mlm" private = "1">Malamute connection helpers</header>
     <class name = "logger"          private = "1">logging api</class>
     <class name = "fsutils"         private = "1">filesystem utils</class>
     <class name = "cidr"            private = "1">C++ Wrapper around libcidr</class>
@@ -87,8 +88,6 @@
     <class name = "nut configurator"    private = "1">NUT configurator class</class>
     <class name = "alert device"        private = "1">device producing alerts</class>
     <class name = "alert device list"   private = "1">collection of alerts</class>
-    <class name = "nut"                 private = "1">agent nut structure</class>
-    <class name = "stream"              private = "1">stream deliver command</class>
     <class name = "sensor device"       private = "1">sensor attached to UPS</class>
     <class name = "sensor list"         private = "1">list of sensor attached to UPSes</class>
 
@@ -96,6 +95,10 @@
     <class name = "fty-nut-configurator-server" state = "stable">fty nut configurator actor</class>
     <class name = "alert actor" state = "stable">actor handling device alerts and thresholds</class>
     <class name = "sensor actor" state = "stable">actor handling sensors attached to UPS/ePDU</class>
+
+    <class name = "state manager" private = "1">Class maintaining the asset list</class>
+    <!-- StateManager unit test also tests AssetState -->
+    <class name = "asset state" private = "1" selftest = "0">list of known assets</class>
 
     <main name = "fty-nut" service = "1" />
     <main name = "fty-nut-configurator" service = "1" />

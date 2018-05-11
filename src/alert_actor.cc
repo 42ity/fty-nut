@@ -20,15 +20,12 @@
 */
 #include "alert_device_list.h"
 #include "alert_actor.h"
-#include "fty_nut.h"
+#include "asset_state.h"
+#include "nut_mlm.h"
 #include "logger.h"
 
+#include <ftyproto.h>
 #include <malamute.h>
-
-/* No consumers for PATH at this time:
-static const char* PATH = "/var/lib/fty/fty-nut";
- */
-static const char* STATE = "/var/lib/fty/fty-nut/state_file";
 
 int
 alert_actor_commands (
@@ -62,85 +59,6 @@ alert_actor_commands (
         verbose = true;
     }
     else
-    if (streq (cmd, ACTION_CONNECT)) {
-        char *endpoint = zmsg_popstr (message);
-        if (!endpoint) {
-            log_error (
-                    "aa: Expected multipart string format: CONNECT/endpoint/name. "
-                    "Received CONNECT/nullptr");
-            zstr_free (&cmd);
-            zmsg_destroy (message_p);
-            return 0;
-        }
-        char *name = zmsg_popstr (message);
-        if (!name) {
-            log_error (
-                    "aa: Expected multipart string format: CONNECT/endpoint/name. "
-                    "Received CONNECT/endpoint/nullptr");
-            zstr_free (&endpoint);
-            zstr_free (&cmd);
-            zmsg_destroy (message_p);
-            return 0;
-        }
-        int rv = mlm_client_connect (client, endpoint, 1000, name);
-        if (rv == -1) {
-            log_error (
-                    "aa: mlm_client_connect (endpoint = '%s', timeout = '%d', address = '%s') failed",
-                    endpoint, 1000, name);
-        }
-        if (mb_client != NULL) {
-            char *mb_name = zsys_sprintf ("%s-mb", name);
-            rv = mlm_client_connect (mb_client, endpoint, 1000, mb_name);
-            if (rv == -1) {
-                log_error (
-                        "aa: mlm_client_connect (endpoint = '%s', timeout = '%d', address = '%s') failed",
-                        endpoint, 1000, mb_name);
-            }
-            zstr_free (&mb_name);
-        }
-        zstr_free (&endpoint);
-        zstr_free (&name);
-    }
-    else
-    if (streq (cmd, ACTION_PRODUCER)) {
-        char *stream = zmsg_popstr (message);
-        if (!stream) {
-            log_error (
-                    "aa: Expected multipart string format: PRODUCER/stream. "
-                    "Received PRODUCER/nullptr");
-            zstr_free (&stream);
-            zstr_free (&cmd);
-            zmsg_destroy (message_p);
-            return 0;
-        }
-        int rv = mlm_client_set_producer (client, stream);
-        if (rv == -1) {
-            log_error ("mlm_client_set_producer (stream = '%s') failed", stream);
-        }
-        zstr_free (&stream);
-    }
-    else
-    if (streq (cmd, ACTION_CONSUMER)) {
-        char *stream = zmsg_popstr (message);
-        char *pattern = zmsg_popstr (message);
-        if (!stream || !pattern) {
-            log_error (
-                    "aa: Expected multipart string format: CONSUMER/stream/pattern. "
-                    "Received PRODUCER/%s/%s", stream ? stream : "nullptr", pattern ? pattern : "nullptr");
-            zstr_free (&stream);
-            zstr_free (&pattern);
-            zstr_free (&cmd);
-            zmsg_destroy (message_p);
-            return 0;
-        }
-        int rv = mlm_client_set_consumer (client, stream, pattern);
-        if (rv == -1) {
-            log_error ("mlm_client_set_consumer (stream = '%s', pattern = '%s') failed", stream, pattern);
-        }
-        zstr_free (&stream);
-        zstr_free (&pattern);
-    }
-    else
     if (streq (cmd, ACTION_POLLING)) {
         char *polling = zmsg_popstr (message);
         if (!polling) {
@@ -167,69 +85,54 @@ alert_actor_commands (
     return ret;
 }
 
-int
-handle_asset_message (mlm_client_t *client, nut_t *data, zmsg_t **message_p) {
-    if (!client || !data || !message_p || !*message_p) return 0;
-    if (!is_fty_proto (*message_p)) {
-        log_warning (
-            "Message received is not fty_proto; sender = '%s', subject = '%s'",
-            mlm_client_sender (client), mlm_client_subject (client));
-        zmsg_destroy (message_p);
-        return 0;
-    }
-    fty_proto_t *proto = fty_proto_decode (message_p);
-    if (!proto) {
-        log_critical ("fty_proto_decode () failed.");
-        zmsg_destroy (message_p);
-        return 0;
-    }
-    nut_put (data, &proto);
-    return 1;
-}
-
 void
 alert_actor (zsock_t *pipe, void *args)
 {
 
     uint64_t polling = 30000;
     bool verbose = false;
+    const char *endpoint = static_cast<const char *>(args);
 
-    mlm_client_t *client = mlm_client_new ();
+    MlmClientGuard client(mlm_client_new());
     if (!client) {
         log_critical ("mlm_client_new () failed");
         return;
     }
-     mlm_client_t *mb_client = mlm_client_new ();
-     if (!mb_client) {
-        log_critical ("mlm_client_new () failed");
+    if (mlm_client_connect(client, endpoint, 5000, ACTOR_ALERT_NAME) < 0) {
+        log_error("client %s failed to connect", ACTOR_ALERT_NAME);
         return;
-     }
+    }
+    if (mlm_client_set_producer(client, FTY_PROTO_STREAM_ALERTS_SYS) < 0) {
+        log_error("mlm_client_set_producer (stream = '%s') failed",
+                FTY_PROTO_STREAM_ALERTS_SYS);
+        return;
+    }
 
-    Devices devices;
+    MlmClientGuard mb_client(mlm_client_new());
+    if (!mb_client) {
+       log_critical ("mlm_client_new () failed");
+       return;
+    }
+
+    Devices devices(NutStateManager.getReader());
     devices.setPollingMs (polling);
 
-    zpoller_t *poller = zpoller_new (pipe, mlm_client_msgpipe (client), NULL);
+    ZpollerGuard poller(zpoller_new(pipe, mlm_client_msgpipe(client), NULL));
     if (!poller) {
         log_critical ("zpoller_new () failed");
-        mlm_client_destroy (&client);
         return;
     }
     zsock_signal (pipe, 0);
     log_debug ("alert actor started");
 
-    nut_t *stateData = nut_new ();
-    int rv = nut_load (stateData, STATE);
-    if (rv != 0) {
-        log_warning ("Could not load state file '%s'.", STATE);
-    }
     uint64_t last = zclock_mono ();
-    devices.updateDeviceList (stateData);
     while (!zsys_interrupted) {
         void *which = zpoller_wait (poller, polling);
         uint64_t now = zclock_mono ();
         if (now - last >= polling) {
             last = now;
             zsys_debug ("Polling data now");
+            devices.updateDeviceList ();
             devices.updateFromNUT ();
             devices.publishRules (mb_client);
             devices.publishAlerts (client);
@@ -246,22 +149,11 @@ alert_actor (zsock_t *pipe, void *args)
                 if (quit) break;
             }
         }
-        else if (which == mlm_client_msgpipe (client)) {
-            // should be asset message
-            zmsg_t *msg = mlm_client_recv (client);
-            if (handle_asset_message (client, stateData, &msg)) {
-                devices.updateDeviceList (stateData);
-            }
-            zmsg_destroy (&msg);
-        }
         else {
             zmsg_t *msg = zmsg_recv (which);
             zmsg_destroy (&msg);
         }
     }
-    zpoller_destroy (&poller);
-    mlm_client_destroy (&mb_client);
-    mlm_client_destroy (&client);
 }
 
 //  --------------------------------------------------------------------------
@@ -283,7 +175,17 @@ alert_actor_test (bool verbose)
         zstr_send (malamute, "VERBOSE");
     zstr_sendx (malamute, "BIND", endpoint, NULL);
 
-    Device dev("mydevice");
+    fty_proto_t *msg = fty_proto_new(FTY_PROTO_ASSET);
+    assert(msg);
+    fty_proto_set_name(msg, "mydevice");
+    fty_proto_set_operation(msg, FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert(msg, "type", "device");
+    fty_proto_aux_insert(msg, "subtype", "ups");
+    fty_proto_ext_insert(msg, "ip.1", "192.0.2.1");
+    AssetState::Asset asset(msg);
+    fty_proto_destroy(&msg);
+
+    Device dev(&asset);
     std::map<std::string,std::vector<std::string> > alerts = {
         { "ambient.temperature.status", {"critical-high", "", ""} },
         { "ambient.temperature.high.warning", {"80", "", ""} },
@@ -293,7 +195,8 @@ alert_actor_test (bool verbose)
     };
     dev.addAlert("ambient.temperature", alerts);
     dev._alerts["ambient.temperature"].status = "critical-high";
-    Devices devs;
+    StateManager manager;
+    Devices devs(manager.getReader());
     devs._devices["mydevice"] = dev;
 
     mlm_client_t *client = mlm_client_new ();

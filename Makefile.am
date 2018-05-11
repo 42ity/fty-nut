@@ -70,10 +70,11 @@ EXTRA_DIST += \
     src/nut_configurator.h \
     src/alert_device.h \
     src/alert_device_list.h \
-    src/nut.h \
-    src/stream.h \
     src/sensor_device.h \
     src/sensor_list.h \
+    src/state_manager.h \
+    src/asset_state.h \
+    src/nut_mlm.h \
     LICENSE \
     README.md \
     CONTRIBUTING.md \
