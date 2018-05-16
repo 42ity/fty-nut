@@ -186,10 +186,10 @@ alert_actor_test (bool verbose)
     fty_proto_aux_insert(msg, "type", "device");
     fty_proto_aux_insert(msg, "subtype", "ups");
     fty_proto_ext_insert(msg, "ip.1", "192.0.2.1");
-    AssetState::Asset asset(msg);
+    std::shared_ptr<AssetState::Asset> asset(new AssetState::Asset(msg));
     fty_proto_destroy(&msg);
 
-    Device dev(&asset);
+    Device dev(asset);
     std::map<std::string,std::vector<std::string> > alerts = {
         { "ambient.temperature.status", {"critical-high", "", ""} },
         { "ambient.temperature.high.warning", {"80", "", ""} },

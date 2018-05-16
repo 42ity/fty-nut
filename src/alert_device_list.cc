@@ -67,6 +67,9 @@ void Devices::addIfNotPresent (Device dev) {
         _devices[dev.assetName ()] = dev;
         return;
     }
+    // At a minimum, we need to update the asset pointer so that the old asset
+    // object can be destroyed
+    it->second.assetPtr(dev.assetPtr());
 }
 
 void Devices::updateDeviceList()
@@ -86,14 +89,14 @@ void Devices::updateDeviceList()
         const std::string& name = i.first;
         switch(i.second->daisychain()) {
         case 0:
-            addIfNotPresent(Device(i.second.get()));
+            addIfNotPresent(Device(i.second));
             break;
         default:
             auto master = deviceState.ip2master(ip);
             if (master.empty()) {
                 log_error("Daisychain host for %s not found", name.c_str());
             } else {
-                addIfNotPresent(Device(i.second.get(), master));
+                addIfNotPresent(Device(i.second, master));
             }
             break;
         }

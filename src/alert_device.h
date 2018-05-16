@@ -28,23 +28,26 @@
 
 #include <nutclient.h>
 #include <malamute.h>
+#include <memory>
 #include <string>
 #include <map>
 
 class Device {
  public:
     Device () : _asset(nullptr), _scanned(false) { };
-    Device (const AssetState::Asset *asset) :
+    explicit Device (std::shared_ptr<AssetState::Asset> asset) :
         _asset(asset),
         _nutName(asset->name()),
         _scanned(false)
     { };
-    Device (const AssetState::Asset *asset, const std::string& nut) :
+    Device (std::shared_ptr<AssetState::Asset> asset, const std::string& nut) :
         _asset(asset),
         _nutName(nut),
         _scanned(false)
     { };
 
+    void assetPtr (std::shared_ptr<AssetState::Asset> asset) { _asset = asset; }
+    std::shared_ptr<AssetState::Asset> assetPtr () const { return _asset; }
     void nutName (const std::string& aName) { _nutName = aName; };
     std::string nutName () const { return _nutName; }
     std::string assetName () const
@@ -66,7 +69,7 @@ class Device {
     friend void alert_device_test (bool verbose);
     friend void alert_actor_test (bool verbose);
  private:
-    const AssetState::Asset *_asset;
+    std::shared_ptr<AssetState::Asset> _asset;
     std::string _nutName;
     bool _scanned;
 
