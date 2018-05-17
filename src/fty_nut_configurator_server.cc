@@ -27,91 +27,17 @@
 */
 
 #include "fty_nut_configurator_server.h"
-#include "fsutils.h"
 #include "logger.h"
 
-#include <cxxtools/jsondeserializer.h>
-#include <cxxtools/jsonserializer.h>
 #include <ftyproto.h>
 #include <fstream>
 
 #define MLM_ENDPOINT "ipc://@/malamute"
 
-static const char* PATH = "/var/lib/fty/fty-autoconfig";
-static const char* STATE = "/var/lib/fty/fty-autoconfig/state";
-
-static int
-load_agent_info(std::string &info)
-{
-    if (shared::is_file (STATE))
-    {
-        try {
-            std::fstream f{STATE};
-            f >> info;
-            return 0;
-        }
-        catch (const std::exception& e)
-        {
-            log_error("Fail to read '%s', %s", PATH, e.what());
-            return -1;
-        }
-    }
-    info = "";
-    return 0;
-}
-
-static int
-save_agent_info(const std::string& json)
-{
-    if (!shared::is_dir (PATH)) {
-        zsys_error ("Can't serialize state, '%s' is not directory", PATH);
-        return -1;
-    }
-    try {
-        std::fstream f{STATE};
-        f << json;
-    }
-    catch (const std::exception& e) {
-        zsys_error ("Can't serialize state, %s", e.what());
-        return -1;
-    }
-    return 0;
-}
-
-inline void operator<<= (cxxtools::SerializationInfo& si, const AutoConfigurationInfo& info)
-{
-    si.setTypeName("AutoConfigurationInfo");
-    // serializing integer doesn't work for unknown reason
-    si.addMember("type") <<= std::to_string(info.type);
-    si.addMember("subtype") <<= std::to_string(info.subtype);
-    si.addMember("operation") <<= std::to_string(info.operation);
-    si.addMember("configured") <<= info.configured;
-    si.addMember("attributes") <<= info.attributes;
-}
-
-inline void operator>>= (const cxxtools::SerializationInfo& si, AutoConfigurationInfo& info)
-{
-    si.getMember("configured") >>= info.configured;
-    {
-        // serializing integer doesn't work
-        std::string tmp;
-        si.getMember("type") >>= tmp;
-        info.type = atoi(tmp.c_str());
-
-        si.getMember("subtype") >>= tmp;
-        info.subtype = atoi(tmp.c_str());
-
-        si.getMember("operation") >>= tmp;
-        info.operation = atoi(tmp.c_str());
-    }
-    si.getMember("attributes")  >>= info.attributes;
-}
-
 // autoconfig agent public methods
 
 void Autoconfig::onStart( )
 {
-    loadState();
     setPollingInterval();
 }
 
@@ -218,7 +144,6 @@ void Autoconfig::onSend( zmsg_t **message )
     _configurableDevices[device_name].operation = s_operation2i (bmsg);
     _configurableDevices[device_name].attributes = s_zhash_to_map(fty_proto_ext (bmsg));
     fty_proto_destroy (&bmsg);
-    saveState();
 
     if (count_upsconf_block == 0) {
         // For devices in non-verbatim mode, schedule discovery to be attempted
@@ -253,7 +178,7 @@ void Autoconfig::onPoll( )
             }
         }
     }
-    if( save ) { cleanupState(); saveState(); }
+    if( save ) { cleanupState(); }
     setPollingInterval();
 }
 
@@ -287,24 +212,6 @@ void Autoconfig::addDeviceIfNeeded(const char *name, uint32_t type, uint32_t sub
     }
 }
 
-void Autoconfig::loadState()
-{
-    std::string json = "";
-    int rv = load_agent_info(json);
-    if ( rv != 0 || json.empty() )
-        return;
-
-    std::istringstream in(json);
-
-    try {
-        _configurableDevices.clear();
-        cxxtools::JsonDeserializer deserializer(in);
-        deserializer.deserialize(_configurableDevices);
-    } catch( std::exception &e ) {
-        log_error( "can't parse state: %s", e.what() );
-    }
-}
-
 void Autoconfig::cleanupState()
 {
     for( auto it = _configurableDevices.cbegin(); it != _configurableDevices.cend() ; ) {
@@ -315,17 +222,6 @@ void Autoconfig::cleanupState()
         }
     }
 }
-
-void Autoconfig::saveState()
-{
-    std::ostringstream stream;
-    cxxtools::JsonSerializer serializer(stream);
-
-    serializer.serialize( _configurableDevices ).finish();
-    std::string json = stream.str();
-    save_agent_info(json );
-}
-
 
 bool Autoconfig::connect(
         const char * endpoint,

@@ -34,7 +34,6 @@ class Autoconfig {
     ~Autoconfig () { mlm_client_destroy (&_client);}
 
     void onStart( );
-    void onEnd( ) { cleanupState(); saveState(); };
     void onSend( zmsg_t **message );
     void onPoll( );
     bool connect(
@@ -49,8 +48,6 @@ class Autoconfig {
     void addDeviceIfNeeded(const char *name, uint32_t type, uint32_t subtype);
     void requestExtendedAttributes( const char *name );
     void cleanupState();
-    void saveState();
-    void loadState();
     ConfigFactory _configurator;
     std::map<std::string,AutoConfigurationInfo> _configurableDevices;
 
