@@ -189,6 +189,8 @@ fty_nut_server (zsock_t *pipe, void *args)
         zmsg_addstr(msg, "ups");
         zmsg_addstr(msg, "epdu");
         zmsg_addstr(msg, "sts");
+        zmsg_addstr(msg, "sensor");
+        zmsg_addstr(msg, "sensorgpio");
         if (mlm_client_sendto(client, "asset-agent", "ASSETS", NULL, 5000, &msg) < 0) {
             log_error("Sending ASSETS message failed");
             zuuid_destroy(&uuid_assets_request);
