@@ -55,6 +55,18 @@ public:
         {
             return location_;
         }
+        const std::string& upsconf_block() const
+        {
+            return upsconf_block_;
+        }
+        const bool have_upsconf_block() const
+        {
+            return have_upsconf_block_;
+        }
+        const bool upsconf_enable_dmf() const
+        {
+            return upsconf_enable_dmf_;
+        }
         double maxCurrent() const
         {
             return max_current_;
@@ -73,8 +85,11 @@ public:
         std::string port_;
         std::string subtype_;
         std::string location_;
+        std::string upsconf_block_;
         double max_current_;
         double max_power_;
+        bool have_upsconf_block_;
+        bool upsconf_enable_dmf_;
         int daisychain_;
     };
     // Update the state from a received fty_proto message. Return true if an

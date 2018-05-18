@@ -38,6 +38,15 @@ AssetState::Asset::Asset(fty_proto_t* message)
     port_ = fty_proto_ext_string(message, "port", "");
     subtype_ = fty_proto_aux_string(message, "subtype", "");
     location_ = fty_proto_aux_string(message, "parent_name.1", "");
+    const char *block = fty_proto_ext_string(message, "upsconf_block", NULL);
+    if (block) {
+        upsconf_block_ = block;
+        have_upsconf_block_ = true;
+    } else {
+        have_upsconf_block_ = false;
+    }
+    const char *dmf = fty_proto_ext_string(message, "upsconf_enable_dmf", "");
+    upsconf_enable_dmf_ = strcmp(dmf, "true") == 0;
     max_current_ = NAN;
     try {
         max_current_ = std::stod(fty_proto_ext_string(message,
