@@ -27,6 +27,7 @@
 */
 
 #include "fty_nut_configurator_server.h"
+#include "state_manager.h"
 #include "nut_mlm.h"
 #include "logger.h"
 
@@ -242,9 +243,28 @@ bool Autoconfig::connect(
 void
 fty_nut_configurator_server (zsock_t *pipe, void *args)
 {
+    StateManager state_manager;
+    StateManager::Writer& state_writer = state_manager.getWriter();
     Autoconfig agent (ACTOR_CONFIGURATOR_NAME);
+
     const char *endpoint = static_cast<const char *>(args);
     agent.connect (endpoint, "ASSETS", ".*");
+
+    // Ge the initial list of assets. This has to be done after subscribing
+    // ourselves to the ASSETS stream. And we do not the infrastructure to do
+    // this during unit testing
+    if (strcmp(endpoint, MLM_ENDPOINT) == 0) {
+        MlmClientGuard mb_client(mlm_client_new());
+        if (!mb_client) {
+            log_error("mlm_client_new() failed");
+            return;
+        }
+        if (mlm_client_connect(mb_client, endpoint, 5000, ACTOR_CONFIGURATOR_MB_NAME) < 0) {
+            log_error("client %s failed to connect", ACTOR_CONFIGURATOR_MB_NAME);
+            return;
+        }
+        get_initial_assets(state_writer, mb_client);
+    }
 
     ZpollerGuard poller(zpoller_new(pipe, mlm_client_msgpipe(agent.client()), NULL));
 
@@ -269,10 +289,18 @@ fty_nut_configurator_server (zsock_t *pipe, void *args)
         }
 
         zmsg_t *msg = mlm_client_recv (agent.client());
-        const char* command = mlm_client_command (agent.client());
-        if (streq (command, "STREAM DELIVER"))
-            agent.onSend (&msg);
-
+        if (is_fty_proto(msg)) {
+            // This is a temporary hack until the agent is fully migrated to
+            // the StateManager
+            zmsg_t *msg2 = zmsg_dup(msg);
+            agent.onSend (&msg2);
+            handle_fty_proto(state_writer, msg);
+            continue;
+        }
+        log_error ("Unhandled message (%s/%s)",
+                mlm_client_command(agent.client()),
+                mlm_client_subject(agent.client()));
+        zmsg_print (msg);
         zmsg_destroy (&msg);
     }
 }
