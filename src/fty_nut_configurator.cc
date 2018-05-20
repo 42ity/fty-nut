@@ -27,6 +27,7 @@
 */
 
 #include "fty_nut_configurator_server.h"
+#include "nut_mlm.h"
 
 #include <czmq.h>
 
@@ -55,7 +56,7 @@ int main (int argc, char *argv [])
     if (verbose)
         zsys_info ("fty_nut_configurator - ");
 
-    zactor_t *server = zactor_new (fty_nut_configurator_server, NULL);
+    zactor_t *server = zactor_new (fty_nut_configurator_server, MLM_ENDPOINT_VOID);
 
     // code from src/malamute.c, under MPL
     //  Accept and print any message back from server

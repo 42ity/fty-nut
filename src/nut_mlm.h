@@ -32,6 +32,7 @@
 #define ACTOR_ALERT_NAME "bios-nut-alert"
 #define ACTOR_ALERT_MB_NAME ACTOR_ALERT_NAME "-mb"
 #define ACTOR_SENSOR_NAME "agent-nut-sensor"
+#define ACTOR_CONFIGURATOR_NAME "nut-configurator"
 
 #define CONFIG_POLLING "nut/polling_interval"
 #define ACTION_POLLING "POLLING"

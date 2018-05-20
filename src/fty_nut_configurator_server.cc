@@ -27,12 +27,11 @@
 */
 
 #include "fty_nut_configurator_server.h"
+#include "nut_mlm.h"
 #include "logger.h"
 
 #include <ftyproto.h>
 #include <fstream>
-
-#define MLM_ENDPOINT "ipc://@/malamute"
 
 // autoconfig agent public methods
 
@@ -243,10 +242,11 @@ bool Autoconfig::connect(
 void
 fty_nut_configurator_server (zsock_t *pipe, void *args)
 {
-    Autoconfig agent ("nut-configurator");
-    agent.connect (MLM_ENDPOINT, "ASSETS", ".*");
+    Autoconfig agent (ACTOR_CONFIGURATOR_NAME);
+    const char *endpoint = static_cast<const char *>(args);
+    agent.connect (endpoint, "ASSETS", ".*");
 
-    zpoller_t *poller = zpoller_new (pipe, mlm_client_msgpipe (agent.client()), NULL);
+    ZpollerGuard poller(zpoller_new(pipe, mlm_client_msgpipe(agent.client()), NULL));
 
     zsock_signal (pipe, 0);
     uint64_t last = zclock_mono ();
@@ -275,8 +275,6 @@ fty_nut_configurator_server (zsock_t *pipe, void *args)
 
         zmsg_destroy (&msg);
     }
-
-    zpoller_destroy (&poller);
 }
 
 //  --------------------------------------------------------------------------
@@ -290,9 +288,14 @@ fty_nut_configurator_server_test (bool verbose)
 
     //  @selftest
     //  Simple create/destroy test
-    zactor_t *self = zactor_new (fty_nut_configurator_server, NULL);
+    static const char* endpoint = "inproc://fty_nut_configurator_server-test";
+    zactor_t *mlm = zactor_new(mlm_server, (void*) "Malamute");
+    assert(mlm);
+    zstr_sendx(mlm, "BIND", endpoint, NULL);
+    zactor_t *self = zactor_new (fty_nut_configurator_server, (void *)endpoint);
     assert (self);
     zactor_destroy (&self);
+    zactor_destroy (&mlm);
     //  @end
     printf ("OK\n");
 }
