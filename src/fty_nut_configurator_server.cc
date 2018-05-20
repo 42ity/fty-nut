@@ -36,11 +36,6 @@
 
 // autoconfig agent public methods
 
-void Autoconfig::onStart( )
-{
-    setPollingInterval();
-}
-
 static bool
 s_is_ups_epdu_or_sts (fty_proto_t *bmsg)
 {

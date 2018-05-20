@@ -33,7 +33,6 @@ class Autoconfig {
     explicit Autoconfig( const char *agentName ): _agentName (agentName) {  };
     ~Autoconfig () { mlm_client_destroy (&_client);}
 
-    void onStart( );
     void onSend( zmsg_t **message );
     void onPoll( );
     bool connect(
@@ -43,17 +42,14 @@ class Autoconfig {
     mlm_client_t *client () const {return _client;}
     int timeout () const {return _timeout;}
  private:
-    void sendNewRules(std::vector<std::string> const &rules);
     void setPollingInterval();
     void addDeviceIfNeeded(const char *name, uint32_t type, uint32_t subtype);
-    void requestExtendedAttributes( const char *name );
     void cleanupState();
     ConfigFactory _configurator;
     std::map<std::string,AutoConfigurationInfo> _configurableDevices;
 
  protected:
     mlm_client_t *_client = NULL;
-    int _exitStatus = 0;
     int _timeout = 2000;
     std::string _agentName;
 };
