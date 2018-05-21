@@ -72,39 +72,21 @@ struct AutoConfigurationInfo
     std::map<std::string,std::string> attributes;
 };
 
-class Configurator {
+class NUTConfigurator {
  public:
-    virtual ~Configurator() {};
-    virtual bool configure( const std::string &name, const AutoConfigurationInfo &info );
-    virtual std::vector<std::string> createRules(std::string const &name);
-};
-
-class NUTConfigurator : public Configurator {
- public:
-    virtual ~NUTConfigurator() {};
-    std::vector<std::string>::const_iterator selectBest( const std::vector<std::string> &configs);
-    std::vector<std::string> createRules(std::string const &name);
-    void updateNUTConfig();
     bool configure( const std::string &name, const AutoConfigurationInfo &info );
  private:
-    std::vector<std::string>::const_iterator stringMatch( const std::vector<std::string> &texts, const char *pattern);
-    std::string makeRule(const std::string &alert, const std::string &bit, const std::string &device, std::string const &description) const;
-    bool match( const std::vector<std::string> &texts, const char *pattern);
-    bool isEpdu( const std::vector<std::string> &texts);
-    bool isAts( const std::vector<std::string> &texts);
-    bool isUps( const std::vector<std::string> &texts);
-    bool canSnmp( const std::vector<std::string> &texts);
-    bool canXml( const std::vector<std::string> &texts);
-    std::vector<std::string>::const_iterator getBestSnmpMib( const std::vector<std::string> &configs);
-    void systemctl( const std::string &operation, const std::string &service );
-};
-
-class ConfigFactory {
- public:
-    bool configureAsset( const std::string &name, AutoConfigurationInfo &info );
-    std::vector<std::string> getNewRules( const std::string &name, AutoConfigurationInfo &info);
- private:
-    Configurator * getConfigurator( uint32_t type, uint32_t subtype );
+    static std::vector<std::string>::const_iterator selectBest( const std::vector<std::string> &configs);
+    static void updateNUTConfig();
+    static std::vector<std::string>::const_iterator stringMatch( const std::vector<std::string> &texts, const char *pattern);
+    static bool match( const std::vector<std::string> &texts, const char *pattern);
+    static bool isEpdu( const std::vector<std::string> &texts);
+    static bool isAts( const std::vector<std::string> &texts);
+    static bool isUps( const std::vector<std::string> &texts);
+    static bool canSnmp( const std::vector<std::string> &texts);
+    static bool canXml( const std::vector<std::string> &texts);
+    static std::vector<std::string>::const_iterator getBestSnmpMib( const std::vector<std::string> &configs);
+    static void systemctl( const std::string &operation, const std::string &service );
 };
 
 //  Self test of this class

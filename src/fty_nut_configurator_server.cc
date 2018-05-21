@@ -164,8 +164,8 @@ void Autoconfig::onPoll( )
                 it.second.operation == asset_operation::RETIRE
             )
             {
-                auto factory = ConfigFactory();
-                if( factory.configureAsset (it.first, it.second)) {
+                NUTConfigurator configurator;
+                if( configurator.configure (it.first, it.second)) {
                     it.second.configured = true;
                     save = true;
                 }

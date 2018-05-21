@@ -45,7 +45,6 @@ class Autoconfig {
     void setPollingInterval();
     void addDeviceIfNeeded(const char *name, uint32_t type, uint32_t subtype);
     void cleanupState();
-    ConfigFactory _configurator;
     std::map<std::string,AutoConfigurationInfo> _configurableDevices;
 
  protected:
