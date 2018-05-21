@@ -45,6 +45,7 @@ class NUTConfigurator {
  public:
     bool configure( const std::string &name, const AutoConfigurationInfo &info );
     void erase(const std::string &name);
+    static bool known_assets(std::vector<std::string>& assets);
  private:
     static std::vector<std::string>::const_iterator selectBest( const std::vector<std::string> &configs);
     static void updateNUTConfig();

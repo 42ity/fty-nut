@@ -339,6 +339,11 @@ void NUTConfigurator::erase(const std::string &name)
     systemctl("reload-or-restart", "nut-server");
 }
 
+bool NUTConfigurator::known_assets(std::vector<std::string>& assets)
+{
+    return files_in_directory(NUT_PART_STORE, assets);
+}
+
 void
 nut_configurator_test (bool verbose)
 {

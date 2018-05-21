@@ -73,6 +73,18 @@ void Autoconfig::onUpdate()
             i.second.asset = nullptr;
         }
     }
+    // Mark stale snippets for deletion (this can happen after startup)
+    std::vector<std::string> snippets;
+    if (NUTConfigurator::known_assets(snippets)) {
+        for (auto i : snippets) {
+            if (_configDevices.count(i))
+                continue;
+            AutoConfigurationInfo device;
+            device.asset = nullptr;
+            device.state = AutoConfigurationInfo::STATE_DELETING;
+            _configDevices.insert(std::make_pair(i, device));
+        }
+    }
     setPollingInterval();
 }
 
