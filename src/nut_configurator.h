@@ -22,59 +22,29 @@
 #ifndef NUT_CONFIGURATOR_H_INCLUDED
 #define NUT_CONFIGURATOR_H_INCLUDED
 
+#include "asset_state.h"
+
 #include <map>
 #include <vector>
 #include <string>
 
-// core.git/src/shared/asset_types.h
-enum asset_type {
-    TUNKNOWN     = 0,
-    GROUP       = 1,
-    DATACENTER  = 2,
-    ROOM        = 3,
-    ROW         = 4,
-    RACK        = 5,
-    DEVICE      = 6
-};
-
-enum asset_subtype {
-    SUNKNOWN = 0,
-    UPS = 1,
-    GENSET,
-    EPDU,
-    PDU,
-    SERVER,
-    FEED,
-    STS,
-    SWITCH,
-    STORAGE,
-    VIRTUAL,
-    N_A = 11
-    /* ATTENTION: don't change N_A id. It is used as default value in init.sql for types, that don't have N_A */
-};
-
-enum asset_operation {
-    INSERT = 1,
-    DELETE,
-    UPDATE,
-    GET,
-    RETIRE
-};
-
-
 struct AutoConfigurationInfo
 {
-    uint32_t type = 0;
-    uint32_t subtype = 0;
-    int8_t operation = 0;
-    bool configured = false;
-    time_t date = 0;
-    std::map<std::string,std::string> attributes;
+    enum {
+        STATE_NEW,
+        STATE_CONFIGURING,
+        STATE_CONFIGURED,
+        STATE_DELETING
+    } state;
+    // Used to mark visited nodes when refreshing the asset list
+    int traversal_color;
+    const AssetState::Asset *asset;
 };
 
 class NUTConfigurator {
  public:
     bool configure( const std::string &name, const AutoConfigurationInfo &info );
+    void erase(const std::string &name);
  private:
     static std::vector<std::string>::const_iterator selectBest( const std::vector<std::string> &configs);
     static void updateNUTConfig();

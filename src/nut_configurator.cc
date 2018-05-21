@@ -194,165 +194,149 @@ s_digest (const std::stringstream& s)
 bool NUTConfigurator::configure( const std::string &name, const AutoConfigurationInfo &info ) {
     log_debug("NUT configurator created");
 
-    switch( info.operation ) {
-    case asset_operation::INSERT:
-    case asset_operation::UPDATE:
-        {
-            // get polling interval first
-            std::string polling = "30";
-            {
-                zconfig_t *config = zconfig_load ("/etc/fty-nut/fty-nut.cfg");
-                if (config) {
-                    polling = zconfig_get (config, "nut/polling_interval", "30");
-                    zconfig_destroy (&config);
-                }
-            }
-
-            std::vector<std::string> configs;
-
-            std::string IP = "127.0.0.1"; // Fake value for local-media devices or dummy-upses, either passed with an upsconf_block
-                // TODO: (lib)nutscan supports local media like serial or USB,
-                // as well as other remote protocols like IPMI. Use them later.
-            auto ubit = info.attributes.find("upsconf_block");
-            if( ubit != info.attributes.end() ) {
-                // TODO: Refactor to optimize string manipulations
-                std::string UBA = ubit->second; // UpsconfBlockAsset - as stored in contents of the asset
-                char SEP = UBA.at(0);
-                if ( SEP == '\0' || UBA.at(1) == '\0' ) {
-                    log_info("device %s is configured with an empty explicit upsconf_block from its asset (adding asset name as NUT device-tag with no config)",
-                        name.c_str());
-                    configs = { "[" + name + "]\n\n" };
-                } else {
-                    // First character of the sufficiently long UB string
-                    // defines the user-selected line separator character
-                    std::string UBN = UBA.substr(1); //UpsconfBlockNut - with EOL chars, without leading SEP character
-                    std::replace( UBN.begin(), UBN.end(), SEP, '\n' );
-                    if ( UBN.at(0) == '[' ) {
-                        log_info("device %s is configured with a complete explicit upsconf_block from its asset: \"%s\" including a custom NUT device-tag",
-                            name.c_str(), UBN.c_str());
-                        configs = { UBN + "\n" };
-                    } else {
-                        log_info("device %s is configured with a content-only explicit upsconf_block from its asset: \"%s\" (prepending asset name as NUT device-tag)",
-                            name.c_str(), UBN.c_str());
-                        configs = { "[" + name + "]\n" + UBN + "\n" };
-                    }
-                }
-            } else {
-                auto ipit = info.attributes.find("ip.1");
-                if( ipit == info.attributes.end() ) {
-                    log_error("device %s has no IP address", name.c_str() );
-                    return true;
-                }
-                IP = ipit->second;
-
-                std::vector <std::string> communities;
-                zconfig_t *config = zconfig_load ("/etc/default/fty.cfg");
-                if (config) {
-                    zconfig_t *item = zconfig_locate (config, "snmp/community");
-                    if (item) {
-                        bool is_array = false;
-                        zconfig_t *child = zconfig_child (item);
-                        while (child) {
-                            if (!streq (zconfig_value (child), "")) {
-                                is_array = true;
-                                communities.push_back (zconfig_value (child));
-                            }
-                            child = zconfig_next (child);
-                        }
-                        if (!is_array && !streq (zconfig_value (item), ""))
-                            communities.push_back (zconfig_value (item));
-                    }
-                    zconfig_destroy (&config);
-                }
-                else {
-                    log_warning ("Config file '%s' could not be read.", "/etc/default/fty.cfg");
-                }
-                communities.push_back ("public");
-
-                bool use_dmf = false;
-                auto use_dmfit = info.attributes.find ("upsconf_enable_dmf");
-                if (use_dmfit != info.attributes.end () && use_dmfit->second == "true")
-                    use_dmf = true;
-
-                for (const auto& c : communities) {
-                    log_debug("Trying community == %s", c.c_str());
-                    if (nut_scan_snmp (name, CIDRAddress (IP), c, use_dmf, configs) == 0 && !configs.empty ()) {
-                        break;
-                    }
-                }
-                nut_scan_xml_http (name, CIDRAddress(IP), configs);
-            }
-
-            auto it = selectBest( configs );
-            if( it == configs.end() ) {
-                log_error("nut-scanner failed for device \"%s\" at IP address \"%s\", no suitable configuration found",
-                    name.c_str(), IP.c_str() );
-                return false; // try again later
-            }
-            std::string deviceDir = NUT_PART_STORE;
-            mkdir_if_needed( deviceDir.c_str() );
-            std::stringstream cfg;
-
-            std::string config_name = std::string(NUT_PART_STORE) + path_separator() + name;
-            char* digest_old = s_digest (config_name.c_str ());
-            cfg << *it;
-            {
-                std::string s = *it;
-                // prototypes expects std::vector <std::string> - lets create fake vector
-                // this is not performance critical code anyway
-                std::vector <std::string> foo = {s};
-                if (isEpdu (foo) && canSnmp (foo)) {
-                    log_debug ("add synchronous = yes");
-                    cfg << "\tsynchronous = yes\n";
-                }
-                if (canXml (foo)) {
-                    log_debug ("add timeout for XML driver");
-                    cfg << "\ttimeout = 15\n";
-                }
-                log_debug ("add polling for driver");
-                if (canSnmp (foo)) {
-                    cfg << "\tpollfreq = " << polling << "\n";
-                } else {
-                    cfg << "\tpollinterval = " << polling << "\n";
-                }
-            }
-            char* digest_new = s_digest (cfg);
-
-            log_debug ("%s: digest_old=%s, digest_new=%s", config_name.c_str (), digest_old ? digest_old : "(null)", digest_new);
-            if (!digest_old || !streq (digest_old, digest_new)) {
-                std::ofstream cfgFile;
-                cfgFile.open (config_name);
-                cfgFile << cfg.str ();
-                cfgFile.flush ();
-                cfgFile.close ();
-                log_info("creating new config file %s/%s", NUT_PART_STORE, name.c_str() );
-                updateNUTConfig ();
-                systemctl ("enable",  std::string("nut-driver@") + name);
-                systemctl ("restart", std::string("nut-driver@") + name);
-                systemctl ("reload-or-restart", "nut-server");
-            }
-            zstr_free (&digest_new);
-            zstr_free (&digest_old);
-            return true;
+    // get polling interval first
+    std::string polling = "30";
+    {
+        zconfig_t *config = zconfig_load ("/etc/fty-nut/fty-nut.cfg");
+        if (config) {
+            polling = zconfig_get (config, "nut/polling_interval", "30");
+            zconfig_destroy (&config);
         }
-    case asset_operation::DELETE:
-    case asset_operation::RETIRE:
-        {
-            log_info("removing configuration file %s/%s", NUT_PART_STORE, name.c_str() );
-            std::string fileName = std::string(NUT_PART_STORE)
-                + path_separator()
-                + name;
-            remove( fileName.c_str() );
-            updateNUTConfig();
-            systemctl("stop",    std::string("nut-driver@") + name);
-            systemctl("disable", std::string("nut-driver@") + name);
-            systemctl("reload-or-restart", "nut-server");
-            return true;
-        }
-    default:
-        log_error("invalid configuration operation %" PRIi8, info.operation);
-        return true; // true means do not try again this
     }
+
+    std::vector<std::string> configs;
+
+    std::string IP = "127.0.0.1"; // Fake value for local-media devices or dummy-upses, either passed with an upsconf_block
+        // TODO: (lib)nutscan supports local media like serial or USB,
+        // as well as other remote protocols like IPMI. Use them later.
+    if(info.asset->have_upsconf_block()) {
+        // TODO: Refactor to optimize string manipulations
+        std::string UBA = info.asset->upsconf_block(); // UpsconfBlockAsset - as stored in contents of the asset
+        char SEP = UBA.at(0);
+        if ( SEP == '\0' || UBA.at(1) == '\0' ) {
+            log_info("device %s is configured with an empty explicit upsconf_block from its asset (adding asset name as NUT device-tag with no config)",
+                name.c_str());
+            configs = { "[" + name + "]\n\n" };
+        } else {
+            // First character of the sufficiently long UB string
+            // defines the user-selected line separator character
+            std::string UBN = UBA.substr(1); //UpsconfBlockNut - with EOL chars, without leading SEP character
+            std::replace( UBN.begin(), UBN.end(), SEP, '\n' );
+            if ( UBN.at(0) == '[' ) {
+                log_info("device %s is configured with a complete explicit upsconf_block from its asset: \"%s\" including a custom NUT device-tag",
+                    name.c_str(), UBN.c_str());
+                configs = { UBN + "\n" };
+            } else {
+                log_info("device %s is configured with a content-only explicit upsconf_block from its asset: \"%s\" (prepending asset name as NUT device-tag)",
+                    name.c_str(), UBN.c_str());
+                configs = { "[" + name + "]\n" + UBN + "\n" };
+            }
+        }
+    } else {
+        if (info.asset->IP().empty()) {
+            log_error("device %s has no IP address", name.c_str() );
+            return true;
+        }
+        IP = info.asset->IP();
+
+        std::vector <std::string> communities;
+        zconfig_t *config = zconfig_load ("/etc/default/fty.cfg");
+        if (config) {
+            zconfig_t *item = zconfig_locate (config, "snmp/community");
+            if (item) {
+                bool is_array = false;
+                zconfig_t *child = zconfig_child (item);
+                while (child) {
+                    if (!streq (zconfig_value (child), "")) {
+                        is_array = true;
+                        communities.push_back (zconfig_value (child));
+                    }
+                    child = zconfig_next (child);
+                }
+                if (!is_array && !streq (zconfig_value (item), ""))
+                    communities.push_back (zconfig_value (item));
+            }
+            zconfig_destroy (&config);
+        }
+        else {
+            log_warning ("Config file '%s' could not be read.", "/etc/default/fty.cfg");
+        }
+        communities.push_back ("public");
+
+        bool use_dmf = info.asset->upsconf_enable_dmf();
+        for (const auto& c : communities) {
+            log_debug("Trying community == %s", c.c_str());
+            if (nut_scan_snmp (name, CIDRAddress (IP), c, use_dmf, configs) == 0 && !configs.empty ()) {
+                break;
+            }
+        }
+        nut_scan_xml_http (name, CIDRAddress(IP), configs);
+    }
+
+    auto it = selectBest( configs );
+    if( it == configs.end() ) {
+        log_error("nut-scanner failed for device \"%s\" at IP address \"%s\", no suitable configuration found",
+            name.c_str(), IP.c_str() );
+        return false; // try again later
+    }
+    std::string deviceDir = NUT_PART_STORE;
+    mkdir_if_needed( deviceDir.c_str() );
+    std::stringstream cfg;
+
+    std::string config_name = std::string(NUT_PART_STORE) + path_separator() + name;
+    char* digest_old = s_digest (config_name.c_str ());
+    cfg << *it;
+    {
+        std::string s = *it;
+        // prototypes expects std::vector <std::string> - lets create fake vector
+        // this is not performance critical code anyway
+        std::vector <std::string> foo = {s};
+        if (isEpdu (foo) && canSnmp (foo)) {
+            log_debug ("add synchronous = yes");
+            cfg << "\tsynchronous = yes\n";
+        }
+        if (canXml (foo)) {
+            log_debug ("add timeout for XML driver");
+            cfg << "\ttimeout = 15\n";
+        }
+        log_debug ("add polling for driver");
+        if (canSnmp (foo)) {
+            cfg << "\tpollfreq = " << polling << "\n";
+        } else {
+            cfg << "\tpollinterval = " << polling << "\n";
+        }
+    }
+    char* digest_new = s_digest (cfg);
+
+    log_debug ("%s: digest_old=%s, digest_new=%s", config_name.c_str (), digest_old ? digest_old : "(null)", digest_new);
+    if (!digest_old || !streq (digest_old, digest_new)) {
+        std::ofstream cfgFile;
+        cfgFile.open (config_name);
+        cfgFile << cfg.str ();
+        cfgFile.flush ();
+        cfgFile.close ();
+        log_info("creating new config file %s/%s", NUT_PART_STORE, name.c_str() );
+        updateNUTConfig ();
+        systemctl ("enable",  std::string("nut-driver@") + name);
+        systemctl ("restart", std::string("nut-driver@") + name);
+        systemctl ("reload-or-restart", "nut-server");
+    }
+    zstr_free (&digest_new);
+    zstr_free (&digest_old);
+    return true;
+}
+
+void NUTConfigurator::erase(const std::string &name)
+{
+    log_info("removing configuration file %s/%s", NUT_PART_STORE, name.c_str());
+    std::string fileName = std::string(NUT_PART_STORE)
+        + path_separator()
+        + name;
+    remove( fileName.c_str() );
+    updateNUTConfig();
+    systemctl("stop",    std::string("nut-driver@") + name);
+    systemctl("disable", std::string("nut-driver@") + name);
+    systemctl("reload-or-restart", "nut-server");
 }
 
 void
