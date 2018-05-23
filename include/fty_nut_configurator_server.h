@@ -22,43 +22,29 @@
 #ifndef FTY_NUT_CONFIGURATOR_SERVER_H_INCLUDED
 #define FTY_NUT_CONFIGURATOR_SERVER_H_INCLUDED
 
-#include <malamute.h>
+#include "nut_configurator.h"
+#include "state_manager.h"
+
 #include <string>
 #include <vector>
 
-#include "nut_configurator.h"
-
 class Autoconfig {
  public:
-    explicit Autoconfig( const char *agentName ): _agentName (agentName) {  };
-    ~Autoconfig () { mlm_client_destroy (&_client);}
+    explicit Autoconfig(StateManager::Reader* reader);
 
-    void onStart( );
-    void onEnd( ) { cleanupState(); saveState(); };
-    void onSend( zmsg_t **message );
-    void onPoll( );
-    bool connect(
-        const char * endpoint,
-        const char *stream,
-        const char *pattern);
-    mlm_client_t *client () const {return _client;}
+    void onPoll();
+    void onUpdate();
     int timeout () const {return _timeout;}
  private:
-    void sendNewRules(std::vector<std::string> const &rules);
     void setPollingInterval();
-    void addDeviceIfNeeded(const char *name, uint32_t type, uint32_t subtype);
-    void requestExtendedAttributes( const char *name );
+    void addDeviceIfNeeded(const std::string& name, AssetState::Asset *asset);
     void cleanupState();
-    void saveState();
-    void loadState();
-    ConfigFactory _configurator;
-    std::map<std::string,AutoConfigurationInfo> _configurableDevices;
+    int _traversal_color;
+    std::map<std::string,AutoConfigurationInfo> _configDevices;
+    std::unique_ptr<StateManager::Reader> _state_reader;
 
  protected:
-    mlm_client_t *_client = NULL;
-    int _exitStatus = 0;
     int _timeout = 2000;
-    std::string _agentName;
 };
 
 

@@ -32,6 +32,8 @@
 #define ACTOR_ALERT_NAME "bios-nut-alert"
 #define ACTOR_ALERT_MB_NAME ACTOR_ALERT_NAME "-mb"
 #define ACTOR_SENSOR_NAME "agent-nut-sensor"
+#define ACTOR_CONFIGURATOR_NAME "nut-configurator"
+#define ACTOR_CONFIGURATOR_MB_NAME ACTOR_CONFIGURATOR_NAME "-mb"
 
 #define CONFIG_POLLING "nut/polling_interval"
 #define ACTION_POLLING "POLLING"
@@ -42,6 +44,9 @@ template<typename T, void (*destructor)(T**)>
 class MlmObjGuard
 {
 public:
+    MlmObjGuard()
+        : ptr_(nullptr)
+    {}
     explicit MlmObjGuard(T* ptr)
         : ptr_(ptr)
     {}
@@ -50,7 +55,17 @@ public:
     {
         destructor(&ptr_);
     }
+    T* operator=(T* ptr)
+    {
+        destructor(&ptr_);
+        ptr_ = ptr;
+        return ptr_;
+    }
     operator T*()
+    {
+        return ptr_;
+    }
+    T* get()
     {
         return ptr_;
     }
@@ -61,5 +76,7 @@ private:
 typedef MlmObjGuard<mlm_client_t, mlm_client_destroy> MlmClientGuard;
 typedef MlmObjGuard<zpoller_t, zpoller_destroy> ZpollerGuard;
 typedef MlmObjGuard<zmsg_t, zmsg_destroy> ZmsgGuard;
+typedef MlmObjGuard<zuuid_t, zuuid_destroy> ZuuidGuard;
+typedef MlmObjGuard<char, zstr_free> ZstrGuard;
 
 #endif

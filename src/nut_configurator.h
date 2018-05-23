@@ -22,89 +22,42 @@
 #ifndef NUT_CONFIGURATOR_H_INCLUDED
 #define NUT_CONFIGURATOR_H_INCLUDED
 
+#include "asset_state.h"
+
 #include <map>
 #include <vector>
 #include <string>
 
-// core.git/src/shared/asset_types.h
-enum asset_type {
-    TUNKNOWN     = 0,
-    GROUP       = 1,
-    DATACENTER  = 2,
-    ROOM        = 3,
-    ROW         = 4,
-    RACK        = 5,
-    DEVICE      = 6
-};
-
-enum asset_subtype {
-    SUNKNOWN = 0,
-    UPS = 1,
-    GENSET,
-    EPDU,
-    PDU,
-    SERVER,
-    FEED,
-    STS,
-    SWITCH,
-    STORAGE,
-    VIRTUAL,
-    N_A = 11
-    /* ATTENTION: don't change N_A id. It is used as default value in init.sql for types, that don't have N_A */
-};
-
-enum asset_operation {
-    INSERT = 1,
-    DELETE,
-    UPDATE,
-    GET,
-    RETIRE
-};
-
-
 struct AutoConfigurationInfo
 {
-    uint32_t type = 0;
-    uint32_t subtype = 0;
-    int8_t operation = 0;
-    bool configured = false;
-    time_t date = 0;
-    std::map<std::string,std::string> attributes;
+    enum {
+        STATE_NEW,
+        STATE_CONFIGURING,
+        STATE_CONFIGURED,
+        STATE_DELETING
+    } state;
+    // Used to mark visited nodes when refreshing the asset list
+    int traversal_color;
+    const AssetState::Asset *asset;
 };
 
-class Configurator {
+class NUTConfigurator {
  public:
-    virtual ~Configurator() {};
-    virtual bool configure( const std::string &name, const AutoConfigurationInfo &info );
-    virtual std::vector<std::string> createRules(std::string const &name);
-};
-
-class NUTConfigurator : public Configurator {
- public:
-    virtual ~NUTConfigurator() {};
-    std::vector<std::string>::const_iterator selectBest( const std::vector<std::string> &configs);
-    std::vector<std::string> createRules(std::string const &name);
-    void updateNUTConfig();
     bool configure( const std::string &name, const AutoConfigurationInfo &info );
+    void erase(const std::string &name);
+    static bool known_assets(std::vector<std::string>& assets);
  private:
-    std::vector<std::string>::const_iterator stringMatch( const std::vector<std::string> &texts, const char *pattern);
-    std::string makeRule(const std::string &alert, const std::string &bit, const std::string &device, std::string const &description) const;
-    bool match( const std::vector<std::string> &texts, const char *pattern);
-    bool isEpdu( const std::vector<std::string> &texts);
-    bool isAts( const std::vector<std::string> &texts);
-    bool isUps( const std::vector<std::string> &texts);
-    bool canSnmp( const std::vector<std::string> &texts);
-    bool canXml( const std::vector<std::string> &texts);
-    std::vector<std::string>::const_iterator getBestSnmpMib( const std::vector<std::string> &configs);
-    void systemctl( const std::string &operation, const std::string &service );
-};
-
-class ConfigFactory {
- public:
-    bool configureAsset( const std::string &name, AutoConfigurationInfo &info );
-    std::vector<std::string> getNewRules( const std::string &name, AutoConfigurationInfo &info);
- private:
-    Configurator * getConfigurator( uint32_t type, uint32_t subtype );
+    static std::vector<std::string>::const_iterator selectBest( const std::vector<std::string> &configs);
+    static void updateNUTConfig();
+    static std::vector<std::string>::const_iterator stringMatch( const std::vector<std::string> &texts, const char *pattern);
+    static bool match( const std::vector<std::string> &texts, const char *pattern);
+    static bool isEpdu( const std::vector<std::string> &texts);
+    static bool isAts( const std::vector<std::string> &texts);
+    static bool isUps( const std::vector<std::string> &texts);
+    static bool canSnmp( const std::vector<std::string> &texts);
+    static bool canXml( const std::vector<std::string> &texts);
+    static std::vector<std::string>::const_iterator getBestSnmpMib( const std::vector<std::string> &configs);
+    static void systemctl( const std::string &operation, const std::string &service );
 };
 
 //  Self test of this class

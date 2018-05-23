@@ -35,8 +35,9 @@
 
 StateManager NutStateManager;
 
-static void
-s_handle_fty_proto (StateManager::Writer& state_writer, zmsg_t *message)
+// Update the state with received fty_proto message
+void
+handle_fty_proto(StateManager::Writer& state_writer, zmsg_t *message)
 {
     assert (message);
 
@@ -52,46 +53,81 @@ s_handle_fty_proto (StateManager::Writer& state_writer, zmsg_t *message)
 }
 
 
-// Handle response to the initial ASSETS request
-static void
-s_handle_ASSETS (mlm_client_t *client, zmsg_t *message, zuuid_t **uuid_p)
+// Query fty-asset about existing devices. This has to be done after
+// subscribing ourselves to the ASSETS stream, to make sure that we do not
+// miss assets created between the mailbox request and the subscription to
+// the stream.
+void
+get_initial_assets(StateManager::Writer& state_writer, mlm_client_t *client)
 {
-    assert (client);
-    assert (message);
-    ZmsgGuard msg(message);
-    zuuid_t *uuid_request = *uuid_p;
-
-    if (!uuid_request) {
-        log_warning("Spurious response to an ASSETS request");
+    zmsg_t *msg = zmsg_new();
+    if (!msg) {
+        log_error("Creating ASSETS message failed");
         return;
     }
-    char *uuid = zmsg_popstr(msg);
-    if (strcmp(uuid, zuuid_str_canonical(uuid_request)) != 0) {
-        log_warning ("Mismatching response to an ASSETS request");
+    ZuuidGuard uuid(zuuid_new());
+    if (!uuid) {
+        zmsg_destroy(&msg);
+        log_error("Creating UUID for the ASSETS message failed");
         return;
     }
-    zuuid_destroy(uuid_p);
-    zstr_free(&uuid);
-    char *status = zmsg_popstr(msg);
-    if (strcmp(status, "OK") != 0) {
-        log_warning("Got %s response to an ASSETS request", status);
-        zmsg_print(msg);
+    zmsg_addstr(msg, "GET");
+    zmsg_addstr(msg, zuuid_str_canonical(uuid));
+    zmsg_addstr(msg, "ups");
+    zmsg_addstr(msg, "epdu");
+    zmsg_addstr(msg, "sts");
+    zmsg_addstr(msg, "sensor");
+    zmsg_addstr(msg, "sensorgpio");
+    if (mlm_client_sendto(client, "asset-agent", "ASSETS", NULL, 5000, &msg) < 0) {
+        log_error("Sending ASSETS message failed");
+        return;
     }
-    zstr_free(&status);
+    ZmsgGuard reply;
+    while (reply = mlm_client_recv(client)) {
+        ZstrGuard uuid_reply(zmsg_popstr(reply));
+        if (strcmp(uuid_reply, zuuid_str_canonical(uuid)) != 0) {
+            log_warning("Mismatching response to an ASSETS request");
+            continue;
+        }
+        ZstrGuard status(zmsg_popstr(reply));
+        if (strcmp(status, "OK") != 0) {
+            log_warning("Got %s response to an ASSETS request", status.get());
+            zmsg_print(reply);
+            return;
+        }
+        break;
+    }
 
-    char *asset = zmsg_popstr(msg);
+    ZstrGuard asset(zmsg_popstr(reply));
+    // Remember which UUIDs we sent
+    std::set<std::string> uuids;
     while (asset) {
-        zuuid_t *uuid = zuuid_new();
+        ZuuidGuard uuid(zuuid_new());
+        auto i = uuids.emplace(zuuid_str_canonical(uuid));
         zmsg_t *req = zmsg_new();
         zmsg_addstr(req, "GET");
-        zmsg_addstr(req, zuuid_str_canonical(uuid));
+        zmsg_addstr(req, i.first->c_str());
         zmsg_addstr(req, asset);
         if (mlm_client_sendto(client, "asset-agent", "ASSET_DETAIL", NULL, 5000, &req) < 0) {
-            log_error ("Sending ASSET_DETAIL message for %s failed", asset);
+            log_error("Sending ASSET_DETAIL message for %s failed", asset.get());
         }
-        asset = zmsg_popstr(msg);
-        zuuid_destroy(&uuid);
+        asset = zmsg_popstr(reply);
     }
+    while (!uuids.empty()) {
+        zmsg_t *reply = mlm_client_recv(client);
+        if (uuids.erase(ZstrGuard(zmsg_popstr(reply)).get()) == 0) {
+            log_warning("Mismatching response to an ASSET_DETAIL request");
+            zmsg_destroy(&reply);
+            continue;
+        }
+        if (!is_fty_proto(reply)) {
+            log_warning("Response to an ASSET_DETAIL message is not fty_proto");
+            zmsg_destroy(&reply);
+            continue;
+        }
+        handle_fty_proto(state_writer, reply);
+    }
+    log_info("Initial ASSETS request complete");
 }
 
 uint64_t
@@ -167,38 +203,10 @@ fty_nut_server (zsock_t *pipe, void *args)
     nut_agent.setClient (client);
     nut_agent.setiClient (iclient);
 
-    // Query fty-asset about existing devices. This has to be done after
-    // subscribing ourselves to the ASSETS stream, to make sure that we do not
-    // miss assets created between the mailbox request and the subscription to
-    // the stream.
-    zuuid_t *uuid_assets_request;
-    {
-        zmsg_t *msg = zmsg_new();
-        if (!msg) {
-            log_error ("Creating ASSETS message failed");
-            return;
-        }
-        uuid_assets_request = zuuid_new();
-        if (!uuid_assets_request) {
-            zmsg_destroy(&msg);
-            log_error("Creating UUID for the ASSETS message failed");
-            return;
-        }
-        zmsg_addstr(msg, "GET");
-        zmsg_addstr(msg, zuuid_str_canonical(uuid_assets_request));
-        zmsg_addstr(msg, "ups");
-        zmsg_addstr(msg, "epdu");
-        zmsg_addstr(msg, "sts");
-        zmsg_addstr(msg, "sensor");
-        zmsg_addstr(msg, "sensorgpio");
-        if (mlm_client_sendto(client, "asset-agent", "ASSETS", NULL, 5000, &msg) < 0) {
-            log_error("Sending ASSETS message failed");
-            zuuid_destroy(&uuid_assets_request);
-            return;
-        }
-    }
-
     StateManager::Writer& state_writer = NutStateManager.getWriter();
+    // (Ab)use the iclient for the initial assets mailbox request, because it
+    // will not receive any interfering stream messages
+    get_initial_assets(state_writer, iclient);
 
     uint64_t timestamp = static_cast<uint64_t> (zclock_mono ());
     uint64_t timeout = 30000;
@@ -249,26 +257,12 @@ fty_nut_server (zsock_t *pipe, void *args)
             log_error ("Given `which == mlm_client_msgpipe (client)`, function `mlm_client_recv ()` returned NULL");
             continue;
         }
-
-        const char *command = mlm_client_command (client);
-        const char *subject = mlm_client_subject (client);
-        if (streq (command, "MAILBOX DELIVER")) {
-            if (strcmp(subject, "ASSETS") == 0) {
-                s_handle_ASSETS (client, message, &uuid_assets_request);
-                continue;
-            }
-            // Assume that this is a response to an ASSET_DETAIL message,
-            // which contains the UUID and a proto message. Just discard the
-            // UUID for now
-            free(zmsg_popstr(message));
-        }
         if (is_fty_proto(message)) {
-            // fty_proto messages are received over the ASSETS stream and as
-            // responses to the ASSET_DETAIL mailbox request
-            s_handle_fty_proto (state_writer, message);
+            handle_fty_proto (state_writer, message);
             continue;
         }
-        log_error ("Unhandled message (%s/%s)", command, subject);
+        log_error ("Unhandled message (%s/%s)",
+                mlm_client_command(client), mlm_client_subject(client));
         zmsg_print (message);
         zmsg_destroy (&message);
     } // while (!zsys_interrupted)
