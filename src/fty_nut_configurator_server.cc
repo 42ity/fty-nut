@@ -65,7 +65,7 @@ void Autoconfig::onUpdate()
         it->second.traversal_color = _traversal_color;
     }
     // Mark no longer existing devices for deletion
-    for (auto i : _configDevices) {
+    for (auto &i : _configDevices) {
         if (i.second.traversal_color != _traversal_color) {
             i.second.state = AutoConfigurationInfo::STATE_DELETING;
             // Not needed, but null pointer derefs are easier to chase down
@@ -194,6 +194,7 @@ fty_nut_configurator_server (zsock_t *pipe, void *args)
             return;
         }
         get_initial_assets(state_writer, mb_client);
+        agent.onUpdate();
     }
 
     ZpollerGuard poller(zpoller_new(pipe, mlm_client_msgpipe(client), NULL));
