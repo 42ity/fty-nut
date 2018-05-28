@@ -194,6 +194,7 @@ fty_nut_configurator_server (zsock_t *pipe, void *args)
             return;
         }
         get_initial_assets(state_writer, mb_client);
+        agent.onUpdate();
     }
 
     ZpollerGuard poller(zpoller_new(pipe, mlm_client_msgpipe(client), NULL));
