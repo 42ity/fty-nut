@@ -65,7 +65,7 @@ void Autoconfig::onUpdate()
         it->second.traversal_color = _traversal_color;
     }
     // Mark no longer existing devices for deletion
-    for (auto i : _configDevices) {
+    for (auto &i : _configDevices) {
         if (i.second.traversal_color != _traversal_color) {
             i.second.state = AutoConfigurationInfo::STATE_DELETING;
             // Not needed, but null pointer derefs are easier to chase down
