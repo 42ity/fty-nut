@@ -66,11 +66,12 @@
 #   define FTY_NUT_EXPORT
 #   define FTY_NUT_PRIVATE
 #else
-#   define FTY_NUT_EXPORT
 #   if (defined __GNUC__ && __GNUC__ >= 4) || defined __INTEL_COMPILER
 #       define FTY_NUT_PRIVATE __attribute__ ((visibility ("hidden")))
+#       define FTY_NUT_EXPORT __attribute__ ((visibility ("default")))
 #   else
 #       define FTY_NUT_PRIVATE
+#       define FTY_NUT_EXPORT
 #   endif
 #endif
 
@@ -93,9 +94,18 @@ typedef struct _sensor_actor_t sensor_actor_t;
 #include "sensor_actor.h"
 
 #ifdef FTY_NUT_BUILD_DRAFT_API
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 //  Self test for private classes
 FTY_NUT_EXPORT void
-    fty_nut_private_selftest (bool verbose);
+    fty_nut_private_selftest (bool verbose, const char *subtest);
+
+#ifdef __cplusplus
+}
+#endif
 #endif // FTY_NUT_BUILD_DRAFT_API
 
 #endif

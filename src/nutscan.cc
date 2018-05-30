@@ -26,10 +26,12 @@
 @end
 */
 
-#include "fty_nut_classes.h"
+#include "subprocess.h"
+#include "nutscan.h"
+#include "logger.h"
 
-#include <string>
 #include <sstream>
+#include <string>
 #include <vector>
 
 /**

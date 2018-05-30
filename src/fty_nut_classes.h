@@ -33,6 +33,7 @@
 #include "../include/fty_nut.h"
 
 //  Extra headers
+#include "nut_mlm.h"
 
 //  Opaque class structures to allow forward references
 #ifndef LOGGER_T_DEFINED
@@ -83,14 +84,6 @@ typedef struct _alert_device_t alert_device_t;
 typedef struct _alert_device_list_t alert_device_list_t;
 #define ALERT_DEVICE_LIST_T_DEFINED
 #endif
-#ifndef NUT_T_DEFINED
-typedef struct _nut_t nut_t;
-#define NUT_T_DEFINED
-#endif
-#ifndef STREAM_T_DEFINED
-typedef struct _stream_t stream_t;
-#define STREAM_T_DEFINED
-#endif
 #ifndef SENSOR_DEVICE_T_DEFINED
 typedef struct _sensor_device_t sensor_device_t;
 #define SENSOR_DEVICE_T_DEFINED
@@ -98,6 +91,14 @@ typedef struct _sensor_device_t sensor_device_t;
 #ifndef SENSOR_LIST_T_DEFINED
 typedef struct _sensor_list_t sensor_list_t;
 #define SENSOR_LIST_T_DEFINED
+#endif
+#ifndef STATE_MANAGER_T_DEFINED
+typedef struct _state_manager_t state_manager_t;
+#define STATE_MANAGER_T_DEFINED
+#endif
+#ifndef ASSET_STATE_T_DEFINED
+typedef struct _asset_state_t asset_state_t;
+#define ASSET_STATE_T_DEFINED
 #endif
 
 //  Internal API
@@ -114,10 +115,10 @@ typedef struct _sensor_list_t sensor_list_t;
 #include "nut_configurator.h"
 #include "alert_device.h"
 #include "alert_device_list.h"
-#include "nut.h"
-#include "stream.h"
 #include "sensor_device.h"
 #include "sensor_list.h"
+#include "state_manager.h"
+#include "asset_state.h"
 
 //  *** To avoid double-definitions, only define if building without draft ***
 #ifndef FTY_NUT_BUILD_DRAFT_API
@@ -185,16 +186,6 @@ FTY_NUT_PRIVATE void
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
 FTY_NUT_PRIVATE void
-    nut_test (bool verbose);
-
-//  *** Draft method, defined for internal use only ***
-//  Self test of this class.
-FTY_NUT_PRIVATE void
-    stream_test (bool verbose);
-
-//  *** Draft method, defined for internal use only ***
-//  Self test of this class.
-FTY_NUT_PRIVATE void
     sensor_device_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
@@ -202,9 +193,14 @@ FTY_NUT_PRIVATE void
 FTY_NUT_PRIVATE void
     sensor_list_test (bool verbose);
 
+//  *** Draft method, defined for internal use only ***
+//  Self test of this class.
+FTY_NUT_PRIVATE void
+    state_manager_test (bool verbose);
+
 //  Self test for private classes
 FTY_NUT_PRIVATE void
-    fty_nut_private_selftest (bool verbose);
+    fty_nut_private_selftest (bool verbose, const char *subtest);
 
 #endif // FTY_NUT_BUILD_DRAFT_API
 

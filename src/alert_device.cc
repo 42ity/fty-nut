@@ -20,8 +20,9 @@
 */
 
 #include "alert_device.h"
-#include "fty_nut_library.h"
 #include "logger.h"
+
+#include <ftyproto.h>
 
 void
 Device::fixAlertLimits (DeviceAlert& alert) {
@@ -44,13 +45,13 @@ Device::fixAlertLimits (DeviceAlert& alert) {
 void
 Device::addAlert(const std::string& quantity, const std::map<std::string,std::vector<std::string> >& variables)
 {
-    log_debug ("aa: device %s provides %s alert", _assetName.c_str(), quantity.c_str());
+    log_debug ("aa: device %s provides %s alert", assetName().c_str(), quantity.c_str());
     std::string prefix = daisychainPrefix() + quantity;
     DeviceAlert alert;
     alert.name = quantity;
 
     if (_alerts.find (quantity) != _alerts.end()) {
-        log_debug ("aa: device %s, alert %s already known", _assetName.c_str(), quantity.c_str());
+        log_debug ("aa: device %s, alert %s already known", assetName().c_str(), quantity.c_str());
         return;
     }
 
@@ -58,7 +59,7 @@ Device::addAlert(const std::string& quantity, const std::map<std::string,std::ve
     {
         const auto& it = variables.find(prefix + ".status");
         if (it == variables.cend ()) {
-            log_debug ("aa: device %s doesn't support %s.status", _assetName.c_str(), quantity.c_str());
+            log_debug ("aa: device %s doesn't support %s.status", assetName().c_str(), quantity.c_str());
             return;
         }
     }
@@ -102,7 +103,7 @@ Device::addAlert(const std::string& quantity, const std::map<std::string,std::ve
         alert.highWarning.empty() ||
         alert.highCritical.empty()
     ) {
-        log_error("aa: thresholds for %s are not present in %s", quantity.c_str (), _assetName.c_str ());
+        log_error("aa: thresholds for %s are not present in %s", quantity.c_str (), assetName().c_str ());
     } else {
         _alerts[quantity] = alert;
     }
@@ -111,14 +112,14 @@ Device::addAlert(const std::string& quantity, const std::map<std::string,std::ve
 int
 Device::scanCapabilities (nut::TcpClient& conn)
 {
-    log_debug ("aa: scanning capabilities for %s", _assetName.c_str());
+    log_debug ("aa: scanning capabilities for %s", assetName().c_str());
     if (!conn.isConnected ()) return 0;
     std::string prefix = daisychainPrefix();
 
     _alerts.clear();
     try {
         auto nutDevice = conn.getDevice(_nutName);
-        if (! nutDevice.isOk()) { throw std::runtime_error("device " + _assetName + " is not configured in NUT yet"); }
+        if (! nutDevice.isOk()) { throw std::runtime_error("device " + assetName() + " is not configured in NUT yet"); }
         auto vars = nutDevice.getVariableValues();
         if (vars.empty ()) return 0;
         if (vars.find (prefix + "ambient.temperature.status") != vars.cend()) {
@@ -158,7 +159,7 @@ Device::scanCapabilities (nut::TcpClient& conn)
             if (!found) break;
         }
     } catch ( std::exception &e ) {
-        log_error("aa: Communication problem with %s (%s)", _assetName.c_str(), e.what() );
+        log_error("aa: Communication problem with %s (%s)", assetName().c_str(), e.what() );
         return 0;
     }
     return 1;
@@ -167,7 +168,7 @@ Device::scanCapabilities (nut::TcpClient& conn)
 void
 Device::publishAlerts (mlm_client_t *client, uint64_t ttl) {
     if (!client) return;
-    log_debug("aa: publishing %zu alerts on %s", _alerts.size (), _assetName.c_str());
+    log_debug("aa: publishing %zu alerts on %s", _alerts.size (), assetName().c_str());
     for (auto& it: _alerts) {
         publishAlert (client, it.second, ttl);
     }
@@ -204,7 +205,7 @@ Device::publishAlert (mlm_client_t *client, DeviceAlert& alert, uint64_t ttl)
         severity = "CRITICAL";
         description += " is critically high";
     }
-    std::string rule = alert.name + "@" + _assetName;
+    std::string rule = alert.name + "@" + assetName();
 
     if (!severity) {
         log_error ("aa: alert %s has unknown severity value %s. Set to WARNING.", rule.c_str (), alert.status.c_str ());
@@ -217,13 +218,13 @@ Device::publishAlert (mlm_client_t *client, DeviceAlert& alert, uint64_t ttl)
         alert.timestamp,    // timestamp
         ttl,
         rule.c_str (),      // rule
-        _assetName.c_str (),// element
+        assetName().c_str (),// element
         state,              // state
         severity,           // severity
         description.c_str (), // description
         NULL                // action ?email
     );
-    std::string topic = rule + "/" + severity + "@" + _assetName;
+    std::string topic = rule + "/" + severity + "@" + assetName();
     if (message) {
         mlm_client_send (client, topic.c_str (), &message);
     };
@@ -277,7 +278,7 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
     zmsg_t *message = zmsg_new();
     assert (message);
 
-    std::string ruleName = alert.name + "@" + _assetName;
+    std::string ruleName = alert.name + "@" + assetName();
     std::string rule =
         "{ \"threshold\" : {"
         "  \"rule_name\"     : \"" + ruleName + "\","
@@ -286,7 +287,7 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
         "  \"rule_hierarchy\": \"internal.device\","
         "  \"rule_desc\"     : \"" + s_rule_desc (alert.name) + "\","
         "  \"target\"        : \"" + ruleName + "\","
-        "  \"element\"       : \"" + _assetName + "\","
+        "  \"element\"       : \"" + assetName() + "\","
         "  \"values_unit\"   : \"" + s_values_unit (alert.name) + "\","
         "  \"values\"        : ["
         "    { \"low_warning\"  : \"" + alert.lowWarning + "\"},"
@@ -313,6 +314,7 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
         else
             zsys_error ("Error %s when requesting %s to ADD rule \n%s.", reason, mlm_client_sender (client), rule.c_str ());
 
+        zstr_free (&reason);
         zstr_free (&result);
         zmsg_destroy (&resp);
     };
@@ -329,10 +331,10 @@ Device::update (nut::TcpClient& conn)
             std::string prefix = daisychainPrefix();
             auto value = nutDevice.getVariableValue (prefix + it.first + ".status");
             if (value.empty ()) {
-                log_debug ("aa: %s on %s is not present", it.first.c_str (), _assetName.c_str ());
+                log_debug ("aa: %s on %s is not present", it.first.c_str (), assetName().c_str ());
             } else {
                 std::string newStatus =  value[0];
-                log_debug ("aa: %s on %s is %s", it.first.c_str (), _assetName.c_str (), newStatus.c_str());
+                log_debug ("aa: %s on %s is %s", it.first.c_str (), assetName().c_str (), newStatus.c_str());
                 if (it.second.status != newStatus) {
                     it.second.timestamp = ::time(NULL);
                     it.second.status = newStatus;
@@ -344,8 +346,8 @@ Device::update (nut::TcpClient& conn)
 
 std::string Device::daisychainPrefix() const
 {
-    if (_chain == 0) return "";
-    return "device." + std::to_string(_chain) + ".";
+    if (chain() == 0) return "";
+    return "device." + std::to_string(chain()) + ".";
 }
 
 

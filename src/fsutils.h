@@ -32,31 +32,25 @@
 namespace shared {
 
 // returns "/"
-FTY_NUT_EXPORT const char*
-    path_separator ();
+const char* path_separator ();
 
 // get the file mode
-FTY_NUT_EXPORT mode_t
-   file_mode (const std::string& path);
+mode_t file_mode (const std::string& path);
 
 // return true if path exists and it is a regular file
-FTY_NUT_EXPORT bool
-    is_file (const std::string& path);
+bool is_file (const std::string& path);
 
 // return true if path exists and it is a directory
-FTY_NUT_EXPORT bool
-    is_dir (const std::string& path);
+bool is_dir (const std::string& path);
 
 // get list of all items in directory
-FTY_NUT_EXPORT bool
-    items_in_directory (
+bool items_in_directory (
             const std::string& path,
             std::vector <std::string>& items
             );
 
 // get list of all regular files in directory
-FTY_NUT_EXPORT bool
-    files_in_directory (
+bool files_in_directory (
             const std::string& path,
             std::vector <std::string>& files
             );
@@ -69,21 +63,18 @@ FTY_NUT_EXPORT bool
  *
  * In case of failure also errno is set, see "man 3 mkdir" for details.
  */
-FTY_NUT_EXPORT bool
-    mkdir_if_needed (
+bool mkdir_if_needed (
             const char *path,
             mode_t mode = 0755, /* OCTAL, not HEX! */
             bool create_parent=true);
 
 // return basename - the component of path following the final path_separator()
-FTY_NUT_EXPORT std::string
-    basename (const std::string& path);
+std::string basename (const std::string& path);
 
 } // namespace shared
 
 //  Self test of this class
-FTY_NUT_EXPORT void
-    fsutils_test (bool verbose);
+void fsutils_test (bool verbose);
 //  @end
 
 #endif

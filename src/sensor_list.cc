@@ -26,9 +26,14 @@
 @end
 */
 
-#include "fty_nut_classes.h"
+#include "sensor_list.h"
+#include "logger.h"
 
-//  Structure of our class
+Sensors::Sensors (StateManager::Reader *reader)
+    : _state_reader(reader)
+{
+}
+
 
 void Sensors::updateFromNUT ()
 {
@@ -44,103 +49,62 @@ void Sensors::updateFromNUT ()
     }
 }
 
-void Sensors::updateSensorList (nut_t *config)
+void Sensors::updateSensorList ()
 {
+    if (!_state_reader->refresh())
+        return;
+    const AssetState& deviceState = _state_reader->getState();
+    auto& devices = deviceState.getPowerDevices();
+    auto& sensors = deviceState.getSensors();
+
     log_debug("sa: updating device list");
 
-    if (!config) return;
-    zlist_t *devices = nut_get_powerdevices (config);
-    if (!devices) return;
-    zlist_t *sensors = nut_get_sensors (config);
-    if (!sensors) { zlist_destroy (&devices); return; }
-    log_debug ("sa: %zd sensors in assets", zlist_size (sensors));
+    log_debug ("sa: %zd sensors in assets", sensors.size());
     _sensors.clear ();
-    std::map<std::string, std::string> ip2master;
-    {
-        // make ip->master map
-        const char *name = (char *)zlist_first(devices);
-        while (name) {
-            const char* ip = nut_asset_ip (config, name);
-            const char* chain = nut_asset_daisychain (config, name);
-            if (ip == NULL || chain == NULL || streq (ip, "") ) {
-                // this is strange. No IP?
-                name = (char *)zlist_next(devices);
-                continue;
-            }
-            if (streq (chain,"") || streq (chain,"1")) {
-                // this is master
-                ip2master[ip] = name;
-            }
-            name = (char *)zlist_next(devices);
-        }
-    }
-
-    char * name = (char *)zlist_first(sensors);
-    while (name) {
-        const char *connected_to = nut_asset_location (config, name);
+    for (auto i : sensors) {
+        const std::string& name = i.first;
+        const std::string& parent_name = i.second->location();
         // do we know where is sensor connected?
-        if (streq (connected_to, "")) {
-            log_debug ("sa: sensor %s ignored (no location)", name);
-            name = (char *) zlist_next (sensors);
+        if (parent_name.empty()) {
+            log_debug ("sa: sensor %s ignored (no location)", name.c_str());
             continue;
         }
 
         // is it connected to UPS/epdu?
-        if ( ! zlist_exists (devices, (void *) connected_to)) {
-            char *parent = nut_parent_sensor (config, name);
-            if (parent)
-            {
+        const auto parent_it = devices.find(parent_name);
+        if (parent_it == devices.cend()) {
+            // Connected to a sensor?
+            if (sensors.count(parent_name)) {
                 // give parent his child
-                const char *extport =  nut_asset_port (config, name);
-                if (extport)
-                {
-                    _sensors[parent].addChild (extport, name);
+                const std::string& port = i.second->port();
+                if (!port.empty()) {
+                    _sensors[parent_name].addChild (port, name);
                 }
             }
             else
-                log_debug ("sa: sensor '%s' ignored (location is unknown/not a power device/not a sensor '%s')", name, connected_to);
+                log_debug ("sa: sensor '%s' ignored (location is unknown/not a power device/not a sensor '%s')", name.c_str(), parent_name.c_str());
 
-            name = (char *) zlist_next (sensors);
             continue;
         }
-        const char* ip = nut_asset_ip (config, connected_to);
-        const char* chain_str = nut_asset_daisychain (config, connected_to);
+        const AssetState::Asset *parent = parent_it->second.get();
+        const std::string& ip = parent->IP();
+        int chain = parent->daisychain();
 
-        std::map <std::string, std::string> children = _sensors [name].getChildren ();
+        Sensor::ChildrenMap children = _sensors [name].getChildren ();
 
-        int chain = 0;
-        if (chain_str) try { chain = std::stoi (chain_str); } catch(...) { };
         if (chain <= 1) {
             // connected to standalone ups or chain master
-            _sensors[name] = Sensor(
-                connected_to,
-                chain,
-                connected_to,
-                nut_asset_port (config, name),
-                children,
-                name
-            );
+            _sensors[name] = Sensor(i.second.get(), parent, children);
         } else {
             // ugh, sensor connected to daisy chain device
-            const auto master_it = ip2master.find (ip);
-            if (master_it == ip2master.cend()) {
-                log_error ("sa: daisychain host for %s not found", connected_to);
+            auto master = deviceState.ip2master(ip);
+            if (master.empty()) {
+                log_error ("sa: daisychain host for %s not found", parent_name.c_str());
             } else {
-                _sensors[name] = Sensor(
-                    master_it->second,
-                    chain,
-                    connected_to,
-                    nut_asset_port (config, name),
-                    children,
-                    name
-
-                );
+                _sensors[name] = Sensor(i.second.get(), parent, children, master);
             }
         }
-        name = (char *) zlist_next (sensors);
     }
-    zlist_destroy (&sensors);
-    zlist_destroy (&devices);
     log_debug ("sa: loaded %zd nut sensors", _sensors.size());
 
 }
@@ -160,63 +124,72 @@ void
 sensor_list_test (bool verbose)
 {
     printf (" * sensor_list: ");
-    //  @selftest
-    nut_t *config = nut_new ();
+
+    StateManager manager;
+    auto& writer = manager.getWriter();
 
     fty_proto_t *asset = fty_proto_new (FTY_PROTO_ASSET);
-    fty_proto_set_name (asset, "%s", "ups-1");
-    fty_proto_set_operation (asset, "%s", FTY_PROTO_ASSET_OP_CREATE);
-    fty_proto_aux_insert (asset, "type", "%s", "device");
-    fty_proto_aux_insert (asset, "subtype", "%s", "ups");
-    fty_proto_ext_insert (asset, "ip.1", "%s", "1.1.1.1");
-    nut_put (config, &asset);
+    fty_proto_set_name (asset, "ups-1");
+    fty_proto_set_operation (asset, FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert (asset, "type", "device");
+    fty_proto_aux_insert (asset, "subtype", "ups");
+    fty_proto_ext_insert (asset, "ip.1", "1.1.1.1");
+    writer.getState().updateFromProto(asset);
+    fty_proto_destroy(&asset);
 
     asset = fty_proto_new (FTY_PROTO_ASSET);
-    fty_proto_set_name (asset, "%s", "sensor-1");
-    fty_proto_set_operation (asset, "%s", FTY_PROTO_ASSET_OP_CREATE);
-    fty_proto_aux_insert (asset, "type", "%s", "device");
-    fty_proto_aux_insert (asset, "subtype", "%s", "sensor");
-    fty_proto_aux_insert (asset, "parent_name.1", "%s", "ups-1");
-    nut_put (config, &asset);
+    fty_proto_set_name (asset, "sensor-1");
+    fty_proto_set_operation (asset, FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert (asset, "type", "device");
+    fty_proto_aux_insert (asset, "subtype", "sensor");
+    fty_proto_aux_insert (asset, "parent_name.1", "ups-1");
+    writer.getState().updateFromProto(asset);
+    fty_proto_destroy(&asset);
+
 
     asset = fty_proto_new (FTY_PROTO_ASSET);
-    fty_proto_set_name (asset, "%s", "epdu-1");
-    fty_proto_set_operation (asset, "%s", FTY_PROTO_ASSET_OP_CREATE);
-    fty_proto_aux_insert (asset, "type", "%s", "device");
-    fty_proto_aux_insert (asset, "subtype", "%s", "epdu");
-    fty_proto_ext_insert (asset, "ip.1", "%s", "1.1.1.2");
-    fty_proto_ext_insert (asset, "daisy_chain", "%s", "1");
-    nut_put (config, &asset);
+    fty_proto_set_name (asset, "epdu-1");
+    fty_proto_set_operation (asset, FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert (asset, "type", "device");
+    fty_proto_aux_insert (asset, "subtype", "epdu");
+    fty_proto_ext_insert (asset, "ip.1", "1.1.1.2");
+    fty_proto_ext_insert (asset, "daisy_chain", "1");
+    writer.getState().updateFromProto(asset);
+    fty_proto_destroy(&asset);
 
     asset = fty_proto_new (FTY_PROTO_ASSET);
-    fty_proto_set_name (asset, "%s", "epdu-2");
-    fty_proto_set_operation (asset, "%s", FTY_PROTO_ASSET_OP_CREATE);
-    fty_proto_aux_insert (asset, "type", "%s", "device");
-    fty_proto_aux_insert (asset, "subtype", "%s", "epdu");
-    fty_proto_ext_insert (asset, "ip.1", "%s", "1.1.1.2");
-    fty_proto_ext_insert (asset, "daisy_chain", "%s", "2");
-    nut_put (config, &asset);
+    fty_proto_set_name (asset, "epdu-2");
+    fty_proto_set_operation (asset, FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert (asset, "type", "device");
+    fty_proto_aux_insert (asset, "subtype", "epdu");
+    fty_proto_ext_insert (asset, "ip.1", "1.1.1.2");
+    fty_proto_ext_insert (asset, "daisy_chain", "2");
+    writer.getState().updateFromProto(asset);
+    fty_proto_destroy(&asset);
 
     asset = fty_proto_new (FTY_PROTO_ASSET);
-    fty_proto_set_name (asset, "%s", "sensor-2");
-    fty_proto_set_operation (asset, "%s", FTY_PROTO_ASSET_OP_CREATE);
-    fty_proto_aux_insert (asset, "type", "%s", "device");
-    fty_proto_aux_insert (asset, "subtype", "%s", "sensor");
-    fty_proto_aux_insert (asset, "parent_name.1", "%s", "epdu-2");
-    fty_proto_ext_insert (asset, "port", "%s", "21");
-    nut_put (config, &asset);
+    fty_proto_set_name (asset, "sensor-2");
+    fty_proto_set_operation (asset, FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert (asset, "type", "device");
+    fty_proto_aux_insert (asset, "subtype", "sensor");
+    fty_proto_aux_insert (asset, "parent_name.1", "epdu-2");
+    fty_proto_ext_insert (asset, "port", "21");
+    writer.getState().updateFromProto(asset);
+    fty_proto_destroy(&asset);
 
     asset = fty_proto_new (FTY_PROTO_ASSET);
-    fty_proto_set_name (asset, "%s", "sensorgpio-1");
-    fty_proto_set_operation (asset, "%s", FTY_PROTO_ASSET_OP_CREATE);
-    fty_proto_aux_insert (asset, "type", "%s", "device");
-    fty_proto_aux_insert (asset, "subtype", "%s", "sensorgpio");
-    fty_proto_aux_insert (asset, "parent_name.1", "%s", "sensor-2");
-    fty_proto_ext_insert (asset, "port", "%s", "1");
-    nut_put (config, &asset);
+    fty_proto_set_name (asset, "sensorgpio-1");
+    fty_proto_set_operation (asset, FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert (asset, "type", "device");
+    fty_proto_aux_insert (asset, "subtype", "sensorgpio");
+    fty_proto_aux_insert (asset, "parent_name.1", "sensor-2");
+    fty_proto_ext_insert (asset, "port", "1");
+    writer.getState().updateFromProto(asset);
+    fty_proto_destroy(&asset);
+    writer.commit();
 
-    Sensors list;
-    list.updateSensorList (config);
+    Sensors list(manager.getReader());
+    list.updateSensorList ();
     assert (list._sensors.size() == 2);
 
     assert (list._sensors["sensor-1"].sensorPrefix() == "ambient.");
@@ -224,7 +197,6 @@ sensor_list_test (bool verbose)
     assert (list._sensors["sensor-2"].sensorPrefix() == "device.2.ambient.21.");
     assert (list._sensors["sensor-2"].topicSuffix() == ".21@epdu-2");
 
-    nut_destroy (&config);
     //  @end
     printf ("OK\n");
 }

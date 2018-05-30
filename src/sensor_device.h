@@ -22,41 +22,67 @@
 #ifndef __SENSOR_DEVICE_H
 #define __SENSOR_DEVICE_H
 
+#include "asset_state.h"
+
 #include <map>
 #include <string>
 #include <nutclient.h>
 #include <malamute.h>
 
-#include "fty_nut_library.h"
-#include "alert_device_alert.h"
-
 class Sensor {
  public:
-    Sensor (const std::string& nutMaster, int chain, const std::string& location, const std::string& port, std::map <std::string, std::string>& children, const std::string& sname) :
-        _nutMaster(nutMaster),
-        _chain(chain),
-        _location(location),
-        _port(port),
-        _children (children),
-        _sname (sname)
-        { };
-    Sensor () { };
+    // port | child_name
+    typedef std::map<std::string, std::string> ChildrenMap;
+    Sensor () :
+        _asset(nullptr),
+        _parent(nullptr)
+    { };
+    Sensor (const AssetState::Asset *asset, const AssetState::Asset *parent,
+            ChildrenMap& children) :
+        _asset(asset),
+        _parent(parent),
+        _children(children),
+        _nutMaster(asset->location())
+    { };
+    Sensor (const AssetState::Asset *asset, const AssetState::Asset *parent,
+            ChildrenMap& children, const std::string& nutMaster) :
+        _asset(asset),
+        _parent(parent),
+        _children(children),
+        _nutMaster(nutMaster)
+    { };
     void update (nut::TcpClient &conn);
     void publish (mlm_client_t *client, int ttl);
-    void addChild (const char* port, const char *child_name);
-    std::map <std::string, std::string> getChildren ();
+    void addChild (const std::string& port, const std::string& child_name);
+    ChildrenMap getChildren ();
+    std::string assetName() const
+    {
+        return _asset ? _asset->name() : std::string();
+    }
+    // get the daisychain value of the parent powerdevice, not the sensor
+    int chain () const
+    {
+        return _parent ? _parent->daisychain() : 0;
+    }
+    std::string location() const
+    {
+        return _asset ? _asset->location() : std::string();
+    }
+    std::string port() const
+    {
+        if (_asset && !_asset->port().empty())
+            return _asset->port();
+        return "0";
+    }
 
     // friend functions for unit-testing
     friend void sensor_device_test (bool verbose);
     friend void sensor_list_test (bool verbose);
     friend void sensor_actor_test (bool verbose);
  protected:
+    const AssetState::Asset *_asset, *_parent;
     std::string _nutMaster;
-    int _chain = 0;
-    std::string _location;
-    std::string _port;
-    std::map <std::string, std::string> _children; // port | child_name
-    std::string _sname;
+    ChildrenMap _children;
 
     std::string _temperature;
     std::string _humidity;
@@ -66,11 +92,9 @@ class Sensor {
     std::string sensorPrefix() const;
     std::string nutPrefix() const;
     std::string topicSuffix() const;
-    std::string port() const;
 };
 
-FTY_NUT_EXPORT void
-sensor_device_test(bool verbose);
+void sensor_device_test(bool verbose);
 
 
 #endif // __ALERT_DEVICE

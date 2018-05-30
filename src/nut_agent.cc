@@ -25,9 +25,11 @@
 @discuss
 @end
 */
-#include <cmath>
+#include "ups_status.h"
+#include "nut_agent.h"
+#include "logger.h"
 
-#include "fty_nut_classes.h"
+#include <cmath>
 
 const std::map<std::string, std::string> NUTAgent::_units =
 {
@@ -43,6 +45,11 @@ const std::map<std::string, std::string> NUTAgent::_units =
     { "timer",       "s" },
     { "delay",       "s" },
 };
+
+NUTAgent::NUTAgent(StateManager::Reader *reader)
+    : _state_reader(reader)
+{
+}
 
 bool NUTAgent::loadMapping (const char *path_to_file)
 {
@@ -71,21 +78,18 @@ void NUTAgent::setiClient (mlm_client_t *client)
     }
 }
 
-bool NUTAgent::isClientSet () const
-{
-    return _client != NULL;
-}
-
-void NUTAgent::onPoll (nut_t *data)
+void NUTAgent::onPoll ()
 {
     if (_client)
-        advertisePhysics (data);
+        advertisePhysics ();
     if (_iclient)
         advertiseInventory ();
 }
 
-void NUTAgent::updateDeviceList (nut_t *deviceState) {
-    _deviceList.updateDeviceList (deviceState);
+void NUTAgent::updateDeviceList ()
+{
+    if (_state_reader->refresh())
+        _deviceList.updateDeviceList (_state_reader->getState());
 }
 
 int NUTAgent::send (const std::string& subject, zmsg_t **message_p)
@@ -134,7 +138,7 @@ std::string NUTAgent::physicalQuantityToUnits (const std::string& quantity) cons
     return it->second;
 }
 
-void NUTAgent::advertisePhysics (nut_t *data)
+void NUTAgent::advertisePhysics ()
 {
     _deviceList.update (true);
     for (auto& device : _deviceList) {
@@ -171,8 +175,7 @@ void NUTAgent::advertisePhysics (nut_t *data)
         // BIOS-1185 start
         // if it is epdu, that doesn't provide load.default,
         // but it is still could be calculated (because input.current is known) then do this
-        const char *subtype = nut_asset_subtype (data, device.second.assetName().c_str() );
-        if (    (subtype && streq ("epdu", subtype))
+        if (device.second.subtype() == "epdu"
              && measurements.count ("load.default") == 0 )
         {
             if ( measurements.count ("load.input.L1") != 0 ) {
@@ -200,22 +203,18 @@ void NUTAgent::advertisePhysics (nut_t *data)
             {
                 // try to compute it
                 // 1. Determine the MAX value
-                double max_value = 0;
+                double max_value = NAN;
                 if ( measurements.count ("current.input.nominal") == 1 ) {
                     try {
                         max_value = std::stof (measurements.at("current.input.nominal"));
                         log_debug ("load.default: max_value %lf from UPS", max_value);
                     } catch (...) {}
                 } else {
-                    const char *max_current = nut_asset_max_current (data, device.second.assetName().c_str() );
-                    if ( max_current && !streq ("", max_current) ) {
-                        // ASSUMPTION: max_current at this point is always verified to be double
-                        max_value = std::stod (max_current);
-                        log_debug ("load.default: max_value %lf from user", max_value);
-                    }
+                    max_value = device.second.maxCurrent();
+                    log_debug ("load.default: max_value %lf from user", max_value);
                 }
                 // 2. if MAX value is known -> do work, otherwise skip
-                if ( max_value != 0 ) {
+                if (!isnan(max_value)) {
                     double value = 0;
                     try {
                         value = stof (measurements.at("current.input.L1"));

@@ -77,6 +77,7 @@ Testing/
 # We here do not want cmake integration
 *.cmake
 CMakeLists.txt
+/builds/cmake
 
 # Repositories downloaded by CI integration scripts
 libzmq/
@@ -86,6 +87,7 @@ fty-proto/
 cidr/
 cxxtools/
 libnutclient/
+/libsodium/
 
 # Travis build area
 tmp/
@@ -140,8 +142,6 @@ bindings/qt/selftest/selftest
 *~
 
 # Test artifacts
-src/selftest_state_file
-test_state_file
 .testdir/
 stderr.txt
 

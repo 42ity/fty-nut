@@ -26,7 +26,10 @@
 @end
 */
 
-#include "fty_nut_classes.h"
+#include "cidr.h"
+
+#include <string>
+
 /*!
  * \file cidr.cc
  * \author Tomas Halman <TomasHalman@Eaton.com>

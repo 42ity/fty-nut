@@ -26,7 +26,9 @@
 @end
 */
 
-#include "fty_nut_classes.h"
+#include "ups_status.h"
+
+#include <string.h>
 
 // following definition is taken as it is from network ups tool project (dummy-ups.h):
 typedef struct {

@@ -26,9 +26,10 @@
 @end
 */
 
-#include "fty_nut_classes.h"
+#include "fsutils.h"
+#include "logger.h"
 
-
+#include <assert.h>
 #include <dirent.h>
 #include <string.h>
 #include <errno.h>
@@ -76,8 +77,8 @@ items_in_directory (
 
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
-        if (streq (entry->d_name, ".") ||
-            streq (entry->d_name, "..")) {
+        if (strcmp (entry->d_name, ".") == 0 ||
+            strcmp (entry->d_name, "..") == 0) {
             continue;
         }
         items.push_back (entry->d_name);

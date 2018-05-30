@@ -26,40 +26,108 @@
 @end
 */
 
-#include "fty_nut_classes.h"
+#include "actor_commands.h"
+#include "fty_nut_server.h"
+#include "state_manager.h"
+#include "nut_agent.h"
+#include "nut_mlm.h"
+#include "logger.h"
 
-/* Consumers of these vars are currently commented away below
-static const char* PATH = "/var/lib/fty/fty-nut";
-static const char* STATE = "/var/lib/fty/fty-nut/state_file";
- */
+StateManager NutStateManager;
 
-static void
-s_handle_poll (NUTAgent& nut_agent, nut_t *data)
+// Update the state with received fty_proto message
+void
+handle_fty_proto(StateManager::Writer& state_writer, zmsg_t *message)
 {
-    assert (data);
-    nut_agent.onPoll (data);
+    assert (message);
+
+    fty_proto_t *proto = fty_proto_decode (&message);
+    if (!proto) {
+        log_critical ("fty_proto_decode () failed.");
+        zmsg_destroy (&message);
+        return;
+    }
+    if (state_writer.getState().updateFromProto(proto))
+        state_writer.commit();
+    fty_proto_destroy(&proto);
 }
 
-static void
-s_handle_service (mlm_client_t *client, zmsg_t **message_p)
+
+// Query fty-asset about existing devices. This has to be done after
+// subscribing ourselves to the ASSETS stream, to make sure that we do not
+// miss assets created between the mailbox request and the subscription to
+// the stream.
+void
+get_initial_assets(StateManager::Writer& state_writer, mlm_client_t *client)
 {
-    assert (client);
-    assert (message_p && *message_p);
+    zmsg_t *msg = zmsg_new();
+    if (!msg) {
+        log_error("Creating ASSETS message failed");
+        return;
+    }
+    ZuuidGuard uuid(zuuid_new());
+    if (!uuid) {
+        zmsg_destroy(&msg);
+        log_error("Creating UUID for the ASSETS message failed");
+        return;
+    }
+    zmsg_addstr(msg, "GET");
+    zmsg_addstr(msg, zuuid_str_canonical(uuid));
+    zmsg_addstr(msg, "ups");
+    zmsg_addstr(msg, "epdu");
+    zmsg_addstr(msg, "sts");
+    zmsg_addstr(msg, "sensor");
+    zmsg_addstr(msg, "sensorgpio");
+    if (mlm_client_sendto(client, "asset-agent", "ASSETS", NULL, 5000, &msg) < 0) {
+        log_error("Sending ASSETS message failed");
+        return;
+    }
+    ZmsgGuard reply;
+    while (reply = mlm_client_recv(client)) {
+        ZstrGuard uuid_reply(zmsg_popstr(reply));
+        if (strcmp(uuid_reply, zuuid_str_canonical(uuid)) != 0) {
+            log_warning("Mismatching response to an ASSETS request");
+            continue;
+        }
+        ZstrGuard status(zmsg_popstr(reply));
+        if (strcmp(status, "OK") != 0) {
+            log_warning("Got %s response to an ASSETS request", status.get());
+            zmsg_print(reply);
+            return;
+        }
+        break;
+    }
 
-    log_error ("Service deliver is not implemented.");
-
-    zmsg_destroy (message_p);
-}
-
-static void
-s_handle_mailbox (mlm_client_t *client, zmsg_t **message_p)
-{
-   assert (client);
-   assert (message_p && *message_p);
-
-   log_error ("Mailbox command is not implemented.");
-
-   zmsg_destroy (message_p);
+    ZstrGuard asset(zmsg_popstr(reply));
+    // Remember which UUIDs we sent
+    std::set<std::string> uuids;
+    while (asset) {
+        ZuuidGuard uuid(zuuid_new());
+        auto i = uuids.emplace(zuuid_str_canonical(uuid));
+        zmsg_t *req = zmsg_new();
+        zmsg_addstr(req, "GET");
+        zmsg_addstr(req, i.first->c_str());
+        zmsg_addstr(req, asset);
+        if (mlm_client_sendto(client, "asset-agent", "ASSET_DETAIL", NULL, 5000, &req) < 0) {
+            log_error("Sending ASSET_DETAIL message for %s failed", asset.get());
+        }
+        asset = zmsg_popstr(reply);
+    }
+    while (!uuids.empty()) {
+        zmsg_t *reply = mlm_client_recv(client);
+        if (uuids.erase(ZstrGuard(zmsg_popstr(reply)).get()) == 0) {
+            log_warning("Mismatching response to an ASSET_DETAIL request");
+            zmsg_destroy(&reply);
+            continue;
+        }
+        if (!is_fty_proto(reply)) {
+            log_warning("Response to an ASSET_DETAIL message is not fty_proto");
+            zmsg_destroy(&reply);
+            continue;
+        }
+        handle_fty_proto(state_writer, reply);
+    }
+    log_info("Initial ASSETS request complete");
 }
 
 uint64_t
@@ -83,57 +151,62 @@ void
 fty_nut_server (zsock_t *pipe, void *args)
 {
     bool verbose = false;
+    const char *endpoint = static_cast<const char *>(args);
 
-    mlm_client_t *client = mlm_client_new ();
+    MlmClientGuard client(mlm_client_new());
     if (!client) {
         log_critical ("mlm_client_new () failed");
         return;
     }
+    if (mlm_client_connect(client, endpoint, 5000, ACTOR_NUT_NAME) < 0) {
+        log_error("client %s failed to connect", ACTOR_NUT_NAME);
+        return;
+    }
+    if (mlm_client_set_producer(client, FTY_PROTO_STREAM_METRICS) < 0) {
+        log_error("mlm_client_set_producer (stream = '%s') failed",
+                FTY_PROTO_STREAM_METRICS);
+        return;
+    }
+    if (mlm_client_set_consumer(client, FTY_PROTO_STREAM_ASSETS, ".*") < 0) {
+        log_error("mlm_client_set_consumer (stream = '%s', pattern = '.*') failed",
+                FTY_PROTO_STREAM_ASSETS);
+        return;
+    }
 
     // inventory client
-    mlm_client_t *iclient = mlm_client_new ();
+    MlmClientGuard iclient(mlm_client_new());
     if (!iclient) {
         log_critical ("mlm_client_new () failed");
         return;
     }
-    int r = mlm_client_connect (iclient, "ipc://@/malamute", 5000, "bios-agent-nut-inventory");
+    int r = mlm_client_connect (iclient, endpoint, 5000, "bios-agent-nut-inventory");
     if (r == -1) {
         log_error ("connect of iclient failed");
+        return;
     }
     r = mlm_client_set_producer (iclient, FTY_PROTO_STREAM_ASSETS);
     if (r == -1) {
         log_error ("iclient set_producer failed");
+        return;
     }
 
-    zpoller_t *poller = zpoller_new (pipe, mlm_client_msgpipe (client), NULL);
+    ZpollerGuard poller(zpoller_new (pipe, mlm_client_msgpipe (client), NULL));
     if (!poller) {
         log_critical ("zpoller_new () failed");
-        mlm_client_destroy (&client);
-        mlm_client_destroy (&iclient);
         return;
     }
 
-    nut_t *data = nut_new ();
-    if (!data) {
-        zpoller_destroy (&poller);
-        log_critical ("nut_new () failed");
-        mlm_client_destroy (&client);
-        mlm_client_destroy (&iclient);
-        return;
-    }
-    NUTAgent nut_agent;
-    std::string state_file;
+    NUTAgent nut_agent(NutStateManager.getReader());
 
     zsock_signal (pipe, 0);
-/*
-    r = nut_load (data, STATE);
-    if (r != 0) {
-        log_warning ("Could not load state file '%s'.", STATE);
-    }
-    nut_agent.updateDeviceList (data);
-*/
 
+    nut_agent.setClient (client);
     nut_agent.setiClient (iclient);
+
+    StateManager::Writer& state_writer = NutStateManager.getWriter();
+    // (Ab)use the iclient for the initial assets mailbox request, because it
+    // will not receive any interfering stream messages
+    get_initial_assets(state_writer, iclient);
 
     uint64_t timestamp = static_cast<uint64_t> (zclock_mono ());
     uint64_t timeout = 30000;
@@ -145,13 +218,8 @@ fty_nut_server (zsock_t *pipe, void *args)
         if (now - last >= timeout) {
             last = now;
             zsys_debug("Periodic polling");
-            s_handle_poll (nut_agent, data);
-        }
-        if (nut_changed (data)) {
-            r = nut_save (data, state_file.c_str ());
-            if (r != 0) {
-                log_warning ("Could not save state file '%s'.", state_file.c_str ());
-            }
+            nut_agent.updateDeviceList();
+            nut_agent.onPoll();
         }
         if (which == NULL) {
             if (zpoller_terminated (poller) || zsys_interrupted) {
@@ -170,7 +238,7 @@ fty_nut_server (zsock_t *pipe, void *args)
                 log_error ("Given `which == pipe`, function `zmsg_recv (pipe)` returned NULL");
                 continue;
             }
-            if (actor_commands (client, &message, verbose, timeout, nut_agent, data, state_file) == 1) {
+            if (actor_commands (client, &message, verbose, timeout, nut_agent) == 1) {
                 break;
             }
             continue;
@@ -189,35 +257,15 @@ fty_nut_server (zsock_t *pipe, void *args)
             log_error ("Given `which == mlm_client_msgpipe (client)`, function `mlm_client_recv ()` returned NULL");
             continue;
         }
-
-        const char *command = mlm_client_command (client);
-        if (streq (command, "STREAM DELIVER")) {
-            stream_deliver_handle (client, nut_agent, data, &message);
+        if (is_fty_proto(message)) {
+            handle_fty_proto (state_writer, message);
+            continue;
         }
-        else
-        if (streq (command, "MAILBOX DELIVER")) {
-            s_handle_mailbox (client, &message);
-        }
-        else
-        if (streq (command, "SERVICE DELIVER")) {
-            s_handle_service (client, &message);
-        }
-        else {
-            log_error ("Unrecognized mlm_client_command () = '%s'", command ? command : "(null)");
-        }
-
+        log_error ("Unhandled message (%s/%s)",
+                mlm_client_command(client), mlm_client_subject(client));
+        zmsg_print (message);
         zmsg_destroy (&message);
     } // while (!zsys_interrupted)
-    if (nut_changed (data)) {
-        r = nut_save (data, state_file.c_str ());
-        if (r != 0) {
-            log_warning ("Could not save state file '%s'.", state_file.c_str ());
-        }
-    }
-    nut_destroy (&data);
-    zpoller_destroy (&poller);
-    mlm_client_destroy (&client);
-    mlm_client_destroy (&iclient);
 }
 
 

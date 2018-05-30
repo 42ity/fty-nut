@@ -22,10 +22,14 @@
 #ifndef SENSOR_LIST_H_INCLUDED
 #define SENSOR_LIST_H_INCLUDED
 
+#include "sensor_device.h"
+#include "state_manager.h"
+
 class Sensors {
  public:
+    explicit Sensors (StateManager::Reader *reader);
     void updateFromNUT ();
-    void updateSensorList (nut_t *config);
+    void updateSensorList ();
     void publish (mlm_client_t *client, int ttl);
 
     // friend function for unit-testing
@@ -33,10 +37,10 @@ class Sensors {
     friend void sensor_actor_test (bool verbose);
  protected:
     std::map <std::string, Sensor>  _sensors; // name | Sensor
+    std::unique_ptr<StateManager::Reader> _state_reader;
 };
 
 //  Self test of this class
-FTY_NUT_EXPORT void
-    sensor_list_test (bool verbose);
+void sensor_list_test (bool verbose);
 
 #endif

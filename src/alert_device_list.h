@@ -21,14 +21,14 @@
 #ifndef __ALERT_DEVICE_LIST
 #define __ALERT_DEVICE_LIST
 
-#include "fty_nut_library.h"
+#include "state_manager.h"
 #include "alert_device.h"
-#include "nut.h"
 
 class Devices {
  public:
+    explicit Devices (StateManager::Reader *reader);
     void updateFromNUT ();
-    void updateDeviceList (nut_t *config);
+    void updateDeviceList ();
     void publishAlerts (mlm_client_t *client);
     void publishRules (mlm_client_t *client);
     void setPollingMs (uint64_t polling_ms) {
@@ -40,6 +40,7 @@ class Devices {
  private:
     uint64_t _polling_ms = 30000;
     std::map <std::string, Device>  _devices;
+    std::unique_ptr<StateManager::Reader> _state_reader;
 
     void updateDeviceCapabilities (nut::TcpClient& nutClient);
     void updateDevices (nut::TcpClient& nutClient);
@@ -48,7 +49,6 @@ class Devices {
 
 
 //  Self test of this class
-FTY_NUT_EXPORT void
-    alert_device_list_test (bool verbose);
+void alert_device_list_test (bool verbose);
 
 #endif // __ALERT_DEVICE_LIST

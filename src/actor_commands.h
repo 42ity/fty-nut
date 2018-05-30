@@ -22,7 +22,9 @@
 #ifndef ACTOR_COMMANDS_H_INCLUDED
 #define ACTOR_COMMANDS_H_INCLUDED
 
-#include "nut.h"
+#include <malamute.h>
+#include <string>
+
 class NUTAgent;
 
 
@@ -42,10 +44,8 @@ class NUTAgent;
 //  CONSUMER/stream/pattern
 //      consume messages from 'stream' with subjects matching 'pattern'
 //
-//  CONFIGURE/mapping/state_file
-//      configure actor, where
-//      mapping_file - full path to mapping file
-//      state_file - full pathname of state file
+//  CONFIGURE/mapping
+//      configure actor, where mapping is the full path to the mapping file
 //
 //  POLLING/value
 //      change polling interval, where
@@ -57,19 +57,15 @@ class NUTAgent;
 // Performs the actor commands logic
 // Destroys the message
 // Returns 1 for $TERM (means exit), 0 otherwise
-FTY_NUT_EXPORT int
-    actor_commands (
+int actor_commands (
             mlm_client_t *client,
             zmsg_t **message_p,
             bool& verbose,
             uint64_t& timeout,
-            NUTAgent& nut_agent,
-            nut_t *data,
-            std::string& state_fullpath);
+            NUTAgent& nut_agent);
 
 //  Self test of this class
-FTY_NUT_EXPORT void
-    actor_commands_test (bool verbose);
+void actor_commands_test (bool verbose);
 //  @end
 
 #endif

@@ -8,11 +8,7 @@ DISTCHECK_CONFIGURE_FLAGS = \
 
 ACLOCAL_AMFLAGS = -I config
 
-AM_CFLAGS = \
-    -Werror=format-security
-
 AM_CXXFLAGS = \
-    -Werror=format-security \
     -std=c++11
 
 AM_CPPFLAGS = \
@@ -30,7 +26,10 @@ AM_CPPFLAGS = \
 project_libs = ${libsodium_LIBS} ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${fty_proto_LIBS} ${cidr_LIBS} ${cxxtools_LIBS} ${libnutclient_LIBS}
 
 SUBDIRS = doc
+SUBDIRS += include
 DIST_SUBDIRS = doc
+DIST_SUBDIRS += include
+
 lib_LTLIBRARIES =
 bin_PROGRAMS =
 noinst_PROGRAMS =
@@ -53,6 +52,8 @@ EXTRA_DIST += \
     Findcidr.cmake \
     Findcxxtools.cmake \
     Findlibnutclient.cmake \
+    builds/cmake/Modules/ClangFormat.cmake \
+    builds/cmake/clang-format-check.sh.in \
     CMakeLists.txt
 endif
 
@@ -69,10 +70,11 @@ EXTRA_DIST += \
     src/nut_configurator.h \
     src/alert_device.h \
     src/alert_device_list.h \
-    src/nut.h \
-    src/stream.h \
     src/sensor_device.h \
     src/sensor_list.h \
+    src/state_manager.h \
+    src/asset_state.h \
+    src/nut_mlm.h \
     LICENSE \
     README.md \
     CONTRIBUTING.md \

@@ -21,8 +21,8 @@ To run fty-nut project:
 * from within the source tree, run:
 
 ```bash
-./src/fty-nut --mapping-file <path_to_mapping_file> --state-file <path_to_state_file>
-./src/fty-nut --mapping-file /usr/share/fty-nut/mapping.conf --state-file /var/lib/fty/fty-nut/state_file
+./src/fty-nut --mapping-file <path_to_mapping_file>
+./src/fty-nut --mapping-file /usr/share/fty-nut/mapping.conf
 
 ./src/fty-nut-configurator
 ```
@@ -50,11 +50,10 @@ Mapping between NUT and fty-nut is saved in:
 ```
 
 ### State File
-State files are located in
+The fty-nut-configurator state file is located in
 
 ```
-/var/lib/fty/fty-nut/state_file  (fty-nut)
-/var/lib/fty/fty-autoconfig/state (fty-nut-configurator)
+/var/lib/fty/fty-autoconfig/state
 
 ```
 
