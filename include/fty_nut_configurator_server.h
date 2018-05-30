@@ -34,9 +34,13 @@ class Autoconfig {
     void onStart( );
     void onEnd( ) { cleanupState(); saveState(); };
     void onSend( zmsg_t **message );
+    void handleLimitations (zmsg_t **message );
     void onPoll( );
     bool connect(
         const char * endpoint,
+        const char *stream,
+        const char *pattern);
+    bool set_consumer(
         const char *stream,
         const char *pattern);
     mlm_client_t *client () const {return _client;}

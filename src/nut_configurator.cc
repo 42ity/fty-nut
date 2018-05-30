@@ -363,6 +363,14 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
             zstr_free (&digest_old);
             return true;
         }
+    case asset_operation::ENABLE:
+        {
+            // keep configuration
+            updateNUTConfig();
+            systemctl("start", std::string("nut-driver@") + name);
+            systemctl("reload-or-restart", "nut-server");
+            return true;
+        }
     case asset_operation::DELETE:
     case asset_operation::RETIRE:
         {
@@ -374,6 +382,14 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
             updateNUTConfig();
             systemctl("stop",    std::string("nut-driver@") + name);
             systemctl("disable", std::string("nut-driver@") + name);
+            systemctl("reload-or-restart", "nut-server");
+            return true;
+        }
+    case asset_operation::DISABLE:
+        {
+            // keep configuration
+            updateNUTConfig();
+            systemctl("stop",    std::string("nut-driver@") + name);
             systemctl("reload-or-restart", "nut-server");
             return true;
         }

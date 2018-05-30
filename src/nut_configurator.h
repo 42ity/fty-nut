@@ -58,7 +58,9 @@ enum asset_operation {
     DELETE,
     UPDATE,
     GET,
-    RETIRE
+    RETIRE,
+    ENABLE,
+    DISABLE
 };
 
 

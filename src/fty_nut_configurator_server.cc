@@ -31,6 +31,7 @@
 #include <fstream>
 #include <cxxtools/jsonserializer.h>
 #include <cxxtools/jsondeserializer.h>
+#include <algorithm>
 
 #define MLM_ENDPOINT "ipc://@/malamute"
 
@@ -122,6 +123,18 @@ s_is_ups_epdu_or_sts (fty_proto_t *bmsg)
 
     const char *subtype = fty_proto_aux_string (bmsg, "subtype", "");
     return streq (subtype, "ups") || streq (subtype, "epdu") || streq (subtype, "sts");
+}
+
+static bool
+s_powerdevice_subtype_match (int subtype)
+{
+    if (subtype == asset_subtype::UPS)
+        return true;
+    if (subtype == asset_subtype::EPDU)
+        return true;
+    if (subtype == asset_subtype::STS)
+        return true;
+    return false;
 }
 
 static int
@@ -226,6 +239,65 @@ void Autoconfig::onSend( zmsg_t **message )
     }
 }
 
+void Autoconfig::handleLimitations( zmsg_t **message )
+{
+    if( ! message || ! *message ) return;
+
+    const char *subject = mlm_client_subject (_client);
+    assert(subject);
+    assert(streq (subject, "LIMITATIONS"));
+    int monitor_power_devices = 1;
+    // should there be any data to share, they come in a group of three (value, item, category)
+    char *value = zmsg_popstr (*message);
+    char *item = zmsg_popstr (*message);
+    char *category = zmsg_popstr (*message);
+    while (value && item && category) {
+        if (streq (category, "POWER_NODES") && streq (item, "MONITOR")) {
+            monitor_power_devices = atoi(value);
+        }
+        zstr_free (&value);
+        zstr_free (&item);
+        zstr_free (&category);
+        value = zmsg_popstr (*message);
+        item = zmsg_popstr (*message);
+        category = zmsg_popstr (*message);
+    }
+    zmsg_destroy(message);
+    // skip if licensing is disabled
+    if (-1 == monitor_power_devices)
+        return;
+    // update devices according to license
+    typedef std::pair<std::string, int> pairsi;
+    std::vector<pairsi> power_devices_list;
+    for( auto &it : _configurableDevices) {
+        if (it.second.type == asset_type::DEVICE &&
+                s_powerdevice_subtype_match(it.second.subtype) &&
+                ! asset_operation::DISABLE == it.second.operation &&
+                ! asset_operation::RETIRE == it.second.operation &&
+                ! asset_operation::DELETE == it.second.operation) {
+            int num_id = 0;
+            if (it.first.compare(0, 4, "sts-") || it.first.compare(0, 4, "ups-")) {
+                num_id = stoi(it.first.substr(4)); // "number is after ups-/sts-, that is 5th character"
+            }
+            if (it.first.compare(0, 5, "epdu-")) {
+                num_id = stoi(it.first.substr(5));
+            }
+            power_devices_list.push_back(make_pair(it.first, num_id));
+        }
+    }
+    sort(power_devices_list.begin(), power_devices_list.end(),
+        [] (const pairsi & a, const pairsi & b) -> bool {
+            return a.second > b.second;
+        });
+    for (unsigned int i = monitor_power_devices; i < power_devices_list.size(); ++i) {
+        _configurableDevices[power_devices_list[i].first].configured = false;
+        _configurableDevices[power_devices_list[i].first].operation = asset_operation::DISABLE;
+    }
+    // save results
+    saveState();
+    onPoll(); // share outcomes
+}
+
 void Autoconfig::onPoll( )
 {
     bool save = false;
@@ -238,6 +310,7 @@ void Autoconfig::onPoll( )
             if(
                 ! it.second.attributes.empty() ||
                 it.second.operation == asset_operation::DELETE ||
+                it.second.operation == asset_operation::DISABLE ||
                 it.second.operation == asset_operation::RETIRE
             )
             {
@@ -341,11 +414,24 @@ bool Autoconfig::connect(
     return true;
 }
 
+bool Autoconfig::set_consumer(
+        const char *stream = NULL,
+        const char *pattern = NULL)
+{
+    if (!_client)
+        return false;
+    if (stream && pattern)
+        mlm_client_set_consumer (_client, stream, pattern);
+
+    return true;
+}
+
 void
 fty_nut_configurator_server (zsock_t *pipe, void *args)
 {
     Autoconfig agent ("nut-configurator");
     agent.connect (MLM_ENDPOINT, "ASSETS", ".*");
+    agent.set_consumer ("LICENSING-ANNOUNCEMENTS", ".*");
 
     zpoller_t *poller = zpoller_new (pipe, mlm_client_msgpipe (agent.client()), NULL);
 
@@ -371,9 +457,13 @@ fty_nut_configurator_server (zsock_t *pipe, void *args)
 
         zmsg_t *msg = mlm_client_recv (agent.client());
         const char* command = mlm_client_command (agent.client());
-        if (streq (command, "STREAM DELIVER"))
-            agent.onSend (&msg);
-
+        if (streq (command, "STREAM DELIVER")) {
+            if (streq ("LIMITATIONS", mlm_client_subject (agent.client()))) {
+                agent.handleLimitations (&msg);
+            } else {
+                agent.onSend (&msg);
+            }
+        }
         zmsg_destroy (&msg);
     }
 
