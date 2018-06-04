@@ -33,10 +33,10 @@ src/fty_nut_selftest
 *.app
 core
 
- # Distcheck workspace and archives
-fty-nut-1.0.0/
-fty-nut-1.0.0.tar.gz
-fty-nut-1.0.0.zip
+# Distcheck workspace and archives
+fty-nut-*/
+fty-nut-*.tar.gz
+fty-nut-*.zip
 
 # Man pages
 doc/*.1
@@ -82,6 +82,7 @@ CMake*
 *.cmake
 
 # Repositories downloaded by CI integration scripts
+libsodium/
 libzmq/
 czmq/
 malamute/
@@ -89,7 +90,6 @@ fty-proto/
 cidr/
 cxxtools/
 libnutclient/
-/libsodium/
 
 # Travis build area
 tmp/
@@ -118,7 +118,7 @@ src/app/gen/
 src/app/obj/
 src/app/local.properties
 
-# Android -dependencies
+# Android - dependencies
 src/app/jni/output
 
 # Python build directory
@@ -139,6 +139,9 @@ bindings/qt/selftest/selftest
 *.swp
 *.bak
 .test*
+
+# Netbeans directory
+nbproject/
 
 # editor backups
 *~
