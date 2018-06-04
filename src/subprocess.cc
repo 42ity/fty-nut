@@ -43,6 +43,7 @@ struct sbp_info_t {
     std::stringstream &buff;
 };
 
+static int close_forget(int &fd);
 char * const * _mk_argv(const Argv& vec);
 void _free_argv(char * const * argv);
 std::size_t _argv_hash(Argv args);
@@ -95,14 +96,19 @@ SubProcess::~SubProcess() {
     }
 
     // close pipes
-    ::close(_inpair[0]);
-    ::close(_outpair[0]);
-    ::close(_errpair[0]);
-    ::close(_inpair[1]);
-    ::close(_outpair[1]);
-    ::close(_errpair[1]);
+    close_forget(_inpair[0]);
+    close_forget(_outpair[0]);
+    close_forget(_errpair[0]);
+    close_forget(_inpair[1]);
+    close_forget(_outpair[1]);
+    close_forget(_errpair[1]);
 
     errno = _saved_errno;
+}
+
+int SubProcess::closeStdin()
+{
+    return close_forget(_inpair[1]);
 }
 
 //note: the extra space at the end of the string doesn't really matter
@@ -144,14 +150,14 @@ bool SubProcess::run() {
             int n_flags = o_flags & (~O_NONBLOCK);
             fcntl(_inpair[0], F_SETFL, n_flags);
             ::dup2(_inpair[0], STDIN_FILENO);
-            ::close(_inpair[1]);
+            close_forget(_inpair[1]);
         }
         if (_outpair[0] != PIPE_DISABLED) {
-            ::close(_outpair[0]);
+            close_forget(_outpair[0]);
             ::dup2(_outpair[1], STDOUT_FILENO);
         }
         if (_errpair[0] != PIPE_DISABLED) {
-            ::close(_errpair[0]);
+            close_forget(_errpair[0]);
             ::dup2(_errpair[1], STDERR_FILENO);
         }
 
@@ -168,9 +174,9 @@ bool SubProcess::run() {
     }
     // we are in parent
     _state = SubProcessState::RUNNING;
-    ::close(_inpair[0]);
-    ::close(_outpair[1]);
-    ::close(_errpair[1]);
+    close_forget(_inpair[0]);
+    close_forget(_outpair[1]);
+    close_forget(_errpair[1]);
     // update a state
     poll();
     return true;
@@ -293,7 +299,7 @@ int output(const Argv& args, std::string& o, std::string& e, const std::string& 
     p.run();
     int r = ::write(p.getStdin(), i.c_str(), i.size());
     ::fsync(p.getStdin());
-    ::close(p.getStdin());
+    p.closeStdin();
     if (r == -1)
         return r;
     return s_output (p, o, e, timeout, timestep);
@@ -341,6 +347,17 @@ std::string wait_read_all(int fd) {
 }
 
 // ### helper functions ###
+// close fd and set it to -1
+static int close_forget(int &fd) {
+    int res = -1;
+
+    if (fd >= 0)
+        res = ::close(fd);
+    if (res == 0)
+        fd = SubProcess::PIPE_DEFAULT;
+    return res;
+}
+
 char * const * _mk_argv(const Argv& vec) {
 
     char ** argv = (char **) malloc(sizeof(char*) * (vec.size()+1));

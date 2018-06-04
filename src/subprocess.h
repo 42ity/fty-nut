@@ -70,6 +70,9 @@ class SubProcess {
         //! \brief get the pipe ends connected to stdin of started program, or -1 if not started
         int getStdin() const { return _inpair[1]; }
 
+	//! \brief close the stdin pipe end
+	int closeStdin();
+
         //! \brief get the pipe ends connected to stdout of started program, or -1 if not started
         int getStdout() const { return _outpair[0]; }
 
