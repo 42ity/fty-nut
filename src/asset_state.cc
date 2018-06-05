@@ -93,6 +93,18 @@ bool AssetState::updateFromProto(fty_proto_t* message)
     return true;
 }
 
+bool AssetState::updateFromProto(zmsg_t* message)
+{
+    fty_proto_t *proto = fty_proto_decode (&message);
+    if (!proto) {
+        zmsg_destroy(&message);
+        return false;
+    }
+    bool ret =  updateFromProto(proto);
+    fty_proto_destroy(&proto);
+    return ret;
+}
+
 void AssetState::recompute()
 {
     ip2master_.clear();

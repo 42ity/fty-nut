@@ -148,7 +148,6 @@ private:
 // fty_nut_server.cc
 extern StateManager NutStateManager;
 void get_initial_assets(StateManager::Writer& state_writer, mlm_client_t *client);
-void handle_fty_proto(StateManager::Writer& state_writer, zmsg_t *message);
 
 //  Self test of this class
 void state_manager_test (bool verbose);

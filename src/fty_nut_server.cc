@@ -35,24 +35,6 @@
 
 StateManager NutStateManager;
 
-// Update the state with received fty_proto message
-void
-handle_fty_proto(StateManager::Writer& state_writer, zmsg_t *message)
-{
-    assert (message);
-
-    fty_proto_t *proto = fty_proto_decode (&message);
-    if (!proto) {
-        log_critical ("fty_proto_decode () failed.");
-        zmsg_destroy (&message);
-        return;
-    }
-    if (state_writer.getState().updateFromProto(proto))
-        state_writer.commit();
-    fty_proto_destroy(&proto);
-}
-
-
 // Query fty-asset about existing devices. This has to be done after
 // subscribing ourselves to the ASSETS stream, to make sure that we do not
 // miss assets created between the mailbox request and the subscription to
@@ -113,6 +95,7 @@ get_initial_assets(StateManager::Writer& state_writer, mlm_client_t *client)
         }
         asset = zmsg_popstr(reply);
     }
+    bool changed = false;
     while (!uuids.empty()) {
         zmsg_t *reply = mlm_client_recv(client);
         if (uuids.erase(ZstrGuard(zmsg_popstr(reply)).get()) == 0) {
@@ -125,8 +108,11 @@ get_initial_assets(StateManager::Writer& state_writer, mlm_client_t *client)
             zmsg_destroy(&reply);
             continue;
         }
-        handle_fty_proto(state_writer, reply);
+        if (state_writer.getState().updateFromProto(reply))
+            changed = true;
     }
+    if (changed)
+        state_writer.commit();
     log_info("Initial ASSETS request complete");
 }
 
@@ -258,7 +244,8 @@ fty_nut_server (zsock_t *pipe, void *args)
             continue;
         }
         if (is_fty_proto(message)) {
-            handle_fty_proto (state_writer, message);
+            if (state_writer.getState().updateFromProto(message))
+                state_writer.commit();
             continue;
         }
         log_error ("Unhandled message (%s/%s)",

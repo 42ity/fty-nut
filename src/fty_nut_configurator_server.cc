@@ -222,7 +222,8 @@ fty_nut_configurator_server (zsock_t *pipe, void *args)
 
         zmsg_t *msg = mlm_client_recv(client);
         if (is_fty_proto(msg)) {
-            handle_fty_proto(state_writer, msg);
+            if (state_writer.getState().updateFromProto(msg))
+                state_writer.commit();
             agent.onUpdate();
             continue;
         }
