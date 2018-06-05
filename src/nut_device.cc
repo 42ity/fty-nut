@@ -139,9 +139,7 @@ void NUTDevice::updatePhysics(const std::string& varName, const std::string& new
         pvalue.candidate = newValue;
         _physics[ varName ] = pvalue;
     } else {
-        if (_physics[ varName ].value != newValue) {
-            _physics[ varName ].candidate = newValue;
-        }
+        _physics[ varName ].candidate = newValue;
     }
 }
 
