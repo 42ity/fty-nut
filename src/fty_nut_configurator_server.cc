@@ -33,6 +33,7 @@
 
 #include <ftyproto.h>
 #include <fstream>
+#include <algorithm>
 
 // autoconfig agent public methods
 
@@ -87,6 +88,54 @@ void Autoconfig::onUpdate()
         }
     }
     setPollingInterval();
+}
+
+void Autoconfig::handleLimitations( zmsg_t **message )
+{
+    if( ! message || ! *message ) return;
+
+    int monitor_power_devices = 1;
+    // should there be any data to share, they come in a group of three (value, item, category)
+    char *value = zmsg_popstr (*message);
+    char *item = zmsg_popstr (*message);
+    char *category = zmsg_popstr (*message);
+    while (value && item && category) {
+        if (streq (category, "POWER_NODES") && streq (item, "MONITOR")) {
+            monitor_power_devices = atoi(value);
+        }
+        zstr_free (&value);
+        zstr_free (&item);
+        zstr_free (&category);
+        value = zmsg_popstr (*message);
+        item = zmsg_popstr (*message);
+        category = zmsg_popstr (*message);
+    }
+    zmsg_destroy(message);
+    // skip if licensing is disabled
+    if (-1 >= monitor_power_devices)
+        return;
+    // update devices according to license
+    typedef std::pair<std::string, int> pairsi; // <name, numeric_id>
+    std::vector<pairsi> power_devices_list;
+    for( auto &it : _configDevices) {
+        int num_id = 0;
+        if (it.second.asset->subtype() == "ups" || it.second.asset->subtype() == "sts") {
+            num_id = stoi(it.first.substr(4)); // number is after ups-/sts-, that is 5th character
+            power_devices_list.push_back(make_pair(it.first, num_id));
+        } else if (it.second.asset->subtype() == "epdu") {
+            num_id = stoi(it.first.substr(5)); // number is after epdu-, that is 6th character
+            power_devices_list.push_back(make_pair(it.first, num_id));
+        }
+    }
+    sort(power_devices_list.begin(), power_devices_list.end(),
+        [] (const pairsi & a, const pairsi & b) -> bool {
+            return a.second < b.second;
+        });
+    for (unsigned int i = monitor_power_devices; i < power_devices_list.size(); ++i) {
+        _configDevices[power_devices_list[i].first].state = AutoConfigurationInfo::STATE_DELETING;
+    }
+    // save results
+    onPoll(); // share outcomes
 }
 
 void Autoconfig::onPoll()
@@ -181,6 +230,11 @@ fty_nut_configurator_server (zsock_t *pipe, void *args)
                 FTY_PROTO_STREAM_ASSETS);
         return;
     }
+    if (mlm_client_set_consumer(client, "LICENSING-ANNOUNCEMENTS", ".*") < 0) {
+        log_error("mlm_client_set_consumer (stream = '%s', pattern = '.*') failed",
+                "LICENSING-ANNOUNCEMENTS");
+        return;
+    }
     // Ge the initial list of assets. This has to be done after subscribing
     // ourselves to the ASSETS stream. And we do not the infrastructure to do
     // this during unit testing
@@ -197,7 +251,6 @@ fty_nut_configurator_server (zsock_t *pipe, void *args)
         get_initial_assets(state_writer, mb_client);
         agent.onUpdate();
     }
-
     ZpollerGuard poller(zpoller_new(pipe, mlm_client_msgpipe(client), NULL));
 
     zsock_signal (pipe, 0);
@@ -221,6 +274,9 @@ fty_nut_configurator_server (zsock_t *pipe, void *args)
         }
 
         zmsg_t *msg = mlm_client_recv(client);
+        if (streq ("LIMITATIONS", mlm_client_subject (client))) {
+            agent.handleLimitations (&msg);
+        } else
         if (is_fty_proto(msg)) {
             handle_fty_proto(state_writer, msg);
             agent.onUpdate();

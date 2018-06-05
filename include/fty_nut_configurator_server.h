@@ -35,6 +35,7 @@ class Autoconfig {
     void onPoll();
     void onUpdate();
     int timeout () const {return _timeout;}
+    void handleLimitations (zmsg_t **message );
  private:
     void setPollingInterval();
     void addDeviceIfNeeded(const std::string& name, AssetState::Asset *asset);
