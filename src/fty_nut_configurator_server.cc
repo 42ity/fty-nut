@@ -48,7 +48,7 @@ void Autoconfig::onUpdate()
     if (!_state_reader->refresh())
         return;
     const AssetState& deviceState = _state_reader->getState();
-    auto& devices = deviceState.getPowerDevices();
+    auto& devices = deviceState.getAllPowerDevices();
     _traversal_color = !_traversal_color;
     // Add new devices and mark existing ones as visited
     for (auto i : devices) {

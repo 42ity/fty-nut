@@ -103,11 +103,25 @@ public:
     // Use a std::map to process the assets in a defined order each time
     // Additions and removals do not happen _that_ often to worry about
     typedef std::map<std::string, std::shared_ptr<Asset> > AssetMap;
+    // Return a map of power devices allowed by the current license
     const AssetMap& getPowerDevices() const
     {
         return powerdevices_;
     }
+    // Return a map of all power devices
+    const AssetMap& getAllPowerDevices() const
+    {
+        return powerdevices_;
+    }
+    // Return a map of sensors allowed by the current license. We currently
+    // do not limit sensors in the license, so this is identical to
+    // getAllSensors()
     const AssetMap& getSensors() const
+    {
+        return sensors_;
+    }
+    // Return a map of all sensors
+    const AssetMap& getAllSensors() const
     {
         return sensors_;
     }
