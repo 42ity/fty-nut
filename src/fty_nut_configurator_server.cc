@@ -37,8 +37,9 @@
 // autoconfig agent public methods
 
 Autoconfig::Autoconfig(StateManager::Reader* reader)
-    : _state_reader(reader)
-    , _traversal_color(0)
+    : _traversal_color(0)
+    , _state_reader(reader)
+
 {
 }
 
