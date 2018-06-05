@@ -81,8 +81,8 @@ class Sensor {
     friend void sensor_actor_test (bool verbose);
  protected:
     const AssetState::Asset *_asset, *_parent;
-    std::string _nutMaster;
     ChildrenMap _children;
+    std::string _nutMaster;
 
     std::string _temperature;
     std::string _humidity;
