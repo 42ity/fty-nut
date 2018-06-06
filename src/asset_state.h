@@ -98,7 +98,7 @@ public:
     // Same for encoded proto messages or licensing messages which are not
     // proto. Note that this overload destroys the passed zmsg
     bool updateFromProto(zmsg_t* message);
-    // Build the ip2master map
+    // Build the ip2master map and the list of allowed devices
     void recompute();
     // Use a std::map to process the assets in a defined order each time
     // Additions and removals do not happen _that_ often to worry about
@@ -106,7 +106,7 @@ public:
     // Return a map of power devices allowed by the current license
     const AssetMap& getPowerDevices() const
     {
-        return powerdevices_;
+        return allowed_powerdevices_;
     }
     // Return a map of all power devices
     const AssetMap& getAllPowerDevices() const
@@ -128,9 +128,15 @@ public:
     // Return the name of the asset with given IP address
     const std::string& ip2master(const std::string& ip) const;
 private:
+    bool handleAssetMessage(fty_proto_t* message);
+    bool handleLicensingMessage(zmsg_t* message);
     AssetMap powerdevices_;
+    // subset of powerdevices_ that are allowed by the license
+    AssetMap allowed_powerdevices_;
     AssetMap sensors_;
     std::unordered_map<std::string, std::string> ip2master_;
+    // -1 for no limit, otherwise number of powerdevices to allow
+    int license_limit_ = -1;
 };
 
 #endif
