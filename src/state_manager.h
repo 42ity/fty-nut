@@ -147,7 +147,7 @@ private:
 
 // fty_nut_server.cc
 extern StateManager NutStateManager;
-void get_initial_assets(StateManager::Writer& state_writer, mlm_client_t *client);
+void get_initial_assets(StateManager::Writer& state_writer, mlm_client_t *client, bool query_licensing = false);
 
 //  Self test of this class
 void state_manager_test (bool verbose);
