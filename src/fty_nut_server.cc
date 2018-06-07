@@ -35,30 +35,46 @@
 
 StateManager NutStateManager;
 
-// Update the state with received fty_proto message
-void
-handle_fty_proto(StateManager::Writer& state_writer, zmsg_t *message)
+static bool
+get_initial_licensing(StateManager::Writer& state_writer, mlm_client_t *client)
 {
-    assert (message);
-
-    fty_proto_t *proto = fty_proto_decode (&message);
-    if (!proto) {
-        log_critical ("fty_proto_decode () failed.");
-        zmsg_destroy (&message);
-        return;
+    ZuuidGuard uuid(zuuid_new());
+    int err = mlm_client_sendtox(client, "etn-licensing", "LIMITATIONS",
+                "LIMITATION_QUERY", zuuid_str_canonical(uuid), "*", "*", NULL);
+    if (err < 0) {
+        log_error("Sending LIMITATION_QUERY message to etn-licensing failed");
+        return false;
     }
-    if (state_writer.getState().updateFromProto(proto))
-        state_writer.commit();
-    fty_proto_destroy(&proto);
+    zmsg_t* reply = mlm_client_recv(client);
+    if (!reply) {
+        zmsg_destroy(&reply);
+        log_error("Getting response to LIMITATION_QUERY failed");
+        return false;
+    }
+    ZstrGuard reply_str(zmsg_popstr(reply));
+    if (!reply_str || strcmp(reply_str, zuuid_str_canonical(uuid)) != 0) {
+        zmsg_destroy(&reply);
+        log_warning("Mismatching response to a LIMITATION_QUERY request");
+        return false;
+    }
+    reply_str = zmsg_popstr(reply);
+    if (!reply_str || strcmp(reply_str, "REPLY") != 0) {
+        zmsg_destroy(&reply);
+        log_error("Got malformed message from etn-licensing");
+        return false;
+    }
+    // The rest is a series of value/item/category triplets that
+    // updateFromProto() can grok
+    return state_writer.getState().updateFromProto(reply);
 }
-
 
 // Query fty-asset about existing devices. This has to be done after
 // subscribing ourselves to the ASSETS stream, to make sure that we do not
 // miss assets created between the mailbox request and the subscription to
 // the stream.
 void
-get_initial_assets(StateManager::Writer& state_writer, mlm_client_t *client)
+get_initial_assets(StateManager::Writer& state_writer, mlm_client_t *client,
+        bool query_licensing)
 {
     zmsg_t *msg = zmsg_new();
     if (!msg) {
@@ -113,6 +129,7 @@ get_initial_assets(StateManager::Writer& state_writer, mlm_client_t *client)
         }
         asset = zmsg_popstr(reply);
     }
+    bool changed = false;
     while (!uuids.empty()) {
         zmsg_t *reply = mlm_client_recv(client);
         if (uuids.erase(ZstrGuard(zmsg_popstr(reply)).get()) == 0) {
@@ -125,8 +142,15 @@ get_initial_assets(StateManager::Writer& state_writer, mlm_client_t *client)
             zmsg_destroy(&reply);
             continue;
         }
-        handle_fty_proto(state_writer, reply);
+        if (state_writer.getState().updateFromProto(reply))
+            changed = true;
     }
+    if (query_licensing) {
+        if (get_initial_licensing(state_writer, client))
+            changed = true;
+    }
+    if (changed)
+        state_writer.commit();
     log_info("Initial ASSETS request complete");
 }
 
@@ -172,6 +196,11 @@ fty_nut_server (zsock_t *pipe, void *args)
                 FTY_PROTO_STREAM_ASSETS);
         return;
     }
+    if (mlm_client_set_consumer(client, "LICENSING-ANNOUNCEMENTS", ".*") < 0) {
+        log_error("mlm_client_set_consumer (stream = '%s', pattern = '.*') failed",
+                "LICENSING-ANNOUNCEMENTS");
+        return;
+    }
 
     // inventory client
     MlmClientGuard iclient(mlm_client_new());
@@ -206,7 +235,7 @@ fty_nut_server (zsock_t *pipe, void *args)
     StateManager::Writer& state_writer = NutStateManager.getWriter();
     // (Ab)use the iclient for the initial assets mailbox request, because it
     // will not receive any interfering stream messages
-    get_initial_assets(state_writer, iclient);
+    get_initial_assets(state_writer, iclient, true);
 
     uint64_t timestamp = static_cast<uint64_t> (zclock_mono ());
     uint64_t timeout = 30000;
@@ -257,8 +286,10 @@ fty_nut_server (zsock_t *pipe, void *args)
             log_error ("Given `which == mlm_client_msgpipe (client)`, function `mlm_client_recv ()` returned NULL");
             continue;
         }
-        if (is_fty_proto(message)) {
-            handle_fty_proto (state_writer, message);
+        if (is_fty_proto(message) ||
+                strcmp(mlm_client_subject(client), "LIMITATIONS") == 0) {
+            if (state_writer.getState().updateFromProto(message))
+                state_writer.commit();
             continue;
         }
         log_error ("Unhandled message (%s/%s)",

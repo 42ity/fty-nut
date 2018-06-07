@@ -241,8 +241,9 @@ public:
             fty_proto_aux_insert(msg, "type", "device");
             fty_proto_aux_insert(msg, "subtype", "epdu");
             fty_proto_ext_insert(msg, "ip.1", "192.0.2.2");
-            writer.getState().updateFromProto(msg);
-            fty_proto_destroy(&msg);
+            // update via encoded zmsg
+            zmsg_t* zmsg = fty_proto_encode(&msg);
+            writer.getState().updateFromProto(zmsg);
             writer.commit();
             assert(manager.states_.size() == 3);
             assert(reader1->refresh());
