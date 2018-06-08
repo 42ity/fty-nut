@@ -139,9 +139,7 @@ void NUTDevice::updatePhysics(const std::string& varName, const std::string& new
         pvalue.candidate = newValue;
         _physics[ varName ] = pvalue;
     } else {
-        if (_physics[ varName ].value != newValue) {
-            _physics[ varName ].candidate = newValue;
-        }
+        _physics[ varName ].candidate = newValue;
     }
 }
 
@@ -394,7 +392,10 @@ void NUTDevice::NUTSetIfNotPresent (const std::string& prefix, std::map< std::st
 
 void NUTDevice::NUTRealpowerFromOutput (const std::string& prefix, std::map< std::string,std::vector<std::string> > &vars) {
 
+    // XXX: Use the mapping info rather than hardcoding these (they both map
+    // to realpower.default)
     if (vars.find (prefix + "ups.realpower") != vars.end()) { return; }
+    if (vars.find (prefix + "input.realpower") != vars.end()) { return; }
 
     // use outlet.realpower if exists
     if (vars.find (prefix + "outlet.realpower") != vars.end()) {

@@ -48,7 +48,7 @@ void Autoconfig::onUpdate()
     if (!_state_reader->refresh())
         return;
     const AssetState& deviceState = _state_reader->getState();
-    auto& devices = deviceState.getPowerDevices();
+    auto& devices = deviceState.getAllPowerDevices();
     _traversal_color = !_traversal_color;
     // Add new devices and mark existing ones as visited
     for (auto i : devices) {
@@ -222,7 +222,8 @@ fty_nut_configurator_server (zsock_t *pipe, void *args)
 
         zmsg_t *msg = mlm_client_recv(client);
         if (is_fty_proto(msg)) {
-            handle_fty_proto(state_writer, msg);
+            if (state_writer.getState().updateFromProto(msg))
+                state_writer.commit();
             agent.onUpdate();
             continue;
         }
