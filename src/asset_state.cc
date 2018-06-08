@@ -27,6 +27,7 @@
 */
 
 #include "asset_state.h"
+#include "nut_mlm.h"
 #include "logger.h"
 
 #include <cmath>
@@ -63,7 +64,7 @@ AssetState::Asset::Asset(fty_proto_t* message)
     } catch (...) { }
 }
 
-bool AssetState::updateFromProto(fty_proto_t* message)
+bool AssetState::handleAssetMessage(fty_proto_t* message)
 {
     std::string type(fty_proto_aux_string (message, "type", ""));
 
@@ -93,6 +94,52 @@ bool AssetState::updateFromProto(fty_proto_t* message)
     return true;
 }
 
+// Destroys passed message
+bool AssetState::handleLicensingMessage(zmsg_t* message)
+{
+    ZmsgGuard msg(message);
+    ZstrGuard value(zmsg_popstr(msg));
+    ZstrGuard item(zmsg_popstr(msg));
+    ZstrGuard category(zmsg_popstr(msg));
+    while (value && item && category) {
+        if (streq(category, "POWER_NODES") && streq(item, "MAX_ACTIVE")) {
+            try {
+                license_limit_ = std::stoi(value.get());
+                return true;
+            } catch (...) { }
+        }
+        value = zmsg_popstr(msg);
+        item = zmsg_popstr(msg);
+        category = zmsg_popstr(msg);
+    }
+    return false;
+}
+
+bool AssetState::updateFromProto(fty_proto_t* message)
+{
+    // proto messages are always assumed to be asset updates
+    return handleAssetMessage(message);
+}
+
+bool AssetState::updateFromProto(zmsg_t* message)
+{
+    bool ret;
+    if (is_fty_proto(message)) {
+        fty_proto_t *proto = fty_proto_decode (&message);
+        if (!proto) {
+            zmsg_destroy(&message);
+            return false;
+        }
+        ret =  handleAssetMessage(proto);
+        fty_proto_destroy(&proto);
+    } else {
+
+        // non-proto messages are assumed to be licensing
+        ret = handleLicensingMessage(message);
+    }
+    return ret;
+}
+
 void AssetState::recompute()
 {
     ip2master_.clear();
@@ -107,6 +154,19 @@ void AssetState::recompute()
             ip2master_[ip] = i.first;
         }
     }
+    // If a limit is set, simply copy a prefix of powerdevices_ to
+    // allowed_powerdevices_ If requested, we could come up with some more
+    // fancy sorting...
+    allowed_powerdevices_.clear();
+    AssetMap::const_iterator end;
+    if (license_limit_ < 0 || static_cast<size_t>(license_limit_) >= powerdevices_.size()) {
+        end = powerdevices_.end();
+    } else {
+        end = powerdevices_.begin();
+        for (int i = 0; i < license_limit_; ++i)
+            ++end;
+    }
+    allowed_powerdevices_ = AssetMap(powerdevices_.cbegin(), end);
 }
 
 const std::string& AssetState::ip2master(const std::string& ip) const
