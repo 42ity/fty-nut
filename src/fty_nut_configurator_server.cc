@@ -57,12 +57,16 @@ void Autoconfig::onUpdate()
         if (it == _configDevices.end()) {
             AutoConfigurationInfo device;
             device.state = AutoConfigurationInfo::STATE_NEW;
+            device.asset = i.second.get();
             auto res = _configDevices.insert(std::make_pair(name, device));
             it = res.first;
+        } else if (it->second.asset != i.second.get()) {
+            // This is an updated asset, mark it for reconfiguration
+            // (STATE_NEW is a misnomer, but the semantics of a potential
+            // STATE_UPDATED would be identical)
+            it->second.state = AutoConfigurationInfo::STATE_NEW;
+            it->second.asset = i.second.get();
         }
-        // Updates to existing assets result in invalidation of the respective
-        // objects in AssetState, so we need to update our pointer each time
-        it->second.asset = i.second.get();
         it->second.traversal_color = _traversal_color;
     }
     // Mark no longer existing devices for deletion
