@@ -66,8 +66,14 @@ AssetState::Asset::Asset(fty_proto_t* message)
 
 bool AssetState::handleAssetMessage(fty_proto_t* message)
 {
-    std::string type(fty_proto_aux_string (message, "type", ""));
+    std::string name(fty_proto_name(message));
+    std::string operation(fty_proto_operation(message));
+    if (operation == FTY_PROTO_ASSET_OP_DELETE ||
+            operation == FTY_PROTO_ASSET_OP_RETIRE) {
+        return (powerdevices_.erase(name) > 0 || sensors_.erase(name) > 0);
+    }
 
+    std::string type(fty_proto_aux_string (message, "type", ""));
     if (type != "device")
         return false;
     std::string subtype(fty_proto_aux_string (message, "subtype", ""));
@@ -78,12 +84,6 @@ bool AssetState::handleAssetMessage(fty_proto_t* message)
         map = &sensors_;
     else
         return false;
-    std::string name(fty_proto_name(message));
-    std::string operation(fty_proto_operation(message));
-    if (operation == FTY_PROTO_ASSET_OP_DELETE ||
-            operation == FTY_PROTO_ASSET_OP_RETIRE) {
-        return (map->erase(name) > 0);
-    }
     if (operation != FTY_PROTO_ASSET_OP_CREATE &&
             operation != FTY_PROTO_ASSET_OP_UPDATE) {
         log_error("unknown asset operation '%s'. Skipping.",

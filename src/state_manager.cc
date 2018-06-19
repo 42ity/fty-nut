@@ -282,8 +282,6 @@ public:
             assert(msg);
             fty_proto_set_name(msg, "epdu-2");
             fty_proto_set_operation(msg, FTY_PROTO_ASSET_OP_DELETE);
-            fty_proto_aux_insert(msg, "type", "device");
-            fty_proto_aux_insert(msg, "subtype", "epdu");
             writer.getState().updateFromProto(msg);
             fty_proto_destroy(&msg);
             writer.commit();
