@@ -69,7 +69,8 @@ bool AssetState::handleAssetMessage(fty_proto_t* message)
     std::string name(fty_proto_name(message));
     std::string operation(fty_proto_operation(message));
     if (operation == FTY_PROTO_ASSET_OP_DELETE ||
-            operation == FTY_PROTO_ASSET_OP_RETIRE) {
+        operation == FTY_PROTO_ASSET_OP_RETIRE ||
+        !streq(fty_proto_aux_string (message, FTY_PROTO_ASSET_STATUS, ""), "active")) {
         return (powerdevices_.erase(name) > 0 || sensors_.erase(name) > 0);
     }
 
