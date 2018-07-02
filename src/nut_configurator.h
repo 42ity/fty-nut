@@ -24,7 +24,7 @@
 
 #include "asset_state.h"
 
-#include <map>
+#include <set>
 #include <vector>
 #include <string>
 
@@ -43,8 +43,10 @@ struct AutoConfigurationInfo
 
 class NUTConfigurator {
  public:
+    ~NUTConfigurator() { commit(); }
     bool configure( const std::string &name, const AutoConfigurationInfo &info );
     void erase(const std::string &name);
+    void commit();
     static bool known_assets(std::vector<std::string>& assets);
  private:
     static std::vector<std::string>::const_iterator selectBest( const std::vector<std::string> &configs);
@@ -58,6 +60,10 @@ class NUTConfigurator {
     static bool canXml( const std::vector<std::string> &texts);
     static std::vector<std::string>::const_iterator getBestSnmpMib( const std::vector<std::string> &configs);
     static void systemctl( const std::string &operation, const std::string &service );
+    template<typename It>
+    static void systemctl( const std::string &operation, It first, It last );
+    std::set<std::string> start_drivers_;
+    std::set<std::string> stop_drivers_;
 };
 
 //  Self test of this class
