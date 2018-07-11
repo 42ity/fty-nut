@@ -151,7 +151,11 @@ get_initial_assets(StateManager::Writer& state_writer, mlm_client_t *client,
     }
     if (changed)
         state_writer.commit();
-    log_info("Initial ASSETS request complete");
+    log_info("Initial ASSETS request complete (%zd/%zd powerdevices, %zd/%zd sensors)",
+		    state_writer.getState().getPowerDevices().size(),
+		    state_writer.getState().getAllPowerDevices().size(),
+		    state_writer.getState().getSensors().size(),
+		    state_writer.getState().getAllSensors().size());
 }
 
 uint64_t
