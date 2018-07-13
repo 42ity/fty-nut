@@ -27,7 +27,7 @@
 */
 
 #include "fsutils.h"
-#include "logger.h"
+#include <fty_log.h>
 
 #include <assert.h>
 #include <dirent.h>

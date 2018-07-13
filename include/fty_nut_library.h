@@ -36,6 +36,7 @@
 #include <libcidr.h>
 #include <cxxtools/allocator.h>
 #include <nutclient.h>
+#include <fty_log.h>
 
 //  FTY_NUT version macros for compile-time API detection
 #define FTY_NUT_VERSION_MAJOR 1

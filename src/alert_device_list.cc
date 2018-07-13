@@ -19,7 +19,7 @@
     =========================================================================
 */
 #include "alert_device_list.h"
-#include "logger.h"
+#include <fty_log.h>
 
 #include <malamute.h>
 #include <nutclient.h>

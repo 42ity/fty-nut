@@ -29,7 +29,7 @@
 #include "fty_nut_configurator_server.h"
 #include "state_manager.h"
 #include "nut_mlm.h"
-#include "logger.h"
+#include <fty_log.h>
 
 #include <ftyproto.h>
 #include <fstream>

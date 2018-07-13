@@ -28,7 +28,7 @@
 
 #include "nut_device.h"
 #include "fsutils.h"
-#include "logger.h"
+#include <fty_log.h>
 
 #include <cxxtools/serializationerror.h>
 #include <cxxtools/jsondeserializer.h>

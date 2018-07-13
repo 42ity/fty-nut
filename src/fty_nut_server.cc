@@ -31,7 +31,7 @@
 #include "state_manager.h"
 #include "nut_agent.h"
 #include "nut_mlm.h"
-#include "logger.h"
+#include <fty_log.h>
 
 StateManager NutStateManager;
 
@@ -179,7 +179,7 @@ fty_nut_server (zsock_t *pipe, void *args)
 
     MlmClientGuard client(mlm_client_new());
     if (!client) {
-        log_critical ("mlm_client_new () failed");
+        log_fatal ("mlm_client_new () failed");
         return;
     }
     if (mlm_client_connect(client, endpoint, 5000, ACTOR_NUT_NAME) < 0) {
@@ -205,7 +205,7 @@ fty_nut_server (zsock_t *pipe, void *args)
     // inventory client
     MlmClientGuard iclient(mlm_client_new());
     if (!iclient) {
-        log_critical ("mlm_client_new () failed");
+        log_fatal ("mlm_client_new () failed");
         return;
     }
     int r = mlm_client_connect (iclient, endpoint, 5000, "bios-agent-nut-inventory");
@@ -221,7 +221,7 @@ fty_nut_server (zsock_t *pipe, void *args)
 
     ZpollerGuard poller(zpoller_new (pipe, mlm_client_msgpipe (client), NULL));
     if (!poller) {
-        log_critical ("zpoller_new () failed");
+        log_fatal ("zpoller_new () failed");
         return;
     }
 
@@ -275,7 +275,7 @@ fty_nut_server (zsock_t *pipe, void *args)
 
         // paranoid non-destructive assertion of a twisted mind
         if (which != mlm_client_msgpipe (client)) {
-            log_critical (
+            log_fatal (
                     "zpoller_wait () returned address that is different from "
                     "`pipe`, `mlm_client_msgpipe (client)`, NULL.");
             continue;
