@@ -23,7 +23,7 @@
 #include "alert_actor.h"
 #include "sensor_list.h"
 #include "nut_mlm.h"
-#include "logger.h"
+#include <fty_log.h>
 
 #include <malamute.h>
 
@@ -38,7 +38,7 @@ sensor_actor (zsock_t *pipe, void *args)
 
     MlmClientGuard client(mlm_client_new());
     if (!client) {
-        log_critical ("mlm_client_new () failed");
+        log_fatal ("mlm_client_new () failed");
         return;
     }
     if (mlm_client_connect(client, endpoint, 5000, ACTOR_SENSOR_NAME) < 0) {
@@ -53,7 +53,7 @@ sensor_actor (zsock_t *pipe, void *args)
 
     ZpollerGuard poller(zpoller_new(pipe, mlm_client_msgpipe(client), NULL));
     if (!poller) {
-        log_critical ("zpoller_new () failed");
+        log_fatal ("zpoller_new () failed");
         return;
     }
     zsock_signal (pipe, 0);

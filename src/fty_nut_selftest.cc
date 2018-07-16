@@ -58,7 +58,6 @@ all_tests [] = {
 #ifdef FTY_NUT_BUILD_DRAFT_API
 // Tests for stable/draft private classes:
 // Now built only with --enable-drafts, so even stable builds are hidden behind the flag
-    { "logger", NULL, true, false, "logger_test" },
     { "fsutils", NULL, true, false, "fsutils_test" },
     { "cidr", NULL, true, false, "cidr_test" },
     { "nutscan", NULL, true, false, "nutscan_test" },

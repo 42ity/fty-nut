@@ -36,10 +36,6 @@
 #include "nut_mlm.h"
 
 //  Opaque class structures to allow forward references
-#ifndef LOGGER_T_DEFINED
-typedef struct _logger_t logger_t;
-#define LOGGER_T_DEFINED
-#endif
 #ifndef FSUTILS_T_DEFINED
 typedef struct _fsutils_t fsutils_t;
 #define FSUTILS_T_DEFINED
@@ -103,7 +99,6 @@ typedef struct _asset_state_t asset_state_t;
 
 //  Internal API
 
-#include "logger.h"
 #include "fsutils.h"
 #include "cidr.h"
 #include "nutscan.h"
@@ -122,11 +117,6 @@ typedef struct _asset_state_t asset_state_t;
 
 //  *** To avoid double-definitions, only define if building without draft ***
 #ifndef FTY_NUT_BUILD_DRAFT_API
-
-//  *** Draft method, defined for internal use only ***
-//  Self test of this class.
-FTY_NUT_PRIVATE void
-    logger_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.

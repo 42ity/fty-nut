@@ -32,6 +32,8 @@ Build-Depends: debhelper (>= 9),
     libcidr0-dev,
     libcxxtools-dev,
     libnutclient-dev,
+    liblog4cplus-dev,
+    libfty-common-logging-dev,
     systemd,
     dh-systemd,
     asciidoc-base | asciidoc, xmlto,
@@ -57,6 +59,8 @@ Depends:
     libcidr0-dev,
     libcxxtools-dev,
     libnutclient-dev,
+    liblog4cplus-dev,
+    libfty-common-logging-dev,
     libfty-nut1 (= ${binary:Version})
 Description: fty-nut development tools
  This package contains development files for fty-nut:

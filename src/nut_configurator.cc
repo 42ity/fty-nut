@@ -30,7 +30,7 @@
 #include "subprocess.h"
 #include "fsutils.h"
 #include "nutscan.h"
-#include "logger.h"
+#include <fty_log.h>
 #include "cidr.h"
 
 #include <cxxtools/jsondeserializer.h>

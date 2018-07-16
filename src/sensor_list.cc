@@ -27,7 +27,7 @@
 */
 
 #include "sensor_list.h"
-#include "logger.h"
+#include <fty_log.h>
 
 Sensors::Sensors (StateManager::Reader *reader)
     : _state_reader(reader)

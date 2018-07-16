@@ -29,7 +29,7 @@
 #include "actor_commands.h"
 #include "nut_agent.h"
 #include "nut_mlm.h"
-#include "logger.h"
+#include <fty_log.h>
 
 int
 actor_commands (
@@ -315,7 +315,7 @@ actor_commands_test (bool verbose)
     assert (nut_agent.isMappingLoaded () == true);
     assert (nut_agent.TTL () == 300);
 
-    STDERR_EMPTY
+    STDERR_NON_EMPTY
 
     zmsg_destroy (&message);
     mlm_client_destroy (&client);

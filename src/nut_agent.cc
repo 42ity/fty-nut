@@ -27,7 +27,7 @@
 */
 #include "ups_status.h"
 #include "nut_agent.h"
-#include "logger.h"
+#include <fty_log.h>
 
 #include <cmath>
 

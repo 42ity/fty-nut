@@ -28,7 +28,7 @@
 
 #include "asset_state.h"
 #include "nut_mlm.h"
-#include "logger.h"
+#include <fty_log.h>
 
 #include <cmath>
 
