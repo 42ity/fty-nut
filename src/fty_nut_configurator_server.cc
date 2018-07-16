@@ -95,8 +95,8 @@ void Autoconfig::onUpdate()
 
 void Autoconfig::onPoll()
 {
+    NUTConfigurator configurator;
     for(auto it = _configDevices.begin(); it != _configDevices.end(); ) {
-        NUTConfigurator configurator;
         switch (it->second.state) {
         case AutoConfigurationInfo::STATE_NEW:
         case AutoConfigurationInfo::STATE_CONFIGURING:
@@ -205,25 +205,16 @@ fty_nut_configurator_server (zsock_t *pipe, void *args)
     ZpollerGuard poller(zpoller_new(pipe, mlm_client_msgpipe(client), NULL));
 
     zsock_signal (pipe, 0);
-    uint64_t last = zclock_mono ();
     while (!zsys_interrupted)
     {
         void *which = zpoller_wait (poller, agent.timeout());
-
-        uint64_t now = zclock_mono();
-        if (now - last >= static_cast<uint64_t>(agent.timeout())) {
-            last = now;
-            zsys_debug("Periodic polling");
-            agent.onPoll ();
-        }
-
         if (which == pipe || zsys_interrupted)
             break;
-
         if (!which) {
+            zsys_debug("Periodic polling");
+            agent.onPoll ();
             continue;
         }
-
         zmsg_t *msg = mlm_client_recv(client);
         if (is_fty_proto(msg)) {
             if (state_writer.getState().updateFromProto(msg))

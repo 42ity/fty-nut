@@ -129,19 +129,34 @@ std::vector<std::string>::const_iterator NUTConfigurator::selectBest(const std::
 
 void NUTConfigurator::systemctl( const std::string &operation, const std::string &service )
 {
-    std::vector<std::string> _argv = {"sudo", "systemctl", operation, service };
+    systemctl(operation, &service, &service + 1);
+}
+
+template<typename It>
+void NUTConfigurator::systemctl( const std::string &operation, It first, It last)
+{
+    if (first == last)
+        return;
+    std::vector<std::string> _argv = {"sudo", "systemctl", operation };
+    // FIXME: Split the argument list into chunks if its size is close to
+    // sysconf(_SC_ARG_MAX). Note that the limit is reasonably high on modern
+    // kernels (stack size / 4, i.e. 2MB typically), so we will only hit it
+    // with with five digit device counts.
+    _argv.insert(_argv.end(), first, last);
     SubProcess systemd( _argv );
     if( systemd.run() ) {
         int result = systemd.wait();
-        log_info("sudo systemctl %s %s result: %i (%s)",
+        log_info("sudo systemctl %s result %i (%s) for following units",
                  operation.c_str(),
-                 service.c_str(),
                  result,
                  (result == 0 ? "ok" : "failed"));
+        for (It it = first; it != last; ++it)
+            log_info(" - %s", it->c_str());
     } else {
-        log_error("can't run sudo systemctl %s %s command",
-                  operation.c_str(),
-                  service.c_str() );
+        log_error("can't run sudo systemctl %s for following units",
+                  operation.c_str());
+        for (It it = first; it != last; ++it)
+            log_error(" - %s", it->c_str());
     }
 }
 
@@ -316,10 +331,7 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
         cfgFile.flush ();
         cfgFile.close ();
         log_info("creating new config file %s/%s", NUT_PART_STORE, name.c_str() );
-        updateNUTConfig ();
-        systemctl ("enable",  std::string("nut-driver@") + name);
-        systemctl ("restart", std::string("nut-driver@") + name);
-        systemctl ("reload-or-restart", "nut-server");
+        start_drivers_.insert("nut-driver@" + name);
     }
     zstr_free (&digest_new);
     zstr_free (&digest_old);
@@ -333,10 +345,20 @@ void NUTConfigurator::erase(const std::string &name)
         + path_separator()
         + name;
     remove( fileName.c_str() );
+    stop_drivers_.insert("nut-driver@" + name);
+}
+
+void NUTConfigurator::commit()
+{
     updateNUTConfig();
-    systemctl("stop",    std::string("nut-driver@") + name);
-    systemctl("disable", std::string("nut-driver@") + name);
-    systemctl("reload-or-restart", "nut-server");
+    systemctl("stop",    stop_drivers_.begin(),  stop_drivers_.end());
+    systemctl("disable", stop_drivers_.begin(),  stop_drivers_.end());
+    systemctl("enable",  start_drivers_.begin(), start_drivers_.end());
+    systemctl("restart", start_drivers_.begin(), start_drivers_.end());
+    if (!stop_drivers_.empty() || !start_drivers_.empty())
+        systemctl("reload-or-restart", "nut-server");
+    stop_drivers_.clear();
+    start_drivers_.clear();
 }
 
 bool NUTConfigurator::known_assets(std::vector<std::string>& assets)

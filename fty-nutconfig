@@ -25,6 +25,7 @@
 #           from files stored in /var/lib/fty/fty-nut/devices.
 
 set -e
+shopt -s nullglob
 
 export PATH=/bin:/usr/bin
 export LC_ALL=C
@@ -57,7 +58,7 @@ EOF
 RES=$?
 
 if [ "$RES" = 0 ]; then
-    cat "${BIOSCONFDIR}"/* 2> /dev/null >> "${TMPFILE}" || RES=$?
+    cat "${BIOSCONFDIR}"/* /dev/null 2> /dev/null >> "${TMPFILE}" || RES=$?
 fi
 
 if [ "$RES" = 0 ] && [ ! -s /etc/systemd/system/nut-driver@.service.d/timeout.conf ] ; then
