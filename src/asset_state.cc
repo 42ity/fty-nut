@@ -30,6 +30,7 @@
 #include "nut_mlm.h"
 #include <fty_log.h>
 
+#include <iterator>
 #include <cmath>
 
 AssetState::Asset::Asset(fty_proto_t* message)
@@ -164,8 +165,7 @@ void AssetState::recompute()
         end = powerdevices_.end();
     } else {
         end = powerdevices_.begin();
-        for (int i = 0; i < license_limit_; ++i)
-            ++end;
+        std::advance(end, license_limit_);
     }
     allowed_powerdevices_ = AssetMap(powerdevices_.cbegin(), end);
 }
