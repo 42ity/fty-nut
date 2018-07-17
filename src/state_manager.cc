@@ -148,13 +148,13 @@ void StateManager::commit()
         else
             break;
     }
+    uncommitted_.recompute();
     // For the Reader constructor, the update of the write_counter_ and the
     // queue must happen atomically. We could split the mutex into two, one
     // protecting the readers_ list and one ensuring this atomicity, but
     // it would have no effect in practice.
     std::lock_guard<std::mutex> lock(readers_mutex_);
     states_.push_back(uncommitted_);
-    states_.back().recompute();
     ++write_counter_;
 }
 
