@@ -53,7 +53,6 @@ void usage() {
 
 int main(int argc, char *argv []) {
     int help = 0;
-    bool verbose = false;
     //    int log_level = -1;
     std::string mapping_file;
     const char* polling = NULL;
@@ -104,7 +103,6 @@ int main(int argc, char *argv []) {
             }
             case 'v':
             {
-                verbose = true;
                 ManageFtyLog::getInstanceFtylog()->setVeboseMode();
                 break;
             }
@@ -145,7 +143,7 @@ int main(int argc, char *argv []) {
 
     // VERBOSE
     if (streq(zconfig_get(config, "server/verbose", "false"), "true")) {
-        verbose = true;
+        ManageFtyLog::getInstanceFtylog()->setVeboseMode();
     }
     // POLLING
     polling = zconfig_get(config, CONFIG_POLLING, "30");
