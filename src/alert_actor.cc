@@ -85,7 +85,6 @@ alert_actor (zsock_t *pipe, void *args)
 {
 
     uint64_t polling = 30000;
-    bool verbose = false;
     const char *endpoint = static_cast<const char *>(args);
 
     MlmClientGuard client(mlm_client_new());
