@@ -45,7 +45,7 @@ void usage() {
             "  --config / -c          path to config file\n"
             "  --mapping-file / -m    NUT-to-BIOS mapping file\n"
             "  --polling / -p         polling interval in seconds [30]\n"
-            "  --verbose / -v         verbose test output\n"
+            "  --verbose / -v         verbose output\n"
             "  --help / -h            this information\n"
             );
 }
@@ -53,7 +53,6 @@ void usage() {
 
 int main(int argc, char *argv []) {
     int help = 0;
-    bool verbose = false;
     //    int log_level = -1;
     std::string mapping_file;
     const char* polling = NULL;
@@ -104,7 +103,6 @@ int main(int argc, char *argv []) {
             }
             case 'v':
             {
-                verbose = true;
                 ManageFtyLog::getInstanceFtylog()->setVeboseMode();
                 break;
             }
@@ -145,7 +143,7 @@ int main(int argc, char *argv []) {
 
     // VERBOSE
     if (streq(zconfig_get(config, "server/verbose", "false"), "true")) {
-        verbose = true;
+        ManageFtyLog::getInstanceFtylog()->setVeboseMode();
     }
     // POLLING
     polling = zconfig_get(config, CONFIG_POLLING, "30");
@@ -170,11 +168,6 @@ int main(int argc, char *argv []) {
         return -1;
     }
 
-    if (verbose) {
-        zstr_sendx(nut_server, "VERBOSE", NULL);
-        zstr_sendx(nut_device_alert, "VERBOSE", NULL);
-        zstr_sendx(nut_sensor, "VERBOSE", NULL);
-    }
     zstr_sendx(nut_server, ACTION_CONFIGURE, mapping_file.c_str(), NULL);
     zstr_sendx(nut_server, ACTION_POLLING, polling, NULL);
 

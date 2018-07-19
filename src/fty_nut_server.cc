@@ -178,7 +178,6 @@ polling_timeout(uint64_t last_poll, uint64_t polling_timeout)
 void
 fty_nut_server (zsock_t *pipe, void *args)
 {
-    bool verbose = false;
     const char *endpoint = static_cast<const char *>(args);
 
     MlmClientGuard client(mlm_client_new());
@@ -271,7 +270,7 @@ fty_nut_server (zsock_t *pipe, void *args)
                 log_error ("Given `which == pipe`, function `zmsg_recv (pipe)` returned NULL");
                 continue;
             }
-            if (actor_commands (client, &message, verbose, timeout, nut_agent) == 1) {
+            if (actor_commands (client, &message, timeout, nut_agent) == 1) {
                 break;
             }
             continue;
