@@ -32,7 +32,6 @@ alert_actor_commands (
     mlm_client_t *client,
     mlm_client_t *mb_client,
     zmsg_t **message_p,
-    bool& verbose,
     uint64_t& timeout
 )
 {
@@ -53,10 +52,6 @@ alert_actor_commands (
     if (streq (cmd, "$TERM")) {
         log_info ("Got $TERM");
         ret = 1;
-    }
-    else
-    if (streq (cmd, "VERBOSE")) {
-        verbose = true;
     }
     else
     if (streq (cmd, ACTION_POLLING)) {
@@ -147,7 +142,7 @@ alert_actor (zsock_t *pipe, void *args)
         else if (which == pipe) {
             zmsg_t *msg = zmsg_recv (pipe);
             if (msg) {
-                int quit = alert_actor_commands (client, mb_client, &msg, verbose, polling);
+                int quit = alert_actor_commands (client, mb_client, &msg, polling);
                 devices.setPollingMs (polling);
                 zmsg_destroy (&msg);
                 if (quit) break;
@@ -161,10 +156,7 @@ alert_actor (zsock_t *pipe, void *args)
 }
 
 //  --------------------------------------------------------------------------
-//  Self test of this class
-
-#define verbose_printf if (verbose) printf
-
+//  Self test of this
 void
 alert_actor_test (bool verbose)
 {
@@ -175,8 +167,6 @@ alert_actor_test (bool verbose)
     // malamute broker
     zactor_t *malamute = zactor_new (mlm_server, (void*) "Malamute");
     assert (malamute);
-    if (verbose)
-        zstr_send (malamute, "VERBOSE");
     zstr_sendx (malamute, "BIND", endpoint, NULL);
 
     fty_proto_t *msg = fty_proto_new(FTY_PROTO_ASSET);
@@ -229,20 +219,20 @@ alert_actor_test (bool verbose)
 
     // check rule message
     {
-        verbose_printf ("\n    recvrule\n");
+        printf ("\n    recvrule\n");
         void *which = zpoller_wait (poller, 1000);
         assert (which);
         zmsg_t *msg = mlm_client_recv (rfc_evaluator);
         assert (msg);
         assert (streq (mlm_client_subject (rfc_evaluator), "rfc-evaluator-rules"));
 
-        verbose_printf ("    rule command\n");
+        printf ("    rule command\n");
         char *item = zmsg_popstr (msg);
         assert (item);
         assert (streq (item, "ADD"));
         zstr_free (&item);
 
-        verbose_printf ("    rule json\n");
+        printf ("    rule json\n");
         item = zmsg_popstr (msg);
         assert (item);
         assert (item[0] == '{');
@@ -253,7 +243,7 @@ alert_actor_test (bool verbose)
     // check alert message
     devs.publishAlerts (client);
     {
-        verbose_printf ("    receive alert\n");
+        printf ("    receive alert\n");
         void *which = zpoller_wait (poller, 1000);
         assert (which);
         zmsg_t *msg = mlm_client_recv (alert_list);
@@ -262,16 +252,16 @@ alert_actor_test (bool verbose)
         fty_proto_t *bp = fty_proto_decode (&msg);
         assert (bp);
 
-        verbose_printf ("    is alert\n");
+        printf ("    is alert\n");
         assert (streq (fty_proto_command (bp), "ALERT"));
 
-        verbose_printf ("    is active\n");
+        printf ("    is active\n");
         assert (streq (fty_proto_state (bp), "ACTIVE"));
 
-        verbose_printf ("    severity\n");
+        printf ("    severity\n");
         assert (streq (fty_proto_severity (bp), "CRITICAL"));
 
-        verbose_printf ("    element\n");
+        printf ("    element\n");
         assert (streq (fty_proto_name (bp), "mydevice"));
 
         fty_proto_destroy (&bp);
@@ -281,7 +271,7 @@ alert_actor_test (bool verbose)
     devs.publishAlerts (client);
     // check alert message
     {
-        verbose_printf ("    receive resolved\n");
+        printf ("    receive resolved\n");
         void *which = zpoller_wait (poller, 1000);
         assert (which);
         zmsg_t *msg = mlm_client_recv (alert_list);
@@ -291,7 +281,7 @@ alert_actor_test (bool verbose)
         assert (bp);
         assert (streq (fty_proto_command (bp), "ALERT"));
 
-        verbose_printf ("    is resolved\n");
+        printf ("    is resolved\n");
         assert (streq (fty_proto_state (bp), "RESOLVED"));
 
         fty_proto_destroy (&bp);

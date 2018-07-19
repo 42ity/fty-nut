@@ -32,9 +32,6 @@ class NUTAgent;
 //  $TERM
 //      terminate
 //
-//  VERBOSE
-//      set verbosity of bios_nut_server, malamute in tests
-//
 //  CONNECT/enpoint/name
 //      connect to malamute broker on 'endpoint' registering as 'name'
 //
@@ -60,7 +57,6 @@ class NUTAgent;
 int actor_commands (
             mlm_client_t *client,
             zmsg_t **message_p,
-            bool& verbose,
             uint64_t& timeout,
             NUTAgent& nut_agent);
 

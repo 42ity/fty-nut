@@ -45,7 +45,7 @@ void usage() {
             "  --config / -c          path to config file\n"
             "  --mapping-file / -m    NUT-to-BIOS mapping file\n"
             "  --polling / -p         polling interval in seconds [30]\n"
-            "  --verbose / -v         verbose test output\n"
+            "  --verbose / -v         verbose output\n"
             "  --help / -h            this information\n"
             );
 }
@@ -170,11 +170,6 @@ int main(int argc, char *argv []) {
         return -1;
     }
 
-    if (verbose) {
-        zstr_sendx(nut_server, "VERBOSE", NULL);
-        zstr_sendx(nut_device_alert, "VERBOSE", NULL);
-        zstr_sendx(nut_sensor, "VERBOSE", NULL);
-    }
     zstr_sendx(nut_server, ACTION_CONFIGURE, mapping_file.c_str(), NULL);
     zstr_sendx(nut_server, ACTION_POLLING, polling, NULL);
 
