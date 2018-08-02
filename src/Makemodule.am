@@ -13,7 +13,6 @@ lib_LTLIBRARIES += src/libfty_nut.la
 pkgconfig_DATA = src/libfty_nut.pc
 
 src_libfty_nut_la_SOURCES = \
-    src/logger.cc \
     src/fsutils.cc \
     src/cidr.cc \
     src/nutscan.cc \

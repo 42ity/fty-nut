@@ -1,7 +1,7 @@
 /*  =========================================================================
     fty-nut - generated layer of public API
 
-    Copyright (C) 2014 - 2017 Eaton
+    Copyright (C) 2014 - 2018 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -36,6 +36,7 @@
 #include <libcidr.h>
 #include <cxxtools/allocator.h>
 #include <nutclient.h>
+#include <fty_log.h>
 
 //  FTY_NUT version macros for compile-time API detection
 #define FTY_NUT_VERSION_MAJOR 1

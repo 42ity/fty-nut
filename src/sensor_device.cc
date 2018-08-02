@@ -20,7 +20,7 @@
 */
 
 #include "sensor_device.h"
-#include "logger.h"
+#include <fty_log.h>
 
 #include <ftyproto.h>
 #include <vector>

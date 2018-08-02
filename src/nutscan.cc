@@ -28,7 +28,7 @@
 
 #include "subprocess.h"
 #include "nutscan.h"
-#include "logger.h"
+#include <fty_log.h>
 
 #include <sstream>
 #include <string>

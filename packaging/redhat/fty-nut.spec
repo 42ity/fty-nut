@@ -1,7 +1,7 @@
 #
 #    fty-nut - NUT (Network UPS Tools) daemon wrapper/proxy
 #
-#    Copyright (C) 2014 - 2017 Eaton
+#    Copyright (C) 2014 - 2018 Eaton
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -59,6 +59,8 @@ BuildRequires:  fty-proto-devel
 BuildRequires:  libcidr-devel
 BuildRequires:  cxxtools-devel
 BuildRequires:  nut-devel
+BuildRequires:  log4cplus-devel
+BuildRequires:  fty-common-logging-devel
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
@@ -90,6 +92,8 @@ Requires:       fty-proto-devel
 Requires:       libcidr-devel
 Requires:       cxxtools-devel
 Requires:       nut-devel
+Requires:       log4cplus-devel
+Requires:       fty-common-logging-devel
 
 %description devel
 nut (network ups tools) daemon wrapper/proxy development tools

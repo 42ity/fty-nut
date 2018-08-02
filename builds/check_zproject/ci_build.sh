@@ -15,6 +15,8 @@ git clone --quiet --depth 1 https://github.com/42ity/fty-proto.git fty-proto
 git clone --quiet --depth 1 -b 1.2.3-FTY-master https://github.com/42ity/libcidr.git cidr
 git clone --quiet --depth 1 -b 2.2-FTY-master https://github.com/42ity/cxxtools.git cxxtools
 git clone --quiet --depth 1 -b FTY https://github.com/42ity/nut.git libnutclient
+git clone --quiet --depth 1 -b 1.1.2-FTY-master https://github.com/42ity/log4cplus.git log4cplus
+git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common-logging.git fty-common-logging
 cd -
 
 if ! ((command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list zproject >/dev/null 2>&1) || \
@@ -28,7 +30,7 @@ fi
 if ! ((command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list generator-scripting-language >/dev/null 2>&1) || \
        (command -v brew >/dev/null 2>&1 && brew ls --versions gsl >/dev/null 2>&1)); then
     cd "$REPO_DIR/.."
-    git clone https://github.com/imatix/gsl.git gsl
+    git clone https://github.com/zeromq/gsl.git gsl
     cd gsl/src
     make
     PATH="`pwd`:$PATH"

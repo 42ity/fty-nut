@@ -29,13 +29,12 @@
 #include "actor_commands.h"
 #include "nut_agent.h"
 #include "nut_mlm.h"
-#include "logger.h"
+#include <fty_log.h>
 
 int
 actor_commands (
         mlm_client_t *client,
         zmsg_t **message_p,
-        bool& verbose,
         uint64_t& timeout,
         NUTAgent& nut_agent) {
 
@@ -56,10 +55,6 @@ actor_commands (
     if (streq (cmd, "$TERM")) {
         log_info ("Got $TERM");
         ret = 1;
-    }
-    else
-    if (streq (cmd, "VERBOSE")) {
-        verbose = true;
     }
     else
     if (streq (cmd, "CONFIGURE")) {
@@ -140,8 +135,6 @@ actor_commands_test (bool verbose)
     // malamute broker
     zactor_t *malamute = zactor_new (mlm_server, (void*) "Malamute");
     assert (malamute);
-    if (verbose)
-        zstr_send (malamute, "VERBOSE");
     zstr_sendx (malamute, "BIND", endpoint, NULL);
 
     mlm_client_t *client = mlm_client_new ();
@@ -149,7 +142,6 @@ actor_commands_test (bool verbose)
     assert(mlm_client_connect(client, endpoint, 5000, "test-agent") == 0);
 
     zmsg_t *message = NULL;
-    bool actor_verbose = false;
 
     StateManager manager;
     NUTAgent nut_agent(manager.getReader());
@@ -160,10 +152,9 @@ actor_commands_test (bool verbose)
     // empty message - expected fail
     message = zmsg_new ();
     assert (message);
-    int rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
+    int rv = actor_commands (client, &message, actor_polling, nut_agent);
     assert (rv == 0);
     assert (message == NULL);
-    assert (actor_verbose == false);
     assert (actor_polling == 0);
     assert (nut_agent.isMappingLoaded () == false);
     assert (nut_agent.TTL () == 60);
@@ -176,10 +167,9 @@ actor_commands_test (bool verbose)
     message = zmsg_new ();
     assert (message);
     zmsg_addstr (message, "");
-    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
+    rv = actor_commands (client, &message, actor_polling, nut_agent);
     assert (rv == 0);
     assert (message == NULL);
-    assert (actor_verbose == false);
     assert (actor_polling == 0);
     assert (nut_agent.isMappingLoaded () == false);
     assert (nut_agent.TTL () == 60);
@@ -192,10 +182,9 @@ actor_commands_test (bool verbose)
     message = zmsg_new ();
     assert (message);
     zmsg_addstr (message, "MAGIC!");
-    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
+    rv = actor_commands (client, &message, actor_polling, nut_agent);
     assert (rv == 0);
     assert (message == NULL);
-    assert (actor_verbose == false);
     assert (actor_polling == 0);
     assert (nut_agent.isMappingLoaded () == false);
     assert (nut_agent.TTL () == 60);
@@ -209,10 +198,9 @@ actor_commands_test (bool verbose)
     assert (message);
     zmsg_addstr (message, ACTION_CONFIGURE);
     // missing mapping_file here
-    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
+    rv = actor_commands (client, &message, actor_polling, nut_agent);
     assert (rv == 0);
     assert (message == NULL);
-    assert (actor_verbose == false);
     assert (actor_polling == 0);
     assert (nut_agent.isMappingLoaded () == false);
     assert (nut_agent.TTL () == 60);
@@ -226,10 +214,9 @@ actor_commands_test (bool verbose)
     assert (message);
     zmsg_addstr (message, ACTION_POLLING);
     // missing value here
-    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
+    rv = actor_commands (client, &message, actor_polling, nut_agent);
     assert (rv == 0);
     assert (message == NULL);
-    assert (actor_verbose == false);
     assert (actor_polling == 0);
     assert (nut_agent.isMappingLoaded () == false);
     assert (nut_agent.TTL () == 60);
@@ -243,10 +230,9 @@ actor_commands_test (bool verbose)
     assert (message);
     zmsg_addstr (message, ACTION_POLLING);
     zmsg_addstr (message, "a14s2"); // Bad value
-    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
+    rv = actor_commands (client, &message, actor_polling, nut_agent);
     assert (rv == 0);
     assert (message == NULL);
-    assert (actor_verbose == false);
     assert (actor_polling == 30000);
     assert (nut_agent.isMappingLoaded () == false);
     assert (nut_agent.TTL () == 60);
@@ -265,27 +251,14 @@ actor_commands_test (bool verbose)
     // Prepare the error logger
     fp = freopen ("stderr.txt", "w+", stderr);
 
-    // VERBOSE
-    message = zmsg_new ();
-    assert (message);
-    zmsg_addstr (message, "VERBOSE");
-    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
-    assert (rv == 0);
-    assert (message == NULL);
-    assert (actor_verbose == true);
-    assert (actor_polling == 0);
-    assert (nut_agent.isMappingLoaded () == false);
-    assert (nut_agent.TTL () == 60);
-
     // CONFIGURE
     message = zmsg_new ();
     assert (message);
     zmsg_addstr (message, ACTION_CONFIGURE);
     zmsg_addstr (message, "src/mapping.conf");
-    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
+    rv = actor_commands (client, &message, actor_polling, nut_agent);
     assert (rv == 0);
     assert (message == NULL);
-    assert (actor_verbose == true);
     assert (actor_polling == 0);
     assert (nut_agent.isMappingLoaded () == true);
     assert (nut_agent.TTL () == 60);
@@ -294,10 +267,9 @@ actor_commands_test (bool verbose)
     message = zmsg_new ();
     assert (message);
     zmsg_addstr (message, "$TERM");
-    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
+    rv = actor_commands (client, &message, actor_polling, nut_agent);
     assert (rv == 1);
     assert (message == NULL);
-    assert (actor_verbose == true);
     assert (actor_polling == 0);
     assert (nut_agent.isMappingLoaded () == true);
     assert (nut_agent.TTL () == 60);
@@ -307,15 +279,14 @@ actor_commands_test (bool verbose)
     assert (message);
     zmsg_addstr (message, ACTION_POLLING);
     zmsg_addstr (message, "150");
-    rv = actor_commands (client, &message, actor_verbose, actor_polling, nut_agent);
+    rv = actor_commands (client, &message, actor_polling, nut_agent);
     assert (rv == 0);
     assert (message == NULL);
-    assert (actor_verbose == true);
     assert (actor_polling == 150000);
     assert (nut_agent.isMappingLoaded () == true);
     assert (nut_agent.TTL () == 300);
 
-    STDERR_EMPTY
+    STDERR_NON_EMPTY
 
     zmsg_destroy (&message);
     mlm_client_destroy (&client);

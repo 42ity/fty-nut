@@ -4,7 +4,7 @@
     Runs all private classes selftests.
 
     -------------------------------------------------------------------------
-    Copyright (C) 2014 - 2017 Eaton
+    Copyright (C) 2014 - 2018 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -38,8 +38,6 @@ void
 fty_nut_private_selftest (bool verbose, const char *subtest)
 {
 // Tests for stable private classes:
-    if (streq (subtest, "$ALL") || streq (subtest, "logger_test"))
-        logger_test (verbose);
     if (streq (subtest, "$ALL") || streq (subtest, "fsutils_test"))
         fsutils_test (verbose);
     if (streq (subtest, "$ALL") || streq (subtest, "cidr_test"))

@@ -23,7 +23,7 @@
 #include "alert_actor.h"
 #include "sensor_list.h"
 #include "nut_mlm.h"
-#include "logger.h"
+#include <fty_log.h>
 
 #include <malamute.h>
 
@@ -32,13 +32,12 @@ sensor_actor (zsock_t *pipe, void *args)
 {
 
     uint64_t polling = 30000;
-    bool verbose = false;
     const char *endpoint = static_cast<const char *>(args);
     Sensors sensors(NutStateManager.getReader());
 
     MlmClientGuard client(mlm_client_new());
     if (!client) {
-        log_critical ("mlm_client_new () failed");
+        log_fatal ("mlm_client_new () failed");
         return;
     }
     if (mlm_client_connect(client, endpoint, 5000, ACTOR_SENSOR_NAME) < 0) {
@@ -53,7 +52,7 @@ sensor_actor (zsock_t *pipe, void *args)
 
     ZpollerGuard poller(zpoller_new(pipe, mlm_client_msgpipe(client), NULL));
     if (!poller) {
-        log_critical ("zpoller_new () failed");
+        log_fatal ("zpoller_new () failed");
         return;
     }
     zsock_signal (pipe, 0);
@@ -72,7 +71,7 @@ sensor_actor (zsock_t *pipe, void *args)
         else if (which == pipe) {
             zmsg_t *msg = zmsg_recv (pipe);
             if (msg) {
-                int quit = alert_actor_commands (client, NULL, &msg, verbose, polling);
+                int quit = alert_actor_commands (client, NULL, &msg, polling);
                 zmsg_destroy (&msg);
                 if (quit) break;
             }
@@ -87,8 +86,6 @@ sensor_actor (zsock_t *pipe, void *args)
 //  --------------------------------------------------------------------------
 //  Self test of this class
 
-#define verbose_printf if (verbose) printf
-
 void
 sensor_actor_test (bool verbose)
 {
@@ -99,8 +96,6 @@ sensor_actor_test (bool verbose)
     // malamute broker
     zactor_t *malamute = zactor_new (mlm_server, (void*) "Malamute");
     assert (malamute);
-    if (verbose)
-        zstr_send (malamute, "VERBOSE");
     zstr_sendx (malamute, "BIND", endpoint, NULL);
 
     mlm_client_t *consumer = mlm_client_new ();

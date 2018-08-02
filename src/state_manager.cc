@@ -148,13 +148,13 @@ void StateManager::commit()
         else
             break;
     }
+    uncommitted_.recompute();
     // For the Reader constructor, the update of the write_counter_ and the
     // queue must happen atomically. We could split the mutex into two, one
     // protecting the readers_ list and one ensuring this atomicity, but
     // it would have no effect in practice.
     std::lock_guard<std::mutex> lock(readers_mutex_);
     states_.push_back(uncommitted_);
-    states_.back().recompute();
     ++write_counter_;
 }
 
@@ -241,8 +241,9 @@ public:
             fty_proto_aux_insert(msg, "type", "device");
             fty_proto_aux_insert(msg, "subtype", "epdu");
             fty_proto_ext_insert(msg, "ip.1", "192.0.2.2");
-            writer.getState().updateFromProto(msg);
-            fty_proto_destroy(&msg);
+            // update via encoded zmsg
+            zmsg_t* zmsg = fty_proto_encode(&msg);
+            writer.getState().updateFromProto(zmsg);
             writer.commit();
             assert(manager.states_.size() == 3);
             assert(reader1->refresh());
@@ -281,8 +282,6 @@ public:
             assert(msg);
             fty_proto_set_name(msg, "epdu-2");
             fty_proto_set_operation(msg, FTY_PROTO_ASSET_OP_DELETE);
-            fty_proto_aux_insert(msg, "type", "device");
-            fty_proto_aux_insert(msg, "subtype", "epdu");
             writer.getState().updateFromProto(msg);
             fty_proto_destroy(&msg);
             writer.commit();

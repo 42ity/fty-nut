@@ -27,8 +27,10 @@
 */
 
 #include "asset_state.h"
-#include "logger.h"
+#include "nut_mlm.h"
+#include <fty_log.h>
 
+#include <iterator>
 #include <cmath>
 
 AssetState::Asset::Asset(fty_proto_t* message)
@@ -63,10 +65,17 @@ AssetState::Asset::Asset(fty_proto_t* message)
     } catch (...) { }
 }
 
-bool AssetState::updateFromProto(fty_proto_t* message)
+bool AssetState::handleAssetMessage(fty_proto_t* message)
 {
-    std::string type(fty_proto_aux_string (message, "type", ""));
+    std::string name(fty_proto_name(message));
+    std::string operation(fty_proto_operation(message));
+    if (operation == FTY_PROTO_ASSET_OP_DELETE ||
+        operation == FTY_PROTO_ASSET_OP_RETIRE ||
+        !streq(fty_proto_aux_string (message, FTY_PROTO_ASSET_STATUS, "active"), "active")) {
+        return (powerdevices_.erase(name) > 0 || sensors_.erase(name) > 0);
+    }
 
+    std::string type(fty_proto_aux_string (message, "type", ""));
     if (type != "device")
         return false;
     std::string subtype(fty_proto_aux_string (message, "subtype", ""));
@@ -77,12 +86,6 @@ bool AssetState::updateFromProto(fty_proto_t* message)
         map = &sensors_;
     else
         return false;
-    std::string name(fty_proto_name(message));
-    std::string operation(fty_proto_operation(message));
-    if (operation == FTY_PROTO_ASSET_OP_DELETE ||
-            operation == FTY_PROTO_ASSET_OP_RETIRE) {
-        return (map->erase(name) > 0);
-    }
     if (operation != FTY_PROTO_ASSET_OP_CREATE &&
             operation != FTY_PROTO_ASSET_OP_UPDATE) {
         log_error("unknown asset operation '%s'. Skipping.",
@@ -91,6 +94,52 @@ bool AssetState::updateFromProto(fty_proto_t* message)
     }
     (*map)[name] = std::shared_ptr<Asset>(new Asset(message));
     return true;
+}
+
+// Destroys passed message
+bool AssetState::handleLicensingMessage(zmsg_t* message)
+{
+    ZmsgGuard msg(message);
+    ZstrGuard value(zmsg_popstr(msg));
+    ZstrGuard item(zmsg_popstr(msg));
+    ZstrGuard category(zmsg_popstr(msg));
+    while (value && item && category) {
+        if (streq(category, "POWER_NODES") && streq(item, "MAX_ACTIVE")) {
+            try {
+                license_limit_ = std::stoi(value.get());
+                return true;
+            } catch (...) { }
+        }
+        value = zmsg_popstr(msg);
+        item = zmsg_popstr(msg);
+        category = zmsg_popstr(msg);
+    }
+    return false;
+}
+
+bool AssetState::updateFromProto(fty_proto_t* message)
+{
+    // proto messages are always assumed to be asset updates
+    return handleAssetMessage(message);
+}
+
+bool AssetState::updateFromProto(zmsg_t* message)
+{
+    bool ret;
+    if (is_fty_proto(message)) {
+        fty_proto_t *proto = fty_proto_decode (&message);
+        if (!proto) {
+            zmsg_destroy(&message);
+            return false;
+        }
+        ret =  handleAssetMessage(proto);
+        fty_proto_destroy(&proto);
+    } else {
+
+        // non-proto messages are assumed to be licensing
+        ret = handleLicensingMessage(message);
+    }
+    return ret;
 }
 
 void AssetState::recompute()
@@ -107,6 +156,18 @@ void AssetState::recompute()
             ip2master_[ip] = i.first;
         }
     }
+    // If a limit is set, simply copy a prefix of powerdevices_ to
+    // allowed_powerdevices_ If requested, we could come up with some more
+    // fancy sorting...
+    allowed_powerdevices_.clear();
+    AssetMap::const_iterator end;
+    if (license_limit_ < 0 || static_cast<size_t>(license_limit_) >= powerdevices_.size()) {
+        end = powerdevices_.end();
+    } else {
+        end = powerdevices_.begin();
+        std::advance(end, license_limit_);
+    }
+    allowed_powerdevices_ = AssetMap(powerdevices_.cbegin(), end);
 }
 
 const std::string& AssetState::ip2master(const std::string& ip) const

@@ -31,34 +31,50 @@
 #include "state_manager.h"
 #include "nut_agent.h"
 #include "nut_mlm.h"
-#include "logger.h"
+#include <fty_log.h>
 
 StateManager NutStateManager;
 
-// Update the state with received fty_proto message
-void
-handle_fty_proto(StateManager::Writer& state_writer, zmsg_t *message)
+static bool
+get_initial_licensing(StateManager::Writer& state_writer, mlm_client_t *client)
 {
-    assert (message);
-
-    fty_proto_t *proto = fty_proto_decode (&message);
-    if (!proto) {
-        log_critical ("fty_proto_decode () failed.");
-        zmsg_destroy (&message);
-        return;
+    ZuuidGuard uuid(zuuid_new());
+    int err = mlm_client_sendtox(client, "etn-licensing", "LIMITATIONS",
+                "LIMITATION_QUERY", zuuid_str_canonical(uuid), "*", "*", NULL);
+    if (err < 0) {
+        log_error("Sending LIMITATION_QUERY message to etn-licensing failed");
+        return false;
     }
-    if (state_writer.getState().updateFromProto(proto))
-        state_writer.commit();
-    fty_proto_destroy(&proto);
+    zmsg_t* reply = mlm_client_recv(client);
+    if (!reply) {
+        zmsg_destroy(&reply);
+        log_error("Getting response to LIMITATION_QUERY failed");
+        return false;
+    }
+    ZstrGuard reply_str(zmsg_popstr(reply));
+    if (!reply_str || strcmp(reply_str, zuuid_str_canonical(uuid)) != 0) {
+        zmsg_destroy(&reply);
+        log_warning("Mismatching response to a LIMITATION_QUERY request");
+        return false;
+    }
+    reply_str = zmsg_popstr(reply);
+    if (!reply_str || strcmp(reply_str, "REPLY") != 0) {
+        zmsg_destroy(&reply);
+        log_error("Got malformed message from etn-licensing");
+        return false;
+    }
+    // The rest is a series of value/item/category triplets that
+    // updateFromProto() can grok
+    return state_writer.getState().updateFromProto(reply);
 }
-
 
 // Query fty-asset about existing devices. This has to be done after
 // subscribing ourselves to the ASSETS stream, to make sure that we do not
 // miss assets created between the mailbox request and the subscription to
 // the stream.
 void
-get_initial_assets(StateManager::Writer& state_writer, mlm_client_t *client)
+get_initial_assets(StateManager::Writer& state_writer, mlm_client_t *client,
+        bool query_licensing)
 {
     zmsg_t *msg = zmsg_new();
     if (!msg) {
@@ -113,6 +129,7 @@ get_initial_assets(StateManager::Writer& state_writer, mlm_client_t *client)
         }
         asset = zmsg_popstr(reply);
     }
+    bool changed = false;
     while (!uuids.empty()) {
         zmsg_t *reply = mlm_client_recv(client);
         if (uuids.erase(ZstrGuard(zmsg_popstr(reply)).get()) == 0) {
@@ -125,9 +142,20 @@ get_initial_assets(StateManager::Writer& state_writer, mlm_client_t *client)
             zmsg_destroy(&reply);
             continue;
         }
-        handle_fty_proto(state_writer, reply);
+        if (state_writer.getState().updateFromProto(reply))
+            changed = true;
     }
-    log_info("Initial ASSETS request complete");
+    if (query_licensing) {
+        if (get_initial_licensing(state_writer, client))
+            changed = true;
+    }
+    if (changed)
+        state_writer.commit();
+    log_info("Initial ASSETS request complete (%zd/%zd powerdevices, %zd/%zd sensors)",
+		    state_writer.getState().getPowerDevices().size(),
+		    state_writer.getState().getAllPowerDevices().size(),
+		    state_writer.getState().getSensors().size(),
+		    state_writer.getState().getAllSensors().size());
 }
 
 uint64_t
@@ -150,12 +178,11 @@ polling_timeout(uint64_t last_poll, uint64_t polling_timeout)
 void
 fty_nut_server (zsock_t *pipe, void *args)
 {
-    bool verbose = false;
     const char *endpoint = static_cast<const char *>(args);
 
     MlmClientGuard client(mlm_client_new());
     if (!client) {
-        log_critical ("mlm_client_new () failed");
+        log_fatal ("mlm_client_new () failed");
         return;
     }
     if (mlm_client_connect(client, endpoint, 5000, ACTOR_NUT_NAME) < 0) {
@@ -172,11 +199,16 @@ fty_nut_server (zsock_t *pipe, void *args)
                 FTY_PROTO_STREAM_ASSETS);
         return;
     }
+    if (mlm_client_set_consumer(client, "LICENSING-ANNOUNCEMENTS", ".*") < 0) {
+        log_error("mlm_client_set_consumer (stream = '%s', pattern = '.*') failed",
+                "LICENSING-ANNOUNCEMENTS");
+        return;
+    }
 
     // inventory client
     MlmClientGuard iclient(mlm_client_new());
     if (!iclient) {
-        log_critical ("mlm_client_new () failed");
+        log_fatal ("mlm_client_new () failed");
         return;
     }
     int r = mlm_client_connect (iclient, endpoint, 5000, "bios-agent-nut-inventory");
@@ -192,7 +224,7 @@ fty_nut_server (zsock_t *pipe, void *args)
 
     ZpollerGuard poller(zpoller_new (pipe, mlm_client_msgpipe (client), NULL));
     if (!poller) {
-        log_critical ("zpoller_new () failed");
+        log_fatal ("zpoller_new () failed");
         return;
     }
 
@@ -206,7 +238,7 @@ fty_nut_server (zsock_t *pipe, void *args)
     StateManager::Writer& state_writer = NutStateManager.getWriter();
     // (Ab)use the iclient for the initial assets mailbox request, because it
     // will not receive any interfering stream messages
-    get_initial_assets(state_writer, iclient);
+    get_initial_assets(state_writer, iclient, true);
 
     uint64_t timestamp = static_cast<uint64_t> (zclock_mono ());
     uint64_t timeout = 30000;
@@ -238,7 +270,7 @@ fty_nut_server (zsock_t *pipe, void *args)
                 log_error ("Given `which == pipe`, function `zmsg_recv (pipe)` returned NULL");
                 continue;
             }
-            if (actor_commands (client, &message, verbose, timeout, nut_agent) == 1) {
+            if (actor_commands (client, &message, timeout, nut_agent) == 1) {
                 break;
             }
             continue;
@@ -246,7 +278,7 @@ fty_nut_server (zsock_t *pipe, void *args)
 
         // paranoid non-destructive assertion of a twisted mind
         if (which != mlm_client_msgpipe (client)) {
-            log_critical (
+            log_fatal (
                     "zpoller_wait () returned address that is different from "
                     "`pipe`, `mlm_client_msgpipe (client)`, NULL.");
             continue;
@@ -257,8 +289,10 @@ fty_nut_server (zsock_t *pipe, void *args)
             log_error ("Given `which == mlm_client_msgpipe (client)`, function `mlm_client_recv ()` returned NULL");
             continue;
         }
-        if (is_fty_proto(message)) {
-            handle_fty_proto (state_writer, message);
+        if (is_fty_proto(message) ||
+                strcmp(mlm_client_subject(client), "LIMITATIONS") == 0) {
+            if (state_writer.getState().updateFromProto(message))
+                state_writer.commit();
             continue;
         }
         log_error ("Unhandled message (%s/%s)",

@@ -29,7 +29,7 @@
 #include "fty_nut_configurator_server.h"
 #include "state_manager.h"
 #include "nut_mlm.h"
-#include "logger.h"
+#include <fty_log.h>
 
 #include <ftyproto.h>
 #include <fstream>
@@ -38,8 +38,9 @@
 // autoconfig agent public methods
 
 Autoconfig::Autoconfig(StateManager::Reader* reader)
-    : _state_reader(reader)
-    , _traversal_color(0)
+    : _traversal_color(0)
+    , _state_reader(reader)
+
 {
 }
 
@@ -48,7 +49,7 @@ void Autoconfig::onUpdate()
     if (!_state_reader->refresh())
         return;
     const AssetState& deviceState = _state_reader->getState();
-    auto& devices = deviceState.getPowerDevices();
+    auto& devices = deviceState.getAllPowerDevices();
     _traversal_color = !_traversal_color;
     // Add new devices and mark existing ones as visited
     for (auto i : devices) {
@@ -57,12 +58,16 @@ void Autoconfig::onUpdate()
         if (it == _configDevices.end()) {
             AutoConfigurationInfo device;
             device.state = AutoConfigurationInfo::STATE_NEW;
+            device.asset = i.second.get();
             auto res = _configDevices.insert(std::make_pair(name, device));
             it = res.first;
+        } else if (it->second.asset != i.second.get()) {
+            // This is an updated asset, mark it for reconfiguration
+            // (STATE_NEW is a misnomer, but the semantics of a potential
+            // STATE_UPDATED would be identical)
+            it->second.state = AutoConfigurationInfo::STATE_NEW;
+            it->second.asset = i.second.get();
         }
-        // Updates to existing assets result in invalidation of the respective
-        // objects in AssetState, so we need to update our pointer each time
-        it->second.asset = i.second.get();
         it->second.traversal_color = _traversal_color;
     }
     // Mark no longer existing devices for deletion
@@ -139,8 +144,8 @@ void Autoconfig::handleLimitations( zmsg_t **message )
 
 void Autoconfig::onPoll()
 {
+    NUTConfigurator configurator;
     for(auto it = _configDevices.begin(); it != _configDevices.end(); ) {
-        NUTConfigurator configurator;
         switch (it->second.state) {
         case AutoConfigurationInfo::STATE_NEW:
         case AutoConfigurationInfo::STATE_CONFIGURING:
@@ -253,31 +258,23 @@ fty_nut_configurator_server (zsock_t *pipe, void *args)
     ZpollerGuard poller(zpoller_new(pipe, mlm_client_msgpipe(client), NULL));
 
     zsock_signal (pipe, 0);
-    uint64_t last = zclock_mono ();
     while (!zsys_interrupted)
     {
         void *which = zpoller_wait (poller, agent.timeout());
-
-        uint64_t now = zclock_mono();
-        if (now - last >= static_cast<uint64_t>(agent.timeout())) {
-            last = now;
-            zsys_debug("Periodic polling");
-            agent.onPoll ();
-        }
-
         if (which == pipe || zsys_interrupted)
             break;
-
         if (!which) {
+            zsys_debug("Periodic polling");
+            agent.onPoll ();
             continue;
         }
-
         zmsg_t *msg = mlm_client_recv(client);
         if (streq ("LIMITATIONS", mlm_client_subject (client))) {
             agent.handleLimitations (&msg);
         } else
         if (is_fty_proto(msg)) {
-            handle_fty_proto(state_writer, msg);
+            if (state_writer.getState().updateFromProto(msg))
+                state_writer.commit();
             agent.onUpdate();
             continue;
         }

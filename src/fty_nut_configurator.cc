@@ -28,34 +28,49 @@
 
 #include "fty_nut_configurator_server.h"
 #include "nut_mlm.h"
-
+#include <fty_log.h>
 #include <czmq.h>
 
 int main (int argc, char *argv [])
 {
     bool verbose = false;
     int argn;
+    char *log_config = NULL;
+    const char *default_log_config = "/etc/fty/ftylog.cfg";
+    ManageFtyLog::setInstanceFtylog("fty-nut-configurator");
+
     for (argn = 1; argn < argc; argn++) {
         if (streq (argv [argn], "--help")
         ||  streq (argv [argn], "-h")) {
             puts ("fty-nut-configurator [options] ...");
             puts ("  --verbose / -v         verbose test output");
             puts ("  --help / -h            this information");
+            puts ("  --config / -c          log configuration ");
             return 0;
         }
         else
         if (streq (argv [argn], "--verbose")
         ||  streq (argv [argn], "-v"))
             verbose = true;
+        else
+        if (streq (argv [argn], "--config")
+            ||  streq (argv [argn], "-c")) {
+            argn += 1;
+            log_config = argv [argn];
+        }
         else {
             printf ("Unknown option: %s\n", argv [argn]);
             return 1;
         }
     }
-    //  Insert main code here
-    if (verbose)
-        zsys_info ("fty_nut_configurator - ");
+    if (log_config == NULL)
+        log_config = (char *)default_log_config;
 
+    ManageFtyLog::getInstanceFtylog()->setConfigFile(std::string(log_config));
+    if (verbose)
+        ManageFtyLog::getInstanceFtylog()->setVeboseMode();
+
+    zsys_info ("fty_nut_configurator  ");
     zactor_t *server = zactor_new (fty_nut_configurator_server, MLM_ENDPOINT_VOID);
 
     // code from src/malamute.c, under MPL
