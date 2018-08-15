@@ -26,7 +26,7 @@
     <include filename = "license.xml" />
     <version major = "1" minor = "0" patch = "0" />
     <abi current = "1" revision = "0" age = "0" />
-
+<!--
     <use project = "czmq"
         repository="https://github.com/42ity/czmq.git"
         release = "v3.0.2-FTY-master"
@@ -45,7 +45,7 @@
         repository="https://github.com/42ity/malamute.git"
         release = "1.0-FTY-master"
         />
-
+-->
     <use project = "fty-common-logging" libname = "libfty_common_logging" header="fty_log.h"
         repository = "https://github.com/42ity/fty-common-logging.git"
         release = "master"
@@ -61,6 +61,15 @@
             release = "2.2-FTY-master"
             />
 
+    </use>
+
+    <use project = "fty-common-mlm" libname = "libfty_common_mlm" header="fty_common_mlm_guards.h"
+        repository = "https://github.com/42ity/fty-common-mlm.git"
+        release = "master" >
+
+      <use project = "fty-common" libname = "libfty_common" header="fty_common.h"
+           repository = "https://github.com/42ity/fty-common.git"
+           release = "master" />
     </use>
 
     <use project = "fty-proto" libname = "libfty_proto" header="ftyproto.h" prefix="fty_proto"
@@ -96,11 +105,10 @@
             <add_config_opts>--with-dmfsnmp-regenerate=no</add_config_opts>
     </use>
 
-    <header name = "nut_mlm"        private = "1">Malamute connection helpers</header>
-    <class name = "fsutils"         private = "1">filesystem utils</class>
+
+    <header name = "nut_mlm" private = "1">Malamute connection helpers</header>
     <class name = "cidr"            private = "1">C++ Wrapper around libcidr</class>
     <class name = "nutscan"         private = "1">Wrapper around nut-scanner tool</class>
-    <class name = "subprocess"      private = "1">C++ Wrapper around cxxtools::Fork</class>
 
     <class name = "actor commands"      private = "1">actor commands</class>
     <class name = "ups status"          private = "1">ups status converting functions</class>

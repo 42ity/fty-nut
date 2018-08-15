@@ -27,8 +27,8 @@
 */
 
 #include "nut_configurator.h"
-#include "subprocess.h"
-#include "fsutils.h"
+#include <fty_common_mlm_subprocess.h>
+#include <fty_common_filesystem.h>
 #include "nutscan.h"
 #include <fty_log.h>
 #include "cidr.h"
@@ -363,7 +363,7 @@ void NUTConfigurator::commit()
 
 bool NUTConfigurator::known_assets(std::vector<std::string>& assets)
 {
-    return files_in_directory(NUT_PART_STORE, assets);
+    return shared::is_file_in_directory(NUT_PART_STORE, assets);
 }
 
 void

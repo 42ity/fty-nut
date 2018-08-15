@@ -25,8 +25,7 @@
 #include "nut_mlm.h"
 #include <fty_log.h>
 
-#include <malamute.h>
-
+#include <fty_common_mlm.h>
 void
 sensor_actor (zsock_t *pipe, void *args)
 {

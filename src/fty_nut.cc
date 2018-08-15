@@ -31,6 +31,8 @@
 #include "alert_actor.h"
 #include "ftyproto.h"
 #include "nut_mlm.h"
+
+#include <fty_common_mlm.h>
 #include <fty_log.h>
 
 #include <getopt.h>

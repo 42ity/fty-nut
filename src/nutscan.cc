@@ -26,7 +26,7 @@
 @end
 */
 
-#include "subprocess.h"
+#include <fty_common_mlm_subprocess.h>
 #include "nutscan.h"
 #include <fty_log.h>
 

@@ -27,7 +27,7 @@
 */
 
 #include "nut_device.h"
-#include "fsutils.h"
+#include <fty_common_filesystem.h>
 #include <fty_log.h>
 
 #include <cxxtools/serializationerror.h>

@@ -29,6 +29,17 @@
 
 #include "fty_nut_classes.h"
 
+#ifndef streq
+/*
+ *  Allow projects without czmq dependency:
+ *  The generated code expects that czmq pulls in a few headers and macro
+ *  definitions. This is a minimal fix for the generated selftest file in
+ *  C++ mode.
+ */
+#include <string.h>
+#define streq(s1,s2)    (!strcmp ((s1), (s2)))
+#endif
+
 typedef struct {
     const char *testname;           // test name, can be called from command line this way
     void (*test) (bool);            // function to run the test (or NULL for private tests)
@@ -47,10 +58,8 @@ all_tests [] = {
 #ifdef FTY_NUT_BUILD_DRAFT_API
 // Tests for stable/draft private classes:
 // Now built only with --enable-drafts, so even stable builds are hidden behind the flag
-    { "fsutils", NULL, true, false, "fsutils_test" },
     { "cidr", NULL, true, false, "cidr_test" },
     { "nutscan", NULL, true, false, "nutscan_test" },
-    { "subprocess", NULL, true, false, "subprocess_test" },
     { "actor_commands", NULL, true, false, "actor_commands_test" },
     { "ups_status", NULL, true, false, "ups_status_test" },
     { "nut_device", NULL, true, false, "nut_device_test" },

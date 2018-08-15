@@ -25,7 +25,6 @@
 #include <malamute.h>
 #include <czmq.h>
 
-#define MLM_ENDPOINT "ipc://@/malamute"
 // zactor_new takes a void* pointer
 #define MLM_ENDPOINT_VOID (const_cast<void *>(static_cast<const void *>(MLM_ENDPOINT)))
 #define ACTOR_NUT_NAME "fty-nut"
@@ -38,45 +37,5 @@
 #define CONFIG_POLLING "nut/polling_interval"
 #define ACTION_POLLING "POLLING"
 #define ACTION_CONFIGURE "CONFIGURE"
-
-// C++ wrapper for czmq / malamute objects with automatic cleanup
-template<typename T, void (*destructor)(T**)>
-class MlmObjGuard
-{
-public:
-    MlmObjGuard()
-        : ptr_(nullptr)
-    {}
-    explicit MlmObjGuard(T* ptr)
-        : ptr_(ptr)
-    {}
-    MlmObjGuard(const MlmObjGuard&) = delete;
-    ~MlmObjGuard()
-    {
-        destructor(&ptr_);
-    }
-    T* operator=(T* ptr)
-    {
-        destructor(&ptr_);
-        ptr_ = ptr;
-        return ptr_;
-    }
-    operator T*()
-    {
-        return ptr_;
-    }
-    T* get()
-    {
-        return ptr_;
-    }
-private:
-    T* ptr_;
-};
-
-typedef MlmObjGuard<mlm_client_t, mlm_client_destroy> MlmClientGuard;
-typedef MlmObjGuard<zpoller_t, zpoller_destroy> ZpollerGuard;
-typedef MlmObjGuard<zmsg_t, zmsg_destroy> ZmsgGuard;
-typedef MlmObjGuard<zuuid_t, zuuid_destroy> ZuuidGuard;
-typedef MlmObjGuard<char, zstr_free> ZstrGuard;
 
 #endif

@@ -12,12 +12,13 @@ AM_CXXFLAGS = \
     -std=c++11
 
 AM_CPPFLAGS = \
-    ${libsodium_CFLAGS} \
+    ${log4cplus_CFLAGS} \
+    ${fty_common_logging_CFLAGS} \
+    ${fty_common_CFLAGS} \
+    ${fty_common_mlm_CFLAGS} \
     ${libzmq_CFLAGS} \
     ${czmq_CFLAGS} \
     ${malamute_CFLAGS} \
-    ${log4cplus_CFLAGS} \
-    ${fty_common_logging_CFLAGS} \
     ${fty_proto_CFLAGS} \
     ${cidr_CFLAGS} \
     ${cxxtools_CFLAGS} \
@@ -25,7 +26,7 @@ AM_CPPFLAGS = \
     -D__STDC_FORMAT_MACROS \
     -I$(srcdir)/include
 
-project_libs = ${libsodium_LIBS} ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${log4cplus_LIBS} ${fty_common_logging_LIBS} ${fty_proto_LIBS} ${cidr_LIBS} ${cxxtools_LIBS} ${libnutclient_LIBS}
+project_libs = ${log4cplus_LIBS} ${fty_common_logging_LIBS} ${fty_common_LIBS} ${fty_common_mlm_LIBS} ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${fty_proto_LIBS} ${cidr_LIBS} ${cxxtools_LIBS} ${libnutclient_LIBS}
 
 SUBDIRS = doc
 SUBDIRS += include
@@ -46,12 +47,13 @@ DISTCLEANFILES =
 
 if ENABLE_DIST_CMAKEFILES
 EXTRA_DIST += \
-    Findlibsodium.cmake \
+    Findlog4cplus.cmake \
+    Findfty_common_logging.cmake \
+    Findfty_common.cmake \
+    Findfty_common_mlm.cmake \
     Findlibzmq.cmake \
     Findczmq.cmake \
     Findmalamute.cmake \
-    Findlog4cplus.cmake \
-    Findfty_common_logging.cmake \
     Findfty_proto.cmake \
     Findcidr.cmake \
     Findcxxtools.cmake \
@@ -63,10 +65,8 @@ EXTRA_DIST += \
 endif
 
 EXTRA_DIST += \
-    src/fsutils.h \
     src/cidr.h \
     src/nutscan.h \
-    src/subprocess.h \
     src/actor_commands.h \
     src/ups_status.h \
     src/nut_device.h \
