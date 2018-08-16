@@ -13,21 +13,21 @@ AM_CXXFLAGS = \
 
 AM_CPPFLAGS = \
     ${log4cplus_CFLAGS} \
-    ${cxxtools_CFLAGS} \
     ${fty_common_logging_CFLAGS} \
     ${fty_common_CFLAGS} \
-    ${libsodium_CFLAGS} \
-    ${fty_common_mlm_CFLAGS} \
     ${libzmq_CFLAGS} \
     ${czmq_CFLAGS} \
     ${malamute_CFLAGS} \
+    ${cxxtools_CFLAGS} \
+    ${libsodium_CFLAGS} \
+    ${fty_common_mlm_CFLAGS} \
     ${fty_proto_CFLAGS} \
     ${cidr_CFLAGS} \
     ${libnutclient_CFLAGS} \
     -D__STDC_FORMAT_MACROS \
     -I$(srcdir)/include
 
-project_libs = ${log4cplus_LIBS} ${cxxtools_LIBS} ${fty_common_logging_LIBS} ${fty_common_LIBS} ${libsodium_LIBS} ${fty_common_mlm_LIBS} ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${fty_proto_LIBS} ${cidr_LIBS} ${libnutclient_LIBS}
+project_libs = ${log4cplus_LIBS} ${fty_common_logging_LIBS} ${fty_common_LIBS} ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${cxxtools_LIBS} ${libsodium_LIBS} ${fty_common_mlm_LIBS} ${fty_proto_LIBS} ${cidr_LIBS} ${libnutclient_LIBS}
 
 SUBDIRS = doc
 SUBDIRS += include
@@ -49,14 +49,14 @@ DISTCLEANFILES =
 if ENABLE_DIST_CMAKEFILES
 EXTRA_DIST += \
     Findlog4cplus.cmake \
-    Findcxxtools.cmake \
     Findfty_common_logging.cmake \
     Findfty_common.cmake \
-    Findlibsodium.cmake \
-    Findfty_common_mlm.cmake \
     Findlibzmq.cmake \
     Findczmq.cmake \
     Findmalamute.cmake \
+    Findcxxtools.cmake \
+    Findlibsodium.cmake \
+    Findfty_common_mlm.cmake \
     Findfty_proto.cmake \
     Findcidr.cmake \
     Findlibnutclient.cmake \

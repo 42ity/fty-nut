@@ -232,95 +232,6 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for log4cplus
 dnl END of enabled attempts to search for log4cplus
 
 
-was_cxxtools_check_lib_detected=no
-
-search_cxxtools="yes"
-
-AC_ARG_WITH([cxxtools],
-    [
-        AS_HELP_STRING([--with-cxxtools],
-        [yes or no. Optionally specify cxxtools prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
-    ],
-    [
-        search_cxxtools="yes"
-    ],
-    [
-        search_cxxtools="yes"
-    ])
-AS_CASE([x"${with_cxxtools}"],
-    [xyes], [search_cxxtools="yes"],
-    [xno],  [search_cxxtools="no"])
-
-dnl We do not abort right now, because the maintainer/developer may have
-dnl something particular in mind, e.g. to build just parts of a project.
-AS_IF([test x"${search_cxxtools}" = xno],
-    [AC_MSG_WARN([Required dependency on cxxtools was explicitly disabled during configuration by '--with-cxxtools=no'; subsequent full build of fty-nut may fail])])
-
-AS_IF([test x"${search_cxxtools}" = xyes], [
-    # Archive previously detected and supplied flags
-    PRE_SEARCH_CFLAGS="${CFLAGS}"
-    PRE_SEARCH_LIBS="${LIBS}"
-
-    found_pkgconfig=""
-    found_linkname=""
-    PKG_CHECK_MODULES([cxxtools], [cxxtools >= 0.0.0],
-    [
-        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $cxxtools_LIBS"
-        was_cxxtools_check_lib_detected=pkgcfg
-        found_pkgconfig="cxxtools"
-    ],
-    [
-        AC_MSG_NOTICE([Package cxxtools not found; falling back to defined compilability tests])
-
-        cxxtools_synthetic_cflags=""
-        cxxtools_synthetic_libs="-lcxxtools"
-
-        if test -n "${with_cxxtools}" && test x"${with_cxxtools}" != xyes && test x"${with_cxxtools}" != xno; then
-            if test -r "${with_cxxtools}/include/cxxtools/allocator.h"; then
-                cxxtools_synthetic_cflags="-I${with_cxxtools}/include"
-                cxxtools_synthetic_libs="-L${with_cxxtools}/lib -lcxxtools"
-            else
-            AC_MSG_ERROR([Header file ${with_cxxtools}/include/cxxtools/allocator.h was not found. Please check cxxtools prefix])
-            fi
-        else
-            AC_CHECK_HEADER([cxxtools/allocator.h], [],
-            AC_MSG_ERROR([Header file cxxtools/allocator.h was not found in default search paths])
-                )
-        fi
-
-        AC_CHECK_LIB([cxxtools], [cxxtools::Utf8Codec::Utf8Codec],
-            [
-                was_cxxtools_check_lib_detected=yes
-                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lcxxtools"
-                found_linkname="cxxtools"
-            ],
-            [AC_MSG_ERROR([cannot link with -lcxxtools, install cxxtools])])
-    ])
-
-dnl END of PKG_CHECK_MODULES and/or direct tests for cxxtools
-    AS_CASE(["x${was_cxxtools_check_lib_detected}"],
-        [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_cxxtools],[${found_pkgconfig}])
-                CFLAGS="${cxxtools_CFLAGS} ${CFLAGS}"
-                LIBS="${cxxtools_LIBS} ${LIBS}"
-            ],
-        [xyes], [
-                AC_SUBST([pkgconfig_name_cxxtools],[${found_linkname}])
-                CFLAGS="${cxxtools_synthetic_cflags} ${CFLAGS}"
-                LDFLAGS="${cxxtools_synthetic_libs} ${LDFLAGS}"
-                LIBS="${cxxtools_synthetic_libs} ${LIBS}"
-
-                AC_SUBST([cxxtools_CFLAGS],[${cxxtools_synthetic_cflags}])
-                AC_SUBST([cxxtools_LIBS],[${cxxtools_synthetic_libs}])
-            ],
-        [xno], [
-                AC_SUBST([pkgconfig_name_cxxtools],[cxxtools])
-            AC_MSG_ERROR([Cannot find pkg-config metadata for cxxtools 0.0.0 or higher])
-    ])
-])
-dnl END of enabled attempts to search for cxxtools
-
-
 was_fty_common_logging_check_lib_detected=no
 
 search_libfty_common_logging="yes"
@@ -448,7 +359,31 @@ AS_IF([test x"${search_libfty_common}" = xyes], [
         found_pkgconfig="libfty_common"
     ],
     [
-        AC_MSG_WARN([Attribute 'test' is not set on zproject dependency 'fty-common' - please ensure it is set])
+        AC_MSG_NOTICE([Package libfty_common not found; falling back to defined compilability tests])
+
+        fty_common_synthetic_cflags=""
+        fty_common_synthetic_libs="-lfty-common"
+
+        if test -n "${with_libfty_common}" && test x"${with_libfty_common}" != xyes && test x"${with_libfty_common}" != xno; then
+            if test -r "${with_libfty_common}/include/fty_common.h"; then
+                fty_common_synthetic_cflags="-I${with_libfty_common}/include"
+                fty_common_synthetic_libs="-L${with_libfty_common}/lib -lfty-common"
+            else
+            AC_MSG_ERROR([Header file ${with_libfty_common}/include/fty_common.h was not found. Please check libfty_common prefix])
+            fi
+        else
+            AC_CHECK_HEADER([fty_common.h], [],
+            AC_MSG_ERROR([Header file fty_common.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([fty-common], [fty_commmon_selftest],
+            [
+                was_fty_common_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty-common"
+                found_linkname="fty-common"
+            ],
+            [AC_MSG_ERROR([cannot link with -lfty-common, install libfty_common])])
     ])
 
 dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common
@@ -473,160 +408,6 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common
     ])
 ])
 dnl END of enabled attempts to search for libfty_common
-
-
-was_libsodium_check_lib_detected=no
-
-search_libsodium="yes"
-
-AC_ARG_WITH([libsodium],
-    [
-        AS_HELP_STRING([--with-libsodium],
-        [yes or no. Optionally specify libsodium prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
-    ],
-    [
-        search_libsodium="yes"
-    ],
-    [
-        search_libsodium="yes"
-    ])
-AS_CASE([x"${with_libsodium}"],
-    [xyes], [search_libsodium="yes"],
-    [xno],  [search_libsodium="no"])
-
-dnl We do not abort right now, because the maintainer/developer may have
-dnl something particular in mind, e.g. to build just parts of a project.
-AS_IF([test x"${search_libsodium}" = xno],
-    [AC_MSG_WARN([Required dependency on libsodium was explicitly disabled during configuration by '--with-libsodium=no'; subsequent full build of fty-nut may fail])])
-
-AS_IF([test x"${search_libsodium}" = xyes], [
-    # Archive previously detected and supplied flags
-    PRE_SEARCH_CFLAGS="${CFLAGS}"
-    PRE_SEARCH_LIBS="${LIBS}"
-
-    found_pkgconfig=""
-    found_linkname=""
-    PKG_CHECK_MODULES([libsodium], [libsodium >= 0.0.0],
-    [
-        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $libsodium_LIBS"
-        was_libsodium_check_lib_detected=pkgcfg
-        found_pkgconfig="libsodium"
-    ],
-    [
-        AC_MSG_NOTICE([Package libsodium not found; falling back to defined compilability tests])
-
-        libsodium_synthetic_cflags=""
-        libsodium_synthetic_libs="-lsodium"
-
-        if test -n "${with_libsodium}" && test x"${with_libsodium}" != xyes && test x"${with_libsodium}" != xno; then
-            if test -r "${with_libsodium}/include/sodium.h"; then
-                libsodium_synthetic_cflags="-I${with_libsodium}/include"
-                libsodium_synthetic_libs="-L${with_libsodium}/lib -lsodium"
-            else
-            AC_MSG_ERROR([Header file ${with_libsodium}/include/sodium.h was not found. Please check libsodium prefix])
-            fi
-        else
-            AC_CHECK_HEADER([sodium.h], [],
-            AC_MSG_ERROR([Header file sodium.h was not found in default search paths])
-                )
-        fi
-
-        AC_CHECK_LIB([sodium], [sodium_init],
-            [
-                was_libsodium_check_lib_detected=yes
-                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lsodium"
-                found_linkname="sodium"
-            ],
-            [AC_MSG_ERROR([cannot link with -lsodium, install libsodium])])
-    ])
-
-dnl END of PKG_CHECK_MODULES and/or direct tests for libsodium
-    AS_CASE(["x${was_libsodium_check_lib_detected}"],
-        [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_libsodium],[${found_pkgconfig}])
-                CFLAGS="${libsodium_CFLAGS} ${CFLAGS}"
-                LIBS="${libsodium_LIBS} ${LIBS}"
-            ],
-        [xyes], [
-                AC_SUBST([pkgconfig_name_libsodium],[${found_linkname}])
-                CFLAGS="${libsodium_synthetic_cflags} ${CFLAGS}"
-                LDFLAGS="${libsodium_synthetic_libs} ${LDFLAGS}"
-                LIBS="${libsodium_synthetic_libs} ${LIBS}"
-
-                AC_SUBST([libsodium_CFLAGS],[${libsodium_synthetic_cflags}])
-                AC_SUBST([libsodium_LIBS],[${libsodium_synthetic_libs}])
-            ],
-        [xno], [
-                AC_SUBST([pkgconfig_name_libsodium],[libsodium])
-            AC_MSG_ERROR([Cannot find pkg-config metadata for libsodium 0.0.0 or higher])
-    ])
-])
-dnl END of enabled attempts to search for libsodium
-
-
-was_fty_common_mlm_check_lib_detected=no
-
-search_libfty_common_mlm="yes"
-
-AC_ARG_WITH([libfty_common_mlm],
-    [
-        AS_HELP_STRING([--with-libfty_common_mlm],
-        [yes or no. Optionally specify libfty_common_mlm prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
-    ],
-    [
-        search_libfty_common_mlm="yes"
-    ],
-    [
-        search_libfty_common_mlm="yes"
-    ])
-AS_CASE([x"${with_libfty_common_mlm}"],
-    [xyes], [search_libfty_common_mlm="yes"],
-    [xno],  [search_libfty_common_mlm="no"])
-
-dnl We do not abort right now, because the maintainer/developer may have
-dnl something particular in mind, e.g. to build just parts of a project.
-AS_IF([test x"${search_libfty_common_mlm}" = xno],
-    [AC_MSG_WARN([Required dependency on fty_common_mlm was explicitly disabled during configuration by '--with-libfty_common_mlm=no'; subsequent full build of fty-nut may fail])])
-
-AS_IF([test x"${search_libfty_common_mlm}" = xyes], [
-    # Archive previously detected and supplied flags
-    PRE_SEARCH_CFLAGS="${CFLAGS}"
-    PRE_SEARCH_LIBS="${LIBS}"
-
-    found_pkgconfig=""
-    found_linkname=""
-    PKG_CHECK_MODULES([fty_common_mlm], [libfty_common_mlm >= 0.0.0],
-    [
-        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $fty_common_mlm_LIBS"
-        was_fty_common_mlm_check_lib_detected=pkgcfg
-        found_pkgconfig="libfty_common_mlm"
-    ],
-    [
-        AC_MSG_WARN([Attribute 'test' is not set on zproject dependency 'fty-common-mlm' - please ensure it is set])
-    ])
-
-dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common_mlm
-    AS_CASE(["x${was_fty_common_mlm_check_lib_detected}"],
-        [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_libfty_common_mlm],[${found_pkgconfig}])
-                CFLAGS="${fty_common_mlm_CFLAGS} ${CFLAGS}"
-                LIBS="${fty_common_mlm_LIBS} ${LIBS}"
-            ],
-        [xyes], [
-                AC_SUBST([pkgconfig_name_libfty_common_mlm],[${found_linkname}])
-                CFLAGS="${fty_common_mlm_synthetic_cflags} ${CFLAGS}"
-                LDFLAGS="${fty_common_mlm_synthetic_libs} ${LDFLAGS}"
-                LIBS="${fty_common_mlm_synthetic_libs} ${LIBS}"
-
-                AC_SUBST([fty_common_mlm_CFLAGS],[${fty_common_mlm_synthetic_cflags}])
-                AC_SUBST([fty_common_mlm_LIBS],[${fty_common_mlm_synthetic_libs}])
-            ],
-        [xno], [
-                AC_SUBST([pkgconfig_name_libfty_common_mlm],[libfty_common_mlm])
-            AC_MSG_ERROR([Cannot find pkg-config metadata for libfty_common_mlm 0.0.0 or higher])
-    ])
-])
-dnl END of enabled attempts to search for libfty_common_mlm
 
 
 was_libzmq_check_lib_detected=no
@@ -838,14 +619,14 @@ AS_IF([test x"${search_libmlm}" = xyes], [
 
     found_pkgconfig=""
     found_linkname=""
-    PKG_CHECK_MODULES([malamute], [libmlm >= 0.0.0],
+    PKG_CHECK_MODULES([malamute], [libmlm >= 1.0.0],
     [
         PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $malamute_LIBS"
         was_malamute_check_lib_detected=pkgcfg
         found_pkgconfig="libmlm"
     ],
     [
-        AC_MSG_NOTICE([Package libmlm not found; falling back to defined compilability tests])
+        AC_MSG_NOTICE([Package libmlm not found with needed constraints; falling back to defined compilability tests])
 
         malamute_synthetic_cflags=""
         malamute_synthetic_libs="-lmlm"
@@ -890,10 +671,253 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for libmlm
             ],
         [xno], [
                 AC_SUBST([pkgconfig_name_libmlm],[libmlm])
-            AC_MSG_ERROR([Cannot find pkg-config metadata for libmlm 0.0.0 or higher])
+            AC_MSG_ERROR([Cannot find pkg-config metadata for libmlm 1.0.0 or higher])
     ])
 ])
 dnl END of enabled attempts to search for libmlm
+
+
+was_cxxtools_check_lib_detected=no
+
+search_cxxtools="yes"
+
+AC_ARG_WITH([cxxtools],
+    [
+        AS_HELP_STRING([--with-cxxtools],
+        [yes or no. Optionally specify cxxtools prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_cxxtools="yes"
+    ],
+    [
+        search_cxxtools="yes"
+    ])
+AS_CASE([x"${with_cxxtools}"],
+    [xyes], [search_cxxtools="yes"],
+    [xno],  [search_cxxtools="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_cxxtools}" = xno],
+    [AC_MSG_WARN([Required dependency on cxxtools was explicitly disabled during configuration by '--with-cxxtools=no'; subsequent full build of fty-nut may fail])])
+
+AS_IF([test x"${search_cxxtools}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    found_linkname=""
+    PKG_CHECK_MODULES([cxxtools], [cxxtools >= 0.0.0],
+    [
+        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $cxxtools_LIBS"
+        was_cxxtools_check_lib_detected=pkgcfg
+        found_pkgconfig="cxxtools"
+    ],
+    [
+        AC_MSG_NOTICE([Package cxxtools not found; falling back to defined compilability tests])
+
+        cxxtools_synthetic_cflags=""
+        cxxtools_synthetic_libs="-lcxxtools"
+
+        if test -n "${with_cxxtools}" && test x"${with_cxxtools}" != xyes && test x"${with_cxxtools}" != xno; then
+            if test -r "${with_cxxtools}/include/cxxtools/allocator.h"; then
+                cxxtools_synthetic_cflags="-I${with_cxxtools}/include"
+                cxxtools_synthetic_libs="-L${with_cxxtools}/lib -lcxxtools"
+            else
+            AC_MSG_ERROR([Header file ${with_cxxtools}/include/cxxtools/allocator.h was not found. Please check cxxtools prefix])
+            fi
+        else
+            AC_CHECK_HEADER([cxxtools/allocator.h], [],
+            AC_MSG_ERROR([Header file cxxtools/allocator.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([cxxtools], [cxxtools::Utf8Codec::Utf8Codec],
+            [
+                was_cxxtools_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lcxxtools"
+                found_linkname="cxxtools"
+            ],
+            [AC_MSG_ERROR([cannot link with -lcxxtools, install cxxtools])])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for cxxtools
+    AS_CASE(["x${was_cxxtools_check_lib_detected}"],
+        [xpkgcfg], [
+                AC_SUBST([pkgconfig_name_cxxtools],[${found_pkgconfig}])
+                CFLAGS="${cxxtools_CFLAGS} ${CFLAGS}"
+                LIBS="${cxxtools_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                AC_SUBST([pkgconfig_name_cxxtools],[${found_linkname}])
+                CFLAGS="${cxxtools_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${cxxtools_synthetic_libs} ${LDFLAGS}"
+                LIBS="${cxxtools_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([cxxtools_CFLAGS],[${cxxtools_synthetic_cflags}])
+                AC_SUBST([cxxtools_LIBS],[${cxxtools_synthetic_libs}])
+            ],
+        [xno], [
+                AC_SUBST([pkgconfig_name_cxxtools],[cxxtools])
+            AC_MSG_ERROR([Cannot find pkg-config metadata for cxxtools 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for cxxtools
+
+
+was_libsodium_check_lib_detected=no
+
+search_libsodium="yes"
+
+AC_ARG_WITH([libsodium],
+    [
+        AS_HELP_STRING([--with-libsodium],
+        [yes or no. Optionally specify libsodium prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_libsodium="yes"
+    ],
+    [
+        search_libsodium="yes"
+    ])
+AS_CASE([x"${with_libsodium}"],
+    [xyes], [search_libsodium="yes"],
+    [xno],  [search_libsodium="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_libsodium}" = xno],
+    [AC_MSG_WARN([Required dependency on libsodium was explicitly disabled during configuration by '--with-libsodium=no'; subsequent full build of fty-nut may fail])])
+
+AS_IF([test x"${search_libsodium}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    found_linkname=""
+    PKG_CHECK_MODULES([libsodium], [libsodium >= 0.0.0],
+    [
+        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $libsodium_LIBS"
+        was_libsodium_check_lib_detected=pkgcfg
+        found_pkgconfig="libsodium"
+    ],
+    [
+        AC_MSG_NOTICE([Package libsodium not found; falling back to defined compilability tests])
+
+        libsodium_synthetic_cflags=""
+        libsodium_synthetic_libs="-lsodium"
+
+        if test -n "${with_libsodium}" && test x"${with_libsodium}" != xyes && test x"${with_libsodium}" != xno; then
+            if test -r "${with_libsodium}/include/sodium.h"; then
+                libsodium_synthetic_cflags="-I${with_libsodium}/include"
+                libsodium_synthetic_libs="-L${with_libsodium}/lib -lsodium"
+            else
+            AC_MSG_ERROR([Header file ${with_libsodium}/include/sodium.h was not found. Please check libsodium prefix])
+            fi
+        else
+            AC_CHECK_HEADER([sodium.h], [],
+            AC_MSG_ERROR([Header file sodium.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([sodium], [sodium_init],
+            [
+                was_libsodium_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lsodium"
+                found_linkname="sodium"
+            ],
+            [AC_MSG_ERROR([cannot link with -lsodium, install libsodium])])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for libsodium
+    AS_CASE(["x${was_libsodium_check_lib_detected}"],
+        [xpkgcfg], [
+                AC_SUBST([pkgconfig_name_libsodium],[${found_pkgconfig}])
+                CFLAGS="${libsodium_CFLAGS} ${CFLAGS}"
+                LIBS="${libsodium_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                AC_SUBST([pkgconfig_name_libsodium],[${found_linkname}])
+                CFLAGS="${libsodium_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${libsodium_synthetic_libs} ${LDFLAGS}"
+                LIBS="${libsodium_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([libsodium_CFLAGS],[${libsodium_synthetic_cflags}])
+                AC_SUBST([libsodium_LIBS],[${libsodium_synthetic_libs}])
+            ],
+        [xno], [
+                AC_SUBST([pkgconfig_name_libsodium],[libsodium])
+            AC_MSG_ERROR([Cannot find pkg-config metadata for libsodium 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for libsodium
+
+
+was_fty_common_mlm_check_lib_detected=no
+
+search_libfty_common_mlm="yes"
+
+AC_ARG_WITH([libfty_common_mlm],
+    [
+        AS_HELP_STRING([--with-libfty_common_mlm],
+        [yes or no. Optionally specify libfty_common_mlm prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_libfty_common_mlm="yes"
+    ],
+    [
+        search_libfty_common_mlm="yes"
+    ])
+AS_CASE([x"${with_libfty_common_mlm}"],
+    [xyes], [search_libfty_common_mlm="yes"],
+    [xno],  [search_libfty_common_mlm="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_libfty_common_mlm}" = xno],
+    [AC_MSG_WARN([Required dependency on fty_common_mlm was explicitly disabled during configuration by '--with-libfty_common_mlm=no'; subsequent full build of fty-nut may fail])])
+
+AS_IF([test x"${search_libfty_common_mlm}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    found_linkname=""
+    PKG_CHECK_MODULES([fty_common_mlm], [libfty_common_mlm >= 0.0.0],
+    [
+        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $fty_common_mlm_LIBS"
+        was_fty_common_mlm_check_lib_detected=pkgcfg
+        found_pkgconfig="libfty_common_mlm"
+    ],
+    [
+        AC_MSG_WARN([Attribute 'test' is not set on zproject dependency 'fty-common-mlm' - please ensure it is set])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common_mlm
+    AS_CASE(["x${was_fty_common_mlm_check_lib_detected}"],
+        [xpkgcfg], [
+                AC_SUBST([pkgconfig_name_libfty_common_mlm],[${found_pkgconfig}])
+                CFLAGS="${fty_common_mlm_CFLAGS} ${CFLAGS}"
+                LIBS="${fty_common_mlm_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                AC_SUBST([pkgconfig_name_libfty_common_mlm],[${found_linkname}])
+                CFLAGS="${fty_common_mlm_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${fty_common_mlm_synthetic_libs} ${LDFLAGS}"
+                LIBS="${fty_common_mlm_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([fty_common_mlm_CFLAGS],[${fty_common_mlm_synthetic_cflags}])
+                AC_SUBST([fty_common_mlm_LIBS],[${fty_common_mlm_synthetic_libs}])
+            ],
+        [xno], [
+                AC_SUBST([pkgconfig_name_libfty_common_mlm],[libfty_common_mlm])
+            AC_MSG_ERROR([Cannot find pkg-config metadata for libfty_common_mlm 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for libfty_common_mlm
 
 
 was_fty_proto_check_lib_detected=no
