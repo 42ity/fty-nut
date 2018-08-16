@@ -51,15 +51,17 @@ BuildRequires:  systemd
 %{?systemd_requires}
 BuildRequires:  xmlto
 BuildRequires:  gcc-c++
-BuildRequires:  libsodium-devel
+BuildRequires:  log4cplus-devel
+BuildRequires:  fty-common-logging-devel
+BuildRequires:  fty-common-devel
 BuildRequires:  zeromq-devel
 BuildRequires:  czmq-devel
 BuildRequires:  malamute-devel
-BuildRequires:  log4cplus-devel
-BuildRequires:  fty-common-logging-devel
+BuildRequires:  cxxtools-devel
+BuildRequires:  libsodium-devel
+BuildRequires:  fty-common-mlm-devel
 BuildRequires:  fty-proto-devel
 BuildRequires:  libcidr-devel
-BuildRequires:  cxxtools-devel
 BuildRequires:  nut-devel
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
@@ -84,15 +86,17 @@ This package contains shared library for fty-nut: nut (network ups tools) daemon
 Summary:        nut (network ups tools) daemon wrapper/proxy
 Group:          System/Libraries
 Requires:       libfty_nut1 = %{version}
-Requires:       libsodium-devel
+Requires:       log4cplus-devel
+Requires:       fty-common-logging-devel
+Requires:       fty-common-devel
 Requires:       zeromq-devel
 Requires:       czmq-devel
 Requires:       malamute-devel
-Requires:       log4cplus-devel
-Requires:       fty-common-logging-devel
+Requires:       cxxtools-devel
+Requires:       libsodium-devel
+Requires:       fty-common-mlm-devel
 Requires:       fty-proto-devel
 Requires:       libcidr-devel
-Requires:       cxxtools-devel
 Requires:       nut-devel
 
 %description devel

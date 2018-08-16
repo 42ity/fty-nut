@@ -30,6 +30,7 @@
 #include "nut_mlm.h"
 #include <fty_log.h>
 #include <czmq.h>
+#include <fty_common_mlm.h>
 
 int main (int argc, char *argv [])
 {

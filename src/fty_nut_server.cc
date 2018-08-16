@@ -32,6 +32,7 @@
 #include "nut_agent.h"
 #include "nut_mlm.h"
 #include <fty_log.h>
+#include <fty_common_mlm.h>
 
 StateManager NutStateManager;
 

@@ -30,12 +30,11 @@
 //  Set up environment for the application
 
 //  External dependencies
-#include <czmq.h>
-#include <malamute.h>
 #include <fty_log.h>
+#include <fty_common.h>
+#include <fty_common_mlm_guards.h>
 #include <ftyproto.h>
 #include <libcidr.h>
-#include <cxxtools/allocator.h>
 #include <nutclient.h>
 
 //  FTY_NUT version macros for compile-time API detection
@@ -47,7 +46,6 @@
     ((major) * 10000 + (minor) * 100 + (patch))
 #define FTY_NUT_VERSION \
     FTY_NUT_MAKE_VERSION(FTY_NUT_VERSION_MAJOR, FTY_NUT_VERSION_MINOR, FTY_NUT_VERSION_PATCH)
-
 
 #if defined (__WINDOWS__)
 #   if defined FTY_NUT_STATIC

@@ -13,10 +13,8 @@ lib_LTLIBRARIES += src/libfty_nut.la
 pkgconfig_DATA = src/libfty_nut.pc
 
 src_libfty_nut_la_SOURCES = \
-    src/fsutils.cc \
     src/cidr.cc \
     src/nutscan.cc \
-    src/subprocess.cc \
     src/actor_commands.cc \
     src/ups_status.cc \
     src/nut_device.cc \
