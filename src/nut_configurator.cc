@@ -143,7 +143,7 @@ void NUTConfigurator::systemctl( const std::string &operation, It first, It last
     // kernels (stack size / 4, i.e. 2MB typically), so we will only hit it
     // with with five digit device counts.
     _argv.insert(_argv.end(), first, last);
-    SubProcess systemd( _argv );
+    MlmSubprocess::SubProcess systemd( _argv );
     if( systemd.run() ) {
         int result = systemd.wait();
         log_info("sudo systemctl %s result %i (%s) for following units",
@@ -163,7 +163,7 @@ void NUTConfigurator::systemctl( const std::string &operation, It first, It last
 void NUTConfigurator::updateNUTConfig() {
     // Run the helper script
     std::vector<std::string> _argv = { "sudo", "fty-nutconfig" };
-    SubProcess systemd( _argv );
+    MlmSubprocess::SubProcess systemd( _argv );
     if( systemd.run() ) {
         int result = systemd.wait();
         log_info("sudo fty-nutconfig %i (%s)",
@@ -186,7 +186,7 @@ s_digest (const char* file)
         log_info ("Cannot open file '%s', digest won't be computed: %s", file, strerror (errno));
         return NULL;
     }
-    std::string buffer = read_all (fd);
+    std::string buffer = MlmSubprocess::read_all (fd);
     close (fd);
 
     zdigest_update (digest, (byte*) buffer.c_str (), buffer.size ());
