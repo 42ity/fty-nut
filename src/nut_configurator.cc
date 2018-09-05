@@ -316,9 +316,9 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
         cfgFile.flush ();
         cfgFile.close ();
         log_info("creating new config file %s/%s", NUT_PART_STORE, name.c_str() );
-        updateNUTConfig ();
-        systemctl ("enable",  std::string("nut-driver@") + name);
+        updateNUTConfig();
         systemctl ("restart", std::string("nut-driver@") + name);
+        systemctl ("enable",  std::string("nut-driver@") + name);
         systemctl ("reload-or-restart", "nut-server");
     }
     zstr_free (&digest_new);
@@ -333,9 +333,9 @@ void NUTConfigurator::erase(const std::string &name)
         + path_separator()
         + name;
     remove( fileName.c_str() );
-    updateNUTConfig();
-    systemctl("stop",    std::string("nut-driver@") + name);
     systemctl("disable", std::string("nut-driver@") + name);
+    systemctl("stop",    std::string("nut-driver@") + name);
+    updateNUTConfig();
     systemctl("reload-or-restart", "nut-server");
 }
 
