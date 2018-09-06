@@ -97,22 +97,14 @@ bool AssetState::handleAssetMessage(fty_proto_t* message)
 }
 
 // Destroys passed message
-bool AssetState::handleLicensingMessage(zmsg_t* message)
+bool AssetState::handleLicensingMessage(fty_proto_t* message)
 {
-    ZmsgGuard msg(message);
-    ZstrGuard value(zmsg_popstr(msg));
-    ZstrGuard item(zmsg_popstr(msg));
-    ZstrGuard category(zmsg_popstr(msg));
-    while (value && item && category) {
-        if (streq(category, "POWER_NODES") && streq(item, "MAX_ACTIVE")) {
-            try {
-                license_limit_ = std::stoi(value.get());
-                return true;
-            } catch (...) { }
-        }
-        value = zmsg_popstr(msg);
-        item = zmsg_popstr(msg);
-        category = zmsg_popstr(msg);
+    assert (fty_proto_id(metric) == FTY_PROTO_METRIC);
+    if (streq (fty_proto_name(metric), "rackcontroller-0") && streq (fty_proto_type(metric), "power_nodes.max_active")) {
+        try {
+            license_limit_ = std::stoi(value.get());
+            return true;
+        } catch (...) { }
     }
     return false;
 }
@@ -120,7 +112,11 @@ bool AssetState::handleLicensingMessage(zmsg_t* message)
 bool AssetState::updateFromProto(fty_proto_t* message)
 {
     // proto messages are always assumed to be asset updates
-    return handleAssetMessage(message);
+    if (fty_proto_id (message) == FTY_PROTO_ASSET) {
+        return handleAssetMessage(message);
+    } else if (fty_proto_id (message) == FTY_PROTO_METRIC) {
+        return handleLicensingMessage(message);
+    }
 }
 
 bool AssetState::updateFromProto(zmsg_t* message)
@@ -137,7 +133,13 @@ bool AssetState::updateFromProto(zmsg_t* message)
     } else {
 
         // non-proto messages are assumed to be licensing
-        ret = handleLicensingMessage(message);
+        fty_proto_t *proto = fty_proto_decode (&message);
+        if (!proto) {
+            zmsg_destroy(&message);
+            return false;
+        }
+        ret = handleLicensingMessage(proto);
+        fty_proto_destroy(&proto);
     }
     return ret;
 }

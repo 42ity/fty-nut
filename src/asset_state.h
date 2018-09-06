@@ -129,7 +129,7 @@ public:
     const std::string& ip2master(const std::string& ip) const;
 private:
     bool handleAssetMessage(fty_proto_t* message);
-    bool handleLicensingMessage(zmsg_t* message);
+    bool handleLicensingMessage(fty_proto_t* message);
     AssetMap powerdevices_;
     // subset of powerdevices_ that are allowed by the license
     AssetMap allowed_powerdevices_;
