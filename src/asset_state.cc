@@ -99,10 +99,10 @@ bool AssetState::handleAssetMessage(fty_proto_t* message)
 // Destroys passed message
 bool AssetState::handleLicensingMessage(fty_proto_t* message)
 {
-    assert (fty_proto_id(metric) == FTY_PROTO_METRIC);
-    if (streq (fty_proto_name(metric), "rackcontroller-0") && streq (fty_proto_type(metric), "power_nodes.max_active")) {
+    assert (fty_proto_id(message) == FTY_PROTO_METRIC);
+    if (streq (fty_proto_name(message), "rackcontroller-0") && streq (fty_proto_type(message), "power_nodes.max_active")) {
         try {
-            license_limit_ = std::stoi(value.get());
+            license_limit_ = std::stoi(fty_proto_value(message));
             return true;
         } catch (...) { }
     }
@@ -121,24 +121,14 @@ bool AssetState::updateFromProto(fty_proto_t* message)
 
 bool AssetState::updateFromProto(zmsg_t* message)
 {
-    bool ret;
+    bool ret = false;
     if (is_fty_proto(message)) {
         fty_proto_t *proto = fty_proto_decode (&message);
         if (!proto) {
             zmsg_destroy(&message);
             return false;
         }
-        ret =  handleAssetMessage(proto);
-        fty_proto_destroy(&proto);
-    } else {
-
-        // non-proto messages are assumed to be licensing
-        fty_proto_t *proto = fty_proto_decode (&message);
-        if (!proto) {
-            zmsg_destroy(&message);
-            return false;
-        }
-        ret = handleLicensingMessage(proto);
+        ret = updateFromProto (proto);
         fty_proto_destroy(&proto);
     }
     return ret;

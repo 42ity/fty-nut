@@ -289,8 +289,7 @@ fty_nut_server (zsock_t *pipe, void *args)
             log_error ("Given `which == mlm_client_msgpipe (client)`, function `mlm_client_recv ()` returned NULL");
             continue;
         }
-        if (is_fty_proto(message) ||
-                strcmp(mlm_client_subject(client), "LIMITATIONS") == 0) {
+        if (is_fty_proto(message)) {
             if (state_writer.getState().updateFromProto(message))
                 state_writer.commit();
             continue;

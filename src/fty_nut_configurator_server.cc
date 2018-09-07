@@ -94,27 +94,19 @@ void Autoconfig::onUpdate()
     setPollingInterval();
 }
 
-void Autoconfig::handleLimitations( zmsg_t **message )
+void Autoconfig::handleLimitations( fty_proto_t **message )
 {
     if( ! message || ! *message ) return;
 
     int monitor_power_devices = 1;
     // should there be any data to share, they come in a group of three (value, item, category)
-    char *value = zmsg_popstr (*message);
-    char *item = zmsg_popstr (*message);
-    char *category = zmsg_popstr (*message);
-    while (value && item && category) {
-        if (streq (category, "POWER_NODES") && streq (item, "MONITOR")) {
-            monitor_power_devices = atoi(value);
-        }
-        zstr_free (&value);
-        zstr_free (&item);
-        zstr_free (&category);
-        value = zmsg_popstr (*message);
-        item = zmsg_popstr (*message);
-        category = zmsg_popstr (*message);
+    assert (fty_proto_id(*message) == FTY_PROTO_METRIC);
+    if (streq (fty_proto_name(*message), "rackcontroller-0") && streq (fty_proto_type(*message), "power_nodes.monitor")) {
+        try {
+            monitor_power_devices = std::stoi(fty_proto_value(*message));
+        } catch (...) { }
     }
-    zmsg_destroy(message);
+    fty_proto_destroy(message);
     // skip if licensing is disabled
     if (-1 >= monitor_power_devices)
         return;
@@ -269,13 +261,18 @@ fty_nut_configurator_server (zsock_t *pipe, void *args)
             continue;
         }
         zmsg_t *msg = mlm_client_recv(client);
-        if (streq ("LIMITATIONS", mlm_client_subject (client))) {
-            agent.handleLimitations (&msg);
-        } else
         if (is_fty_proto(msg)) {
-            if (state_writer.getState().updateFromProto(msg))
-                state_writer.commit();
-            agent.onUpdate();
+            fty_proto_t *proto = fty_proto_decode (&msg);
+            if (!proto) {
+                zmsg_destroy(&msg);
+            }
+            if (fty_proto_id (proto) == FTY_PROTO_ASSET) {
+                if (state_writer.getState().updateFromProto(proto))
+                    state_writer.commit();
+                agent.onUpdate();
+            } else if (fty_proto_id (proto) == FTY_PROTO_METRIC) {
+                agent.handleLimitations(&proto);
+            }
             continue;
         }
         log_error ("Unhandled message (%s/%s)",
