@@ -26,7 +26,7 @@
 @end
 */
 
-#include "subprocess.h"
+#include <fty_common_mlm_subprocess.h>
 #include "nutscan.h"
 #include <fty_log.h>
 
@@ -134,14 +134,14 @@ s_parse_nut_scanner_output(
 static
 int
 s_run_nut_scanner(
-        const Argv& args,
-        const std::string& name,
-        std::vector<std::string>& out)
+    const MlmSubprocess::Argv& args,
+    const std::string& name,
+    std::vector<std::string>& out)
 {
     std::string o;
     std::string e;
     log_debug ("START: nut-scanner with timeout 10 ...");
-    int ret = output(args, o, e, 10);
+    int ret = MlmSubprocess::output(args, o, e, 10);
     log_debug ("       done with code %d and following stdout:\n-----\n%s\n-----\n       ...and stderr:\n-----\n%s\n-----\n", ret, o.c_str(), e.c_str());
     if (ret != 0) {
         log_error("Execution of nut-scanner FAILED with code %d and %s",
@@ -185,7 +185,7 @@ nut_scan_snmp(
     int r = -1;
     // DMF enabled and available
     if (use_dmf || ::getenv ("BIOS_NUT_USE_DMF")) {
-        Argv args = {"nut-scanner", "-q", "--community", comm, "-z", "-s", ip_address.toString()};
+        MlmSubprocess::Argv args = {"nut-scanner", "-q", "--community", comm, "-z", "-s", ip_address.toString()};
         log_debug("nut-scanning SNMP device at %s using DMF support", ip_address.toString().c_str());
         r = s_run_nut_scanner(
                 args,
@@ -197,7 +197,7 @@ nut_scan_snmp(
     }
 
     // DMF not available
-    Argv args = {"nut-scanner", "-q", "--community", comm, "-S", "-s", ip_address.toString()};
+    MlmSubprocess::Argv args = {"nut-scanner", "-q", "--community", comm, "-S", "-s", ip_address.toString()};
     log_debug("nut-scanning SNMP device at %s using legacy mode", ip_address.toString().c_str());
     r = s_run_nut_scanner(
             args,
@@ -213,7 +213,7 @@ nut_scan_xml_http(
         const CIDRAddress& ip_address,
         std::vector<std::string>& out)
 {
-    Argv args = {"nut-scanner", "-q", "-M", "-s", ip_address.toString()};
+    MlmSubprocess::Argv args = {"nut-scanner", "-q", "-M", "-s", ip_address.toString()};
     log_debug("nut-scanning NetXML device at %s", ip_address.toString().c_str());
     return s_run_nut_scanner(
             args,

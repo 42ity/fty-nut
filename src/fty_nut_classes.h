@@ -36,10 +36,6 @@
 #include "nut_mlm.h"
 
 //  Opaque class structures to allow forward references
-#ifndef FSUTILS_T_DEFINED
-typedef struct _fsutils_t fsutils_t;
-#define FSUTILS_T_DEFINED
-#endif
 #ifndef CIDR_T_DEFINED
 typedef struct _cidr_t cidr_t;
 #define CIDR_T_DEFINED
@@ -47,10 +43,6 @@ typedef struct _cidr_t cidr_t;
 #ifndef NUTSCAN_T_DEFINED
 typedef struct _nutscan_t nutscan_t;
 #define NUTSCAN_T_DEFINED
-#endif
-#ifndef SUBPROCESS_T_DEFINED
-typedef struct _subprocess_t subprocess_t;
-#define SUBPROCESS_T_DEFINED
 #endif
 #ifndef ACTOR_COMMANDS_T_DEFINED
 typedef struct _actor_commands_t actor_commands_t;
@@ -99,10 +91,8 @@ typedef struct _asset_state_t asset_state_t;
 
 //  Internal API
 
-#include "fsutils.h"
 #include "cidr.h"
 #include "nutscan.h"
-#include "subprocess.h"
 #include "actor_commands.h"
 #include "ups_status.h"
 #include "nut_device.h"
@@ -121,22 +111,12 @@ typedef struct _asset_state_t asset_state_t;
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
 FTY_NUT_PRIVATE void
-    fsutils_test (bool verbose);
-
-//  *** Draft method, defined for internal use only ***
-//  Self test of this class.
-FTY_NUT_PRIVATE void
     cidr_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
 FTY_NUT_PRIVATE void
     nutscan_test (bool verbose);
-
-//  *** Draft method, defined for internal use only ***
-//  Self test of this class.
-FTY_NUT_PRIVATE void
-    subprocess_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.

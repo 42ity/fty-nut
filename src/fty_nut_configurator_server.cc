@@ -30,7 +30,7 @@
 #include "state_manager.h"
 #include "nut_mlm.h"
 #include <fty_log.h>
-
+#include <fty_common_mlm.h>
 #include <ftyproto.h>
 #include <fstream>
 #include <algorithm>

@@ -27,8 +27,8 @@
 */
 
 #include "nut_configurator.h"
-#include "subprocess.h"
-#include "fsutils.h"
+#include <fty_common_mlm_subprocess.h>
+#include <fty_common_filesystem.h>
 #include "nutscan.h"
 #include <fty_log.h>
 #include "cidr.h"
@@ -143,7 +143,7 @@ void NUTConfigurator::systemctl( const std::string &operation, It first, It last
     // kernels (stack size / 4, i.e. 2MB typically), so we will only hit it
     // with with five digit device counts.
     _argv.insert(_argv.end(), first, last);
-    SubProcess systemd( _argv );
+    MlmSubprocess::SubProcess systemd( _argv );
     if( systemd.run() ) {
         int result = systemd.wait();
         log_info("sudo systemctl %s result %i (%s) for following units",
@@ -163,7 +163,7 @@ void NUTConfigurator::systemctl( const std::string &operation, It first, It last
 void NUTConfigurator::updateNUTConfig() {
     // Run the helper script
     std::vector<std::string> _argv = { "sudo", "fty-nutconfig" };
-    SubProcess systemd( _argv );
+    MlmSubprocess::SubProcess systemd( _argv );
     if( systemd.run() ) {
         int result = systemd.wait();
         log_info("sudo fty-nutconfig %i (%s)",
@@ -186,7 +186,7 @@ s_digest (const char* file)
         log_info ("Cannot open file '%s', digest won't be computed: %s", file, strerror (errno));
         return NULL;
     }
-    std::string buffer = read_all (fd);
+    std::string buffer = MlmSubprocess::read_all (fd);
     close (fd);
 
     zdigest_update (digest, (byte*) buffer.c_str (), buffer.size ());
@@ -350,11 +350,11 @@ void NUTConfigurator::erase(const std::string &name)
 
 void NUTConfigurator::commit()
 {
-    updateNUTConfig();
-    systemctl("stop",    stop_drivers_.begin(),  stop_drivers_.end());
     systemctl("disable", stop_drivers_.begin(),  stop_drivers_.end());
-    systemctl("enable",  start_drivers_.begin(), start_drivers_.end());
+    systemctl("stop",    stop_drivers_.begin(),  stop_drivers_.end());
+    updateNUTConfig();
     systemctl("restart", start_drivers_.begin(), start_drivers_.end());
+    systemctl("enable",  start_drivers_.begin(), start_drivers_.end());
     if (!stop_drivers_.empty() || !start_drivers_.empty())
         systemctl("reload-or-restart", "nut-server");
     stop_drivers_.clear();
@@ -363,7 +363,7 @@ void NUTConfigurator::commit()
 
 bool NUTConfigurator::known_assets(std::vector<std::string>& assets)
 {
-    return files_in_directory(NUT_PART_STORE, assets);
+    return shared::is_file_in_directory(NUT_PART_STORE, assets);
 }
 
 void

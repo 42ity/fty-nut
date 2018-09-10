@@ -28,8 +28,9 @@
 
 #include "actor_commands.h"
 #include "nut_agent.h"
-#include "nut_mlm.h"
 #include <fty_log.h>
+#include "nut_mlm.h"
+#include <fty_common_mlm.h>
 
 int
 actor_commands (
