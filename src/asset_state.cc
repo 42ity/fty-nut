@@ -117,6 +117,7 @@ bool AssetState::updateFromProto(fty_proto_t* message)
     } else if (fty_proto_id (message) == FTY_PROTO_METRIC) {
         return handleLicensingMessage(message);
     }
+    return false;
 }
 
 bool AssetState::updateFromProto(zmsg_t* message)
