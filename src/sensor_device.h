@@ -35,7 +35,8 @@ class Sensor {
     typedef std::map<std::string, std::string> ChildrenMap;
     Sensor () :
         _asset(nullptr),
-        _parent(nullptr)
+        _parent(nullptr),
+        _nutMaster("invalidNutMaster")
     { };
     Sensor (const AssetState::Asset *asset, const AssetState::Asset *parent,
             ChildrenMap& children) :
