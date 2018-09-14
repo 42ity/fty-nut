@@ -183,6 +183,7 @@ sensor_list_test (bool verbose)
     fty_proto_aux_insert (asset, "type", "device");
     fty_proto_aux_insert (asset, "subtype", "sensorgpio");
     fty_proto_aux_insert (asset, "parent_name.1", "sensor-2");
+    fty_proto_aux_insert (asset, "parent_name.2", "epdu-2");
     fty_proto_ext_insert (asset, "port", "1");
     writer.getState().updateFromProto(asset);
     fty_proto_destroy(&asset);
