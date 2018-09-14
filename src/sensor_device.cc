@@ -55,6 +55,8 @@ void Sensor::update (nut::TcpClient &conn)
 
         }
 
+        _contacts.clear();
+
         std::string state = nutDevice.getVariableValue (prefix + "contacts.1.status")[0];
         if (state != "unknown" && state != "bad")
             _contacts.push_back (state);
