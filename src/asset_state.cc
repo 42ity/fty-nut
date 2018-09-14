@@ -81,8 +81,20 @@ bool AssetState::handleAssetMessage(fty_proto_t* message)
     AssetMap* map;
     if (subtype == "epdu" || subtype == "ups" || subtype == "sts")
         map = &powerdevices_;
-    else if (subtype == "sensor" || subtype == "sensorgpio")
+    else if (subtype == "sensor") {
+        // skip sensors connected to rackcontrollers
+        if (streq (fty_proto_aux_string(message, "parent_name.1", ""), "rackcontroller-0"))
+            return false;
         map = &sensors_;
+    }
+    else if (subtype == "sensorgpio") {
+        // skip gpi sensors connected to rackcontrollers
+        if (streq (fty_proto_aux_string(message, "parent_name.1", ""), "rackcontroller-0"))
+            return false;
+        if (streq (fty_proto_aux_string(message, "parent_name.2", ""), "rackcontroller-0"))
+            return false;
+        map = &sensors_;
+    }
     else
         return false;
     if (operation != FTY_PROTO_ASSET_OP_CREATE &&
