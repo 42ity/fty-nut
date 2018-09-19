@@ -154,6 +154,10 @@ void NUTConfigurator::upsd_reload()
         log_info("sudo upsd -c reload result: %i (%s)",
                  result,
                  (result == 0 ? "ok" : "failed"));
+        if(result != 0 ){
+            //upsd daemon is probably not yet started
+            systemctl ("reload-or-restart", "nut-server");
+        }
     } else {
         log_error("can't run 'sudo upsd -c reload' command");
     }
