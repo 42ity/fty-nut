@@ -155,7 +155,7 @@ void NUTConfigurator::upsd_reload()
                  result,
                  (result == 0 ? "ok" : "failed"));
     } else {
-        log_error("can't run sudo upsd -c reloa command");
+        log_error("can't run 'sudo upsd -c reload' command");
     }
 }
 
