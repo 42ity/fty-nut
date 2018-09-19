@@ -145,6 +145,20 @@ void NUTConfigurator::systemctl( const std::string &operation, const std::string
     }
 }
 
+void NUTConfigurator::upsd_reload()
+{
+    std::vector<std::string> _argv = {"sudo", "/sbin/upsd", "-c", "reload" };
+    SubProcess upsd_c( _argv );
+    if( upsd_c.run() ) {
+        int result = upsd_c.wait();
+        log_info("sudo upsd -c reload result: %i (%s)",
+                 result,
+                 (result == 0 ? "ok" : "failed"));
+    } else {
+        log_error("can't run sudo upsd -c reloa command");
+    }
+}
+
 void NUTConfigurator::updateNUTConfig() {
     // Run the helper script
     std::vector<std::string> _argv = { "sudo", "fty-nutconfig" };
@@ -319,7 +333,7 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
         updateNUTConfig();
         systemctl ("restart", std::string("nut-driver@") + name);
         systemctl ("enable",  std::string("nut-driver@") + name);
-        systemctl ("reload-or-restart", "nut-server");
+        upsd_reload();
     }
     zstr_free (&digest_new);
     zstr_free (&digest_old);
@@ -336,7 +350,7 @@ void NUTConfigurator::erase(const std::string &name)
     systemctl("disable", std::string("nut-driver@") + name);
     systemctl("stop",    std::string("nut-driver@") + name);
     updateNUTConfig();
-    systemctl("reload-or-restart", "nut-server");
+    upsd_reload();
 }
 
 bool NUTConfigurator::known_assets(std::vector<std::string>& assets)

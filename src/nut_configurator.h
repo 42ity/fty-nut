@@ -58,6 +58,7 @@ class NUTConfigurator {
     static bool canXml( const std::vector<std::string> &texts);
     static std::vector<std::string>::const_iterator getBestSnmpMib( const std::vector<std::string> &configs);
     static void systemctl( const std::string &operation, const std::string &service );
+    static void upsd_reload();
 };
 
 //  Self test of this class
