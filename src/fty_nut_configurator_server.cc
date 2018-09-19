@@ -256,7 +256,7 @@ fty_nut_configurator_server (zsock_t *pipe, void *args)
         if (which == pipe || zsys_interrupted)
             break;
         if (!which) {
-            zsys_debug("Periodic polling");
+            log_debug("Periodic polling");
             agent.onPoll ();
             continue;
         }
