@@ -130,7 +130,7 @@ alert_actor (zsock_t *pipe, void *args)
         uint64_t now = zclock_mono ();
         if (now - last >= polling) {
             last = now;
-            zsys_debug ("Polling data now");
+            log_debug ("Polling data now");
             devices.updateDeviceList ();
             devices.updateFromNUT ();
             devices.publishRules (mb_client);

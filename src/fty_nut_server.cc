@@ -250,7 +250,7 @@ fty_nut_server (zsock_t *pipe, void *args)
         uint64_t now = zclock_mono();
         if (now - last >= timeout) {
             last = now;
-            zsys_debug("Periodic polling");
+            log_debug("Periodic polling");
             nut_agent.updateDeviceList();
             nut_agent.onPoll();
         }
