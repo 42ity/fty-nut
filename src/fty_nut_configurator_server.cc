@@ -105,7 +105,11 @@ void Autoconfig::handleLimitations( fty_proto_t **message )
         try {
             monitor_power_devices = std::stoi(fty_proto_value(*message));
             log_info("According to metrics, rackcontroller-0 may monitor %d devices", monitor_power_devices);
-        } catch (...) { }
+        } catch (...) {
+            log_error("Failed to extract a numeric value from power_nodes.monitor for rackcontroller-0: %s", fty_proto_value(*message));
+        }
+    } else {
+        log_debug("There is no metric on how many devices may rackcontroller-0 monitor");
     }
     fty_proto_destroy(message);
     // skip if licensing is disabled
