@@ -141,7 +141,7 @@ void Autoconfig::handleLimitations( fty_proto_t **message )
     for (unsigned int i = monitor_power_devices; i < power_devices_list.size(); ++i) {
         log_info("Due to licensing limitations, disabling monitoring for power device #%u type %s named %s",
             i, _configDevices[power_devices_list[i].first].asset->subtype().c_str(),
-            power_devices_list[i].first] );
+            power_devices_list[i].first.c_str() );
         _configDevices[power_devices_list[i].first].state = AutoConfigurationInfo::STATE_DELETING;
     }
     // save results
