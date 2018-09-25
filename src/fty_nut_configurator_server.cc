@@ -104,12 +104,15 @@ void Autoconfig::handleLimitations( fty_proto_t **message )
     if (streq (fty_proto_name(*message), "rackcontroller-0") && streq (fty_proto_type(*message), "power_nodes.monitor")) {
         try {
             monitor_power_devices = std::stoi(fty_proto_value(*message));
+            log_info("According to metrics, rackcontroller-0 may monitor %d devices", monitor_power_devices);
         } catch (...) { }
     }
     fty_proto_destroy(message);
     // skip if licensing is disabled
-    if (-1 >= monitor_power_devices)
+    if (-1 >= monitor_power_devices) {
+        log_info("Licensing placed no limitation here");
         return;
+    }
     // update devices according to license
     typedef std::pair<std::string, int> pairsi; // <name, numeric_id>
     std::vector<pairsi> power_devices_list;
@@ -127,7 +130,14 @@ void Autoconfig::handleLimitations( fty_proto_t **message )
         [] (const pairsi & a, const pairsi & b) -> bool {
             return a.second < b.second;
         });
+    // Note: potential mismatch of uint vs int here, let's
+    // hope we don't have that many devices to monitor :)
+    log_info("Got %u devices in the list and may monitor %d devices",
+         power_devices_list.size(), monitor_power_devices);
     for (unsigned int i = monitor_power_devices; i < power_devices_list.size(); ++i) {
+        log_info("Due to licensing limitations, disabling monitoring for power device #%u type %s named %s",
+            i, _configDevices[power_devices_list[i].first].asset->subtype().c_str(),
+            std::string(_configDevices[power_devices_list[i].first]).c_str() );
         _configDevices[power_devices_list[i].first].state = AutoConfigurationInfo::STATE_DELETING;
     }
     // save results
