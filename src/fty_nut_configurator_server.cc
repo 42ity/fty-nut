@@ -99,11 +99,12 @@ void Autoconfig::handleLimitations( fty_proto_t **message )
     if( ! message || ! *message ) return;
 
     int monitor_power_devices = 1;
-    // should there be any data to share, they come in a group of three (value, item, category)
+    bool message_affects_me = false;
     assert (fty_proto_id(*message) == FTY_PROTO_METRIC);
-    if (streq (fty_proto_name(*message), "rackcontroller-0") && streq (fty_proto_type(*message), "power_nodes.monitor")) {
+    if (streq (fty_proto_name(*message), "rackcontroller-0") && streq (fty_proto_type(*message), "power_nodes.max_active")) {
         try {
             monitor_power_devices = std::stoi(fty_proto_value(*message));
+            message_affects_me = true;
             log_info("According to metrics, rackcontroller-0 may monitor %d devices", monitor_power_devices);
         } catch (...) {
             log_error("Failed to extract a numeric value from power_nodes.monitor for rackcontroller-0: %s", fty_proto_value(*message));
@@ -112,6 +113,10 @@ void Autoconfig::handleLimitations( fty_proto_t **message )
         log_debug("There is no metric on how many devices may rackcontroller-0 monitor");
     }
     fty_proto_destroy(message);
+    if (!message_affects_me) {
+        log_debug ("This licensing message don't affect me");
+        return;
+    }
     // skip if licensing is disabled
     if (-1 >= monitor_power_devices) {
         log_info("Licensing placed no limitation here");
@@ -285,7 +290,8 @@ fty_nut_configurator_server (zsock_t *pipe, void *args)
                     state_writer.commit();
                 agent.onUpdate();
             } else if (fty_proto_id (proto) == FTY_PROTO_METRIC) {
-                agent.handleLimitations(&proto);
+                // no longer handle licensing limitations as it's been moved to asset state
+                //agent.handleLimitations(&proto);
             }
             continue;
         }
