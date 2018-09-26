@@ -292,6 +292,8 @@ fty_nut_configurator_server (zsock_t *pipe, void *args)
             } else if (fty_proto_id (proto) == FTY_PROTO_METRIC) {
                 // no longer handle licensing limitations as it's been moved to asset state
                 //agent.handleLimitations(&proto);
+                log_debug ("Licensing messages are ignored by fty-nut-configurator");
+                fty_proto_destroy (&proto);
             }
             continue;
         }
