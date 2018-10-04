@@ -278,32 +278,49 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
     zmsg_t *message = zmsg_new();
     assert (message);
 
-    std::string ruleName = alert.name + "@" + assetName();
-    std::string rule =
+    char *ruleName = zsys_sprintf ("%s@%s", alert.name.c_str (), assetName().c_str ());
+    char *rule = zsys_sprintf (
         "{ \"threshold\" : {"
-        "  \"rule_name\"     : \"" + ruleName + "\","
+        "  \"rule_name\"     : \" %s\","
         "  \"rule_source\"   : \"NUT\","
         "  \"rule_class\"    : \"Device internal\","
         "  \"rule_hierarchy\": \"internal.device\","
-        "  \"rule_desc\"     : \"" + s_rule_desc (alert.name) + "\","
-        "  \"target\"        : \"" + ruleName + "\","
-        "  \"element\"       : \"" + assetName() + "\","
-        "  \"values_unit\"   : \"" + s_values_unit (alert.name) + "\","
+        "  \"rule_desc\"     : \"%s\","
+        "  \"target\"        : \"%s\","
+        "  \"element\"       : \"%s\","
+        "  \"values_unit\"   : \"%s\","
         "  \"values\"        : ["
-        "    { \"low_warning\"  : \"" + alert.lowWarning + "\"},"
-        "    { \"low_critical\" : \"" + alert.lowCritical + "\"},"
-        "    { \"high_warning\"  : \"" + alert.highWarning + "\"},"
-        "    { \"high_critical\" : \"" + alert.highCritical + "\"}"
+        "    { \"low_warning\"  : \"%s\"},"
+        "    { \"low_critical\" : \"%s\"},"
+        "    { \"high_warning\"  : \"%s\"},"
+        "    { \"high_critical\" : \"%s\"}"
         "    ],"
         "  \"results\"       : ["
-        "    { \"low_critical\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : \"" + alert.name + " is critically low\" }},"
-        "    { \"low_warning\"   : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : \"" + alert.name + " is low\"}},"
-        "    { \"high_warning\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : \"" + alert.name + " is critically high\" }},"
-        "    { \"high_critical\" : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : \"" + alert.name + " is high\" } }"
-        "  ] } }";
-    log_debug("aa: publishing rule %s", ruleName.c_str ());
+        "    { \"low_critical\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : \"{\"key\" : \"TRANSLATE_LUA($alert_name$ is critically low for $ename$.)\", \"variable\" : {\"alert_name\" : \"%s\", \"ename\" : \"%s\"} }\" }},"
+        "    { \"low_warning\"   : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : \"{\"key\" : \"TRANSLATE_LUA($alert_name$ is low for $ename$.)\", \"variable\" : {\"alert_name\" : \"%s\", \"ename\" : \"%s\"} }\"}},"
+        "    { \"high_warning\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : \"{\"key\" : \"TRANSLATE_LUA($alert_name$ is high for $ename$.)\", \"variable\" : {\"alert_name\" : \"%s\", \"ename\" : \"%s\"} }\"}},"
+        "    { \"high_critical\" : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : \"{\"key\" : \"TRANSLATE_LUA($alert_name$ is critically high for $ename$.)\", \"variable\" : {\"alert_name\" : \"%s\", \"ename\" : \"%s\"} }\" }} ] } } ",
+        ruleName,
+        s_rule_desc (alert.name).c_str (),
+        ruleName,
+        assetName().c_str (),
+        s_values_unit (alert.name).c_str (),
+        alert.lowWarning.c_str (),
+        alert.lowCritical.c_str (),
+        alert.highWarning.c_str (),
+        alert.highCritical.c_str (),
+        alert.name.c_str (),
+        assetName ().c_str (),
+        alert.name.c_str (),
+        assetName ().c_str (),
+        alert.name.c_str (),
+        assetName ().c_str (),
+        alert.name.c_str (),
+        assetName ().c_str ());
+
+    log_debug("aa: publishing rule %s", ruleName);
     zmsg_addstr (message, "ADD");
-    zmsg_addstr (message, rule.c_str ());
+    zmsg_addstr (message, rule);
     if (mlm_client_sendto (client, "fty-alert-engine", "rfc-evaluator-rules", NULL, 1000, &message) == 0) {
         zmsg_t *resp = mlm_client_recv (client);
         char *result = zmsg_popstr (resp);
@@ -312,12 +329,15 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
         if (streq (result, "OK") || streq (reason, "ALREADY_EXISTS"))
             alert.rulePublished = true;
         else
-            log_error ("Error %s when requesting %s to ADD rule \n%s.", reason, mlm_client_sender (client), rule.c_str ());
+            log_error ("Error %s when requesting %s to ADD rule \n%s.", reason, mlm_client_sender (client), rule);
 
         zstr_free (&reason);
         zstr_free (&result);
         zmsg_destroy (&resp);
     };
+
+    zstr_free (&rule);
+    zstr_free (&ruleName);
     zmsg_destroy (&message);
 }
 
