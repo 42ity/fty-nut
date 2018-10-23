@@ -63,6 +63,7 @@ BuildRequires:  fty-common-mlm-devel
 BuildRequires:  fty-proto-devel
 BuildRequires:  libcidr-devel
 BuildRequires:  nut-devel
+BuildRequires:  fty_shm-devel
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
@@ -98,6 +99,7 @@ Requires:       fty-common-mlm-devel
 Requires:       fty-proto-devel
 Requires:       libcidr-devel
 Requires:       nut-devel
+Requires:       fty_shm-devel
 
 %description devel
 nut (network ups tools) daemon wrapper/proxy development tools

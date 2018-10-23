@@ -58,7 +58,7 @@ actor_commands (
         ret = 1;
     }
     else
-    if (streq (cmd, "CONFIGURE")) {
+    if (streq (cmd, ACTION_CONFIGURE)) {
         char *mapping = zmsg_popstr (message);
         if (!mapping) {
             log_error (

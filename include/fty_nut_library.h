@@ -36,6 +36,7 @@
 #include <ftyproto.h>
 #include <libcidr.h>
 #include <nutclient.h>
+#include <fty_shm.h>
 
 //  FTY_NUT version macros for compile-time API detection
 #define FTY_NUT_VERSION_MAJOR 1

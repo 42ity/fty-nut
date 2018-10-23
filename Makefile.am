@@ -24,10 +24,11 @@ AM_CPPFLAGS = \
     ${fty_proto_CFLAGS} \
     ${cidr_CFLAGS} \
     ${libnutclient_CFLAGS} \
+    ${fty_shm_CFLAGS} \
     -D__STDC_FORMAT_MACROS \
     -I$(srcdir)/include
 
-project_libs = ${log4cplus_LIBS} ${fty_common_logging_LIBS} ${fty_common_LIBS} ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${cxxtools_LIBS} ${libsodium_LIBS} ${fty_common_mlm_LIBS} ${fty_proto_LIBS} ${cidr_LIBS} ${libnutclient_LIBS}
+project_libs = ${log4cplus_LIBS} ${fty_common_logging_LIBS} ${fty_common_LIBS} ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${cxxtools_LIBS} ${libsodium_LIBS} ${fty_common_mlm_LIBS} ${fty_proto_LIBS} ${cidr_LIBS} ${libnutclient_LIBS} ${fty_shm_LIBS}
 
 SUBDIRS = doc
 SUBDIRS += include
@@ -60,6 +61,7 @@ EXTRA_DIST += \
     Findfty_proto.cmake \
     Findcidr.cmake \
     Findlibnutclient.cmake \
+    Findfty_shm.cmake \
     builds/cmake/Modules/ClangFormat.cmake \
     builds/cmake/clang-format-check.sh.in \
     builds/cmake/Config.cmake.in \

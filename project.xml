@@ -45,6 +45,7 @@
 
     <use project = "fty-common-mlm" libname = "libfty_common_mlm" header="fty_common_mlm_guards.h"
         repository = "https://github.com/42ity/fty-common-mlm.git"
+        test = "fty_commmon_mlm_selftest"
         release = "master" >
       <use project = "malamute" min_major = "1" test = "mlm_server_test"
            repository="https://github.com/42ity/malamute.git"
@@ -97,6 +98,8 @@
             <add_config_opts>--with-dmfsnmp-regenerate=no</add_config_opts>
     </use>
 
+    <use project = "fty_shm" libname = "libfty_shm" header="fty_shm.h" min_major = "1" test = "fty_shm_test"
+    />
 
     <header name = "nut_mlm" private = "1">Malamute connection helpers</header>
     <class name = "cidr"            private = "1">C++ Wrapper around libcidr</class>

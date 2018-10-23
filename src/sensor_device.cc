@@ -25,6 +25,7 @@
 #include <ftyproto.h>
 #include <vector>
 #include <string>
+#include <fty_shm.h>
 
 void Sensor::update (nut::TcpClient &conn)
 {
@@ -99,6 +100,8 @@ void Sensor::publish (mlm_client_t *client, int ttl)
         zhash_autofree (aux);
         zhash_insert (aux, "port", (void*) port().c_str());
         zhash_insert (aux, "sname", (void *) assetName().c_str ());
+
+        fty::shm::write_metric(location(), ("temperature." + port ()), _temperature, "C", ttl);
         zmsg_t *msg = fty_proto_encode_metric (
             aux,
             time (NULL),
@@ -122,6 +125,8 @@ void Sensor::publish (mlm_client_t *client, int ttl)
         zhash_autofree (aux);
         zhash_insert (aux, "port", (void*) port().c_str());
         zhash_insert (aux, "sname", (void *) assetName().c_str ());
+
+        fty::shm::write_metric(location(), ("humidity." + port ()), _humidity, "%", ttl);
         zmsg_t *msg = fty_proto_encode_metric (
             aux,
             time (NULL),
@@ -158,6 +163,8 @@ void Sensor::publish (mlm_client_t *client, int ttl)
                 zhash_insert (aux, "port", (void*) port().c_str ());
                 zhash_insert (aux, "ext-port", (void *) extport.c_str ());
                 zhash_insert (aux, "sname", (void *) sname.c_str ()); // sname of the child sensor if any
+
+                fty::shm::write_metric(location(), ("status.GPI" + std::to_string (gpiPort) + "." + port()), contact, " ", ttl);
                 zmsg_t *msg = fty_proto_encode_metric (
                     aux,
                     ::time (NULL),
