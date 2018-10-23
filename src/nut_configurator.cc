@@ -179,7 +179,6 @@ static char*
 s_digest (const char* file)
 {
     assert (file);
-    zdigest_t *digest = zdigest_new ();
 
     int fd = open (file, O_NOFOLLOW | O_RDONLY);
     if (fd == -1) {
@@ -189,6 +188,7 @@ s_digest (const char* file)
     std::string buffer = MlmSubprocess::read_all (fd);
     close (fd);
 
+    zdigest_t *digest = zdigest_new ();
     zdigest_update (digest, (byte*) buffer.c_str (), buffer.size ());
     char *ret = strdup (zdigest_string (digest));
     zdigest_destroy (&digest);
@@ -350,11 +350,11 @@ void NUTConfigurator::erase(const std::string &name)
 
 void NUTConfigurator::commit()
 {
-    updateNUTConfig();
-    systemctl("stop",    stop_drivers_.begin(),  stop_drivers_.end());
     systemctl("disable", stop_drivers_.begin(),  stop_drivers_.end());
-    systemctl("enable",  start_drivers_.begin(), start_drivers_.end());
+    systemctl("stop",    stop_drivers_.begin(),  stop_drivers_.end());
+    updateNUTConfig();
     systemctl("restart", start_drivers_.begin(), start_drivers_.end());
+    systemctl("enable",  start_drivers_.begin(), start_drivers_.end());
     if (!stop_drivers_.empty() || !start_drivers_.empty())
         systemctl("reload-or-restart", "nut-server");
     stop_drivers_.clear();

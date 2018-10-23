@@ -477,7 +477,7 @@ void NUTDevice::NUTRealpowerFromOutput (const std::string& prefix, std::map< std
                 log_debug ("ats, realpower");
                 return;
             } catch(...) {
-                zsys_error ("Exception in power = current*voltage calculation");
+                log_error ("Exception in power = current*voltage calculation");
             }
         }
     }
@@ -540,7 +540,7 @@ void NUTDevice::NUTFixMissingLoad (const std::string& prefix, std::map< std::str
             }
         }
     } catch (...) {
-        zsys_error ("failed to calculate load for %s", assetName().c_str ());
+        log_error ("failed to calculate load for %s", assetName().c_str ());
     }
 }
 

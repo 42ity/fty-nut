@@ -133,7 +133,7 @@ int main(int argc, char *argv []) {
     // Process configuration file
     config = zconfig_load(config_file);
     if (!config) {
-        zsys_error("Failed to load config file %s", config_file);
+        log_error("Failed to load config file %s", config_file);
         exit(EXIT_FAILURE);
     }
 
@@ -204,7 +204,7 @@ int main(int argc, char *argv []) {
                 zstr_sendx(nut_device_alert, ACTION_POLLING, polling, NULL);
                 zstr_sendx(nut_sensor, ACTION_POLLING, polling, NULL);
             } else {
-                zsys_error("Failed to load config file %s", config_file);
+                log_error("Failed to load config file %s", config_file);
                 break;
             }
         }

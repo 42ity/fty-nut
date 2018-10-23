@@ -71,7 +71,7 @@ int main (int argc, char *argv [])
     if (verbose)
         ManageFtyLog::getInstanceFtylog()->setVeboseMode();
 
-    zsys_info ("fty_nut_configurator  ");
+    log_info ("fty_nut_configurator  ");
     zactor_t *server = zactor_new (fty_nut_configurator_server, MLM_ENDPOINT_VOID);
 
     // code from src/malamute.c, under MPL
