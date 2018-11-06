@@ -21,6 +21,7 @@
 
 #include "alert_device.h"
 #include <fty_log.h>
+#include <fty_common_macros.h>
 
 #include <ftyproto.h>
 
@@ -181,29 +182,29 @@ Device::publishAlert (mlm_client_t *client, DeviceAlert& alert, uint64_t ttl)
     if (alert.status.empty()) return;
 
     const char *state = "ACTIVE", *severity = NULL;
-    std::string description = alert.name;
+    std::string description;
 
     log_debug ("aa: alert status '%s'", alert.status.c_str ());
     if (alert.status == "good") {
         state = "RESOLVED";
         severity = "ok";
-        description += " is resolved";
+        description = TRANSLATE_ME ("%s is resolved", alert.name.c_str ());
     }
     else if (alert.status == "warning-low") {
         severity = "WARNING";
-        description += " is low";
+        description = TRANSLATE_ME ("%s is low", alert.name.c_str ());
     }
     else if (alert.status == "critical-low") {
         severity = "CRITICAL";
-        description += " is critically low";
+        description = TRANSLATE_ME ("%s is critically low", alert.name.c_str ());
     }
     else if (alert.status == "warning-high") {
         severity = "WARNING";
-        description += " is high";
+        description = TRANSLATE_ME ("%s is high", alert.name.c_str ());
     }
     else if (alert.status == "critical-high") {
         severity = "CRITICAL";
-        description += " is critically high";
+        description = TRANSLATE_ME ("%s is critically high", alert.name.c_str ());
     }
     std::string rule = alert.name + "@" + assetName();
 
@@ -259,13 +260,13 @@ static std::string
 s_rule_desc (const std::string& alert_name)
 {
     if (alert_name.find ("power") != std::string::npos)
-        return "Power";
+        return TRANSLATE_ME ("Power");
     else
     if (alert_name.find ("voltage") != std::string::npos)
-        return "Voltage";
+        return TRANSLATE_ME ("Voltage");
     else
     if (alert_name.find ("current") != std::string::npos)
-        return "Current";
+        return TRANSLATE_ME ("Current");
     else
         return "";
 }
@@ -296,10 +297,10 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
         "    { \"high_critical\" : \"%s\"}"
         "    ],"
         "  \"results\"       : ["
-        "    { \"low_critical\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : \"{\"key\" : \"TRANSLATE_LUA($alert_name$ is critically low for $ename$.)\", \"variable\" : {\"alert_name\" : \"%s\", \"ename\" : \"%s\"} }\" }},"
-        "    { \"low_warning\"   : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : \"{\"key\" : \"TRANSLATE_LUA($alert_name$ is low for $ename$.)\", \"variable\" : {\"alert_name\" : \"%s\", \"ename\" : \"%s\"} }\"}},"
-        "    { \"high_warning\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : \"{\"key\" : \"TRANSLATE_LUA($alert_name$ is high for $ename$.)\", \"variable\" : {\"alert_name\" : \"%s\", \"ename\" : \"%s\"} }\"}},"
-        "    { \"high_critical\" : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : \"{\"key\" : \"TRANSLATE_LUA($alert_name$ is critically high for $ename$.)\", \"variable\" : {\"alert_name\" : \"%s\", \"ename\" : \"%s\"} }\" }} ] } } ",
+        "    { \"low_critical\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : \"{\"key\" : \"TRANSLATE_LUA({{alert_name}} is critically low for {{ename}}.)\", \"variable\" : {\"alert_name\" : \"%s\", \"ename\" : \"%s\"} }\" }},"
+        "    { \"low_warning\"   : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : \"{\"key\" : \"TRANSLATE_LUA({{alert_name}} is low for {{ename}}.)\", \"variable\" : {\"alert_name\" : \"%s\", \"ename\" : \"%s\"} }\"}},"
+        "    { \"high_warning\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : \"{\"key\" : \"TRANSLATE_LUA({{alert_name}} is high for {{ename}}.)\", \"variable\" : {\"alert_name\" : \"%s\", \"ename\" : \"%s\"} }\"}},"
+        "    { \"high_critical\" : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : \"{\"key\" : \"TRANSLATE_LUA({{alert_name}} is critically high for {{ename}}.)\", \"variable\" : {\"alert_name\" : \"%s\", \"ename\" : \"%s\"} }\" }} ] } } ",
         ruleName,
         s_rule_desc (alert.name).c_str (),
         ruleName,
