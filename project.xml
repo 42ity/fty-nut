@@ -132,6 +132,16 @@
         </use>
     </use>
 
+    <use project = "tntdb"
+        test="tntdb::connectCached"
+        repository = "https://github.com/42ity/tntdb.git"
+        release = "1.3-FTY-master"
+        builddir = "tntdb" />
+
+    <use project = "fty-common-db" libname = "libfty_common_db" header = "fty_common_db.h"
+        repository = "https://github.com/42ity/fty-common-db.git"
+        test = "fty_commmon_db_selftest" />
+
     <use project = "fty-proto" libname = "libfty_proto" header = "ftyproto.h" prefix = "fty_proto"
         min_major = "1" min_minor = "0" min_patch = "0"
         repository = "https://github.com/42ity/fty-proto.git"
@@ -208,6 +218,7 @@
     <class name = "sensor list"         private = "1">list of sensor attached to UPSes</class>
 
     <class name = "fty-nut-server" state = "stable">fty nut actor</class>
+    <class name = "fty-nut-command-server" state = "stable">fty nut command actor</class>
     <class name = "fty-nut-configurator-server" state = "stable">fty nut configurator actor</class>
     <class name = "alert actor" state = "stable">actor handling device alerts and thresholds</class>
     <class name = "sensor actor" state = "stable">actor handling sensors attached to UPS/ePDU</class>
@@ -217,6 +228,7 @@
     <class name = "asset state" private = "1" selftest = "0">list of known assets</class>
 
     <main name = "fty-nut" service = "1" />
+    <main name = "fty-nut-command" service = "1" />
     <main name = "fty-nut-configurator" service = "1" />
     <bin name = "fty-nutconfig" />
     <bin name = "fty-dmf" />

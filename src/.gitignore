@@ -10,10 +10,12 @@ libfty_nut.pc
 
 # + config files for mains (if any):
 fty-nut.cfg
+fty-nut-command.cfg
 fty-nut-configurator.cfg
 
 # + systemd service unit for daemons (if any):
 fty-nut.service
+fty-nut-command.service
 fty-nut-configurator.service
 
 # location designated for writing self-tests:

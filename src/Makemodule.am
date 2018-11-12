@@ -25,6 +25,7 @@ src_libfty_nut_la_SOURCES = \
     src/sensor_device.cc \
     src/sensor_list.cc \
     src/fty_nut_server.cc \
+    src/fty_nut_command_server.cc \
     src/fty_nut_configurator_server.cc \
     src/alert_actor.cc \
     src/sensor_actor.cc \
@@ -75,6 +76,19 @@ systemdsystemunit_DATA += src/fty-nut.service
 endif #WITH_SYSTEMD_UNITS
 endif #ENABLE_FTY_NUT
 
+if ENABLE_FTY_NUT_COMMAND
+bin_PROGRAMS += src/fty-nut-command
+src_fty_nut_command_CPPFLAGS = ${AM_CPPFLAGS}
+src_fty_nut_command_LDADD = ${program_libs}
+src_fty_nut_command_SOURCES = src/fty_nut_command.cc
+src_fty_nut_command_config_DATA =
+src_fty_nut_command_config_DATA += src/fty-nut-command.cfg
+src_fty_nut_command_configdir = $(sysconfdir)/fty-nut
+if WITH_SYSTEMD_UNITS
+systemdsystemunit_DATA += src/fty-nut-command.service
+endif #WITH_SYSTEMD_UNITS
+endif #ENABLE_FTY_NUT_COMMAND
+
 if ENABLE_FTY_NUT_CONFIGURATOR
 bin_PROGRAMS += src/fty-nut-configurator
 src_fty_nut_configurator_CPPFLAGS = ${AM_CPPFLAGS}
@@ -104,6 +118,7 @@ dist_bin_SCRIPTS = \
 # define custom target for all products of /src
 src: \
 		src/fty-nut \
+		src/fty-nut-command \
 		src/fty-nut-configurator \
 		src/fty_nut_selftest \
 		src/libfty_nut.la

@@ -1,9 +1,12 @@
 usr/bin/fty-nut
+usr/bin/fty-nut-command
 usr/bin/fty-nut-configurator
 usr/bin/fty-nutconfig
 usr/bin/fty-dmf
 etc/fty-nut/fty-nut.cfg
 lib/systemd/system/fty-nut.service
+etc/fty-nut/fty-nut-command.cfg
+lib/systemd/system/fty-nut-command.service
 etc/fty-nut/fty-nut-configurator.cfg
 lib/systemd/system/fty-nut-configurator.service
 
