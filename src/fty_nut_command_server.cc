@@ -133,10 +133,13 @@ static void
 get_commands(nut::Client &nut, tntdb::Connection &conn, mlm_client_t *client, const std::string &address, zmsg_t *msg, const char *uuid)
 {
     std::vector<std::pair<std::string, std::set<std::string>>> replyData;
+    std::map<std::string, mapped_device> mappedDevices;
 
     while (zmsg_size(msg)) {
         ZstrGuard asset(zmsg_popstr(msg));
-        replyData.emplace_back(asset.get(), get_commands_nut(nut, asset_to_mapped_device(conn, std::string(asset))));
+        mapped_device device = asset_to_mapped_device(conn, std::string(asset));
+        replyData.emplace_back(asset.get(), get_commands_nut(nut, device));
+        mappedDevices.emplace(asset.get(), device);
     }
 
     // Build reply message
@@ -144,10 +147,13 @@ get_commands(nut::Client &nut, tntdb::Connection &conn, mlm_client_t *client, co
     zmsg_addstr(reply, "OK");
     zmsg_addstr(reply, uuid);
     for (const auto &asset : replyData) {
+        const auto& mappedDevice = mappedDevices.at(asset.first);
+        const std::string pattern = mappedDevice.daisy_chain ? std::string("device.") + std::to_string(mappedDevice.daisy_chain) + "." : "";
         zmsg_addstr(reply, "ASSET");
         zmsg_addstr(reply, asset.first.c_str());
         for (const auto &commands : asset.second) {
             zmsg_addstr(reply, commands.c_str());
+            zmsg_addstr(reply, nut.getDeviceCommandDescription(mappedDevice.name, pattern+commands).c_str());
         }
     }
 

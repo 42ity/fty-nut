@@ -175,7 +175,7 @@ where
 * 'assetN' is a list of asset names, one per message part
 
 fty-nut-command will respond back with either:
-* "OK"/'uuid'/("ASSET"/'assetN'/('commandN')\*)\*
+* "OK"/'uuid'/("ASSET"/'assetN'/('commandN'/'descriptionN')\*)\*
 * "ERROR"/'uuid'/'reason'
 
 where
@@ -183,7 +183,8 @@ where
 * 'uuid' is the client-provided string in the request
 * "ASSET" is a constant delimiter string
 * 'assetN' is an asset name
-* 'commandN' is the list of commands provided by 'assetN', one per message part
+* 'commandN' is a command provided by 'assetN'
+* 'descriptionN' is the description of 'commandN'
 
 The following request performs one or more actions on an asset:
 * "DO_COMMANDS"/'uuid'/'asset'/('commandN'/'argumentN')*
