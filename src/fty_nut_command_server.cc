@@ -51,12 +51,7 @@ struct mapped_device
 static mapped_device
 asset_to_mapped_device(tntdb::Connection &conn, const std::string &asset)
 {
-    int32_t assetId = DBAssets::name_to_asset_id(asset);
-    if (assetId < 0) {
-        throw std::runtime_error("Unknown asset");
-    }
-
-    db_reply <std::map <int, uint32_t> > daisy_chain = DBAssets::select_daisy_chain(conn, assetId);
+    auto daisy_chain = DBAssets::select_daisy_chain(conn, asset);
     if (!daisy_chain.status) {
         throw std::runtime_error(daisy_chain.msg);
     }
@@ -66,12 +61,12 @@ asset_to_mapped_device(tntdb::Connection &conn, const std::string &asset)
     else {
         int daisy_number = 0;
         for (const auto &i : daisy_chain.item) {
-            if (i.second == assetId) {
+            if (i.second == asset) {
                 daisy_number = i.first;
                 break;
             }
         }
-        return mapped_device(DBAssets::id_to_name_ext_name(daisy_chain.item.begin()->second).first, daisy_number);
+        return mapped_device(daisy_chain.item.begin()->second, daisy_number);
     }
 }
 
