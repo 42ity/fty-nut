@@ -30,19 +30,23 @@
 
 int main (int argc, char *argv [])
 {
+    std::string nutHost = "localhost";
+    std::string nutUsername = "";
+    std::string nutPassword = "";
+    std::string logConfig = "/etc/fty/ftylog.cfg";
+    std::string configFile;
+
     bool verbose = false;
     int argn;
-    char *log_config = NULL;
-    const char *default_log_config = "/etc/fty/ftylog.cfg";
     ManageFtyLog::setInstanceFtylog("fty-nut-command");
 
     for (argn = 1; argn < argc; argn++) {
         if (streq (argv [argn], "--help")
         ||  streq (argv [argn], "-h")) {
             puts ("fty-nut-command [options] ...");
-            puts ("  --verbose / -v         verbose test output");
+            puts ("  --config / -c          configuration file");
             puts ("  --help / -h            this information");
-            puts ("  --config / -c          log configuration ");
+            puts ("  --verbose / -v         verbose test output");
             return 0;
         }
         else
@@ -53,23 +57,41 @@ int main (int argc, char *argv [])
         if (streq (argv [argn], "--config")
             ||  streq (argv [argn], "-c")) {
             argn += 1;
-            log_config = argv [argn];
+            configFile = argv [argn];
         }
         else {
             printf ("Unknown option: %s\n", argv [argn]);
             return 1;
         }
     }
-    if (log_config == NULL)
-        log_config = (char *)default_log_config;
 
-    ManageFtyLog::getInstanceFtylog()->setConfigFile(std::string(log_config));
+    if (configFile != "") {
+        log_info ("Loading config file '%s'...", configFile.c_str());
+        zconfig_t *cfg = zconfig_load(configFile.c_str());
+        if (cfg) {
+            logConfig = zconfig_get(cfg, "log/config", "");
+            nutHost        = zconfig_get(cfg, "amqp/host", nutHost.c_str());
+            nutUsername    = zconfig_get(cfg, "nut/username", nutUsername.c_str());
+            nutPassword    = zconfig_get(cfg, "nut/password", nutPassword.c_str());
+            log_info ("Config file loaded.");
+        }
+        else {
+            log_info ("Couldn't load config file.");
+        }
+    }
+
+    ManageFtyLog::getInstanceFtylog()->setConfigFile(std::string(logConfig));
     if (verbose)
         ManageFtyLog::getInstanceFtylog()->setVeboseMode();
 
     log_info ("fty_nut_command  ");
     const char *endpoint = "ipc://@/malamute";
     zactor_t *server = zactor_new (fty_nut_command_server, (void*)endpoint);
+
+    zstr_sendm (server, "NUT_SERVER");
+    zstr_sendm (server, nutHost.c_str());
+    zstr_sendm (server, nutUsername.c_str());
+    zstr_send (server, nutPassword.c_str());
 
     // code from src/malamute.c, under MPL
     //  Accept and print any message back from server

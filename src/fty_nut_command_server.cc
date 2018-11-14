@@ -32,10 +32,6 @@ const char *COMMAND_SUBJECT = "power-actions";
 const char *ACTOR_COMMAND_NAME = "fty-nut-command";
 const int TIMEOUT = 5;
 
-const char *NUT_HOSTNAME = "localhost";
-const char *NUT_USERNAME = "admin";
-const char *NUT_PASSWORD = "mypass";
-
 struct mapped_device
 {
     mapped_device(const std::string &n, int d) : name(n), daisy_chain(d) {}
@@ -204,6 +200,10 @@ do_commands(nut::Client &nut, tntdb::Connection &conn, mlm_client_t *client, con
 void
 fty_nut_command_server(zsock_t *pipe, void *args)
 {
+    std::string nutHost = "localhost";
+    std::string nutUsername;
+    std::string nutPassword;
+
     // Connect to Malamute
     MlmClientGuard client(mlm_client_new());
     if (!client) {
@@ -228,8 +228,31 @@ fty_nut_command_server(zsock_t *pipe, void *args)
     zsock_signal(pipe, 0);
     while (!zsys_interrupted) {
         void *which = zpoller_wait(poller, -1);
-        if (which == pipe || zsys_interrupted) {
+        if (zsys_interrupted) {
             break;
+        }
+        if (which == pipe) {
+            ZmsgGuard msg(zmsg_recv(pipe));
+            ZstrGuard actor_command(zmsg_popstr(msg));
+
+            //  $TERM actor command implementation is required by zactor_t interface
+            if (streq(actor_command, "$TERM")) {
+                return;
+            }
+            else if (streq(actor_command, "NUT_SERVER")) {
+                ZstrGuard host(zmsg_popstr(msg));
+                ZstrGuard username(zmsg_popstr(msg));
+                ZstrGuard password(zmsg_popstr(msg));
+                nutHost = host.get();
+                nutUsername = username.get();
+                nutPassword = password.get();
+                log_info("NUT server '%s' configured", host.get());
+                continue;
+            }
+            else {
+                log_error("Unrecognized pipe request '%s'", actor_command.get());
+                continue;
+            }
         }
 
         ZmsgGuard msg(mlm_client_recv(client));
@@ -250,9 +273,9 @@ fty_nut_command_server(zsock_t *pipe, void *args)
         try {
             // Connect to NUT server
             nut::TcpClient nutClient;
-            nutClient.connect(NUT_HOSTNAME);
+            nutClient.connect(nutHost);
             log_info("Connected to NUT server");
-            nutClient.authenticate(NUT_USERNAME, NUT_PASSWORD);
+            nutClient.authenticate(nutUsername, nutPassword);
             log_info("Authenticated to NUT server");
 
             // Connect to database
