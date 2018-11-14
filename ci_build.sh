@@ -255,7 +255,7 @@ default|default-Werror|default-with-docs|valgrind|clang-format-check)
         BASE_PWD=${PWD}
         echo "`date`: INFO: Building prerequisite 'fty-common' from Git repository..." >&2
         cd ./tmp-deps
-        $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/fty-common.git fty-common
+        $CI_TIME git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common.git fty-common
         cd ./fty-common
         CCACHE_BASEDIR=${PWD}
         export CCACHE_BASEDIR
@@ -630,14 +630,18 @@ default|default-Werror|default-with-docs|valgrind|clang-format-check)
     make check-gitignore
     echo "==="
 
+    if [ "$CI_TEST_DISTCHECK" = false ]; then
+        make check
+    else
     (
-        export DISTCHECK_CONFIGURE_FLAGS="--enable-drafts=yes ${CONFIG_OPTS[@]}"
-        $CI_TIME make VERBOSE=1 DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS" distcheck
-
-        echo "=== Are GitIgnores good after 'make distcheck' with drafts?"
-        make check-gitignore
-        echo "==="
+        export DISTCHECK_CONFIGURE_FLAGS="--enable-drafts=yes ${CONFIG_OPTS[@]}" && \
+        $CI_TIME make VERBOSE=1 DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS" distcheck || exit $?
     )
+    fi
+
+    echo "=== Are GitIgnores good after 'make (dist)check' with drafts?"
+    make check-gitignore
+    echo "==="
 
     # Build and check this project without DRAFT APIs
     echo ""
@@ -650,14 +654,18 @@ default|default-Werror|default-with-docs|valgrind|clang-format-check)
         $CI_TIME ./autogen.sh 2> /dev/null
         $CI_TIME ./configure --enable-drafts=no "${CONFIG_OPTS[@]}"
         $CI_TIME make VERBOSE=1 all || exit $?
+        if [ "$CI_TEST_DISTCHECK" = false ]; then
+            make check
+        else
         (
             export DISTCHECK_CONFIGURE_FLAGS="--enable-drafts=no ${CONFIG_OPTS[@]}" && \
             $CI_TIME make VERBOSE=1 DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS" distcheck || exit $?
         )
+        fi
     ) || exit 1
     [ -z "$CI_TIME" ] || echo "`date`: Builds completed without fatal errors!"
 
-    echo "=== Are GitIgnores good after 'make distcheck' without drafts?"
+    echo "=== Are GitIgnores good after 'make (dist)check' without drafts?"
     make check-gitignore
     echo "==="
 
