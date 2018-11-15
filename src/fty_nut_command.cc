@@ -87,6 +87,9 @@ int main (int argc, char *argv [])
     if (verbose)
         ManageFtyLog::getInstanceFtylog()->setVeboseMode();
 
+    // Build database URL
+    DBConn::dbpath();
+
     log_info ("fty_nut_command  ");
     const char *endpoint = "ipc://@/malamute";
     zactor_t *server = zactor_new (fty_nut_command_server, (void*)endpoint);
@@ -95,6 +98,9 @@ int main (int argc, char *argv [])
     zstr_sendm (server, nutHost.c_str());
     zstr_sendm (server, nutUsername.c_str());
     zstr_send (server, nutPassword.c_str());
+
+    zstr_sendm (server, "DB_URL");
+    zstr_send (server, DBConn::url.c_str());
 
     // code from src/malamute.c, under MPL
     //  Accept and print any message back from server

@@ -200,6 +200,7 @@ do_commands(nut::Client &nut, tntdb::Connection &conn, mlm_client_t *client, con
 void
 fty_nut_command_server(zsock_t *pipe, void *args)
 {
+    std::string dbURL;
     std::string nutHost = "localhost";
     std::string nutUsername;
     std::string nutPassword;
@@ -215,13 +216,6 @@ fty_nut_command_server(zsock_t *pipe, void *args)
         log_error("client %s failed to connect", ACTOR_COMMAND_NAME);
         return;
     }
-
-    // Grab DB credentials
-    if (!DBConn::dbreadcredentials()) {
-        log_error("failed to read DB credentials");
-        return;
-    }
-    DBConn::dbpath();
 
     // Enter mainloop
     ZpollerGuard poller(zpoller_new(pipe, mlm_client_msgpipe(client), nullptr));
@@ -247,6 +241,12 @@ fty_nut_command_server(zsock_t *pipe, void *args)
                 nutUsername = username.get();
                 nutPassword = password.get();
                 log_info("NUT server '%s' configured", host.get());
+                continue;
+            }
+            else if (streq(actor_command, "DB_URL")) {
+                ZstrGuard databaseURL(zmsg_popstr(msg));
+                dbURL = databaseURL.get();
+                log_info("Database URL configured");
                 continue;
             }
             else {
@@ -279,7 +279,7 @@ fty_nut_command_server(zsock_t *pipe, void *args)
             log_info("Authenticated to NUT server");
 
             // Connect to database
-            tntdb::Connection conn = tntdb::connectCached(DBConn::url);
+            tntdb::Connection conn = tntdb::connectCached(dbURL);
 
             log_info("Received request '%s' from '%s', UUID='%s'", action.get(), sender, uuid.get());
 

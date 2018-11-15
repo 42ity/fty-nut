@@ -14,6 +14,7 @@ Restart=always
 Environment="prefix=@prefix@"
 Environment='SYSTEMD_UNIT_FULLNAME=%n'
 EnvironmentFile=-/etc/default/bios-nut-admin
+EnvironmentFile=-/etc/default/bios-db-ro
 ExecStart=@prefix@/bin/fty-nut-command -c @sysconfdir@/@PACKAGE@/fty-nut-command.cfg
 
 [Install]
