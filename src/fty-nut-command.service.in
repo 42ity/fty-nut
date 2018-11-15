@@ -13,6 +13,7 @@ User=bios
 Restart=always
 Environment="prefix=@prefix@"
 Environment='SYSTEMD_UNIT_FULLNAME=%n'
+EnvironmentFile=-/etc/default/bios-nut-admin
 ExecStart=@prefix@/bin/fty-nut-command -c @sysconfdir@/@PACKAGE@/fty-nut-command.cfg
 
 [Install]

@@ -28,11 +28,14 @@
 
 #include "fty_nut_command_server.h"
 
+const char *NUT_USER_ENV = "NUT_USER";
+const char *NUT_PASS_ENV = "NUT_PASSWD";
+
 int main (int argc, char *argv [])
 {
     std::string nutHost = "localhost";
-    std::string nutUsername = "";
-    std::string nutPassword = "";
+    std::string nutUsername = getenv(NUT_USER_ENV) ? getenv(NUT_USER_ENV) : "";
+    std::string nutPassword = getenv(NUT_PASS_ENV) ? getenv(NUT_PASS_ENV) : "";
     std::string logConfig = "/etc/fty/ftylog.cfg";
     std::string configFile;
 
@@ -70,7 +73,7 @@ int main (int argc, char *argv [])
         zconfig_t *cfg = zconfig_load(configFile.c_str());
         if (cfg) {
             logConfig = zconfig_get(cfg, "log/config", "");
-            nutHost        = zconfig_get(cfg, "amqp/host", nutHost.c_str());
+            nutHost        = zconfig_get(cfg, "nut/host", nutHost.c_str());
             nutUsername    = zconfig_get(cfg, "nut/username", nutUsername.c_str());
             nutPassword    = zconfig_get(cfg, "nut/password", nutPassword.c_str());
             log_info ("Config file loaded.");
