@@ -182,7 +182,7 @@ where
 * '/' indicates a multipart string message
 * 'uuid' is the client-provided string in the request
 * "ASSET" is a constant delimiter string
-* 'assetN' is an asset name
+* 'assetN' is an internal asset name
 * 'commandN' is a command provided by 'assetN'
 * 'descriptionN' is the description of 'commandN'
 
@@ -192,7 +192,7 @@ The following request performs one or more actions on an asset:
 where
 * '/' indicates a multipart string message
 * 'uuid' is the client-provided string in the request
-* 'asset' is an asset name
+* 'asset' is an internal asset name
 * 'commandN' is a command for the asset
 * 'argumentN' is an argument for 'commandN', set to empty string if not used
 

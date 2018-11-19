@@ -1,7 +1,7 @@
 /*  =========================================================================
     fty_nut_command - nut server command
 
-    Copyright (C) 2014 - 2017 Eaton
+    Copyright (C) 2014 - 2018 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -83,7 +83,7 @@ int main (int argc, char *argv [])
         }
     }
 
-    ManageFtyLog::getInstanceFtylog()->setConfigFile(std::string(logConfig));
+    ManageFtyLog::getInstanceFtylog()->setConfigFile(logConfig);
     if (verbose)
         ManageFtyLog::getInstanceFtylog()->setVeboseMode();
 

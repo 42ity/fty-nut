@@ -176,7 +176,7 @@ do_commands(nut::Client &nut, tntdb::Connection &conn, mlm_client_t *client, con
         }
         // XXX: we don't handle arguments just yet
         if (!streq(data, "")) {
-            throw std::runtime_error("CMD-NOT-SUPPORTED");
+            throw std::runtime_error("CMD-ARGS-NOT-YET-SUPPORTED");
         }
 
         commands.emplace_back(cmd.get(), data.get());
@@ -255,50 +255,56 @@ fty_nut_command_server(zsock_t *pipe, void *args)
             }
         }
 
-        ZmsgGuard msg(mlm_client_recv(client));
+        else if (which == mlm_client_msgpipe(client)) {
+            ZmsgGuard msg(mlm_client_recv(client));
 
-        if (!streq(mlm_client_subject(client), COMMAND_SUBJECT)) {
-            log_error("Unrecognized subject '%s', ignoring message", mlm_client_subject(client));
-            continue;
+            if (!streq(mlm_client_subject(client), COMMAND_SUBJECT)) {
+                log_error("Unrecognized subject '%s', ignoring message", mlm_client_subject(client));
+                continue;
+            }
+            if (zmsg_size(msg) < 2) {
+                log_error("Message doesn't have UUID and command fields, ignoring message", mlm_client_subject(client));
+                continue;
+            }
+
+            const char *sender = mlm_client_sender(client);
+            ZstrGuard action(zmsg_popstr(msg));
+            ZstrGuard uuid(zmsg_popstr(msg));
+
+            try {
+                // Connect to NUT server
+                nut::TcpClient nutClient;
+                nutClient.connect(nutHost);
+                log_info("Connected to NUT server");
+                nutClient.authenticate(nutUsername, nutPassword);
+                log_info("Authenticated to NUT server");
+
+                // Connect to database
+                tntdb::Connection conn = tntdb::connectCached(dbURL);
+
+                log_info("Received request '%s' from '%s', UUID='%s'", action.get(), sender, uuid.get());
+
+                if (streq(action.get(), "GET_COMMANDS")) {
+                    get_commands(nutClient, conn, client, sender, msg, uuid.get());
+                }
+                else if (streq(action.get(), "DO_COMMANDS")) {
+                    do_commands(nutClient, conn, client, sender, msg, uuid.get());
+                }
+                else if (streq(action.get(), "ERROR")) {
+                    ZstrGuard desc(zmsg_popstr(msg));
+                    log_error("Received error message with payload '%s' '%s', ignoring", uuid ? uuid.get() : "(null)", desc ? desc.get() : "(null)");
+                }
+                else {
+                    log_error("Request '%s' is not valid", action.get());
+                    throw std::runtime_error("INVALID_REQUEST");
+                }
+            } catch (std::exception &e) {
+                send_error(client, sender, e.what(), uuid.get());
+            }
         }
-        if (zmsg_size(msg) < 2) {
-            log_error("Message doesn't have UUID and command fields, ignoring message", mlm_client_subject(client));
-            continue;
-        }
-
-        const char *sender = mlm_client_sender(client);
-        ZstrGuard action(zmsg_popstr(msg));
-        ZstrGuard uuid(zmsg_popstr(msg));
-
-        try {
-            // Connect to NUT server
-            nut::TcpClient nutClient;
-            nutClient.connect(nutHost);
-            log_info("Connected to NUT server");
-            nutClient.authenticate(nutUsername, nutPassword);
-            log_info("Authenticated to NUT server");
-
-            // Connect to database
-            tntdb::Connection conn = tntdb::connectCached(dbURL);
-
-            log_info("Received request '%s' from '%s', UUID='%s'", action.get(), sender, uuid.get());
-
-            if (streq(action.get(), "GET_COMMANDS")) {
-                get_commands(nutClient, conn, client, sender, msg, uuid.get());
-            }
-            else if (streq(action.get(), "DO_COMMANDS")) {
-                do_commands(nutClient, conn, client, sender, msg, uuid.get());
-            }
-            else if (streq(action.get(), "ERROR")) {
-                ZstrGuard desc(zmsg_popstr(msg));
-                log_error("Received error message with payload '%s' '%s', ignoring", uuid ? uuid.get() : "(null)", desc ? desc.get() : "(null)");
-            }
-            else {
-                log_error("Request '%s' is not valid", action.get());
-                throw std::runtime_error("INVALID_REQUEST");
-            }
-        } catch (std::exception &e) {
-            send_error(client, sender, e.what(), uuid.get());
+        else {
+            // How did we get here?
+            log_error("Abnormal zpoller_wait() return value '%p'", which);
         }
     }
 }
