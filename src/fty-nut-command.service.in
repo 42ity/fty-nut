@@ -3,8 +3,8 @@
 
 [Unit]
 Description=fty-nut-command service
-Requires=malamute.service fty-db-init.service
-After=malamute.service fty-db-init.service
+Requires=malamute.service fty-db-init.service nut-server.service
+After=malamute.service fty-db-init.service nut-server.service
 PartOf=bios.target
 
 [Service]
@@ -19,3 +19,4 @@ ExecStart=@prefix@/bin/fty-nut-command -c @sysconfdir@/@PACKAGE@/fty-nut-command
 
 [Install]
 WantedBy=bios.target
+WantedBy=nut-server.service
