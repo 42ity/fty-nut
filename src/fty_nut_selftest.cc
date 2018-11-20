@@ -41,6 +41,7 @@ static test_item_t
 all_tests [] = {
 // Tests for stable public classes:
     { "fty_nut_server", fty_nut_server_test, true, true, NULL },
+    { "fty_nut_command_server", fty_nut_command_server_test, true, true, NULL },
     { "fty_nut_configurator_server", fty_nut_configurator_server_test, true, true, NULL },
     { "alert_actor", alert_actor_test, true, true, NULL },
     { "sensor_actor", sensor_actor_test, true, true, NULL },

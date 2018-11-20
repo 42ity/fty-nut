@@ -18,6 +18,8 @@ git clone --quiet --depth 1 -b v3.0.2-FTY-master https://github.com/42ity/czmq.g
 git clone --quiet --depth 1 -b 2.2-FTY-master https://github.com/42ity/cxxtools.git cxxtools
 git clone --quiet --depth 1 -b 1.0-FTY-master https://github.com/42ity/malamute.git malamute
 git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common-mlm.git fty-common-mlm
+git clone --quiet --depth 1 -b 1.3-FTY-master https://github.com/42ity/tntdb.git tntdb
+git clone --quiet --depth 1 https://github.com/42ity/fty-common-db.git fty-common-db
 git clone --quiet --depth 1 -b master https://github.com/42ity/fty-proto.git fty-proto
 git clone --quiet --depth 1 -b 1.2.3-FTY-master https://github.com/42ity/libcidr.git cidr
 git clone --quiet --depth 1 -b FTY https://github.com/42ity/nut.git libnutclient

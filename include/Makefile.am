@@ -5,6 +5,7 @@
 include_HEADERS = \
     fty_nut.h \
     fty_nut_server.h \
+    fty_nut_command_server.h \
     fty_nut_configurator_server.h \
     alert_actor.h \
     sensor_actor.h \
