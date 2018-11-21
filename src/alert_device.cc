@@ -282,7 +282,7 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
     char *ruleName = zsys_sprintf ("%s@%s", alert.name.c_str (), assetName ().c_str ());
     char *rule = zsys_sprintf (
         "{ \"threshold\" : {"
-        "  \"rule_name\"     : \" %s\","
+        "  \"rule_name\"     : \"%s\","
         "  \"rule_source\"   : \"NUT\","
         "  \"rule_class\"    : \"Device internal\","
         "  \"rule_hierarchy\": \"internal.device\","
