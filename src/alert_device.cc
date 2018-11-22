@@ -268,7 +268,7 @@ s_rule_desc (const std::string& alert_name)
     if (alert_name.find ("current") != std::string::npos)
         return TRANSLATE_ME ("Current");
     else
-        return "";
+        return "{}";
 }
 
 void
@@ -282,11 +282,11 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
     char *ruleName = zsys_sprintf ("%s@%s", alert.name.c_str (), assetName ().c_str ());
     char *rule = zsys_sprintf (
         "{ \"threshold\" : {"
-        "  \"rule_name\"     : \" %s\","
+        "  \"rule_name\"     : \"%s\","
         "  \"rule_source\"   : \"NUT\","
         "  \"rule_class\"    : \"Device internal\","
         "  \"rule_hierarchy\": \"internal.device\","
-        "  \"rule_desc\"     : \"%s\","
+        "  \"rule_desc\"     : %s,"
         "  \"target\"        : \"%s\","
         "  \"element\"       : \"%s\","
         "  \"values_unit\"   : \"%s\","
