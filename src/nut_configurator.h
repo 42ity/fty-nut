@@ -64,6 +64,9 @@ class NUTConfigurator {
     static void systemctl( const std::string &operation, It first, It last );
     std::set<std::string> start_drivers_;
     std::set<std::string> stop_drivers_;
+    // Currently NUT manages services based on config file changes
+    // so nut_configurator should not, and this flag defaults to 0.
+    int manage_systemctl {0};
 };
 
 //  Self test of this class
