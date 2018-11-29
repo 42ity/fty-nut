@@ -353,6 +353,8 @@ void NUTConfigurator::commit()
     if (manage_systemctl) {
         systemctl("disable", stop_drivers_.begin(),  stop_drivers_.end());
         systemctl("stop",    stop_drivers_.begin(),  stop_drivers_.end());
+    } else {
+        log_info("Updating NUT configs, expecting it to manage the service units as needed");
     }
     updateNUTConfig();
     if (manage_systemctl) {
