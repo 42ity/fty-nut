@@ -48,6 +48,11 @@ class NUTConfigurator {
     void erase(const std::string &name);
     void commit();
     static bool known_assets(std::vector<std::string>& assets);
+    // Currently NUT manages services based on config file changes
+    // so nut_configurator should not, and this flag defaults to false.
+    // This may be ripped out completely after testing, so no fuss about
+    // accessor methods to manage this setting.
+    bool manage_systemctl {false};
  private:
     static std::vector<std::string>::const_iterator selectBest( const std::vector<std::string> &configs);
     static void updateNUTConfig();
@@ -64,9 +69,6 @@ class NUTConfigurator {
     static void systemctl( const std::string &operation, It first, It last );
     std::set<std::string> start_drivers_;
     std::set<std::string> stop_drivers_;
-    // Currently NUT manages services based on config file changes
-    // so nut_configurator should not, and this flag defaults to 0.
-    int manage_systemctl {0};
 };
 
 //  Self test of this class
