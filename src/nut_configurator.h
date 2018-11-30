@@ -48,6 +48,11 @@ class NUTConfigurator {
     void erase(const std::string &name);
     void commit();
     static bool known_assets(std::vector<std::string>& assets);
+    // Currently NUT manages services based on config file changes
+    // so nut_configurator should not, and this flag defaults to false.
+    // This may be ripped out completely after testing, so no fuss about
+    // accessor methods to manage this setting.
+    bool manage_systemctl {false};
  private:
     static std::vector<std::string>::const_iterator selectBest( const std::vector<std::string> &configs);
     static void updateNUTConfig();
