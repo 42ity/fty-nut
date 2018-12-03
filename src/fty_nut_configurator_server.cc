@@ -289,6 +289,7 @@ fty_nut_configurator_server (zsock_t *pipe, void *args)
                 if (state_writer.getState().updateFromProto(proto))
                     state_writer.commit();
                 agent.onUpdate();
+                fty_proto_destroy (&proto);
             } else if (fty_proto_id (proto) == FTY_PROTO_METRIC) {
                 // no longer handle licensing limitations as it's been moved to asset state
                 //agent.handleLimitations(&proto);
