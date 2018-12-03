@@ -77,6 +77,12 @@ RES=$?
 fi
 
 if [ "$RES" = 0 ] ; then
+    if diff -q "${NUTCONFIG}" "${TMPFILE}" ; then
+        # Avoid wearing out the flash storage by needless updates
+        echo "NUT configuration did not change since last generation" >&2
+        exit 0
+    fi
+
     # This can take a while and needs space; have our moves atomic
     mv -f "${TMPFILE}" "${NUTCONFIG}.tmp" || die "Error moving ups.conf from temporary to final directory"
     mv -f "${NUTCONFIG}.tmp" "${NUTCONFIG}" || die "Error atomically moving ups.conf from temporary to final file"
