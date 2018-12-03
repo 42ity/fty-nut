@@ -65,8 +65,8 @@ get_initial_licensing(StateManager::Writer& state_writer, mlm_client_t *client)
         return false;
     }
     // The rest is a series of value/item/category triplets that
-    // updateFromProto() can grok
-    return state_writer.getState().updateFromProto(reply);
+    // updateFromMsg() can grok
+    return state_writer.getState().updateFromMsg(reply);
 }
 
 // Query fty-asset about existing devices. This has to be done after
@@ -143,7 +143,7 @@ get_initial_assets(StateManager::Writer& state_writer, mlm_client_t *client,
             zmsg_destroy(&reply);
             continue;
         }
-        if (state_writer.getState().updateFromProto(reply))
+        if (state_writer.getState().updateFromMsg(reply))
             changed = true;
     }
     if (query_licensing) {
@@ -291,7 +291,7 @@ fty_nut_server (zsock_t *pipe, void *args)
             continue;
         }
         if (is_fty_proto(message)) {
-            if (state_writer.getState().updateFromProto(message))
+            if (state_writer.getState().updateFromMsg(message))
                 state_writer.commit();
             continue;
         }
