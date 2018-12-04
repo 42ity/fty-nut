@@ -77,7 +77,21 @@ RES=$?
 fi
 
 if [ "$RES" = 0 ] ; then
-    mv "${TMPFILE}" "$NUTCONFIG"
+    if diff -q "${NUTCONFIG}" "${TMPFILE}" ; then
+        # Avoid wearing out the flash storage by needless updates
+        echo "NUT configuration did not change since last generation" >&2
+
+        # Still work towards regularly reducing the chance that we
+        # could have missed some NUT config changes earlier (posted
+        # while the script was already processing earlier data):
+        /bin/systemctl start --no-block nut-driver-enumerator.service || true
+
+        exit 0
+    fi
+
+    # This can take a while and needs space; have our moves atomic
+    mv -f "${TMPFILE}" "${NUTCONFIG}.tmp" || die "Error moving ups.conf from temporary to final directory"
+    mv -f "${NUTCONFIG}.tmp" "${NUTCONFIG}" || die "Error atomically moving ups.conf from temporary to final file"
     chmod 0640 "${NUTCONFIG}"
     chown root:nut "${NUTCONFIG}"
     exit 0
