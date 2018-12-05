@@ -76,16 +76,32 @@ RES=$?
     fi
 fi
 
+tickle_NDE() {
+    # Still work towards regularly reducing the chance that we
+    # could have missed some NUT config changes earlier (posted
+    # while the script was already processing earlier data)...
+    # Note that this somewhat duplicates the activity of a .path
+    # unit, which should also trigger the corresponding activity
+    # when ups.conf is changed, but unlike the path - this code
+    # ensures that the config is re-evaluated after any asset
+    # repubishing and similar events, so would cover up if we
+    # missed something earlier... better late than never...
+
+    echo "FAILSAFE: Tickling NUT nut-driver-enumerator service(s) to regenerate the service units"
+    if /bin/systemctl is-enabled nut-driver-enumerator.service | grep -w enabled ; then
+        /bin/systemctl start --no-block nut-driver-enumerator.service || true
+    fi
+    if /bin/systemctl is-enabled nut-driver-enumerator-daemon.service | grep -w enabled ; then
+        /bin/systemctl reload --no-block nut-driver-enumerator-daemon.service || \
+        /bin/systemctl restart --no-block nut-driver-enumerator-daemon.service || true
+    fi
+}
+
 if [ "$RES" = 0 ] ; then
     if diff -q "${NUTCONFIG}" "${TMPFILE}" ; then
         # Avoid wearing out the flash storage by needless updates
         echo "NUT configuration did not change since last generation" >&2
-
-        # Still work towards regularly reducing the chance that we
-        # could have missed some NUT config changes earlier (posted
-        # while the script was already processing earlier data):
-        /bin/systemctl start --no-block nut-driver-enumerator.service || true
-
+        tickle_NDE
         exit 0
     fi
 
@@ -94,6 +110,7 @@ if [ "$RES" = 0 ] ; then
     mv -f "${NUTCONFIG}.tmp" "${NUTCONFIG}" || die "Error atomically moving ups.conf from temporary to final file"
     chmod 0640 "${NUTCONFIG}"
     chown root:nut "${NUTCONFIG}"
+    tickle_NDE
     exit 0
 else
     rm "${TMPFILE}" >/dev/null 2>&1
