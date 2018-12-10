@@ -53,7 +53,6 @@ static status_lkp_t status_info[] = {
     { "DISCHRG", STATUS_DISCHRG },
     { "HB", STATUS_HB },
     { "FSD", STATUS_FSD },
-    { "OT", STATUS_OT },
     { "NULL", 0 },
 };
 
@@ -102,8 +101,8 @@ upsstatus_to_int (const char *status, const char *test_result)
     }
     //detect if a test is in progress 
     if(streq(test_result,"in progress")){
-        //add "On Test" (OT) flag to ups status
-        result |= s_upsstatus_single_status_to_int ("OT");
+        //add calibration (CAL) flag to ups status
+        result |= s_upsstatus_single_status_to_int ("CAL");
     }
     return result;
 }
