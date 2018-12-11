@@ -72,6 +72,8 @@ pkg_deps_prereqs_source: &pkg_deps_prereqs_source
     - cxxtools-dev
     - libmlm-dev
     - libfty-common-mlm-dev
+    - tntdb-dev
+    - libfty-common-db-dev
     - libfty-proto-dev
     - libcidr0-dev
     - libnutclient-dev

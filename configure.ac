@@ -1132,7 +1132,7 @@ AS_IF([test x"${search_libfty_common_db}" = xyes], [
                 )
         fi
 
-        AC_CHECK_LIB([fty-common-db], [fty_commmon_db_selftest],
+        AC_CHECK_LIB([fty-common-db], [fty_common_db_selftest],
             [
                 was_fty_common_db_check_lib_detected=yes
                 PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty-common-db"
