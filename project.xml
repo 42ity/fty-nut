@@ -140,7 +140,7 @@
 
     <use project = "fty-common-db" libname = "libfty_common_db" header = "fty_common_db.h"
         repository = "https://github.com/42ity/fty-common-db.git"
-        test = "fty_commmon_db_selftest" />
+        test = "fty_common_db_selftest" />
 
     <use project = "fty-proto" libname = "libfty_proto" header = "ftyproto.h" prefix = "fty_proto"
         min_major = "1" min_minor = "0" min_patch = "0"
