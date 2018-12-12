@@ -251,11 +251,13 @@ void NUTAgent::advertisePhysics ()
             }
         }
 
-        // BIOS-1185 end
-        // send also status as bitmap
+        // send status and "in progress" test result as a bitmap
         if (device.second.hasProperty ("status.ups")) {
             std::string status_s = device.second.property ("status.ups");
-            uint16_t    status_i = upsstatus_to_int (status_s);
+            std::string test_s = (device.second.hasProperty ("ups.test.result")?
+                device.second.property ("ups.test.result"):
+                "no test initiated");
+            uint16_t    status_i = upsstatus_to_int (status_s, test_s);
             fty::shm::write_metric(device.second.assetName (), "status.ups", std::to_string(status_i), " ", _ttl);
             zmsg_t *msg = fty_proto_encode_metric (
                 NULL,
@@ -276,7 +278,8 @@ void NUTAgent::advertisePhysics ()
                 device.second.setChanged ("status.ups", false);
             }
         }
-        //MVY: send also epdu status as bitmap
+        
+        //send epdu outlet status as bitmap
         for (int i = 1; i != 100; i++) {
             std::string property = "status.outlet." + std::to_string (i);
             // assumption, if outlet.10 does not exists, outlet.11 does not as well

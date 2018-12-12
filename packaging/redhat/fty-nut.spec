@@ -54,12 +54,15 @@ BuildRequires:  gcc-c++
 BuildRequires:  log4cplus-devel
 BuildRequires:  fty-common-logging-devel
 BuildRequires:  fty-common-devel
+BuildRequires:  libsodium-devel
 BuildRequires:  zeromq-devel
 BuildRequires:  czmq-devel
-BuildRequires:  malamute-devel
 BuildRequires:  cxxtools-devel
-BuildRequires:  libsodium-devel
+BuildRequires:  malamute-devel
+BuildRequires:  openssl-devel
 BuildRequires:  fty-common-mlm-devel
+BuildRequires:  tntdb-devel
+BuildRequires:  fty-common-db-devel
 BuildRequires:  fty-proto-devel
 BuildRequires:  libcidr-devel
 BuildRequires:  nut-devel
@@ -90,12 +93,15 @@ Requires:       libfty_nut1 = %{version}
 Requires:       log4cplus-devel
 Requires:       fty-common-logging-devel
 Requires:       fty-common-devel
+Requires:       libsodium-devel
 Requires:       zeromq-devel
 Requires:       czmq-devel
-Requires:       malamute-devel
 Requires:       cxxtools-devel
-Requires:       libsodium-devel
+Requires:       malamute-devel
+Requires:       openssl-devel
 Requires:       fty-common-mlm-devel
+Requires:       tntdb-devel
+Requires:       fty-common-db-devel
 Requires:       fty-proto-devel
 Requires:       libcidr-devel
 Requires:       nut-devel
@@ -134,22 +140,26 @@ find %{buildroot} -name '*.la' | xargs rm -f
 %doc README.md
 %{_bindir}/fty-nut
 %{_mandir}/man1/fty-nut*
+%{_bindir}/fty-nut-command
+%{_mandir}/man1/fty-nut-command*
 %{_bindir}/fty-nut-configurator
 %{_mandir}/man1/fty-nut-configurator*
 %{_bindir}/fty-nutconfig
 %{_bindir}/fty-dmf
 %config(noreplace) %{_sysconfdir}/fty-nut/fty-nut.cfg
 %{SYSTEMD_UNIT_DIR}/fty-nut.service
+%config(noreplace) %{_sysconfdir}/fty-nut/fty-nut-command.cfg
+%{SYSTEMD_UNIT_DIR}/fty-nut-command.service
 %config(noreplace) %{_sysconfdir}/fty-nut/fty-nut-configurator.cfg
 %{SYSTEMD_UNIT_DIR}/fty-nut-configurator.service
 %dir %{_sysconfdir}/fty-nut
 %if 0%{?suse_version} > 1315
 %post
-%systemd_post fty-nut.service fty-nut-configurator.service
+%systemd_post fty-nut.service fty-nut-command.service fty-nut-configurator.service
 %preun
-%systemd_preun fty-nut.service fty-nut-configurator.service
+%systemd_preun fty-nut.service fty-nut-command.service fty-nut-configurator.service
 %postun
-%systemd_postun_with_restart fty-nut.service fty-nut-configurator.service
+%systemd_postun_with_restart fty-nut.service fty-nut-command.service fty-nut-configurator.service
 %endif
 
 %changelog

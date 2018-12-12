@@ -28,45 +28,45 @@
 void
 Device::fixAlertLimits (DeviceAlert& alert) {
     // lower limit
-    if (alert.lowWarning.empty() && ! alert.lowCritical.empty()) {
+    if (alert.lowWarning.empty () && ! alert.lowCritical.empty ()) {
         alert.lowWarning = alert.lowCritical;
     }
-    if (!alert.lowWarning.empty() && alert.lowCritical.empty()) {
+    if (!alert.lowWarning.empty () && alert.lowCritical.empty ()) {
         alert.lowCritical = alert.lowWarning;
     }
     // upper limit
-    if (alert.highWarning.empty() && ! alert.highCritical.empty()) {
+    if (alert.highWarning.empty () && ! alert.highCritical.empty ()) {
         alert.highWarning = alert.highCritical;
     }
-    if (!alert.highWarning.empty() && alert.highCritical.empty()) {
+    if (!alert.highWarning.empty () && alert.highCritical.empty ()) {
         alert.highCritical = alert.highWarning;
     }
 }
 
 void
-Device::addAlert(const std::string& quantity, const std::map<std::string,std::vector<std::string> >& variables)
+Device::addAlert (const std::string& quantity, const std::map<std::string,std::vector<std::string> >& variables)
 {
-    log_debug ("aa: device %s provides %s alert", assetName().c_str(), quantity.c_str());
-    std::string prefix = daisychainPrefix() + quantity;
+    log_debug ("aa: device %s provides %s alert", assetName ().c_str (), quantity.c_str ());
+    std::string prefix = daisychainPrefix () + quantity;
     DeviceAlert alert;
     alert.name = quantity;
 
-    if (_alerts.find (quantity) != _alerts.end()) {
-        log_debug ("aa: device %s, alert %s already known", assetName().c_str(), quantity.c_str());
+    if (_alerts.find (quantity) != _alerts.end ()) {
+        log_debug ("aa: device %s, alert %s already known", assetName ().c_str (), quantity.c_str ());
         return;
     }
 
     // does the device evaluation?
     {
-        const auto& it = variables.find(prefix + ".status");
+        const auto& it = variables.find (prefix + ".status");
         if (it == variables.cend ()) {
-            log_debug ("aa: device %s doesn't support %s.status", assetName().c_str(), quantity.c_str());
+            log_debug ("aa: device %s doesn't support %s.status", assetName ().c_str (), quantity.c_str ());
             return;
         }
     }
     // some devices provides ambient.temperature.(high|low)
     {
-        const auto& it = variables.find(prefix + ".high");
+        const auto& it = variables.find (prefix + ".high");
         if (it != variables.cend ()) {
             alert.highWarning = it->second[0];
             alert.highCritical = it->second[0];
@@ -74,37 +74,37 @@ Device::addAlert(const std::string& quantity, const std::map<std::string,std::ve
     }
     {
         const auto& it = variables.find (prefix + ".low");
-        if (it != variables.cend()) {
+        if (it != variables.cend ()) {
             alert.lowWarning = it->second[0];
             alert.lowCritical = it->second[0];
         }
     }
     // some devices provides ambient.temperature.(high|low).(warning|critical)
     {
-        const auto& it = variables.find(prefix + ".high.warning");
-        if (it != variables.cend()) alert.highWarning = it->second[0];
+        const auto& it = variables.find (prefix + ".high.warning");
+        if (it != variables.cend ()) alert.highWarning = it->second[0];
     }
     {
-        const auto& it = variables.find(prefix + ".high.critical");
-        if (it != variables.cend()) alert.highCritical = it->second[0];
+        const auto& it = variables.find (prefix + ".high.critical");
+        if (it != variables.cend ()) alert.highCritical = it->second[0];
     }
     {
-        const auto& it = variables.find(prefix + ".low.warning");
-        if (it != variables.cend()) alert.lowWarning = it->second[0];
+        const auto& it = variables.find (prefix + ".low.warning");
+        if (it != variables.cend ()) alert.lowWarning = it->second[0];
     }
     {
-        const auto& it = variables.find(prefix + ".low.critical");
-        if (it != variables.cend()) alert.lowCritical = it->second[0];
+        const auto& it = variables.find (prefix + ".low.critical");
+        if (it != variables.cend ()) alert.lowCritical = it->second[0];
     }
     // if some limits are missing, use those present
     fixAlertLimits (alert);
     if (
-        alert.lowWarning.empty() ||
-        alert.lowCritical.empty() ||
-        alert.highWarning.empty() ||
-        alert.highCritical.empty()
+        alert.lowWarning.empty () ||
+        alert.lowCritical.empty () ||
+        alert.highWarning.empty () ||
+        alert.highCritical.empty ()
     ) {
-        log_error("aa: thresholds for %s are not present in %s", quantity.c_str (), assetName().c_str ());
+        log_error ("aa: thresholds for %s are not present in %s", quantity.c_str (), assetName ().c_str ());
     } else {
         _alerts[quantity] = alert;
     }
@@ -113,46 +113,46 @@ Device::addAlert(const std::string& quantity, const std::map<std::string,std::ve
 int
 Device::scanCapabilities (nut::TcpClient& conn)
 {
-    log_debug ("aa: scanning capabilities for %s", assetName().c_str());
+    log_debug ("aa: scanning capabilities for %s", assetName ().c_str ());
     if (!conn.isConnected ()) return 0;
-    std::string prefix = daisychainPrefix();
+    std::string prefix = daisychainPrefix ();
 
-    _alerts.clear();
+    _alerts.clear ();
     try {
-        auto nutDevice = conn.getDevice(_nutName);
-        if (! nutDevice.isOk()) { throw std::runtime_error("device " + assetName() + " is not configured in NUT yet"); }
-        auto vars = nutDevice.getVariableValues();
+        auto nutDevice = conn.getDevice (_nutName);
+        if (! nutDevice.isOk ()) { throw std::runtime_error ("device " + assetName () + " is not configured in NUT yet"); }
+        auto vars = nutDevice.getVariableValues ();
         if (vars.empty ()) return 0;
-        if (vars.find (prefix + "ambient.temperature.status") != vars.cend()) {
+        if (vars.find (prefix + "ambient.temperature.status") != vars.cend ()) {
             addAlert ("ambient.temperature", vars);
             _scanned = true;
         }
-        if (vars.find (prefix + "ambient.humidity.status") != vars.cend()) {
+        if (vars.find (prefix + "ambient.humidity.status") != vars.cend ()) {
             addAlert ("ambient.humidity", vars);
             _scanned = true;
         }
         for (int a=1; a<=3; a++) {
-            std::string q = "input.L" + std::to_string(a) + ".current";
-            if (vars.find (prefix + q + ".status") != vars.cend()) {
+            std::string q = "input.L" + std::to_string (a) + ".current";
+            if (vars.find (prefix + q + ".status") != vars.cend ()) {
                 addAlert (q, vars);
                 _scanned = true;
             }
-            q = "input.L" + std::to_string(a) + ".voltage";
-            if (vars.find (prefix + q + ".status") != vars.cend()) {
+            q = "input.L" + std::to_string (a) + ".voltage";
+            if (vars.find (prefix + q + ".status") != vars.cend ()) {
                 addAlert (q, vars);
                 _scanned = true;
             }
         }
         for (int a=1; a<=1000; a++) {
             int found = 0;
-            std::string q = "outlet.group." + std::to_string(a) + ".current";
-            if (vars.find (prefix + q + ".status") != vars.cend()) {
+            std::string q = "outlet.group." + std::to_string (a) + ".current";
+            if (vars.find (prefix + q + ".status") != vars.cend ()) {
                 addAlert (q, vars);
                 ++found;
                 _scanned = true;
             }
-            q = "outlet.group." + std::to_string(a) + ".voltage";
-            if (vars.find (prefix + q + ".status") != vars.cend()) {
+            q = "outlet.group." + std::to_string (a) + ".voltage";
+            if (vars.find (prefix + q + ".status") != vars.cend ()) {
                 addAlert (q, vars);
                 ++found;
                 _scanned = true;
@@ -160,7 +160,7 @@ Device::scanCapabilities (nut::TcpClient& conn)
             if (!found) break;
         }
     } catch ( std::exception &e ) {
-        log_error("aa: Communication problem with %s (%s)", assetName().c_str(), e.what() );
+        log_error ("aa: Communication problem with %s (%s)", assetName ().c_str (), e.what () );
         return 0;
     }
     return 1;
@@ -169,7 +169,7 @@ Device::scanCapabilities (nut::TcpClient& conn)
 void
 Device::publishAlerts (mlm_client_t *client, uint64_t ttl) {
     if (!client) return;
-    log_debug("aa: publishing %zu alerts on %s", _alerts.size (), assetName().c_str());
+    log_debug ("aa: publishing %zu alerts on %s", _alerts.size (), assetName ().c_str ());
     for (auto& it: _alerts) {
         publishAlert (client, it.second, ttl);
     }
@@ -179,7 +179,7 @@ void
 Device::publishAlert (mlm_client_t *client, DeviceAlert& alert, uint64_t ttl)
 {
     if (!client) return;
-    if (alert.status.empty()) return;
+    if (alert.status.empty ()) return;
 
     const char *state = "ACTIVE", *severity = NULL;
     std::string description;
@@ -206,26 +206,26 @@ Device::publishAlert (mlm_client_t *client, DeviceAlert& alert, uint64_t ttl)
         severity = "CRITICAL";
         description = TRANSLATE_ME ("%s is critically high", alert.name.c_str ());
     }
-    std::string rule = alert.name + "@" + assetName();
+    std::string rule = alert.name + "@" + assetName ();
 
     if (!severity) {
         log_error ("aa: alert %s has unknown severity value %s. Set to WARNING.", rule.c_str (), alert.status.c_str ());
         severity = "WARNING";
     }
 
-    log_debug("aa: publishing alert %s", rule.c_str ());
-    zmsg_t *message = fty_proto_encode_alert(
+    log_debug ("aa: publishing alert %s", rule.c_str ());
+    zmsg_t *message = fty_proto_encode_alert (
         NULL,               // aux
         alert.timestamp,    // timestamp
         ttl,
         rule.c_str (),      // rule
-        assetName().c_str (),// element
+        assetName ().c_str (),// element
         state,              // state
         severity,           // severity
         description.c_str (), // description
         NULL                // action ?email
     );
-    std::string topic = rule + "/" + severity + "@" + assetName();
+    std::string topic = rule + "/" + severity + "@" + assetName ();
     if (message) {
         mlm_client_send (client, topic.c_str (), &message);
     };
@@ -268,7 +268,7 @@ s_rule_desc (const std::string& alert_name)
     if (alert_name.find ("current") != std::string::npos)
         return TRANSLATE_ME ("Current");
     else
-        return "";
+        return "{}";
 }
 
 void
@@ -276,17 +276,17 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
 {
     if (!client || alert.rulePublished) return;
 
-    zmsg_t *message = zmsg_new();
+    zmsg_t *message = zmsg_new ();
     assert (message);
 
-    char *ruleName = zsys_sprintf ("%s@%s", alert.name.c_str (), assetName().c_str ());
+    char *ruleName = zsys_sprintf ("%s@%s", alert.name.c_str (), assetName ().c_str ());
     char *rule = zsys_sprintf (
         "{ \"threshold\" : {"
-        "  \"rule_name\"     : \" %s\","
+        "  \"rule_name\"     : \"%s\","
         "  \"rule_source\"   : \"NUT\","
         "  \"rule_class\"    : \"Device internal\","
         "  \"rule_hierarchy\": \"internal.device\","
-        "  \"rule_desc\"     : \"%s\","
+        "  \"rule_desc\"     : %s,"
         "  \"target\"        : \"%s\","
         "  \"element\"       : \"%s\","
         "  \"values_unit\"   : \"%s\","
@@ -297,14 +297,14 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
         "    { \"high_critical\" : \"%s\"}"
         "    ],"
         "  \"results\"       : ["
-        "    { \"low_critical\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : \"{\"key\" : \"TRANSLATE_LUA({{alert_name}} is critically low for {{ename}}.)\", \"variable\" : {\"alert_name\" : \"%s\", \"ename\" : \"%s\"} }\" }},"
-        "    { \"low_warning\"   : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : \"{\"key\" : \"TRANSLATE_LUA({{alert_name}} is low for {{ename}}.)\", \"variable\" : {\"alert_name\" : \"%s\", \"ename\" : \"%s\"} }\"}},"
-        "    { \"high_warning\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : \"{\"key\" : \"TRANSLATE_LUA({{alert_name}} is high for {{ename}}.)\", \"variable\" : {\"alert_name\" : \"%s\", \"ename\" : \"%s\"} }\"}},"
-        "    { \"high_critical\" : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : \"{\"key\" : \"TRANSLATE_LUA({{alert_name}} is critically high for {{ename}}.)\", \"variable\" : {\"alert_name\" : \"%s\", \"ename\" : \"%s\"} }\" }} ] } } ",
+        "    { \"low_critical\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is critically low for {{ename}}.)\", \"variable\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\", \"assetLink\" : \"%s\" } } } } },"
+        "    { \"low_warning\"   : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is low for {{ename}}.)\", \"variable\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\", \"assetLink\" : \"%s\" } } } } },"
+        "    { \"high_warning\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is high for {{ename}}.)\", \"variable\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\", \"assetLink\" : \"%s\" } } } } },"
+        "    { \"high_critical\" : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is critically high for {{ename}}.)\", \"variable\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\", \"assetLink\" : \"%s\" } } } } } ] } } ",
         ruleName,
         s_rule_desc (alert.name).c_str (),
         ruleName,
-        assetName().c_str (),
+        assetName ().c_str (),
         s_values_unit (alert.name).c_str (),
         alert.lowWarning.c_str (),
         alert.lowCritical.c_str (),
@@ -312,14 +312,18 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
         alert.highCritical.c_str (),
         alert.name.c_str (),
         assetName ().c_str (),
-        alert.name.c_str (),
         assetName ().c_str (),
         alert.name.c_str (),
         assetName ().c_str (),
+        assetName ().c_str (),
         alert.name.c_str (),
+        assetName ().c_str (),
+        assetName ().c_str (),
+        alert.name.c_str (),
+        assetName ().c_str (),
         assetName ().c_str ());
 
-    log_debug("aa: publishing rule %s", ruleName);
+    log_debug ("aa: publishing rule %s", ruleName);
     zmsg_addstr (message, "ADD");
     zmsg_addstr (message, rule);
     if (mlm_client_sendto (client, "fty-alert-engine", "rfc-evaluator-rules", NULL, 1000, &message) == 0) {
@@ -345,19 +349,19 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
 void
 Device::update (nut::TcpClient& conn)
 {
-    auto nutDevice = conn.getDevice(_nutName);
-    if (! nutDevice.isOk()) return;
+    auto nutDevice = conn.getDevice (_nutName);
+    if (! nutDevice.isOk ()) return;
     for (auto &it: _alerts) {
         try {
-            std::string prefix = daisychainPrefix();
+            std::string prefix = daisychainPrefix ();
             auto value = nutDevice.getVariableValue (prefix + it.first + ".status");
             if (value.empty ()) {
-                log_debug ("aa: %s on %s is not present", it.first.c_str (), assetName().c_str ());
+                log_debug ("aa: %s on %s is not present", it.first.c_str (), assetName ().c_str ());
             } else {
                 std::string newStatus =  value[0];
-                log_debug ("aa: %s on %s is %s", it.first.c_str (), assetName().c_str (), newStatus.c_str());
+                log_debug ("aa: %s on %s is %s", it.first.c_str (), assetName ().c_str (), newStatus.c_str ());
                 if (it.second.status != newStatus) {
-                    it.second.timestamp = ::time(NULL);
+                    it.second.timestamp = ::time (NULL);
                     it.second.status = newStatus;
                 }
             }
@@ -365,10 +369,10 @@ Device::update (nut::TcpClient& conn)
     }
 }
 
-std::string Device::daisychainPrefix() const
+std::string Device::daisychainPrefix () const
 {
-    if (chain() == 0) return "";
-    return "device." + std::to_string(chain()) + ".";
+    if (chain () == 0) return "";
+    return "device." + std::to_string (chain ()) + ".";
 }
 
 
@@ -384,9 +388,9 @@ alert_device_test (bool verbose)
     std::map<std::string,std::vector<std::string> > nothing = {
         { "nothing", {"h1", "h2"} }
     };
-    dev.addAlert("ambient.temperature", nothing);
-    printf(".");
-    assert(dev._alerts.empty());
+    dev.addAlert ("ambient.temperature", nothing);
+    printf (".");
+    assert (dev._alerts.empty ());
 
     std::map<std::string,std::vector<std::string> > alerts = {
         { "ambient.temperature.status", {"good", "", ""} },
@@ -399,15 +403,15 @@ alert_device_test (bool verbose)
         { "ambient.humidity.high", {"100", "", ""} },
         { "ambient.humidity.low", {"10", "", ""} },
     };
-    dev.addAlert("ambient.temperature", alerts);
-    dev.addAlert("ambient.humidity", alerts);
-    assert(dev._alerts.size() == 2);
-    assert(dev._alerts["ambient.humidity"].lowWarning == "10");
-    assert(dev._alerts["ambient.humidity"].lowCritical == "10");
-    assert(dev._alerts["ambient.temperature"].lowWarning == "10");
-    assert(dev._alerts["ambient.temperature"].lowCritical == "5");
-    assert(dev._alerts["ambient.temperature"].highWarning == "80");
-    assert(dev._alerts["ambient.temperature"].highCritical == "100");
+    dev.addAlert ("ambient.temperature", alerts);
+    dev.addAlert ("ambient.humidity", alerts);
+    assert (dev._alerts.size () == 2);
+    assert (dev._alerts["ambient.humidity"].lowWarning == "10");
+    assert (dev._alerts["ambient.humidity"].lowCritical == "10");
+    assert (dev._alerts["ambient.temperature"].lowWarning == "10");
+    assert (dev._alerts["ambient.temperature"].lowCritical == "5");
+    assert (dev._alerts["ambient.temperature"].highWarning == "80");
+    assert (dev._alerts["ambient.temperature"].highCritical == "100");
     //  @end
     printf (" OK\n");
 }

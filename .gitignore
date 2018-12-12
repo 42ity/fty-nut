@@ -3,7 +3,6 @@
 ### Note: Customized after generation; take care upon regens
 
 save.xml
-
 # Object files
 *.o
 *.so
@@ -26,6 +25,7 @@ save.xml
 # Executables
 src/fty-nut_selftest
 src/fty-nut
+src/fty-nut-command
 src/fty-nut-configurator
 src/fty_nut_selftest
 *.exe
@@ -82,14 +82,7 @@ CMake*
 *.cmake
 
 # Repositories downloaded by CI integration scripts
-libsodium/
-libzmq/
-czmq/
-malamute/
-fty-proto/
-cidr/
-cxxtools/
-libnutclient/
+tmp-deps/
 
 # Travis build area
 tmp/
@@ -145,13 +138,3 @@ nbproject/
 
 # editor backups
 *~
-
-# Test artifacts
-.testdir/
-stderr.txt
-
-# Generated from templates
-src/fty-nut.service
-src/fty-nut.cfg
-src/fty-nut-configurator.service
-src/fty-nut-configurator.cfg

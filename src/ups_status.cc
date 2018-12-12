@@ -27,7 +27,7 @@
 */
 
 #include "ups_status.h"
-
+#include <fty_common_base.h>
 #include <string.h>
 
 // following definition is taken as it is from network ups tool project (dummy-ups.h):
@@ -76,7 +76,7 @@ s_upsstatus_single_status_to_int (const char *status) {
 
 
 uint16_t
-upsstatus_to_int (const char *status)
+upsstatus_to_int (const char *status, const char *test_result)
 {
     uint16_t result = 0;
     char *buff = strdup (status);
@@ -99,13 +99,18 @@ upsstatus_to_int (const char *status)
         free (buff);
         buff = NULL;
     }
+    //detect if a test is in progress 
+    if(streq(test_result,"in progress")){
+        //add calibration (CAL) flag to ups status
+        result |= s_upsstatus_single_status_to_int ("CAL");
+    }
     return result;
 }
 
 uint16_t
-upsstatus_to_int (const std::string& status)
+upsstatus_to_int (const std::string& status, const std::string& test_result)
 {
-    return upsstatus_to_int (status.c_str ());
+    return upsstatus_to_int (status.c_str(), test_result.c_str());
 }
 
 std::string

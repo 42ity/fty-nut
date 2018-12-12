@@ -13,6 +13,8 @@
 # Ignore the source doc texts generated from program sources
 fty_nut_server.txt
 fty_nut_server.doc
+fty_nut_command_server.txt
+fty_nut_command_server.doc
 fty_nut_configurator_server.txt
 fty_nut_configurator_server.doc
 alert_actor.txt
@@ -21,6 +23,8 @@ sensor_actor.txt
 sensor_actor.doc
 fty-nut.txt
 fty-nut.doc
+fty-nut-command.txt
+fty-nut-command.doc
 fty-nut-configurator.txt
 fty-nut-configurator.doc
 

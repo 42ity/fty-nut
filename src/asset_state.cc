@@ -132,7 +132,7 @@ bool AssetState::updateFromProto(fty_proto_t* message)
     return false;
 }
 
-bool AssetState::updateFromProto(zmsg_t* message)
+bool AssetState::updateFromMsg(zmsg_t* message)
 {
     bool ret = false;
     if (is_fty_proto(message)) {

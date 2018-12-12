@@ -71,6 +71,10 @@ fty-nut-configurator is composed of 1 actor:
 
 * fty_nut_configurator_server - server actor which configures nut-server (upsd) based on results from nut scanner
 
+fty-nut-command is composed of 1 actor:
+
+* fty-nut-command - bridge forwarding commands from Malamute to NUT devices
+
 ## Protocols
 
 ### Publishing Metrics
@@ -126,6 +130,8 @@ D: 17-11-13 12:53:21     value='42'
 D: 17-11-13 12:53:21     unit=''
 ```
 
+* fty-nut-command doesn't produce metrics.
+
 ### Publishing Alerts
 
 * alert_actor produces metrics on FTY_PROTO_STREAM_ALERT_SYS.
@@ -146,9 +152,50 @@ D: 17-11-13 15:05:57     description='outlet.group.1.voltage is resolved'
 D: 17-11-13 15:05:57     action=''
 ```
 
+* fty-nut-command doesn't produce alerts.
+
 ### Consuming Assets
 
 * fty_nut_server, sensor_actor and alert_actor listen on FTY_PROTO_STREAM_ASSETS stream.
+* fty-nut-command doesn't consume assets.
 
 ### Mailbox Requests
-No mailbox commands implemented
+
+fty-nut-command responds to messages with subject `power-actions`. It is
+important to note that fty-nut-command hides the details of daisy-chained NUT
+devices to its clients by offering an uniform interface across daisy-chained
+devices and their hosts.
+
+The following request queries all known commands of an asset:
+* "GET_COMMANDS"/'uuid'/('assetN')*...
+
+where
+* '/' indicates a multipart string message
+* 'uuid' is a client-provided string returned in the reply
+* 'assetN' is a list of asset names, one per message part
+
+fty-nut-command will respond back with either:
+* "OK"/'uuid'/("ASSET"/'assetN'/('commandN'/'descriptionN')\*)\*
+* "ERROR"/'uuid'/'reason'
+
+where
+* '/' indicates a multipart string message
+* 'uuid' is the client-provided string in the request
+* "ASSET" is a constant delimiter string
+* 'assetN' is an internal asset name
+* 'commandN' is a command provided by 'assetN'
+* 'descriptionN' is the description of 'commandN'
+
+The following request performs one or more actions on an asset:
+* "DO_COMMANDS"/'uuid'/'asset'/('commandN'/'argumentN')*
+
+where
+* '/' indicates a multipart string message
+* 'uuid' is the client-provided string in the request
+* 'asset' is an internal asset name
+* 'commandN' is a command for the asset
+* 'argumentN' is an argument for 'commandN', set to empty string if not used
+
+fty-nut-command will respond back with either:
+* "OK"/'uuid'
+* "ERROR"/'uuid'/'reason'

@@ -45,11 +45,11 @@
 #define STATUS_HB              (1 << 12)       /* High battery */
 #define STATUS_FSD             (1 << 13)       /* Forced Shutdown */
 
-// converts status from char* format (e.g. "OL CHRG") to bitmap representation
-uint16_t upsstatus_to_int (const char *status);
+// converts status and test result from char* format (e.g. "OL CHRG") to bitmap representation
+uint16_t upsstatus_to_int (const char *status, const char *test_result);
 
 // std::string wrapper for upsstatus_to_int
-uint16_t upsstatus_to_int (const std::string& status);
+uint16_t upsstatus_to_int (const std::string& status,const std::string& test_result );
 
 // converts status from uint16_t bitmap (e.g. STATUS_CHRG|STATUS_OL) to text
 // representation (e.g. "OL CHRG")

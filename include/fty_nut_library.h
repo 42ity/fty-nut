@@ -32,7 +32,9 @@
 //  External dependencies
 #include <fty_log.h>
 #include <fty_common.h>
-#include <fty_common_mlm_guards.h>
+#include <fty_common_mlm.h>
+#include <tntdb.h>
+#include <fty_common_db.h>
 #include <ftyproto.h>
 #include <libcidr.h>
 #include <nutclient.h>
@@ -47,6 +49,26 @@
     ((major) * 10000 + (minor) * 100 + (patch))
 #define FTY_NUT_VERSION \
     FTY_NUT_MAKE_VERSION(FTY_NUT_VERSION_MAJOR, FTY_NUT_VERSION_MINOR, FTY_NUT_VERSION_PATCH)
+
+// czmq_prelude.h bits
+#if !defined (__WINDOWS__)
+#   if (defined WIN32 || defined _WIN32 || defined WINDOWS || defined _WINDOWS)
+#       undef __WINDOWS__
+#       define __WINDOWS__
+#   endif
+#endif
+
+// Windows MSVS doesn't have stdbool
+#if (defined (_MSC_VER) && !defined (true))
+#   if (!defined (__cplusplus) && (!defined (true)))
+#       define true 1
+#       define false 0
+        typedef char bool;
+#   endif
+#else
+#   include <stdbool.h>
+#endif
+// czmq_prelude.h bits
 
 #if defined (__WINDOWS__)
 #   if defined FTY_NUT_STATIC
@@ -80,6 +102,8 @@
 //  These classes are stable or legacy and built in all releases
 typedef struct _fty_nut_server_t fty_nut_server_t;
 #define FTY_NUT_SERVER_T_DEFINED
+typedef struct _fty_nut_command_server_t fty_nut_command_server_t;
+#define FTY_NUT_COMMAND_SERVER_T_DEFINED
 typedef struct _fty_nut_configurator_server_t fty_nut_configurator_server_t;
 #define FTY_NUT_CONFIGURATOR_SERVER_T_DEFINED
 typedef struct _alert_actor_t alert_actor_t;
@@ -90,6 +114,7 @@ typedef struct _sensor_actor_t sensor_actor_t;
 
 //  Public classes, each with its own header file
 #include "fty_nut_server.h"
+#include "fty_nut_command_server.h"
 #include "fty_nut_configurator_server.h"
 #include "alert_actor.h"
 #include "sensor_actor.h"
