@@ -49,6 +49,9 @@ chown -R bios:bios-infra "${BIOSCONFDIR}"
 
 TMPFILE=$(mktemp -p "${TMPDIR}" nutconfig.XXXXXXXXXX)
 
+# Handle signals and a graceful shell process exit
+trap "rm -f ${TMPFILE} >/dev/null 2>&1" 0 1 2 3 15
+
 cat << EOF > "${TMPFILE}"
 # Data-walks of networked devices to initialize a NUT driver state
 # can take considerable time; we should allow for that to succeed.
