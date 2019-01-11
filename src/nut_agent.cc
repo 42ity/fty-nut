@@ -315,7 +315,7 @@ void NUTAgent::advertisePhysics ()
             if (msg) {
                 log_debug ("sending new status for element_src = '%s', value = '%s' (%s)",
                            device.second.assetName().c_str (), std::to_string (status_i).c_str (), status_s.c_str ());
-                subject = "status@" + device.second.assetName ();
+                subject = "status.ups@" + device.second.assetName ();
                 int r = send (subject, &msg);
                 if( r != 0 )
                     log_error("failed to send measurement %s result %i", subject.c_str(), r);
