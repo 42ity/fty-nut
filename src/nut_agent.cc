@@ -46,6 +46,22 @@ const std::map<std::string, std::string> NUTAgent::_units =
     { "delay",       "s" },
 };
 
+const std::vector<std::string> alarmsList =
+{
+    "Replace battery!",
+    "Shutdown imminent!",
+    "Fan failure!",
+    "No battery installed!",
+    "Battery voltage too low!",
+    "Battery voltage too high!",
+    "Battery charger fail!",
+    "Temperature too high!",
+    "Internal UPS fault!",
+    "Awaiting power!",
+    "Automatic bypass mode!",
+    "Manual bypass mode!"
+};
+
 NUTAgent::NUTAgent(StateManager::Reader *reader)
     : _state_reader(reader)
 {
@@ -246,6 +262,38 @@ void NUTAgent::advertisePhysics ()
             }
         }
 
+        // send alarms as bitmap
+        bool has_alarms = false;
+        if (device.second.hasProperty ("ups.alarm")) {
+            const auto &alarms = device.second.property ("ups.alarm");
+            uint16_t bitfield = 0;
+            int bit = 0;
+            for (const auto &i : alarmsList) {
+                if (alarms.find(i)) {
+                    bitfield |= (1 << bit);
+                    has_alarms = true;
+                }
+                bit++;
+            }
+            zmsg_t *msg = fty_proto_encode_metric (
+                NULL,
+                time (NULL),
+                _ttl,
+                "ups.alarm",
+                device.second.assetName ().c_str (),
+                std::to_string (bitfield).c_str (),
+                "");
+            if (msg) {
+                log_debug ("sending new alarms for element_src = '%s', value = '%s' (%s)",
+                           device.second.assetName().c_str (), std::to_string (bitfield).c_str (), alarms.c_str ());
+                subject = "ups.alarm@" + device.second.assetName ();
+                int r = send (subject, &msg);
+                if( r != 0 )
+                    log_error("failed to send measurement %s result %i", subject.c_str(), r);
+                zmsg_destroy (&msg);
+                device.second.setChanged ("ups.alarm", false);
+            }
+        }
         // send status and "in progress" test result as a bitmap
         if (device.second.hasProperty ("status.ups")) {
             std::string status_s = device.second.property ("status.ups");
@@ -253,6 +301,9 @@ void NUTAgent::advertisePhysics ()
                 device.second.property ("ups.test.result"):
                 "no test initiated");
             uint16_t    status_i = upsstatus_to_int (status_s, test_s);
+            if (has_alarms) {
+                status_i |= STATUS_ALARM;
+            }
             zmsg_t *msg = fty_proto_encode_metric (
                 NULL,
                 time (NULL),
