@@ -284,7 +284,7 @@ void NUTAgent::advertisePhysics ()
                 std::to_string (bitfield).c_str (),
                 "");
             if (msg) {
-                log_debug ("sending new alarms for element_src = '%s', value = '%s' (%s)",
+                log_debug ("sending new ups.alarm for element_src = '%s', value = '%s' (%s)",
                            device.second.assetName().c_str (), std::to_string (bitfield).c_str (), alarms.c_str ());
                 subject = "ups.alarm@" + device.second.assetName ();
                 int r = send (subject, &msg);
