@@ -53,6 +53,7 @@ static status_lkp_t status_info[] = {
     { "DISCHRG", STATUS_DISCHRG },
     { "HB", STATUS_HB },
     { "FSD", STATUS_FSD },
+    { "ALARM", STATUS_ALARM },
     { "NULL", 0 },
 };
 
