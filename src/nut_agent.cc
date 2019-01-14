@@ -59,7 +59,9 @@ const std::vector<std::string> alarmsList =
     "Internal UPS fault!",
     "Awaiting power!",
     "Automatic bypass mode!",
-    "Manual bypass mode!"
+    "Manual bypass mode!",
+    "Communication fault!",
+    "Fuse fault!"
 };
 
 NUTAgent::NUTAgent(StateManager::Reader *reader)
