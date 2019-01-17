@@ -271,7 +271,7 @@ void NUTAgent::advertisePhysics ()
             uint16_t bitfield = 0;
             int bit = 0;
             for (const auto &i : alarmsList) {
-                if (alarms.find(i)) {
+                if (alarms.find(i) != std::string::npos) {
                     bitfield |= (1 << bit);
                     has_alarms = true;
                 }
