@@ -36,6 +36,7 @@
 #include <exception>
 #include <iostream>
 #include <fstream>
+#include <chrono>
 
 #define NUT_MEASUREMENT_REPEAT_AFTER    300     //!< (once in 5 minutes now (300s))
 
@@ -644,20 +645,39 @@ void NUTDeviceList::updateDeviceList(const AssetState& deviceState) {
 
 
 void NUTDeviceList::updateDeviceStatus( bool forceUpdate ) {
+    auto start = std::chrono::steady_clock::now();
+
+    std::set<std::string> allDevices;
+    for(const auto &device : _devices) {
+        allDevices.insert(device.second.nutName());
+    }
+    std::map<std::string, std::map<std::string, std::vector<std::string> > > allData;
+    try {
+        allData = nutClient.getDevicesVariableValues(allDevices);
+    } catch (std::exception &e) {
+        log_error("Major communication problem with NUT (%s)", e.what());
+    }
+
+    int updatedDevices = 0;
     for(auto &device : _devices ) {
-        try {
-            nutclient::Device nutDevice = nutClient.getDevice(device.second.nutName());
-            if (! nutDevice.isOk()) { throw std::runtime_error ("device " + device.second.assetName() + " is not configured in NUT yet"); }
+        auto it = allData.find(device.second.nutName());
+        if (it != allData.end()) {
             std::function <const std::map <std::string, std::string>&(const char *)> x = std::bind (&NUTDeviceList::get_mapping, this, std::placeholders::_1);
-            device.second.update( nutDevice.getVariableValues(), x, forceUpdate );
-        } catch ( std::exception &e ) {
-            log_error("Communication problem with %s (%s)", device.first.c_str(), e.what() );
+            device.second.update( it->second, x, forceUpdate );
+            log_debug("Updated device status %s", device.first.c_str() );
+            updatedDevices++;
+        }
+        else {
+            log_error("Communication problem with %s", device.first.c_str() );
             if( time(NULL) - device.second.lastUpdate() > NUT_MEASUREMENT_REPEAT_AFTER/2 ) {
                 // we are not communicating for a while. Let's drop the values.
                 device.second.clear();
             }
         }
     }
+
+    auto end = std::chrono::steady_clock::now();
+    log_info("Updated %d/%d devices in %.3f seconds", updatedDevices, _devices.size(), std::chrono::duration_cast<std::chrono::milliseconds>(end-start) / 1000.0 );
 }
 
 bool NUTDeviceList::connect() {
