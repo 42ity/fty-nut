@@ -278,8 +278,10 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
 
     zmsg_t *message = zmsg_new ();
     assert (message);
+    const char *alert_name = alert.name.c_str ();
+    const char *asset_name = assetName ().c_str ();
 
-    char *ruleName = zsys_sprintf ("%s@%s", alert.name.c_str (), assetName ().c_str ());
+    char *ruleName = zsys_sprintf ("%s@%s", alert_name, asset_name);
     char *rule = zsys_sprintf (
         "{ \"threshold\" : {"
         "  \"rule_name\"     : \"%s\","
@@ -304,24 +306,24 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
         ruleName,
         s_rule_desc (alert.name).c_str (),
         ruleName,
-        assetName ().c_str (),
+        asset_name,
         s_values_unit (alert.name).c_str (),
         alert.lowWarning.c_str (),
         alert.lowCritical.c_str (),
         alert.highWarning.c_str (),
         alert.highCritical.c_str (),
-        alert.name.c_str (),
-        assetName ().c_str (),
-        assetName ().c_str (),
-        alert.name.c_str (),
-        assetName ().c_str (),
-        assetName ().c_str (),
-        alert.name.c_str (),
-        assetName ().c_str (),
-        assetName ().c_str (),
-        alert.name.c_str (),
-        assetName ().c_str (),
-        assetName ().c_str ());
+        alert_name,
+        asset_name,
+        asset_name,
+        alert_name,
+        asset_name,
+        asset_name,
+        alert_name,
+        asset_name,
+        asset_name,
+        alert_name,
+        asset_name,
+        asset_name);
 
     log_debug ("aa: publishing rule %s", ruleName);
     zmsg_addstr (message, "ADD");
