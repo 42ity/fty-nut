@@ -32,6 +32,7 @@ struct DeviceAlert {
     std::string status;
     int64_t timestamp = 0;
     bool rulePublished = false;
+    bool ruleRescanned = false;
 };
 
 #endif // __ALERT_DEVICE_ALERT

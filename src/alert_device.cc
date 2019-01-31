@@ -51,10 +51,24 @@ Device::addAlert (const std::string& quantity, const std::map<std::string,std::v
     DeviceAlert alert;
     alert.name = quantity;
 
-    if (_alerts.find (quantity) != _alerts.end ()) {
-        log_debug ("aa: device %s, alert %s already known", assetName ().c_str (), quantity.c_str ());
-        return;
-    }
+    // Is there an existing alert which we can change?
+    const auto &_existingalert = _alerts.find (quantity);
+    bool updatingalert = false;
+    DeviceAlert existingalert;
+    if (_existingalert != _alerts.end ()) {
+        existingalert = _existingalert->second; // Dereference operator in iterator
+        if (existingalert.ruleRescanned) {
+            log_debug ("aa: device %s, alert %s already known", assetName ().c_str (), quantity.c_str ());
+            return;
+        } else {
+            // This entry is in the list, but was not refreshed in this
+            // run of scanAlerts(). Initialize "alert" from this value
+            // and below we will put it back into the list, overwriting
+            // the old existing value.
+            updatingalert = true;
+            alert = existingalert;
+        }
+    } // else go on using the freshly made "alert" instance
 
     // does the device evaluation?
     {
@@ -64,6 +78,7 @@ Device::addAlert (const std::string& quantity, const std::map<std::string,std::v
             return;
         }
     }
+
     // some devices provides ambient.temperature.(high|low)
     {
         const auto& it = variables.find (prefix + ".high");
@@ -106,6 +121,16 @@ Device::addAlert (const std::string& quantity, const std::map<std::string,std::v
     ) {
         log_error ("aa: thresholds for %s are not present in %s", quantity.c_str (), assetName ().c_str ());
     } else {
+        alert.ruleRescanned = true;
+        if (updatingalert && alert.rulePublished) {
+            // If anything changed, reset the flag to make the info known
+            if (alert.lowWarning != existingalert.lowWarning)     alert.rulePublished = false;
+            if (alert.highWarning != existingalert.highWarning)   alert.rulePublished = false;
+            if (alert.lowCritical != existingalert.lowCritical)   alert.rulePublished = false;
+            if (alert.highCritical != existingalert.highCritical) alert.rulePublished = false;
+        }
+        // If entry exists we must update at least the alert.ruleRescanned
+        // otherwise we must add it to the list.
         _alerts[quantity] = alert;
     }
 }
@@ -116,8 +141,11 @@ Device::scanCapabilities (nut::TcpClient& conn)
     log_debug ("aa: scanning capabilities for %s", assetName ().c_str ());
     if (!conn.isConnected ()) return 0;
     std::string prefix = daisychainPrefix ();
+    int retval = -1;
 
-    _alerts.clear ();
+    for (auto& it: _alerts) {
+        it.second.ruleRescanned = false;
+    }
     try {
         auto nutDevice = conn.getDevice (_nutName);
         if (! nutDevice.isOk ()) { throw std::runtime_error ("device " + assetName () + " is not configured in NUT yet"); }
@@ -161,9 +189,22 @@ Device::scanCapabilities (nut::TcpClient& conn)
         }
     } catch ( std::exception &e ) {
         log_error ("aa: Communication problem with %s (%s)", assetName ().c_str (), e.what () );
-        return 0;
+        retval = 0;
+        goto cleanup;
     }
-    return 1;
+    retval = 1;
+
+cleanup:
+    for (auto it = _alerts.begin() ; it != _alerts.end() ; ) {
+        if (!it->second.ruleRescanned) {
+            // Remove the obsolete entry not touched by current scan
+            // or where addAlert errored out and returned early
+            _alerts.erase(it++);
+        } else {
+            ++it;
+        }
+    }
+    return retval;
 }
 
 void
