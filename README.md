@@ -79,7 +79,7 @@ fty-nut-command is composed of 1 actor:
 
 ### Publishing Metrics
 
-* sensor_actor produces metrics from sensors connected to power devices on FTY_PROTO_STREAM_METRICS_SENSOR.
+* sensor_actor produces metrics from sensors connected to power devices on FTY_PROTO_STREAM_METRICS_SENSOR and fty_shm.
 
 ```
 stream=_METRICS_SENSOR
@@ -114,7 +114,7 @@ D: 17-11-13 15:21:57     unit=''
 ```
 alerts for sensors are managed by fty-alert-engine (environmental sensors) and fty-alert-flexible (GPI sensors)
 
-* fty_nut_server produces metrics on FTY_PROTO_STREAM_METRICS.
+* fty_nut_server produces metrics on FTY_PROTO_STREAM_METRICS and fty_shm.
 
 ```
 stream=METRICS
