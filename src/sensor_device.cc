@@ -103,7 +103,6 @@ void Sensor::publish (mlm_client_t *client, int ttl)
         zhash_insert (aux, "port", (void*) port().c_str());
         zhash_insert (aux, "sname", (void *) assetName().c_str ());
 
-        fty::shm::write_metric(location(), ("temperature." + port ()), _temperature, "C", ttl);
         zmsg_t *msg = fty_proto_encode_metric (
             aux,
             time (NULL),
@@ -114,6 +113,9 @@ void Sensor::publish (mlm_client_t *client, int ttl)
             "C");
         zhash_destroy (&aux);
         if (msg) {
+            zmsg_t *msgP = zmsg_dup (msg);
+            if(msgP)
+              fty::shm::write_metric(fty_proto_decode(&msgP));
             std::string topic = "temperature" + topicSuffix();
             log_debug ("sending new temperature for element_src = '%s', value = '%s'",
                        location().c_str (), _temperature.c_str ());
@@ -128,7 +130,6 @@ void Sensor::publish (mlm_client_t *client, int ttl)
         zhash_insert (aux, "port", (void*) port().c_str());
         zhash_insert (aux, "sname", (void *) assetName().c_str ());
 
-        fty::shm::write_metric(location(), ("humidity." + port ()), _humidity, "%", ttl);
         zmsg_t *msg = fty_proto_encode_metric (
             aux,
             time (NULL),
@@ -139,6 +140,9 @@ void Sensor::publish (mlm_client_t *client, int ttl)
             "%");
         zhash_destroy (&aux);
         if (msg) {
+            zmsg_t *msgP = zmsg_dup (msg);
+            if(msgP)
+              fty::shm::write_metric(fty_proto_decode(&msgP));
             std::string topic = "humidity" + topicSuffix();
             log_debug ("sending new humidity for element_src = '%s', value = '%s'",
                        location().c_str (), _humidity.c_str ());
@@ -166,7 +170,6 @@ void Sensor::publish (mlm_client_t *client, int ttl)
                 zhash_insert (aux, "ext-port", (void *) extport.c_str ());
                 zhash_insert (aux, "sname", (void *) sname.c_str ()); // sname of the child sensor if any
 
-                fty::shm::write_metric(location(), ("status.GPI" + std::to_string (gpiPort) + "." + port()), contact, " ", ttl);
                 zmsg_t *msg = fty_proto_encode_metric (
                     aux,
                     ::time (NULL),
@@ -178,6 +181,9 @@ void Sensor::publish (mlm_client_t *client, int ttl)
                 zhash_destroy (&aux);
 
                 if (msg) {
+                    zmsg_t *msgP = zmsg_dup (msg);
+                    if(msgP)
+                      fty::shm::write_metric(fty_proto_decode(&msgP));
                     std::string topic = "status" + topicSuffixExternal (std::to_string (gpiPort));
                     log_debug ("sending new contact status information for element_src = '%s', value = '%s'. GPI '%s' on port '%s'.",
                                location().c_str (), contact.c_str (), sname.c_str (), extport.c_str ());
