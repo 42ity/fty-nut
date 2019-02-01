@@ -114,8 +114,11 @@ void Sensor::publish (mlm_client_t *client, int ttl)
         zhash_destroy (&aux);
         if (msg) {
             zmsg_t *msgP = zmsg_dup (msg);
-            if(msgP)
-              fty::shm::write_metric(fty_proto_decode(&msgP));
+            if(msgP) {
+              fty_proto_t *proto_metric = fty_proto_decode(&msgP);
+              fty::shm::write_metric(proto_metric);
+              fty_proto_destroy(&proto_metric);
+            }
             std::string topic = "temperature" + topicSuffix();
             log_debug ("sending new temperature for element_src = '%s', value = '%s'",
                        location().c_str (), _temperature.c_str ());
@@ -141,8 +144,11 @@ void Sensor::publish (mlm_client_t *client, int ttl)
         zhash_destroy (&aux);
         if (msg) {
             zmsg_t *msgP = zmsg_dup (msg);
-            if(msgP)
-              fty::shm::write_metric(fty_proto_decode(&msgP));
+            if(msgP) {
+              fty_proto_t *proto_metric = fty_proto_decode(&msgP);
+              fty::shm::write_metric(proto_metric);
+              fty_proto_destroy(&proto_metric);
+            }
             std::string topic = "humidity" + topicSuffix();
             log_debug ("sending new humidity for element_src = '%s', value = '%s'",
                        location().c_str (), _humidity.c_str ());
@@ -182,8 +188,11 @@ void Sensor::publish (mlm_client_t *client, int ttl)
 
                 if (msg) {
                     zmsg_t *msgP = zmsg_dup (msg);
-                    if(msgP)
-                      fty::shm::write_metric(fty_proto_decode(&msgP));
+                    if(msgP) {
+                      fty_proto_t *proto_metric = fty_proto_decode(&msgP);
+                      fty::shm::write_metric(proto_metric);
+                      fty_proto_destroy(&proto_metric);
+                    }
                     std::string topic = "status" + topicSuffixExternal (std::to_string (gpiPort));
                     log_debug ("sending new contact status information for element_src = '%s', value = '%s'. GPI '%s' on port '%s'.",
                                location().c_str (), contact.c_str (), sname.c_str (), extport.c_str ());
