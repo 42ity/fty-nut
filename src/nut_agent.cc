@@ -282,6 +282,7 @@ void NUTAgent::advertisePhysics ()
                 }
                 bit++;
             }
+            fty::shm::write_metric(device.second.assetName (), "ups.alarm", td::to_string (bitfield).c_str (), "", _ttl);
             zmsg_t *msg = fty_proto_encode_metric (
                 NULL,
                 time (NULL),
