@@ -1425,6 +1425,93 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for libnutclient
 dnl END of enabled attempts to search for libnutclient
 
 
+was_fty_shm_check_lib_detected=no
+
+search_libfty_shm="yes"
+
+AC_ARG_WITH([libfty_shm],
+    [
+        AS_HELP_STRING([--with-libfty_shm],
+        [yes or no. Optionally specify libfty_shm prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_libfty_shm="yes"
+    ],
+    [
+        search_libfty_shm="yes"
+    ])
+AS_CASE([x"${with_libfty_shm}"],
+    [xyes], [search_libfty_shm="yes"],
+    [xno],  [search_libfty_shm="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_libfty_shm}" = xno],
+    [AC_MSG_WARN([Required dependency on fty_shm was explicitly disabled during configuration by '--with-libfty_shm=no'; subsequent full build of fty-nut may fail])])
+
+AS_IF([test x"${search_libfty_shm}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([fty_shm], [libfty_shm >= 1.0.0],
+    [
+        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $fty_shm_LIBS"
+        was_fty_shm_check_lib_detected=pkgcfg
+        found_pkgconfig="libfty_shm"
+    ],
+    [
+        AC_MSG_NOTICE([Package libfty_shm not found with needed constraints; falling back to defined compilability tests])
+
+        fty_shm_synthetic_cflags=""
+        fty_shm_synthetic_libs="-lfty_shm"
+
+        if test -n "${with_libfty_shm}" && test x"${with_libfty_shm}" != xyes && test x"${with_libfty_shm}" != xno; then
+            if test -r "${with_libfty_shm}/include/fty_shm.h"; then
+                fty_shm_synthetic_cflags="-I${with_libfty_shm}/include"
+                fty_shm_synthetic_libs="-L${with_libfty_shm}/lib -lfty_shm"
+            else
+            AC_MSG_ERROR([Header file ${with_libfty_shm}/include/fty_shm.h was not found. Please check libfty_shm prefix])
+            fi
+        else
+            AC_CHECK_HEADER([fty_shm.h], [],
+            AC_MSG_ERROR([Header file fty_shm.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([fty_shm], [fty_shm_test],
+            [
+                was_fty_shm_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty_shm"
+            ],
+            [AC_MSG_ERROR([cannot link with -lfty_shm, install libfty_shm])])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_shm
+    AS_CASE(["x${was_fty_shm_check_lib_detected}"],
+        [xpkgcfg], [
+                AC_SUBST([pkgconfig_name_libfty_shm],["${found_pkgconfig} >= 1.0.0"])
+                CFLAGS="${fty_shm_CFLAGS} ${CFLAGS}"
+                LIBS="${fty_shm_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                AC_SUBST([pkgconfig_name_libfty_shm],[""])
+                CFLAGS="${fty_shm_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${fty_shm_synthetic_libs} ${LDFLAGS}"
+                LIBS="${fty_shm_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([fty_shm_CFLAGS],[${fty_shm_synthetic_cflags}])
+                AC_SUBST([fty_shm_LIBS],[${fty_shm_synthetic_libs}])
+            ],
+        [xno], [
+                AC_SUBST([pkgconfig_name_libfty_shm],[""])
+            AC_MSG_ERROR([Cannot find pkg-config metadata for libfty_shm 1.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for libfty_shm
+
+
 CFLAGS="${PREVIOUS_CFLAGS}"
 LIBS="${PREVIOUS_LIBS}"
 

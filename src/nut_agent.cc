@@ -28,6 +28,8 @@
 #include "ups_status.h"
 #include "nut_agent.h"
 #include <fty_log.h>
+#include <string>
+#include <fty_shm.h>
 
 #include <cmath>
 
@@ -166,6 +168,7 @@ void NUTAgent::advertisePhysics ()
             std::string type = physicalQuantityShortName (measurement.first);
             std::string units = physicalQuantityToUnits (type);
 
+            fty::shm::write_metric(device.second.assetName (), measurement.first, measurement.second, units, _ttl);
             zmsg_t *msg = fty_proto_encode_metric (
                 NULL,
                 time (NULL),
@@ -198,6 +201,7 @@ void NUTAgent::advertisePhysics ()
         {
             if ( measurements.count ("load.input.L1") != 0 ) {
                 std::string value = measurements.at("load.input.L1");
+                fty::shm::write_metric(device.second.assetName (), "load.default", value, "%", _ttl);
                 zmsg_t *msg = fty_proto_encode_metric (
                         NULL,
                         time (NULL),
@@ -250,6 +254,7 @@ void NUTAgent::advertisePhysics ()
                             buffer,
                             "%");
                     // 5. send the messsage
+                    fty::shm::write_metric(device.second.assetName (), "load.default", buffer, "%", _ttl);
                     if (msg) {
                         log_debug ("sending new measurement for element_src = '%s', type = '%s', value = '%s', units = '%s'",
                                 device.second.assetName ().c_str (), "load.default", buffer, "%");
@@ -277,6 +282,7 @@ void NUTAgent::advertisePhysics ()
                 }
                 bit++;
             }
+            fty::shm::write_metric(device.second.assetName (), "ups.alarm", std::to_string (bitfield), "", _ttl);
             zmsg_t *msg = fty_proto_encode_metric (
                 NULL,
                 time (NULL),
@@ -306,6 +312,7 @@ void NUTAgent::advertisePhysics ()
             if (has_alarms) {
                 status_i |= STATUS_ALARM;
             }
+            fty::shm::write_metric(device.second.assetName (), "status.ups", std::to_string(status_i), " ", _ttl);
             zmsg_t *msg = fty_proto_encode_metric (
                 NULL,
                 time (NULL),
@@ -335,6 +342,7 @@ void NUTAgent::advertisePhysics ()
             std::string status_s = device.second.property (property);
             uint16_t    status_i = status_s == "on" ? 42 : 0;
 
+            fty::shm::write_metric(device.second.assetName (), property, std::to_string (status_i), " ", _ttl);
             zmsg_t *msg = fty_proto_encode_metric (
                 NULL,
                 time (NULL),
