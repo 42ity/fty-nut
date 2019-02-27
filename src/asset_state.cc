@@ -80,8 +80,15 @@ bool AssetState::handleAssetMessage(fty_proto_t* message)
         return false;
     std::string subtype(fty_proto_aux_string (message, "subtype", ""));
     AssetMap* map;
-    if (subtype == "epdu" || subtype == "ups" || subtype == "sts")
+    if (subtype == "epdu" || subtype == "ups" || subtype == "sts") {
+        // daisy_chain pdu support - only devices with daisy_chain == 1 or
+        // no such ext attribute will be configured via nut-scanner
+        if ((subtype == "epdu") && (fty_proto_ext_number (message, "daisy_chain", 0) > 1)) {
+            log_debug("Discarding daisychain ePDU device '%s'", name.c_str());
+            return false;
+        }
         map = &powerdevices_;
+    }
     else if (subtype == "sensor") {
         // skip sensors connected to rackcontrollers
         if (streq (fty_proto_aux_string(message, "parent_name.1", ""), "rackcontroller-0"))
