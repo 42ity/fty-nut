@@ -55,6 +55,14 @@ void Autoconfig::onUpdate()
     for (auto i : devices) {
         const std::string& name = i.first;
         auto it = _configDevices.find(name);
+
+         // daisy_chain pdu support - only devices with daisy_chain == 1 or
+         // no such ext attribute will be configured via nut-scanner
+        if (i.second.get()->daisychain() > 1) {
+             log_debug("Discarding daisychain ePDU device '%s'", name.c_str());
+             continue;
+         }
+
         if (it == _configDevices.end()) {
             AutoConfigurationInfo device;
             device.state = AutoConfigurationInfo::STATE_NEW;
