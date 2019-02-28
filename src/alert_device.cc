@@ -340,10 +340,10 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
         "    { \"high_critical\" : \"%s\"}"
         "    ],"
         "  \"results\"       : ["
-        "    { \"low_critical\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is critically low for {{ename}}.)\", \"variable\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\", \"assetLink\" : \"%s\" } } } } },"
-        "    { \"low_warning\"   : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is low for {{ename}}.)\", \"variable\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\", \"assetLink\" : \"%s\" } } } } },"
-        "    { \"high_warning\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is high for {{ename}}.)\", \"variable\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\", \"assetLink\" : \"%s\" } } } } },"
-        "    { \"high_critical\" : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is critically high for {{ename}}.)\", \"variable\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\", \"assetLink\" : \"%s\" } } } } } ] } } ",
+        "    { \"low_critical\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is critically low for {{ename}}.)\", \"variables\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\", \"assetLink\" : \"%s\" } } } } },"
+        "    { \"low_warning\"   : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is low for {{ename}}.)\", \"variables\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\", \"assetLink\" : \"%s\" } } } } },"
+        "    { \"high_warning\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is high for {{ename}}.)\", \"variables\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\", \"assetLink\" : \"%s\" } } } } },"
+        "    { \"high_critical\" : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is critically high for {{ename}}.)\", \"variables\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\", \"assetLink\" : \"%s\" } } } } } ] } } ",
         ruleName,
         s_rule_desc (alert.name).c_str (),
         ruleName,
