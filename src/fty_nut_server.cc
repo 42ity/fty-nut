@@ -190,11 +190,6 @@ fty_nut_server (zsock_t *pipe, void *args)
         log_error("client %s failed to connect", ACTOR_NUT_NAME);
         return;
     }
-    if (mlm_client_set_producer(client, FTY_PROTO_STREAM_METRICS) < 0) {
-        log_error("mlm_client_set_producer (stream = '%s') failed",
-                FTY_PROTO_STREAM_METRICS);
-        return;
-    }
     if (mlm_client_set_consumer(client, FTY_PROTO_STREAM_ASSETS, ".*") < 0) {
         log_error("mlm_client_set_consumer (stream = '%s', pattern = '.*') failed",
                 FTY_PROTO_STREAM_ASSETS);

@@ -168,29 +168,10 @@ void NUTAgent::advertisePhysics ()
             std::string type = physicalQuantityShortName (measurement.first);
             std::string units = physicalQuantityToUnits (type);
 
-            fty::shm::write_metric(device.second.assetName (), measurement.first, measurement.second, units, _ttl);
-            zmsg_t *msg = fty_proto_encode_metric (
-                NULL,
-                time (NULL),
-                _ttl,
-                measurement.first.c_str (),
-                device.second.assetName ().c_str (),
-                measurement.second.c_str (),
-                units.c_str ());
-            if (msg) {
-                log_debug ("sending new measurement for element_src = '%s', type = '%s', value = '%s', units = '%s'",
-                           device.second.assetName ().c_str (),
-                           measurement.first.c_str (),
-                           measurement.second.c_str (),
-                           units.c_str ());
-
-                subject = measurement.first + "@" + device.second.assetName ();
-                int r = send(subject, &msg);
-                if( r != 0 )
-                    log_error("failed to send measurement %s result %i", subject.c_str(), r);
-                zmsg_destroy (&msg);
-                device.second.setChanged (measurement.first, false);
-            }
+            int r = fty::shm::write_metric(device.second.assetName (), measurement.first, measurement.second, units, _ttl);
+            if( r !=0)
+              log_error("failed to send measurement %s@%s", measurement.first.c_str(), device.second.assetName().c_str());
+            device.second.setChanged (measurement.first, false);
         }
         // 'load' computing
         // BIOS-1185 start
@@ -201,25 +182,9 @@ void NUTAgent::advertisePhysics ()
         {
             if ( measurements.count ("load.input.L1") != 0 ) {
                 std::string value = measurements.at("load.input.L1");
-                fty::shm::write_metric(device.second.assetName (), "load.default", value, "%", _ttl);
-                zmsg_t *msg = fty_proto_encode_metric (
-                        NULL,
-                        time (NULL),
-                        _ttl,
-                        "load.default",
-                        device.second.assetName().c_str(),
-                        value.c_str (),
-                        "%");
-                if (msg) {
-                    log_debug ("sending new measurement for element_src = '%s', type = '%s', value = '%s', units = '%s'",
-                               device.second.assetName ().c_str (), "load.default", value.c_str (), "%");
-
-                    subject = "load.default@" + device.second.assetName();
-                    int r = send (subject, &msg);
-                    if( r != 0 )
-                        log_error("failed to send measurement %s result %i", subject.c_str(), r);
-                    zmsg_destroy (&msg);
-                }
+                int r = fty::shm::write_metric(device.second.assetName (), "load.default", value, "%", _ttl);
+                if( r != 0 )
+                      log_error("failed to send measurement %s result %i", subject.c_str(), r);
             }
             else if ( measurements.count ("current.input.L1") != 0 ) // it is a mapped value!!!!!!!!!!!
             {
@@ -245,26 +210,10 @@ void NUTAgent::advertisePhysics ()
                     // 3. compute a real value
                     sprintf (buffer, "%lf", value*100/max_value); // because it is %!!!!
                     // 4. form message
-                    zmsg_t *msg = fty_proto_encode_metric (
-                            NULL,
-                            time (NULL),
-                            _ttl,
-                            "load.default",
-                            device.second.assetName().c_str(),
-                            buffer,
-                            "%");
                     // 5. send the messsage
-                    fty::shm::write_metric(device.second.assetName (), "load.default", buffer, "%", _ttl);
-                    if (msg) {
-                        log_debug ("sending new measurement for element_src = '%s', type = '%s', value = '%s', units = '%s'",
-                                device.second.assetName ().c_str (), "load.default", buffer, "%");
-
-                        subject = "load.default@" + device.second.assetName();
-                        int r = send (subject, &msg);
-                        if( r != 0 )
-                            log_error("failed to send measurement %s result %i", subject.c_str(), r);
-                        zmsg_destroy (&msg);
-                    }
+                    int r = fty::shm::write_metric(device.second.assetName (), "load.default", buffer, "%", _ttl);
+                    if( r != 0 )
+                        log_error("failed to send measurement %s result %i", subject.c_str(), r);
                 }
             }
         }
@@ -282,25 +231,10 @@ void NUTAgent::advertisePhysics ()
                 }
                 bit++;
             }
-            fty::shm::write_metric(device.second.assetName (), "ups.alarm", std::to_string (bitfield), "", _ttl);
-            zmsg_t *msg = fty_proto_encode_metric (
-                NULL,
-                time (NULL),
-                _ttl,
-                "ups.alarm",
-                device.second.assetName ().c_str (),
-                std::to_string (bitfield).c_str (),
-                "");
-            if (msg) {
-                log_debug ("sending new ups.alarm for element_src = '%s', value = '%s' (%s)",
-                           device.second.assetName().c_str (), std::to_string (bitfield).c_str (), alarms.c_str ());
-                subject = "ups.alarm@" + device.second.assetName ();
-                int r = send (subject, &msg);
-                if( r != 0 )
-                    log_error("failed to send measurement %s result %i", subject.c_str(), r);
-                zmsg_destroy (&msg);
-                device.second.setChanged ("ups.alarm", false);
-            }
+            int r = fty::shm::write_metric(device.second.assetName (), "ups.alarm", std::to_string (bitfield), "", _ttl);
+            if( r != 0 )
+                log_error("failed to send measurement %s result %i", subject.c_str(), r);
+            device.second.setChanged ("ups.alarm", false);
         }
         // send status and "in progress" test result as a bitmap
         if (device.second.hasProperty ("status.ups")) {
@@ -312,25 +246,10 @@ void NUTAgent::advertisePhysics ()
             if (has_alarms) {
                 status_i |= STATUS_ALARM;
             }
-            fty::shm::write_metric(device.second.assetName (), "status.ups", std::to_string(status_i), " ", _ttl);
-            zmsg_t *msg = fty_proto_encode_metric (
-                NULL,
-                time (NULL),
-                _ttl,
-                "status.ups",
-                device.second.assetName ().c_str (),
-                std::to_string (status_i).c_str (),
-                "");
-            if (msg) {
-                log_debug ("sending new status for element_src = '%s', value = '%s' (%s)",
-                           device.second.assetName().c_str (), std::to_string (status_i).c_str (), status_s.c_str ());
-                subject = "status.ups@" + device.second.assetName ();
-                int r = send (subject, &msg);
-                if( r != 0 )
-                    log_error("failed to send measurement %s result %i", subject.c_str(), r);
-                zmsg_destroy (&msg);
-                device.second.setChanged ("status.ups", false);
-            }
+            int r = fty::shm::write_metric(device.second.assetName (), "status.ups", std::to_string(status_i), " ", _ttl);
+            if( r != 0 )
+                log_error("failed to send measurement %s result %i", subject.c_str(), r);
+            device.second.setChanged ("status.ups", false);
         }
         
         //send epdu outlet status as bitmap
@@ -342,28 +261,10 @@ void NUTAgent::advertisePhysics ()
             std::string status_s = device.second.property (property);
             uint16_t    status_i = status_s == "on" ? 42 : 0;
 
-            fty::shm::write_metric(device.second.assetName (), property, std::to_string (status_i), " ", _ttl);
-            zmsg_t *msg = fty_proto_encode_metric (
-                NULL,
-                time (NULL),
-                _ttl,
-                property.c_str (),
-                device.second.assetName ().c_str (),
-                std::to_string (status_i).c_str (),
-                "");
-            if (msg) {
-                log_debug ("sending new status for %s %s, value %i (%s)",
-                           property.c_str (),
-                           device.second.assetName().c_str(),
-                           status_i,
-                           status_s.c_str());
-                subject = "status.outlet." + std::to_string (i) + "@" + device.second.assetName ();
-                int r = send (subject, &msg);
-                if( r != 0 )
-                    log_error("failed to send measurement %s result %i", subject.c_str(), r);
-                zmsg_destroy (&msg);
-                device.second.setChanged (property, false);
-            }
+            int r = fty::shm::write_metric(device.second.assetName (), property, std::to_string (status_i), " ", _ttl);
+            if( r != 0 )
+                log_error("failed to send measurement %s result %i", subject.c_str(), r);
+            device.second.setChanged (property, false);
         }
     }
 }
