@@ -253,39 +253,24 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
             return true;
         }
         IP = info.asset->IP();
-
-        std::vector <std::string> communities;
-        zconfig_t *config = zconfig_load ("/etc/default/fty.cfg");
-        if (config) {
-            zconfig_t *item = zconfig_locate (config, "snmp/community");
-            if (item) {
-                bool is_array = false;
-                zconfig_t *child = zconfig_child (item);
-                while (child) {
-                    if (!streq (zconfig_value (child), "")) {
-                        is_array = true;
-                        communities.push_back (zconfig_value (child));
-                    }
-                    child = zconfig_next (child);
-                }
-                if (!is_array && !streq (zconfig_value (item), ""))
-                    communities.push_back (zconfig_value (item));
-            }
-            zconfig_destroy (&config);
-        }
-        else {
-            log_warning ("Config file '%s' could not be read.", "/etc/default/fty.cfg");
-        }
-        communities.push_back ("public");
-
         bool use_dmf = info.asset->upsconf_enable_dmf();
-        for (const auto& c : communities) {
-            log_debug("Trying community == %s", c.c_str());
-            if (nut_scan_snmp (name, CIDRAddress (IP), c, use_dmf, configs) == 0 && !configs.empty ()) {
-                break;
+
+        auto credentialsSNMPv3 = fetch_snmpv3_credentials();
+        auto credentialsSNMPv1 = fetch_snmpv1_credentials();
+
+        for (const auto &i : credentialsSNMPv3) {
+            if (!configs.empty()) {
+                nut_scan_snmpv3(name, CIDRAddress (IP), i, use_dmf, 10, configs);
             }
         }
-        nut_scan_xml_http (name, CIDRAddress(IP), configs);
+
+        for (const auto &i : credentialsSNMPv1) {
+            if (!configs.empty()) {
+                nut_scan_snmpv1(name, CIDRAddress (IP), i, use_dmf, 10, configs);
+            }
+        }
+
+        nut_scan_xml_http (name, CIDRAddress(IP), 10, configs);
     }
 
     auto it = selectBest( configs );

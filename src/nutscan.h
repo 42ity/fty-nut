@@ -24,44 +24,58 @@
 
 #include "cidr.h"
 
-/**
- * \brief call nut scan over SNMP
- *
- * \param[in] name asset name of device
- * \param[in] ip_address ip address of device
- * \param[in] community string, if empty 'public' will be used 
- * \param[in] use_dmf - true means that snmp-usp-dmf driver will be used
- * \param[out] out resulted string with NUT config snippets
- * \return 0 if success, -1 otherwise
- *
- * Environment variables:
- * BIOS_NUT_USE_DMF - will force usage of snmp-ups-dmf driver regardless
- *                    use_dmf argument
- */
+struct SNMPv1Credentials
+{
+        SNMPv1Credentials(const std::string& comm) : community(comm) {}
+
+        std::string community;
+};
+
+struct SNMPv3Credentials
+{
+        SNMPv3Credentials(const std::string& user,
+                const std::string& authPass, const std::string& authProto,
+                const std::string& privPass, const std::string& privProto
+        ) : username(user),
+                authPassword(authPass), authProtocol(authProto),
+                privPassword(privPass), authProtocol(privProto) {}
+
+        std::string username;
+        std::string authPassword;
+        std::string authProtocol;
+        std::string privPassword;
+        std::string privProtocol;
+};
+
+std::vector<SNMPv3Credentials> fetch_snmpv3_credentials();
+std::vector<SNMPv1Credentials> fetch_snmpv1_credentials();
+
 int
-nut_scan_snmp(
+nut_scan_snmpv3(
         const std::string& name,
-        const CIDRAddress& ip_address,
-        const std::string community,
+        const CIDRAddress& ip_address_start,
+        const CIDRAddress& ip_address_end,
+        const SNMPv3Credentials &credentials,
         bool use_dmf,
+        int timeout,
         std::vector<std::string>& out);
 
-/**
- * \brief call nut scan over XML HTTP
- *
- * \param[in] name asset name of device
- * \param[in] ip_address ip address of device
- * \param[out] out resulted string with NUT config snippets
- * \return 0 if success, -1 otherwise
- */
+int
+nut_scan_snmpv1(
+        const std::string& name,
+        const CIDRAddress& ip_address_start,
+        const CIDRAddress& ip_address_end,
+        const SNMPv1Credentials &credentials,
+        bool use_dmf,
+        int timeout,
+        std::vector<std::string>& out);
+
 int
 nut_scan_xml_http(
         const std::string& name,
-        const CIDRAddress& ip_address,
+        const CIDRAddress& ip_address_start,
+        const CIDRAddress& ip_address_end,
+        int timeout,
         std::vector<std::string>& out);
-
-//  Self test of this class
-void nutscan_test (bool verbose);
-
 
 #endif
