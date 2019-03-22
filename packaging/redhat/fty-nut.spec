@@ -56,17 +56,17 @@ BuildRequires:  fty-common-logging-devel
 BuildRequires:  fty-common-devel
 BuildRequires:  libsodium-devel
 BuildRequires:  zeromq-devel
-BuildRequires:  czmq-devel
+BuildRequires:  czmq-devel >= 3.0.2
 BuildRequires:  cxxtools-devel
-BuildRequires:  malamute-devel
+BuildRequires:  malamute-devel >= 1.0.0
 BuildRequires:  openssl-devel
 BuildRequires:  fty-common-mlm-devel
 BuildRequires:  tntdb-devel
 BuildRequires:  fty-common-db-devel
-BuildRequires:  fty-proto-devel
+BuildRequires:  fty-proto-devel >= 1.0.0
 BuildRequires:  libcidr-devel
 BuildRequires:  nut-devel
-BuildRequires:  fty_shm-devel
+BuildRequires:  fty_shm-devel >= 1.0.0
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
@@ -95,17 +95,17 @@ Requires:       fty-common-logging-devel
 Requires:       fty-common-devel
 Requires:       libsodium-devel
 Requires:       zeromq-devel
-Requires:       czmq-devel
+Requires:       czmq-devel >= 3.0.2
 Requires:       cxxtools-devel
-Requires:       malamute-devel
+Requires:       malamute-devel >= 1.0.0
 Requires:       openssl-devel
 Requires:       fty-common-mlm-devel
 Requires:       tntdb-devel
 Requires:       fty-common-db-devel
-Requires:       fty-proto-devel
+Requires:       fty-proto-devel >= 1.0.0
 Requires:       libcidr-devel
 Requires:       nut-devel
-Requires:       fty_shm-devel
+Requires:       fty_shm-devel >= 1.0.0
 
 %description devel
 nut (network ups tools) daemon wrapper/proxy development tools
@@ -144,6 +144,8 @@ find %{buildroot} -name '*.la' | xargs rm -f
 %{_mandir}/man1/fty-nut-command*
 %{_bindir}/fty-nut-configurator
 %{_mandir}/man1/fty-nut-configurator*
+%{_bindir}/fty-nut-discovery
+%{_mandir}/man1/fty-nut-discovery*
 %{_bindir}/fty-nutconfig
 %{_bindir}/fty-dmf
 %config(noreplace) %{_sysconfdir}/fty-nut/fty-nut.cfg
@@ -152,14 +154,16 @@ find %{buildroot} -name '*.la' | xargs rm -f
 %{SYSTEMD_UNIT_DIR}/fty-nut-command.service
 %config(noreplace) %{_sysconfdir}/fty-nut/fty-nut-configurator.cfg
 %{SYSTEMD_UNIT_DIR}/fty-nut-configurator.service
+%config(noreplace) %{_sysconfdir}/fty-nut/fty-nut-discovery.cfg
+%{SYSTEMD_UNIT_DIR}/fty-nut-discovery.service
 %dir %{_sysconfdir}/fty-nut
 %if 0%{?suse_version} > 1315
 %post
-%systemd_post fty-nut.service fty-nut-command.service fty-nut-configurator.service
+%systemd_post fty-nut.service fty-nut-command.service fty-nut-configurator.service fty-nut-discovery.service
 %preun
-%systemd_preun fty-nut.service fty-nut-command.service fty-nut-configurator.service
+%systemd_preun fty-nut.service fty-nut-command.service fty-nut-configurator.service fty-nut-discovery.service
 %postun
-%systemd_postun_with_restart fty-nut.service fty-nut-command.service fty-nut-configurator.service
+%systemd_postun_with_restart fty-nut.service fty-nut-command.service fty-nut-configurator.service fty-nut-discovery.service
 %endif
 
 %changelog

@@ -528,8 +528,4 @@ private:
   bool _nextSimple(CIDRAddress& address);
 };
 
-
-//  Self test of this class
-void cidr_test (bool verbose);
-
 #endif

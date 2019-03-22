@@ -38,7 +38,7 @@ struct SNMPv3Credentials
                 const std::string& privPass, const std::string& privProto
         ) : username(user),
                 authPassword(authPass), authProtocol(authProto),
-                privPassword(privPass), authProtocol(privProto) {}
+                privPassword(privPass), privProtocol(privProto) {}
 
         std::string username;
         std::string authPassword;

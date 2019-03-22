@@ -40,16 +40,21 @@ typedef struct {
 static test_item_t
 all_tests [] = {
 // Tests for stable public classes:
-    { "fty_nut_server", fty_nut_server_test, true, true, NULL },
     { "fty_nut_command_server", fty_nut_command_server_test, true, true, NULL },
     { "fty_nut_configurator_server", fty_nut_configurator_server_test, true, true, NULL },
+    { "fty_nut_discovery_server", fty_nut_discovery_server_test, true, true, NULL },
+    { "fty_nut_server", fty_nut_server_test, true, true, NULL },
     { "alert_actor", alert_actor_test, true, true, NULL },
     { "sensor_actor", sensor_actor_test, true, true, NULL },
 #ifdef FTY_NUT_BUILD_DRAFT_API
 // Tests for stable/draft private classes:
 // Now built only with --enable-drafts, so even stable builds are hidden behind the flag
-    { "cidr", NULL, true, false, "cidr_test" },
-    { "nutscan", NULL, true, false, "nutscan_test" },
+    { "assets", NULL, true, false, "assets_test" },
+    { "nutdumpdata", NULL, true, false, "nutdumpdata_test" },
+    { "device_scan", NULL, true, false, "device_scan_test" },
+    { "range_scan", NULL, true, false, "range_scan_test" },
+    { "scan_dns", NULL, true, false, "scan_dns_test" },
+    { "scan_nut", NULL, true, false, "scan_nut_test" },
     { "actor_commands", NULL, true, false, "actor_commands_test" },
     { "ups_status", NULL, true, false, "ups_status_test" },
     { "nut_device", NULL, true, false, "nut_device_test" },

@@ -25,4 +25,10 @@
 //  Include the project library file
 #include "fty_nut_library.h"
 
+#define FTY_DISCOVERY_ACTOR_NAME "fty-discovery"
+#define FTY_DISCOVERY_ENDPOINT   "ipc://@/malamute"
+
+#define FTY_DISCOVERY_CFG_FILE "/etc/fty-nut/fty-nut-discovery.cfg"
+#define FTY_DEFAULT_CFG_FILE "/etc/default/fty.cfg"
+
 #endif

@@ -27,6 +27,7 @@ src/fty-nut_selftest
 src/fty-nut
 src/fty-nut-command
 src/fty-nut-configurator
+src/fty-nut-discovery
 src/fty_nut_selftest
 *.exe
 *.out

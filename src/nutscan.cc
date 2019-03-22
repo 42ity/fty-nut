@@ -29,10 +29,13 @@
 #include <fty_common_mlm_subprocess.h>
 #include "nutscan.h"
 #include <fty_log.h>
+#include <czmq.h>
 
 #include <sstream>
 #include <string>
 #include <vector>
+
+#define FTY_DEFAULT_CFG_FILE "/etc/default/fty.cfg"
 
 /**
  * \brief Parse the output of nut-scanner
@@ -45,7 +48,6 @@ static
 void
 s_parse_nut_scanner_output(
         const std::string& name,
-        int timeout,
         std::istream& inp,
         std::vector<std::string>& out)
 {
@@ -74,7 +76,7 @@ s_parse_nut_scanner_output(
                 got_name = false;
             }
             if (buf.tellp() > 0)
-                buf << line;
+                buf << line << std::endl;
         }
     }
 
@@ -107,7 +109,7 @@ s_run_nut_scanner(
     if (ret == 0) {
         log_info("Execution of nut-scanner SUCCEEDED with code %d.", ret);
         std::istringstream inp{strOut};
-        s_parse_nut_scanner_output(name, inp, out);
+        s_parse_nut_scanner_output(name, inp, result);
     }
     else {
         log_error("Execution of nut-scanner FAILED with code %d.", ret);
@@ -163,12 +165,13 @@ std::vector<SNMPv1Credentials> fetch_snmpv1_credentials()
 
     zconfig_t *config = zconfig_load(FTY_DEFAULT_CFG_FILE);
     if (config) {
-        item = zconfig_locate (config, "snmp/community");
+        zconfig_t *item = zconfig_locate(config, "snmp/community");
         if (item) {
             zconfig_t *child = zconfig_child(item);
             while (child) {
                 const char *community = zconfig_value (child);
                 creds.emplace_back(community);
+                child = zconfig_next(child);
             }
         }
     }
@@ -199,7 +202,15 @@ nut_scan_snmpv3(
         use_dmf = true;
     }
 
-    MlmSubprocess::Argv args = { "nut-scanner", "--quiet", "--start_ip", ip_address_start.toString(), "--end_ip", ip_address_end.toString(), "--secName", credentials.username };
+    const std::string start_range = ip_address_start.toString(CIDR_WITHOUT_PREFIX);
+    const std::string end_range = ip_address_end.toString(CIDR_WITHOUT_PREFIX);
+
+    MlmSubprocess::Argv args = {
+        "nut-scanner", "--quiet", use_dmf ? "-z" : "--snmp_scan",
+        "--start_ip", start_range,
+        "--end_ip", end_range,
+        "--secName", credentials.username
+    };
 
     /**
      * There are three possible cases:
@@ -237,13 +248,12 @@ nut_scan_snmpv3(
         args.emplace_back("noAuthNoPriv");
     }
 
-    args.emplace_back(use_dmf ? "-z" : "--snmp_scan");
-
-    log_info("nut-scanning SNMPv3 devices from %s to %s username '%s' using %s mode, timeout %d.",
-        ip_address_start.toString().c_str(),
-        ip_address_end.toString().c_str(),
+    log_info("nut-scanning SNMPv3 device(s) '%s' from %s to %s username '%s' using %s mode, timeout %d.",
+        name.c_str(),
+        start_range.c_str(),
+        end_range.c_str(),
         credentials.username.c_str(),
-        use_dmf ? "DMF", "legacy",
+        use_dmf ? "DMF" : "legacy",
         timeout
     );
 
@@ -264,15 +274,22 @@ nut_scan_snmpv1(
         use_dmf = true;
     }
 
-    MlmSubprocess::Argv args = { "nut-scanner", "--quiet", "--start_ip", ip_address_start.toString(), "--end_ip", ip_address_end.toString(), "--community", credentials.community };
+    const std::string start_range = ip_address_start.toString(CIDR_WITHOUT_PREFIX);
+    const std::string end_range = ip_address_end.toString(CIDR_WITHOUT_PREFIX);
 
-    args.emplace_back(use_dmf ? "-z" : "--snmp_scan");
+    MlmSubprocess::Argv args = {
+        "nut-scanner", "--quiet", use_dmf ? "-z" : "--snmp_scan",
+        "--start_ip", start_range,
+        "--end_ip", end_range,
+        "--community", credentials.community
+    };
 
-    log_info("nut-scanning SNMPv1 devices from %s to %s community '%s' using %s mode, timeout %d.",
-        ip_address_start.toString().c_str(),
-        ip_address_end.toString().c_str(),
+    log_info("nut-scanning SNMPv1 device(s) '%s' from %s to %s community '%s' using %s mode, timeout %d.",
+        name.c_str(),
+        start_range.c_str(),
+        end_range.c_str(),
         credentials.community.c_str(),
-        use_dmf ? "DMF", "legacy",
+        use_dmf ? "DMF" : "legacy",
         timeout
     );
 
@@ -287,11 +304,19 @@ nut_scan_xml_http(
         int timeout,
         std::vector<std::string>& out)
 {
-    MlmSubprocess::Argv args = { "nut-scanner", "--quiet", "--start_ip", ip_address_start.toString(), "--end_ip", ip_address_end.toString(), "--xml_scan" };
+    const std::string start_range = ip_address_start.toString(CIDR_WITHOUT_PREFIX);
+    const std::string end_range = ip_address_end.toString(CIDR_WITHOUT_PREFIX);
+
+    MlmSubprocess::Argv args = {
+        "nut-scanner", "--quiet", "--xml_scan",
+        "--start_ip", start_range,
+        "--end_ip", end_range
+    };
     
-    log_info("nut-scanning NetXML devices from %s to %s, timeout %d.",
-        ip_address_start.toString().c_str(),
-        ip_address_end.toString().c_str(),
+    log_info("nut-scanning NetXML device(s) '%s' from %s to %s, timeout %d.",
+        name.c_str(),
+        start_range.c_str(),
+        end_range.c_str(),
         timeout
     );
 

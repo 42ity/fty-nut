@@ -75,8 +75,14 @@ EXTRA_DIST += \
 endif
 
 EXTRA_DIST += \
+    src/assets.h \
     src/cidr.h \
     src/nutscan.h \
+    src/nutdumpdata.h \
+    src/device_scan.h \
+    src/range_scan.h \
+    src/scan_dns.h \
+    src/scan_nut.h \
     src/actor_commands.h \
     src/ups_status.h \
     src/nut_device.h \

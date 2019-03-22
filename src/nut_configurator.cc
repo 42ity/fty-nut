@@ -207,7 +207,7 @@ s_digest (const std::stringstream& s)
 }
 
 bool NUTConfigurator::configure( const std::string &name, const AutoConfigurationInfo &info ) {
-    log_debug("NUT configurator created");
+    log_debug("NUT configurator '%s' created.", name.c_str());
 
     // get polling interval first
     std::string polling = "30";
@@ -259,18 +259,18 @@ bool NUTConfigurator::configure( const std::string &name, const AutoConfiguratio
         auto credentialsSNMPv1 = fetch_snmpv1_credentials();
 
         for (const auto &i : credentialsSNMPv3) {
-            if (!configs.empty()) {
-                nut_scan_snmpv3(name, CIDRAddress (IP), i, use_dmf, 10, configs);
+            if (configs.empty()) {
+                nut_scan_snmpv3(name, CIDRAddress(IP), CIDRAddress(IP), i, use_dmf, 10, configs);
             }
         }
 
         for (const auto &i : credentialsSNMPv1) {
-            if (!configs.empty()) {
-                nut_scan_snmpv1(name, CIDRAddress (IP), i, use_dmf, 10, configs);
+            if (configs.empty()) {
+                nut_scan_snmpv1(name, CIDRAddress(IP), CIDRAddress(IP), i, use_dmf, 10, configs);
             }
         }
 
-        nut_scan_xml_http (name, CIDRAddress(IP), 10, configs);
+        nut_scan_xml_http (name, CIDRAddress(IP), CIDRAddress(IP), 10, configs);
     }
 
     auto it = selectBest( configs );

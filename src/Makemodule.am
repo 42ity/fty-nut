@@ -13,8 +13,14 @@ lib_LTLIBRARIES += src/libfty_nut.la
 pkgconfig_DATA = src/libfty_nut.pc
 
 src_libfty_nut_la_SOURCES = \
+    src/assets.cc \
     src/cidr.cc \
     src/nutscan.cc \
+    src/nutdumpdata.cc \
+    src/device_scan.cc \
+    src/range_scan.cc \
+    src/scan_dns.cc \
+    src/scan_nut.cc \
     src/actor_commands.cc \
     src/ups_status.cc \
     src/nut_device.cc \
@@ -24,9 +30,10 @@ src_libfty_nut_la_SOURCES = \
     src/alert_device_list.cc \
     src/sensor_device.cc \
     src/sensor_list.cc \
-    src/fty_nut_server.cc \
     src/fty_nut_command_server.cc \
     src/fty_nut_configurator_server.cc \
+    src/fty_nut_discovery_server.cc \
+    src/fty_nut_server.cc \
     src/alert_actor.cc \
     src/sensor_actor.cc \
     src/state_manager.cc \
@@ -102,6 +109,19 @@ systemdsystemunit_DATA += src/fty-nut-configurator.service
 endif #WITH_SYSTEMD_UNITS
 endif #ENABLE_FTY_NUT_CONFIGURATOR
 
+if ENABLE_FTY_NUT_DISCOVERY
+bin_PROGRAMS += src/fty-nut-discovery
+src_fty_nut_discovery_CPPFLAGS = ${AM_CPPFLAGS}
+src_fty_nut_discovery_LDADD = ${program_libs}
+src_fty_nut_discovery_SOURCES = src/fty_nut_discovery.cc
+src_fty_nut_discovery_config_DATA =
+src_fty_nut_discovery_config_DATA += src/fty-nut-discovery.cfg
+src_fty_nut_discovery_configdir = $(sysconfdir)/fty-nut
+if WITH_SYSTEMD_UNITS
+systemdsystemunit_DATA += src/fty-nut-discovery.service
+endif #WITH_SYSTEMD_UNITS
+endif #ENABLE_FTY_NUT_DISCOVERY
+
 if ENABLE_FTY_NUT_SELFTEST
 check_PROGRAMS += src/fty_nut_selftest
 noinst_PROGRAMS += src/fty_nut_selftest
@@ -120,6 +140,7 @@ src: \
 		src/fty-nut \
 		src/fty-nut-command \
 		src/fty-nut-configurator \
+		src/fty-nut-discovery \
 		src/fty_nut_selftest \
 		src/libfty_nut.la
 
@@ -259,6 +280,16 @@ else
 coverage: src/fty_nut_selftest
 	@echo "call make clean && configure --with-gcov to enable code coverage"
 	@exit 1
+endif
+
+bindings: python-bindings
+
+python-bindings:
+if ENABLE_BINDINGS_PYTHON
+	-( cd bindings/python && python setup.py install )
+else
+	@echo "Python Bindings not enabled or missing setup.py... skipping"
+
 endif
 
 # A series of tests that the codebase and recipes are pretty, easy

@@ -38,10 +38,18 @@ void
 fty_nut_private_selftest (bool verbose, const char *subtest)
 {
 // Tests for stable private classes:
-    if (streq (subtest, "$ALL") || streq (subtest, "cidr_test"))
-        cidr_test (verbose);
-    if (streq (subtest, "$ALL") || streq (subtest, "nutscan_test"))
-        nutscan_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "assets_test"))
+        assets_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "nutdumpdata_test"))
+        nutdumpdata_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "device_scan_test"))
+        device_scan_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "range_scan_test"))
+        range_scan_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "scan_dns_test"))
+        scan_dns_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "scan_nut_test"))
+        scan_nut_test (verbose);
     if (streq (subtest, "$ALL") || streq (subtest, "actor_commands_test"))
         actor_commands_test (verbose);
     if (streq (subtest, "$ALL") || streq (subtest, "ups_status_test"))

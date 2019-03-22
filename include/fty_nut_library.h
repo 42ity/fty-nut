@@ -100,12 +100,14 @@
 
 //  Opaque class structures to allow forward references
 //  These classes are stable or legacy and built in all releases
-typedef struct _fty_nut_server_t fty_nut_server_t;
-#define FTY_NUT_SERVER_T_DEFINED
 typedef struct _fty_nut_command_server_t fty_nut_command_server_t;
 #define FTY_NUT_COMMAND_SERVER_T_DEFINED
 typedef struct _fty_nut_configurator_server_t fty_nut_configurator_server_t;
 #define FTY_NUT_CONFIGURATOR_SERVER_T_DEFINED
+typedef struct _fty_nut_discovery_server_t fty_nut_discovery_server_t;
+#define FTY_NUT_DISCOVERY_SERVER_T_DEFINED
+typedef struct _fty_nut_server_t fty_nut_server_t;
+#define FTY_NUT_SERVER_T_DEFINED
 typedef struct _alert_actor_t alert_actor_t;
 #define ALERT_ACTOR_T_DEFINED
 typedef struct _sensor_actor_t sensor_actor_t;
@@ -113,9 +115,10 @@ typedef struct _sensor_actor_t sensor_actor_t;
 
 
 //  Public classes, each with its own header file
-#include "fty_nut_server.h"
 #include "fty_nut_command_server.h"
 #include "fty_nut_configurator_server.h"
+#include "fty_nut_discovery_server.h"
+#include "fty_nut_server.h"
 #include "alert_actor.h"
 #include "sensor_actor.h"
 

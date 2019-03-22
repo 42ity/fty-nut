@@ -685,13 +685,3 @@ bool CIDRList::excludes(const CIDRAddress& address) const{
 CIDRList::~CIDRList(){
 
 }
-
-void
-cidr_test (bool verbose)
-{
-    printf (" * cidr: ");
-
-    //  @selftest
-    //  @end
-    printf ("Empty test - OK\n");
-}

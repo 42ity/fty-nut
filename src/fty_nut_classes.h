@@ -32,10 +32,11 @@
 //  External API
 #include "../include/fty_nut.h"
 
-//  Extra headers
-#include "nut_mlm.h"
-
 //  Opaque class structures to allow forward references
+#ifndef ASSETS_T_DEFINED
+typedef struct _assets_t assets_t;
+#define ASSETS_T_DEFINED
+#endif
 #ifndef CIDR_T_DEFINED
 typedef struct _cidr_t cidr_t;
 #define CIDR_T_DEFINED
@@ -43,6 +44,26 @@ typedef struct _cidr_t cidr_t;
 #ifndef NUTSCAN_T_DEFINED
 typedef struct _nutscan_t nutscan_t;
 #define NUTSCAN_T_DEFINED
+#endif
+#ifndef NUTDUMPDATA_T_DEFINED
+typedef struct _nutdumpdata_t nutdumpdata_t;
+#define NUTDUMPDATA_T_DEFINED
+#endif
+#ifndef DEVICE_SCAN_T_DEFINED
+typedef struct _device_scan_t device_scan_t;
+#define DEVICE_SCAN_T_DEFINED
+#endif
+#ifndef RANGE_SCAN_T_DEFINED
+typedef struct _range_scan_t range_scan_t;
+#define RANGE_SCAN_T_DEFINED
+#endif
+#ifndef SCAN_DNS_T_DEFINED
+typedef struct _scan_dns_t scan_dns_t;
+#define SCAN_DNS_T_DEFINED
+#endif
+#ifndef SCAN_NUT_T_DEFINED
+typedef struct _scan_nut_t scan_nut_t;
+#define SCAN_NUT_T_DEFINED
 #endif
 #ifndef ACTOR_COMMANDS_T_DEFINED
 typedef struct _actor_commands_t actor_commands_t;
@@ -89,6 +110,9 @@ typedef struct _asset_state_t asset_state_t;
 #define ASSET_STATE_T_DEFINED
 #endif
 
+//  Extra headers
+#include "nut_mlm.h"
+
 //  Internal API
 // common definitions and idioms from czmq_prelude.h, which are used in generated code
 #if ! defined(__CZMQ_PRELUDE_H_INCLUDED__)
@@ -128,8 +152,14 @@ safe_malloc (size_t size, const char *file, unsigned line)
 #endif // __CZMQ_PRELUDE_H_INCLUDED__
 
 
+#include "assets.h"
 #include "cidr.h"
 #include "nutscan.h"
+#include "nutdumpdata.h"
+#include "device_scan.h"
+#include "range_scan.h"
+#include "scan_dns.h"
+#include "scan_nut.h"
 #include "actor_commands.h"
 #include "ups_status.h"
 #include "nut_device.h"
@@ -148,12 +178,32 @@ safe_malloc (size_t size, const char *file, unsigned line)
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
 FTY_NUT_PRIVATE void
-    cidr_test (bool verbose);
+    assets_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
 FTY_NUT_PRIVATE void
-    nutscan_test (bool verbose);
+    nutdumpdata_test (bool verbose);
+
+//  *** Draft method, defined for internal use only ***
+//  Self test of this class.
+FTY_NUT_PRIVATE void
+    device_scan_test (bool verbose);
+
+//  *** Draft method, defined for internal use only ***
+//  Self test of this class.
+FTY_NUT_PRIVATE void
+    range_scan_test (bool verbose);
+
+//  *** Draft method, defined for internal use only ***
+//  Self test of this class.
+FTY_NUT_PRIVATE void
+    scan_dns_test (bool verbose);
+
+//  *** Draft method, defined for internal use only ***
+//  Self test of this class.
+FTY_NUT_PRIVATE void
+    scan_nut_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
