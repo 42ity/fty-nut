@@ -32,7 +32,7 @@
 //  External dependencies
 #include <fty_log.h>
 #include <fty_common.h>
-#include <fty_common_mlm.h>
+#include <fty_common_nut.h>
 #include <tntdb.h>
 #include <fty_common_db.h>
 #include <ftyproto.h>

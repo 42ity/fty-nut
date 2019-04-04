@@ -56,17 +56,18 @@ BuildRequires:  fty-common-logging-devel
 BuildRequires:  fty-common-devel
 BuildRequires:  libsodium-devel
 BuildRequires:  zeromq-devel
-BuildRequires:  czmq-devel
+BuildRequires:  czmq-devel >= 3.0.2
 BuildRequires:  cxxtools-devel
-BuildRequires:  malamute-devel
+BuildRequires:  malamute-devel >= 1.0.0
 BuildRequires:  openssl-devel
 BuildRequires:  fty-common-mlm-devel
+BuildRequires:  fty-common-nut-devel
 BuildRequires:  tntdb-devel
 BuildRequires:  fty-common-db-devel
-BuildRequires:  fty-proto-devel
+BuildRequires:  fty-proto-devel >= 1.0.0
 BuildRequires:  libcidr-devel
 BuildRequires:  nut-devel
-BuildRequires:  fty_shm-devel
+BuildRequires:  fty_shm-devel >= 1.0.0
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
@@ -95,17 +96,18 @@ Requires:       fty-common-logging-devel
 Requires:       fty-common-devel
 Requires:       libsodium-devel
 Requires:       zeromq-devel
-Requires:       czmq-devel
+Requires:       czmq-devel >= 3.0.2
 Requires:       cxxtools-devel
-Requires:       malamute-devel
+Requires:       malamute-devel >= 1.0.0
 Requires:       openssl-devel
 Requires:       fty-common-mlm-devel
+Requires:       fty-common-nut-devel
 Requires:       tntdb-devel
 Requires:       fty-common-db-devel
-Requires:       fty-proto-devel
+Requires:       fty-proto-devel >= 1.0.0
 Requires:       libcidr-devel
 Requires:       nut-devel
-Requires:       fty_shm-devel
+Requires:       fty_shm-devel >= 1.0.0
 
 %description devel
 nut (network ups tools) daemon wrapper/proxy development tools

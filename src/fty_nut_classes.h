@@ -32,9 +32,6 @@
 //  External API
 #include "../include/fty_nut.h"
 
-//  Extra headers
-#include "nut_mlm.h"
-
 //  Opaque class structures to allow forward references
 #ifndef CIDR_T_DEFINED
 typedef struct _cidr_t cidr_t;
@@ -88,6 +85,9 @@ typedef struct _state_manager_t state_manager_t;
 typedef struct _asset_state_t asset_state_t;
 #define ASSET_STATE_T_DEFINED
 #endif
+
+//  Extra headers
+#include "nut_mlm.h"
 
 //  Internal API
 // common definitions and idioms from czmq_prelude.h, which are used in generated code
