@@ -40,8 +40,6 @@ fty_nut_private_selftest (bool verbose, const char *subtest)
 // Tests for stable private classes:
     if (streq (subtest, "$ALL") || streq (subtest, "cidr_test"))
         cidr_test (verbose);
-    if (streq (subtest, "$ALL") || streq (subtest, "nutscan_test"))
-        nutscan_test (verbose);
     if (streq (subtest, "$ALL") || streq (subtest, "actor_commands_test"))
         actor_commands_test (verbose);
     if (streq (subtest, "$ALL") || streq (subtest, "ups_status_test"))

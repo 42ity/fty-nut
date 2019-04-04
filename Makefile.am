@@ -78,7 +78,6 @@ endif
 
 EXTRA_DIST += \
     src/cidr.h \
-    src/nutscan.h \
     src/actor_commands.h \
     src/ups_status.h \
     src/nut_device.h \

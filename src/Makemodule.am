@@ -14,7 +14,6 @@ pkgconfig_DATA = src/libfty_nut.pc
 
 src_libfty_nut_la_SOURCES = \
     src/cidr.cc \
-    src/nutscan.cc \
     src/actor_commands.cc \
     src/ups_status.cc \
     src/nut_device.cc \

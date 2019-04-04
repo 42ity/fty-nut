@@ -223,7 +223,6 @@
 
     <header name = "nut_mlm" private = "1">Malamute connection helpers</header>
     <class name = "cidr"            private = "1">C++ Wrapper around libcidr</class>
-    <class name = "nutscan"         private = "1">Wrapper around nut-scanner tool</class>
 
     <class name = "actor commands"      private = "1">actor commands</class>
     <class name = "ups status"          private = "1">ups status converting functions</class>
