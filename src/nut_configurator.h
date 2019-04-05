@@ -27,6 +27,7 @@
 #include <set>
 #include <vector>
 #include <string>
+#include <fty_common_nut.h>
 
 struct AutoConfigurationInfo
 {
@@ -54,16 +55,13 @@ class NUTConfigurator {
     // accessor methods to manage this setting.
     bool manage_systemctl {false};
  private:
-    static std::vector<std::string>::const_iterator selectBest( const std::vector<std::string> &configs);
-    static void updateNUTConfig();
-    static std::vector<std::string>::const_iterator stringMatch( const std::vector<std::string> &texts, const char *pattern);
-    static bool match( const std::vector<std::string> &texts, const char *pattern);
-    static bool isEpdu( const std::vector<std::string> &texts);
-    static bool isAts( const std::vector<std::string> &texts);
-    static bool isUps( const std::vector<std::string> &texts);
-    static bool canSnmp( const std::vector<std::string> &texts);
-    static bool canXml( const std::vector<std::string> &texts);
-    static std::vector<std::string>::const_iterator getBestSnmpMib( const std::vector<std::string> &configs);
+    nutcommon::DeviceConfigurations::const_iterator getBestSnmpMibConfiguration(const nutcommon::DeviceConfigurations &configs);
+    nutcommon::DeviceConfigurations::const_iterator getNetXMLConfiguration(const nutcommon::DeviceConfigurations &configs);
+    nutcommon::DeviceConfigurations::const_iterator selectBestConfiguration(const nutcommon::DeviceConfigurations &configs);
+    void updateNUTConfig();
+    nutcommon::DeviceConfigurations getConfigurationFromUpsConfBlock(const std::string &name, const AutoConfigurationInfo &info);
+    nutcommon::DeviceConfigurations getConfigurationFromScanningDevice(const std::string &name, const AutoConfigurationInfo &info);
+    void updateDeviceConfiguration(const std::string &name, const AutoConfigurationInfo &info, nutcommon::DeviceConfiguration config);
     static void systemctl( const std::string &operation, const std::string &service );
     template<typename It>
     static void systemctl( const std::string &operation, It first, It last );
