@@ -28,6 +28,8 @@
 
 #include "fty_nut_command_server.h"
 
+#include "nut_mlm.h"
+
 const char *NUT_USER_ENV = "NUT_USER";
 const char *NUT_PASS_ENV = "NUT_PASSWD";
 
@@ -91,24 +93,29 @@ int main (int argc, char *argv [])
     DBConn::dbpath();
 
     log_info ("fty_nut_command  ");
-    const char *endpoint = "ipc://@/malamute";
-    zactor_t *server = zactor_new (fty_nut_command_server, (void*)endpoint);
+    zactor_t *server = zactor_new (fty_nut_command_server, MLM_ENDPOINT_VOID);
 
-    zstr_sendm (server, "NUT_SERVER");
+    zstr_sendm (server, "CONFIGURATION");
     zstr_sendm (server, nutHost.c_str());
     zstr_sendm (server, nutUsername.c_str());
-    zstr_send (server, nutPassword.c_str());
-
-    zstr_sendm (server, "DB_URL");
+    zstr_sendm (server, nutPassword.c_str());
     zstr_send (server, DBConn::url.c_str());
+
+    int r = EXIT_SUCCESS;
 
     // code from src/malamute.c, under MPL
     //  Accept and print any message back from server
     while (true) {
-        char *message = zstr_recv (server);
+        ZstrGuard message (zstr_recv (server));
         if (message) {
-            puts (message);
-            free (message);
+            if (streq (message, "NUT_CONNECTION_FAILURE")) {
+                log_fatal ("Agent not connected to NUT, aborting...");
+                r = EXIT_FAILURE;
+                break;
+            }
+            else {
+                puts (message.get());
+            }
         }
         else {
             puts ("interrupted");
@@ -117,6 +124,5 @@ int main (int argc, char *argv [])
     }
 
     zactor_destroy (&server);
-
-    return 0;
+    return r;
 }
