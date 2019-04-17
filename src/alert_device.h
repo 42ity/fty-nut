@@ -22,7 +22,6 @@
 #ifndef __ALERT_DEVICE
 #define __ALERT_DEVICE
 
-#include "alert_device_alert.h"
 #include "alert_actor.h"
 #include "asset_state.h"
 
@@ -31,6 +30,18 @@
 #include <memory>
 #include <string>
 #include <map>
+
+struct DeviceAlert {
+    std::string name;
+    std::string lowWarning;
+    std::string highWarning;
+    std::string lowCritical;
+    std::string highCritical;
+    std::string status;
+    int64_t timestamp = 0;
+    bool rulePublished = false;
+    bool ruleRescanned = false;
+};
 
 class Device {
  public:

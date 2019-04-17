@@ -739,9 +739,7 @@ nut_device_test (bool verbose)
 
     // test case: load the mappig file
     drivers::nut::NUTDeviceList self {};
-    const char* path = "src/mapping.conf";
-    if (zsys_file_exists ("_build/../src/mapping.conf"))
-        path = "_build/../src/mapping.conf";
+    const char* path = "src/selftest-ro/mapping.conf";
 
     self.load_mapping (path);
 

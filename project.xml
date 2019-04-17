@@ -252,7 +252,6 @@
 
 <!--
 TODO: Handle (automate) delivery of .in templates (and configure.ac translation) for:
-                 src/mapping.conf
                  src/fty-nut.conf
                  src/fty_10_agent-nut
 -->

@@ -22,7 +22,7 @@ To run fty-nut project:
 
 ```bash
 ./src/fty-nut --mapping-file <path_to_mapping_file>
-./src/fty-nut --mapping-file /usr/share/fty-nut/mapping.conf
+./src/fty-nut --mapping-file /usr/share/fty/fty-common-nut/mapping.conf
 
 ./src/fty-nut-configurator
 ```
@@ -46,7 +46,7 @@ Both contain standard configuration directives, under the server sections. Addit
 Mapping between NUT and fty-nut is saved in:
 
 ```
-/usr/share/fty-nut/mapping.conf
+/usr/share/fty/fty-common-nut/mapping.conf
 ```
 
 ### State File
