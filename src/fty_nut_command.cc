@@ -109,7 +109,7 @@ int main (int argc, char *argv [])
         ZstrGuard message (zstr_recv (server));
         if (message) {
             if (streq (message, "NUT_CONNECTION_FAILURE")) {
-                log_fatal ("Agent not connected to NUT, aborting...");
+                log_fatal ("Failed to communicate with NUT server, aborting...");
                 r = EXIT_FAILURE;
                 break;
             }

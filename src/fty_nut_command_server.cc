@@ -266,12 +266,12 @@ fty_nut_command_server(zsock_t *pipe, void *args)
     // Connect to Malamute
     MlmClientGuard client(mlm_client_new());
     if (!client) {
-        log_error("mlm_client_new() failed");
+        log_error("mlm_client_new() failed.");
         return;
     }
     const char *endpoint = static_cast<const char*>(args);
     if (mlm_client_connect(client, endpoint, 5000, ACTOR_COMMAND_NAME) < 0) {
-        log_error("client %s failed to connect", ACTOR_COMMAND_NAME);
+        log_error("Client %s failed to connect.", ACTOR_COMMAND_NAME);
         return;
     }
 
@@ -306,22 +306,24 @@ fty_nut_command_server(zsock_t *pipe, void *args)
                     nutUsername = username.get();
                     nutPassword = password.get();
 
+                    log_info("Connecting to NUT server '%s'...", host.get());
                     nutClient.connect(nutHost);
-                    log_info("Connected to NUT server '%s'", host.get());
+                    log_info("Connected to NUT server '%s'.", host.get());
+                    log_info("Authenticating to NUT server '%s' as '%s'...", host.get(), username.get());
                     nutClient.authenticate(nutUsername, nutPassword);
-                    log_info("Authenticated to NUT server '%s' as '%s'", host.get(), username.get());
+                    log_info("Authenticated to NUT server '%s' as '%s'.", host.get(), username.get());
                     nutClient.setFeature(nut::Client::TRACKING, true);
 
                     ZstrGuard databaseURL(zmsg_popstr(msg));
                     dbURL = databaseURL.get();
-                    log_info("Database URL configured");
+                    log_info("Database URL configured.");
                 }
                 catch (nut::NutException &e) {
                     zstr_send(pipe, "NUT_CONNECTION_FAILURE");
                 }
             }
             else {
-                log_error("Unrecognized pipe request '%s'", actor_command.get());
+                log_error("Unrecognized pipe request '%s'.", actor_command.get());
                 continue;
             }
         }
@@ -330,11 +332,11 @@ fty_nut_command_server(zsock_t *pipe, void *args)
             ZmsgGuard msg(mlm_client_recv(client));
 
             if (!streq(mlm_client_subject(client), COMMAND_SUBJECT)) {
-                log_error("Unrecognized subject '%s', ignoring message", mlm_client_subject(client));
+                log_error("Unrecognized subject '%s', ignoring message.", mlm_client_subject(client));
                 continue;
             }
             if (zmsg_size(msg) < 2) {
-                log_error("Message doesn't have correlation id and command fields, ignoring message", mlm_client_subject(client));
+                log_error("Message doesn't have correlation id and command fields, ignoring message.", mlm_client_subject(client));
                 continue;
             }
 
@@ -346,43 +348,47 @@ fty_nut_command_server(zsock_t *pipe, void *args)
                 // Connect to database
                 tntdb::Connection conn = tntdb::connectCached(dbURL);
 
-                log_info("Received request '%s' from '%s', correlation id='%s'", action.get(), sender, uuid.get());
+                log_info("Received request '%s' from '%s', correlation id='%s'.", action.get(), sender, uuid.get());
 
                 if (streq(action, "GET_COMMANDS")) {
                     get_commands(nutClient, conn, client, sender, uuid.get(), msg);
-                    lastPingPong = zclock_mono();
                 }
                 else if (streq(action, "DO_COMMANDS")) {
                     do_commands(nutClient, conn, client, sender, uuid.get(), msg, pendingCommands);
-                    lastPingPong = zclock_mono();
                 }
                 else if (streq(action, "ERROR")) {
                     ZstrGuard desc(zmsg_popstr(msg));
-                    log_error("Received error message with payload '%s' '%s', ignoring", uuid ? uuid.get() : "(null)", desc ? desc.get() : "(null)");
+                    log_error("Received error message with payload '%s' '%s', ignoring.", uuid ? uuid.get() : "(null)", desc ? desc.get() : "(null)");
                 }
                 else {
-                    log_error("Request '%s' is not valid", action.get());
+                    log_error("Request '%s' is not valid.", action.get());
                     throw std::runtime_error("INVALID_REQUEST");
                 }
             } catch (std::exception &e) {
+                log_error("Caught exception while processing request (%s).", e.what());
                 send_error(client, sender, action.get(), e.what(), uuid.get());
             }
         }
 
-        if ((zclock_mono() > lastTrackingCheck + 1000) && !pendingCommands.empty()) {
-            treat_pending_commands(nutClient, client, pendingCommands);
-
-            lastTrackingCheck = zclock_mono();
-            lastPingPong = zclock_mono();
+        // Perform NUT house-keeping tasks.
+        try {
+            if ((zclock_mono() > lastTrackingCheck + 1000) && !pendingCommands.empty()) {
+                treat_pending_commands(nutClient, client, pendingCommands);
+                lastTrackingCheck = zclock_mono();
+            }
+            if (zclock_mono() > lastPingPong + 30000) {
+                /**
+                 * Keep alive the NUT connection. If the NUT server dies or the connection closed,
+                 * eventually we're going to find it out here and bail out.
+                 */
+                // TODO: use something a bit more lightweight once available in libnutclient (like querying version numbers).
+                nutClient.getDeviceNames();
+                lastPingPong = zclock_mono();
+            }
         }
-        if (zclock_mono() > lastPingPong + 30000) {
-            // Keep alive the NUT connection.
-            nutClient.getDeviceNames();
-            lastPingPong = zclock_mono();
-        }
-
-        if (!nutClient.isConnected()) {
-            zstr_send(mlm_client_msgpipe(client), "NUT_CONNECTION_FAILURE");
+        catch (nut::NutException &e) {
+            log_fatal("Caught exception while performing NUT house-keeping tasks (%s), aborting...", e.what());
+            zstr_send(pipe, "NUT_CONNECTION_FAILURE");
         }
     }
 }
