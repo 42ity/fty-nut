@@ -181,6 +181,112 @@ default|default-Werror|default-with-docs|valgrind|clang-format-check)
     # or MacOS packages; other OSes are not currently supported by Travis cloud
     [ -z "$CI_TIME" ] || echo "`date`: Starting build of dependencies (if any)..."
 
+    # Start of recipe for dependency: cxxtools
+    if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list cxxtools-dev >/dev/null 2>&1) || \
+           (command -v brew >/dev/null 2>&1 && brew ls --versions cxxtools >/dev/null 2>&1) \
+    ; then
+        echo ""
+        BASE_PWD=${PWD}
+        echo "`date`: INFO: Building prerequisite 'cxxtools' from Git repository..." >&2
+        cd ./tmp-deps
+        $CI_TIME git clone --quiet --depth 1 -b 2.2-FTY-master https://github.com/42ity/cxxtools.git cxxtools
+        cd ./cxxtools
+        CCACHE_BASEDIR=${PWD}
+        export CCACHE_BASEDIR
+        git --no-pager log --oneline -n1
+        if [ -e autogen.sh ]; then
+            $CI_TIME ./autogen.sh 2> /dev/null
+        fi
+        if [ -e buildconf ]; then
+            $CI_TIME ./buildconf 2> /dev/null
+        fi
+        if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
+            $CI_TIME libtoolize --copy --force && \
+            $CI_TIME aclocal -I . && \
+            $CI_TIME autoheader && \
+            $CI_TIME automake --add-missing --copy && \
+            $CI_TIME autoconf || \
+            $CI_TIME autoreconf -fiv
+        fi
+        $CI_TIME ./configure "${CONFIG_OPTS[@]}"
+        $CI_TIME make -j4
+        $CI_TIME make install
+        cd "${BASE_PWD}"
+    fi
+
+    # Start of recipe for dependency: cidr
+    if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libcidr0-dev >/dev/null 2>&1) || \
+           (command -v brew >/dev/null 2>&1 && brew ls --versions cidr >/dev/null 2>&1) \
+    ; then
+        echo ""
+        BASE_PWD=${PWD}
+        echo "`date`: INFO: Building prerequisite 'cidr' from Git repository..." >&2
+        cd ./tmp-deps
+        $CI_TIME git clone --quiet --depth 1 -b 1.2.3-FTY-master https://github.com/42ity/libcidr.git cidr
+        cd ./cidr
+        CCACHE_BASEDIR=${PWD}
+        export CCACHE_BASEDIR
+        git --no-pager log --oneline -n1
+        if [ -e autogen.sh ]; then
+            $CI_TIME ./autogen.sh 2> /dev/null
+        fi
+        if [ -e buildconf ]; then
+            $CI_TIME ./buildconf 2> /dev/null
+        fi
+        if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
+            $CI_TIME libtoolize --copy --force && \
+            $CI_TIME aclocal -I . && \
+            $CI_TIME autoheader && \
+            $CI_TIME automake --add-missing --copy && \
+            $CI_TIME autoconf || \
+            $CI_TIME autoreconf -fiv
+        fi
+        $CI_TIME ./configure "${CONFIG_OPTS[@]}"
+        $CI_TIME make -j4
+        $CI_TIME make install
+        cd "${BASE_PWD}"
+    fi
+
+    # Start of recipe for dependency: libnutclient
+    if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libnutclient-dev >/dev/null 2>&1) || \
+           (command -v brew >/dev/null 2>&1 && brew ls --versions libnutclient >/dev/null 2>&1) \
+    ; then
+        echo ""
+        BASE_PWD=${PWD}
+        echo "`date`: INFO: Building prerequisite 'libnutclient' from Git repository..." >&2
+        cd ./tmp-deps
+        $CI_TIME git clone --quiet --depth 1 -b FTY https://github.com/42ity/nut.git libnutclient
+        cd ./libnutclient
+        CCACHE_BASEDIR=${PWD}
+        export CCACHE_BASEDIR
+        git --no-pager log --oneline -n1
+        if [ -e autogen.sh ]; then
+            $CI_TIME ./autogen.sh 2> /dev/null
+        fi
+        if [ -e buildconf ]; then
+            $CI_TIME ./buildconf 2> /dev/null
+        fi
+        if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
+            $CI_TIME libtoolize --copy --force && \
+            $CI_TIME aclocal -I . && \
+            $CI_TIME autoheader && \
+            $CI_TIME automake --add-missing --copy && \
+            $CI_TIME autoconf || \
+            $CI_TIME autoreconf -fiv
+        fi
+        ( # Custom additional options for libnutclient
+            CONFIG_OPTS+=("--with-doc=no")
+            CONFIG_OPTS+=("--with-all=no")
+            CONFIG_OPTS+=("--with-dev=yes")
+            CONFIG_OPTS+=("--with-dmfnutscan-regenerate=no")
+            CONFIG_OPTS+=("--with-dmfsnmp-regenerate=no")
+            $CI_TIME ./configure "${CONFIG_OPTS[@]}"
+        )
+        $CI_TIME make -j4
+        $CI_TIME make install
+        cd "${BASE_PWD}"
+    fi
+
     # Start of recipe for dependency: log4cplus
     if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list log4cplus-dev >/dev/null 2>&1) || \
            (command -v brew >/dev/null 2>&1 && brew ls --versions log4cplus >/dev/null 2>&1) \
@@ -257,6 +363,40 @@ default|default-Werror|default-with-docs|valgrind|clang-format-check)
         cd ./tmp-deps
         $CI_TIME git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common.git fty-common
         cd ./fty-common
+        CCACHE_BASEDIR=${PWD}
+        export CCACHE_BASEDIR
+        git --no-pager log --oneline -n1
+        if [ -e autogen.sh ]; then
+            $CI_TIME ./autogen.sh 2> /dev/null
+        fi
+        if [ -e buildconf ]; then
+            $CI_TIME ./buildconf 2> /dev/null
+        fi
+        if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
+            $CI_TIME libtoolize --copy --force && \
+            $CI_TIME aclocal -I . && \
+            $CI_TIME autoheader && \
+            $CI_TIME automake --add-missing --copy && \
+            $CI_TIME autoconf || \
+            $CI_TIME autoreconf -fiv
+        fi
+        $CI_TIME ./configure "${CONFIG_OPTS[@]}"
+        $CI_TIME make -j4
+        $CI_TIME make install
+        cd "${BASE_PWD}"
+    fi
+
+    # Start of recipe for dependency: tntdb
+    if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list tntdb-dev >/dev/null 2>&1) || \
+           (command -v brew >/dev/null 2>&1 && brew ls --versions tntdb >/dev/null 2>&1) \
+    ; then
+        echo ""
+        BASE_PWD=${PWD}
+        echo "`date`: INFO: Building prerequisite 'tntdb' from Git repository..." >&2
+        cd ./tmp-deps
+        $CI_TIME git clone --quiet --depth 1 -b 1.3-FTY-master https://github.com/42ity/tntdb.git tntdb
+        cd ./tntdb
+        cd ./tntdb
         CCACHE_BASEDIR=${PWD}
         export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
@@ -379,16 +519,16 @@ default|default-Werror|default-with-docs|valgrind|clang-format-check)
         cd "${BASE_PWD}"
     fi
 
-    # Start of recipe for dependency: cxxtools
-    if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list cxxtools-dev >/dev/null 2>&1) || \
-           (command -v brew >/dev/null 2>&1 && brew ls --versions cxxtools >/dev/null 2>&1) \
+    # Start of recipe for dependency: malamute
+    if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libmlm-dev >/dev/null 2>&1) || \
+           (command -v brew >/dev/null 2>&1 && brew ls --versions malamute >/dev/null 2>&1) \
     ; then
         echo ""
         BASE_PWD=${PWD}
-        echo "`date`: INFO: Building prerequisite 'cxxtools' from Git repository..." >&2
+        echo "`date`: INFO: Building prerequisite 'malamute' from Git repository..." >&2
         cd ./tmp-deps
-        $CI_TIME git clone --quiet --depth 1 -b 2.2-FTY-master https://github.com/42ity/cxxtools.git cxxtools
-        cd ./cxxtools
+        $CI_TIME git clone --quiet --depth 1 -b 1.0-FTY-master https://github.com/42ity/malamute.git malamute
+        cd ./malamute
         CCACHE_BASEDIR=${PWD}
         export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
@@ -412,16 +552,49 @@ default|default-Werror|default-with-docs|valgrind|clang-format-check)
         cd "${BASE_PWD}"
     fi
 
-    # Start of recipe for dependency: malamute
-    if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libmlm-dev >/dev/null 2>&1) || \
-           (command -v brew >/dev/null 2>&1 && brew ls --versions malamute >/dev/null 2>&1) \
+    # Start of recipe for dependency: fty-proto
+    if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_proto-dev >/dev/null 2>&1) || \
+           (command -v brew >/dev/null 2>&1 && brew ls --versions fty-proto >/dev/null 2>&1) \
     ; then
         echo ""
         BASE_PWD=${PWD}
-        echo "`date`: INFO: Building prerequisite 'malamute' from Git repository..." >&2
+        echo "`date`: INFO: Building prerequisite 'fty-proto' from Git repository..." >&2
         cd ./tmp-deps
-        $CI_TIME git clone --quiet --depth 1 -b 1.0-FTY-master https://github.com/42ity/malamute.git malamute
-        cd ./malamute
+        $CI_TIME git clone --quiet --depth 1 -b master https://github.com/42ity/fty-proto.git fty-proto
+        cd ./fty-proto
+        CCACHE_BASEDIR=${PWD}
+        export CCACHE_BASEDIR
+        git --no-pager log --oneline -n1
+        if [ -e autogen.sh ]; then
+            $CI_TIME ./autogen.sh 2> /dev/null
+        fi
+        if [ -e buildconf ]; then
+            $CI_TIME ./buildconf 2> /dev/null
+        fi
+        if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
+            $CI_TIME libtoolize --copy --force && \
+            $CI_TIME aclocal -I . && \
+            $CI_TIME autoheader && \
+            $CI_TIME automake --add-missing --copy && \
+            $CI_TIME autoconf || \
+            $CI_TIME autoreconf -fiv
+        fi
+        $CI_TIME ./configure "${CONFIG_OPTS[@]}"
+        $CI_TIME make -j4
+        $CI_TIME make install
+        cd "${BASE_PWD}"
+    fi
+
+    # Start of recipe for dependency: fty-common-db
+    if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_common_db-dev >/dev/null 2>&1) || \
+           (command -v brew >/dev/null 2>&1 && brew ls --versions fty-common-db >/dev/null 2>&1) \
+    ; then
+        echo ""
+        BASE_PWD=${PWD}
+        echo "`date`: INFO: Building prerequisite 'fty-common-db' from Git repository..." >&2
+        cd ./tmp-deps
+        $CI_TIME git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common-db.git fty-common-db
+        cd ./fty-common-db
         CCACHE_BASEDIR=${PWD}
         export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
@@ -488,6 +661,39 @@ default|default-Werror|default-with-docs|valgrind|clang-format-check)
         cd "${BASE_PWD}"
     fi
 
+    # Start of recipe for dependency: fty-security-wallet
+    if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_security_wallet-dev >/dev/null 2>&1) || \
+           (command -v brew >/dev/null 2>&1 && brew ls --versions fty-security-wallet >/dev/null 2>&1) \
+    ; then
+        echo ""
+        BASE_PWD=${PWD}
+        echo "`date`: INFO: Building prerequisite 'fty-security-wallet' from Git repository..." >&2
+        cd ./tmp-deps
+        $CI_TIME git clone --quiet --depth 1 -b master https://github.com/42ity/fty-security-wallet.git fty-security-wallet
+        cd ./fty-security-wallet
+        CCACHE_BASEDIR=${PWD}
+        export CCACHE_BASEDIR
+        git --no-pager log --oneline -n1
+        if [ -e autogen.sh ]; then
+            $CI_TIME ./autogen.sh 2> /dev/null
+        fi
+        if [ -e buildconf ]; then
+            $CI_TIME ./buildconf 2> /dev/null
+        fi
+        if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
+            $CI_TIME libtoolize --copy --force && \
+            $CI_TIME aclocal -I . && \
+            $CI_TIME autoheader && \
+            $CI_TIME automake --add-missing --copy && \
+            $CI_TIME autoconf || \
+            $CI_TIME autoreconf -fiv
+        fi
+        $CI_TIME ./configure "${CONFIG_OPTS[@]}"
+        $CI_TIME make -j4
+        $CI_TIME make install
+        cd "${BASE_PWD}"
+    fi
+
     # Start of recipe for dependency: fty-common-nut
     if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_common_nut-dev >/dev/null 2>&1) || \
            (command -v brew >/dev/null 2>&1 && brew ls --versions fty-common-nut >/dev/null 2>&1) \
@@ -516,179 +722,6 @@ default|default-Werror|default-with-docs|valgrind|clang-format-check)
             $CI_TIME autoreconf -fiv
         fi
         $CI_TIME ./configure "${CONFIG_OPTS[@]}"
-        $CI_TIME make -j4
-        $CI_TIME make install
-        cd "${BASE_PWD}"
-    fi
-
-    # Start of recipe for dependency: tntdb
-    if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list tntdb-dev >/dev/null 2>&1) || \
-           (command -v brew >/dev/null 2>&1 && brew ls --versions tntdb >/dev/null 2>&1) \
-    ; then
-        echo ""
-        BASE_PWD=${PWD}
-        echo "`date`: INFO: Building prerequisite 'tntdb' from Git repository..." >&2
-        cd ./tmp-deps
-        $CI_TIME git clone --quiet --depth 1 -b 1.3-FTY-master https://github.com/42ity/tntdb.git tntdb
-        cd ./tntdb
-        cd ./tntdb
-        CCACHE_BASEDIR=${PWD}
-        export CCACHE_BASEDIR
-        git --no-pager log --oneline -n1
-        if [ -e autogen.sh ]; then
-            $CI_TIME ./autogen.sh 2> /dev/null
-        fi
-        if [ -e buildconf ]; then
-            $CI_TIME ./buildconf 2> /dev/null
-        fi
-        if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
-            $CI_TIME libtoolize --copy --force && \
-            $CI_TIME aclocal -I . && \
-            $CI_TIME autoheader && \
-            $CI_TIME automake --add-missing --copy && \
-            $CI_TIME autoconf || \
-            $CI_TIME autoreconf -fiv
-        fi
-        $CI_TIME ./configure "${CONFIG_OPTS[@]}"
-        $CI_TIME make -j4
-        $CI_TIME make install
-        cd "${BASE_PWD}"
-    fi
-
-    # Start of recipe for dependency: fty-common-db
-    if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_common_db-dev >/dev/null 2>&1) || \
-           (command -v brew >/dev/null 2>&1 && brew ls --versions fty-common-db >/dev/null 2>&1) \
-    ; then
-        echo ""
-        BASE_PWD=${PWD}
-        echo "`date`: INFO: Building prerequisite 'fty-common-db' from Git repository..." >&2
-        cd ./tmp-deps
-        $CI_TIME git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common-db.git fty-common-db
-        cd ./fty-common-db
-        CCACHE_BASEDIR=${PWD}
-        export CCACHE_BASEDIR
-        git --no-pager log --oneline -n1
-        if [ -e autogen.sh ]; then
-            $CI_TIME ./autogen.sh 2> /dev/null
-        fi
-        if [ -e buildconf ]; then
-            $CI_TIME ./buildconf 2> /dev/null
-        fi
-        if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
-            $CI_TIME libtoolize --copy --force && \
-            $CI_TIME aclocal -I . && \
-            $CI_TIME autoheader && \
-            $CI_TIME automake --add-missing --copy && \
-            $CI_TIME autoconf || \
-            $CI_TIME autoreconf -fiv
-        fi
-        $CI_TIME ./configure "${CONFIG_OPTS[@]}"
-        $CI_TIME make -j4
-        $CI_TIME make install
-        cd "${BASE_PWD}"
-    fi
-
-    # Start of recipe for dependency: fty-proto
-    if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_proto-dev >/dev/null 2>&1) || \
-           (command -v brew >/dev/null 2>&1 && brew ls --versions fty-proto >/dev/null 2>&1) \
-    ; then
-        echo ""
-        BASE_PWD=${PWD}
-        echo "`date`: INFO: Building prerequisite 'fty-proto' from Git repository..." >&2
-        cd ./tmp-deps
-        $CI_TIME git clone --quiet --depth 1 -b master https://github.com/42ity/fty-proto.git fty-proto
-        cd ./fty-proto
-        CCACHE_BASEDIR=${PWD}
-        export CCACHE_BASEDIR
-        git --no-pager log --oneline -n1
-        if [ -e autogen.sh ]; then
-            $CI_TIME ./autogen.sh 2> /dev/null
-        fi
-        if [ -e buildconf ]; then
-            $CI_TIME ./buildconf 2> /dev/null
-        fi
-        if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
-            $CI_TIME libtoolize --copy --force && \
-            $CI_TIME aclocal -I . && \
-            $CI_TIME autoheader && \
-            $CI_TIME automake --add-missing --copy && \
-            $CI_TIME autoconf || \
-            $CI_TIME autoreconf -fiv
-        fi
-        $CI_TIME ./configure "${CONFIG_OPTS[@]}"
-        $CI_TIME make -j4
-        $CI_TIME make install
-        cd "${BASE_PWD}"
-    fi
-
-    # Start of recipe for dependency: cidr
-    if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libcidr0-dev >/dev/null 2>&1) || \
-           (command -v brew >/dev/null 2>&1 && brew ls --versions cidr >/dev/null 2>&1) \
-    ; then
-        echo ""
-        BASE_PWD=${PWD}
-        echo "`date`: INFO: Building prerequisite 'cidr' from Git repository..." >&2
-        cd ./tmp-deps
-        $CI_TIME git clone --quiet --depth 1 -b 1.2.3-FTY-master https://github.com/42ity/libcidr.git cidr
-        cd ./cidr
-        CCACHE_BASEDIR=${PWD}
-        export CCACHE_BASEDIR
-        git --no-pager log --oneline -n1
-        if [ -e autogen.sh ]; then
-            $CI_TIME ./autogen.sh 2> /dev/null
-        fi
-        if [ -e buildconf ]; then
-            $CI_TIME ./buildconf 2> /dev/null
-        fi
-        if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
-            $CI_TIME libtoolize --copy --force && \
-            $CI_TIME aclocal -I . && \
-            $CI_TIME autoheader && \
-            $CI_TIME automake --add-missing --copy && \
-            $CI_TIME autoconf || \
-            $CI_TIME autoreconf -fiv
-        fi
-        $CI_TIME ./configure "${CONFIG_OPTS[@]}"
-        $CI_TIME make -j4
-        $CI_TIME make install
-        cd "${BASE_PWD}"
-    fi
-
-    # Start of recipe for dependency: libnutclient
-    if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libnutclient-dev >/dev/null 2>&1) || \
-           (command -v brew >/dev/null 2>&1 && brew ls --versions libnutclient >/dev/null 2>&1) \
-    ; then
-        echo ""
-        BASE_PWD=${PWD}
-        echo "`date`: INFO: Building prerequisite 'libnutclient' from Git repository..." >&2
-        cd ./tmp-deps
-        $CI_TIME git clone --quiet --depth 1 -b FTY https://github.com/42ity/nut.git libnutclient
-        cd ./libnutclient
-        CCACHE_BASEDIR=${PWD}
-        export CCACHE_BASEDIR
-        git --no-pager log --oneline -n1
-        if [ -e autogen.sh ]; then
-            $CI_TIME ./autogen.sh 2> /dev/null
-        fi
-        if [ -e buildconf ]; then
-            $CI_TIME ./buildconf 2> /dev/null
-        fi
-        if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
-            $CI_TIME libtoolize --copy --force && \
-            $CI_TIME aclocal -I . && \
-            $CI_TIME autoheader && \
-            $CI_TIME automake --add-missing --copy && \
-            $CI_TIME autoconf || \
-            $CI_TIME autoreconf -fiv
-        fi
-        ( # Custom additional options for libnutclient
-            CONFIG_OPTS+=("--with-doc=no")
-            CONFIG_OPTS+=("--with-all=no")
-            CONFIG_OPTS+=("--with-dev=yes")
-            CONFIG_OPTS+=("--with-dmfnutscan-regenerate=no")
-            CONFIG_OPTS+=("--with-dmfsnmp-regenerate=no")
-            $CI_TIME ./configure "${CONFIG_OPTS[@]}"
-        )
         $CI_TIME make -j4
         $CI_TIME make install
         cd "${BASE_PWD}"
