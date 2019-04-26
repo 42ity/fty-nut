@@ -29,11 +29,35 @@
 #include "fty_nut_configurator_server.h"
 #include "state_manager.h"
 #include "nut_mlm.h"
+#include "nut_configurator.h"
+#include "state_manager.h"
 #include <fty_log.h>
 #include <fty_common_mlm.h>
 #include <ftyproto.h>
 #include <fstream>
 #include <algorithm>
+#include <string>
+#include <vector>
+
+class Autoconfig {
+ public:
+    explicit Autoconfig(StateManager::Reader* reader);
+
+    void onPoll();
+    void onUpdate();
+    int timeout () const {return _timeout;}
+    void handleLimitations (fty_proto_t **message );
+ private:
+    void setPollingInterval();
+    void addDeviceIfNeeded(const std::string& name, AssetState::Asset *asset);
+    void cleanupState();
+    int _traversal_color;
+    std::map<std::string,AutoConfigurationInfo> _configDevices;
+    std::unique_ptr<StateManager::Reader> _state_reader;
+
+ protected:
+    int _timeout = 2000;
+};
 
 // autoconfig agent public methods
 
