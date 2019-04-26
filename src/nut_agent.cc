@@ -201,7 +201,7 @@ void NUTAgent::advertisePhysics ()
                     log_debug ("load.default: max_value %lf from user", max_value);
                 }
                 // 2. if MAX value is known -> do work, otherwise skip
-                if (!isnan(max_value)) {
+                if (!std::isnan(max_value)) {
                     double value = 0;
                     try {
                         value = stof (measurements.at("current.input.L1"));
