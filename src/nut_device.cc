@@ -218,7 +218,7 @@ void NUTDevice::update (std::map <std::string, std::vector <std::string>> vars,
 
             auto inventoryMappedKey = inventoryMapping.find(unprefixedVar);
             if (inventoryMappedKey != inventoryMapping.cend()) {
-                updatePhysics(inventoryMappedKey->second, var.second);
+                updateInventory(inventoryMappedKey->second, var.second);
             }
         }
     }
