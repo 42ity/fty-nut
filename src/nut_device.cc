@@ -145,15 +145,6 @@ void NUTDevice::updatePhysics(const std::string& varName, const std::string& new
     }
 }
 
-void NUTDevice::updatePhysics(const std::string& varName, const std::vector<std::string>& values) {
-    if( values.size() == 1 ) {
-        // don't know how to handle multiple values
-        // multiple values would be probably nonsence
-        try {
-            updatePhysics(varName,values[0]);
-        } catch (...) {}
-    }
-}
 
 void NUTDevice::commitChanges() {
     for( auto & item:  _physics ) {
@@ -164,17 +155,9 @@ void NUTDevice::commitChanges() {
     }
 }
 
-void NUTDevice::updateInventory(const std::string& varName, const std::vector<std::string>& values) {
-    std::string inventory = "";
-    for(size_t i = 0 ; i < values.size() ; ++i ) {
-        inventory += values[i];
-        if( i < values.size() -1 ) {
-            inventory += ", ";
-        }
-    }
-    // inventory now looks like "value1, value2, value3"
+void NUTDevice::updateInventory(const std::string& varName, const std::string& inventory) {
     // NUT bug type pdu => epdu
-    if( varName == "type" && inventory == "pdu" ) { inventory = "epdu"; }
+    if( varName == "type" && inventory == "pdu" ) { return updateInventory(varName, "epdu"); }
     if( _inventory.count( varName ) == 0 ) {
         // this is new value
         struct NUTInventoryValue ivalue;
@@ -189,6 +172,18 @@ void NUTDevice::updateInventory(const std::string& varName, const std::vector<st
     }
 }
 
+static std::string collapse_commas(const std::vector<std::string> &values)
+{
+    std::string inventory = "";
+    for(size_t i = 0 ; i < values.size() ; ++i ) {
+        inventory += values[i];
+        if( i < values.size() -1 ) {
+            inventory += ", ";
+        }
+    }
+    return inventory;
+}
+
 void NUTDevice::update (std::map <std::string, std::vector <std::string>> vars,
                         std::function <const std::map <std::string, std::string>&(const char *)> mapping,
                         bool forceUpdate)
@@ -199,27 +194,27 @@ void NUTDevice::update (std::map <std::string, std::vector <std::string>> vars,
 
     const std::string prefix = daisyPrefix();
     const int prefixId = daisyChainIndex();
-    const auto& physicsMapping = mapping("physicsMapping");
-    const auto& inventoryMapping = mapping("inventoryMapping");
     _lastUpdate = time(NULL);
 
     // Use transformation table first.
     NUTValuesTransformation(prefix, vars);
 
+    nutcommon::KeyValues scalarVars;
+    for (auto var : vars) {
+        scalarVars.emplace(var.first, collapse_commas(var.second));
+    }
+
     // Translate NUT keys into 42ity keys.
-    for (const auto& var : vars) {
-        std::string unprefixedVar = nutcommon::extractDaisyChainedKey(var.first, prefixId);
-
-        if (!unprefixedVar.empty()) {
-            auto physicsMappedKey = physicsMapping.find(unprefixedVar);
-            if (physicsMappedKey != physicsMapping.cend()) {
-                updatePhysics(physicsMappedKey->second, var.second);
-            }
-
-            auto inventoryMappedKey = inventoryMapping.find(unprefixedVar);
-            if (inventoryMappedKey != inventoryMapping.cend()) {
-                updateInventory(inventoryMappedKey->second, var.second);
-            }
+    {
+        auto mappedPhysics = nutcommon::performMapping(mapping("physicsMapping"), scalarVars, prefixId);
+        for (auto value : mappedPhysics) {
+            updatePhysics(value.first, value.second);
+        }
+    }
+    {
+        auto mappedInventory = nutcommon::performMapping(mapping("inventoryMapping"), scalarVars, prefixId);
+        for (auto value : mappedInventory) {
+            updateInventory(value.first, value.second);
         }
     }
 
