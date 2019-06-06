@@ -214,21 +214,12 @@ class NUTDevice {
     void updatePhysics(const std::string& varName, const std::string& newValue);
 
     /**
-     * \brief Updates physical or measurement value from vector.
-     *
-     * Calculates the value with first value from vector (NUT returns vectors of
-     * values).
-     */
-    void updatePhysics(const std::string& varName, std::vector<std::string>& values);
-
-    /**
      * \brief Updates inventory value.
      *
-     * Updates the value with values from vector (NUT returns vectors of
-     * values). values are connected like "value1, value2, value3". Flag _change is
+     * Updates the value with values from vector. Flag _change is
      * set if new value is different from old one.
      */
-    void updateInventory(const std::string& varName, std::vector<std::string>& values);
+    void updateInventory(const std::string& varName, const std::string& inventory);
 
     /**
      * \brief Updates all values from NUT.

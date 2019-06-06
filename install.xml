@@ -12,5 +12,4 @@ Installation model
 <install>
     <item type = "systemd-tmpfiles" />
     <item path = "/etc/sudoers.d/" name = "fty_10_agent-nut" />
-    <item path = "/usr/share/fty-nut" name = "mapping.conf" />
 </install>

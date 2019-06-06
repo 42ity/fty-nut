@@ -23,7 +23,7 @@ EnvironmentFile=-@sysconfdir@/default/bios__%n.conf
 EnvironmentFile=-@sysconfdir@/default/fty
 EnvironmentFile=-@sysconfdir@/default/fty__%n.conf
 Environment="prefix=@prefix@"
-ExecStart=@prefix@/bin/fty-nut --mapping-file @datadir@/fty-nut/mapping.conf
+ExecStart=@prefix@/bin/fty-nut --mapping-file @datadir@/fty-common-nut/mapping.conf
 
 [Install]
 WantedBy=bios.target

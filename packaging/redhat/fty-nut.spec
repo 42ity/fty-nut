@@ -51,22 +51,24 @@ BuildRequires:  systemd
 %{?systemd_requires}
 BuildRequires:  xmlto
 BuildRequires:  gcc-c++
+BuildRequires:  cxxtools-devel
+BuildRequires:  libcidr-devel
+BuildRequires:  nut-devel
 BuildRequires:  log4cplus-devel
 BuildRequires:  fty-common-logging-devel
 BuildRequires:  fty-common-devel
+BuildRequires:  tntdb-devel
 BuildRequires:  libsodium-devel
 BuildRequires:  zeromq-devel
-BuildRequires:  czmq-devel
-BuildRequires:  cxxtools-devel
-BuildRequires:  malamute-devel
+BuildRequires:  czmq-devel >= 3.0.2
+BuildRequires:  malamute-devel >= 1.0.0
+BuildRequires:  fty-proto-devel >= 1.0.0
+BuildRequires:  fty-common-db-devel
 BuildRequires:  openssl-devel
 BuildRequires:  fty-common-mlm-devel
-BuildRequires:  tntdb-devel
-BuildRequires:  fty-common-db-devel
-BuildRequires:  fty-proto-devel
-BuildRequires:  libcidr-devel
-BuildRequires:  nut-devel
-BuildRequires:  fty_shm-devel
+BuildRequires:  fty-security-wallet-devel
+BuildRequires:  fty-common-nut-devel
+BuildRequires:  fty_shm-devel >= 1.0.0
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
@@ -90,22 +92,24 @@ This package contains shared library for fty-nut: nut (network ups tools) daemon
 Summary:        nut (network ups tools) daemon wrapper/proxy
 Group:          System/Libraries
 Requires:       libfty_nut1 = %{version}
+Requires:       cxxtools-devel
+Requires:       libcidr-devel
+Requires:       nut-devel
 Requires:       log4cplus-devel
 Requires:       fty-common-logging-devel
 Requires:       fty-common-devel
+Requires:       tntdb-devel
 Requires:       libsodium-devel
 Requires:       zeromq-devel
-Requires:       czmq-devel
-Requires:       cxxtools-devel
-Requires:       malamute-devel
+Requires:       czmq-devel >= 3.0.2
+Requires:       malamute-devel >= 1.0.0
+Requires:       fty-proto-devel >= 1.0.0
+Requires:       fty-common-db-devel
 Requires:       openssl-devel
 Requires:       fty-common-mlm-devel
-Requires:       tntdb-devel
-Requires:       fty-common-db-devel
-Requires:       fty-proto-devel
-Requires:       libcidr-devel
-Requires:       nut-devel
-Requires:       fty_shm-devel
+Requires:       fty-security-wallet-devel
+Requires:       fty-common-nut-devel
+Requires:       fty_shm-devel >= 1.0.0
 
 %description devel
 nut (network ups tools) daemon wrapper/proxy development tools

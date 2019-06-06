@@ -32,6 +32,7 @@
 
 #include <cxxtools/serializationerror.h>
 #include <cxxtools/jsondeserializer.h>
+#include <fty_common_nut.h>
 #include <algorithm>
 #include <exception>
 #include <iostream>
@@ -144,15 +145,6 @@ void NUTDevice::updatePhysics(const std::string& varName, const std::string& new
     }
 }
 
-void NUTDevice::updatePhysics(const std::string& varName, std::vector<std::string>& values) {
-    if( values.size() == 1 ) {
-        // don't know how to handle multiple values
-        // multiple values would be probably nonsence
-        try {
-            updatePhysics(varName,values[0]);
-        } catch (...) {}
-    }
-}
 
 void NUTDevice::commitChanges() {
     for( auto & item:  _physics ) {
@@ -163,17 +155,9 @@ void NUTDevice::commitChanges() {
     }
 }
 
-void NUTDevice::updateInventory(const std::string& varName, std::vector<std::string>& values) {
-    std::string inventory = "";
-    for(size_t i = 0 ; i < values.size() ; ++i ) {
-        inventory += values[i];
-        if( i < values.size() -1 ) {
-            inventory += ", ";
-        }
-    }
-    // inventory now looks like "value1, value2, value3"
+void NUTDevice::updateInventory(const std::string& varName, const std::string& inventory) {
     // NUT bug type pdu => epdu
-    if( varName == "type" && inventory == "pdu" ) { inventory = "epdu"; }
+    if( varName == "type" && inventory == "pdu" ) { return updateInventory(varName, "epdu"); }
     if( _inventory.count( varName ) == 0 ) {
         // this is new value
         struct NUTInventoryValue ivalue;
@@ -188,82 +172,52 @@ void NUTDevice::updateInventory(const std::string& varName, std::vector<std::str
     }
 }
 
+static std::string collapse_commas(const std::vector<std::string> &values)
+{
+    std::string inventory = "";
+    for(size_t i = 0 ; i < values.size() ; ++i ) {
+        inventory += values[i];
+        if( i < values.size() -1 ) {
+            inventory += ", ";
+        }
+    }
+    return inventory;
+}
+
 void NUTDevice::update (std::map <std::string, std::vector <std::string>> vars,
                         std::function <const std::map <std::string, std::string>&(const char *)> mapping,
-                        bool forceUpdate) {
+                        bool forceUpdate)
+{
+    if (vars.empty()) {
+        return;
+    }
 
-    if( vars.empty() ) return;
+    const std::string prefix = daisyPrefix();
+    const int prefixId = daisyChainIndex();
     _lastUpdate = time(NULL);
-    std::string prefix = daisyPrefix();
 
-    // use transformation table first
-    NUTValuesTransformation (prefix, vars);
+    // Use transformation table first.
+    NUTValuesTransformation(prefix, vars);
 
-    // walk trough physics
-    for (const auto& item : mapping ("physicsMapping")) {
-        if (vars.find (prefix + item.first) != vars.end ()) {
-            // variable found in received data
-            std::vector<std::string> values = vars[prefix + item.first];
-            updatePhysics (item.second, values);
+    nutcommon::KeyValues scalarVars;
+    for (auto var : vars) {
+        scalarVars.emplace(var.first, collapse_commas(var.second));
+    }
+
+    // Translate NUT keys into 42ity keys.
+    {
+        auto mappedPhysics = nutcommon::performMapping(mapping("physicsMapping"), scalarVars, prefixId);
+        for (auto value : mappedPhysics) {
+            updatePhysics(value.first, value.second);
         }
-        else {
-            // iterating numbered items in physics
-            // like outlet.1.voltage, outlet.2.voltage, ...
-            int x = item.first.find(".#."); // is always in the middle: outlet.1.realpower
-            int y = item.second.find(".#"); // can be at the end: outlet.voltage.#
-            if( x > 0 && y > 0 ) {
-                // this is something like outlet.#.realpower
-                std::string nutprefix = item.first.substr(0,x+1);
-                std::string nutsuffix = item.first.substr(x+2);
-                std::string biosprefix = item.second.substr(0,y+1);
-                std::string biossuffix = item.second.substr(y+2);
-                std::string nutname,biosname;
-                int i = 1;
-                while(true) {
-                    nutname = nutprefix + std::to_string(i) + nutsuffix;
-                    biosname = biosprefix + std::to_string(i) + biossuffix;
-                    if( vars.count(prefix + nutname) == 0 ) break; // variable out of scope
-                    // variable found
-                    std::vector<std::string> values = vars[prefix + nutname];
-                    updatePhysics (biosname, values);
-                    ++i;
-                }
-            }
+    }
+    {
+        auto mappedInventory = nutcommon::performMapping(mapping("inventoryMapping"), scalarVars, prefixId);
+        for (auto value : mappedInventory) {
+            updateInventory(value.first, value.second);
         }
     }
 
-    // walk trough inventory
-    //for(size_t i = 0; i < inventoryMapping.size(); ++i) {
-    for (const auto& item : mapping ("inventoryMapping")) {
-        if( vars.find (prefix + item.first) != vars.end() ) {
-            // variable found in received data
-            std::vector<std::string> values = vars[prefix + item.first];
-            updateInventory (item.second, values);
-        } else {
-            // iterating numbered items in physics
-            // like outlet.1.voltage, outlet.2.voltage, ...
-            int x = item.first.find(".#."); // is always in the middle: outlet.1.realpower
-            int y = item.second.find(".#"); // can be at the end: outlet.voltage.#
-            if( x > 0 && y > 0 ) {
-                // this is something like outlet.#.realpower
-                std::string nutprefix = item.first.substr(0,x+1);
-                std::string nutsuffix = item.first.substr(x+2);
-                std::string biosprefix = item.second.substr(0,y+1);
-                std::string biossuffix = item.second.substr(y+2);
-                std::string nutname,biosname;
-                int i = 1;
-                while(true) {
-                    nutname = nutprefix + std::to_string(i) + nutsuffix;
-                    biosname = biosprefix + std::to_string(i) + biossuffix;
-                    if( vars.count(prefix + nutname) == 0 ) break; // variable out of scope
-                    // variable found
-                    std::vector<std::string> values = vars[prefix + nutname];
-                    updateInventory(biosname, values);
-                    ++i;
-                }
-            }
-        }
-    }
     commitChanges();
 }
 
@@ -723,69 +677,24 @@ bool NUTDeviceList::changed() const {
     return false;
 }
 
-static void
-s_deserialize_to_map (cxxtools::SerializationInfo& si, std::map <std::string, std::string>& m) {
-    for (const auto& i : si) {
-        std::string temp;
-        if (i.category () != cxxtools::SerializationInfo::Category::Value) {
-            log_warning ("While reading mapping configuration - Value of property '%s' is not json string.", i.name ().c_str ());
-          continue;
-        }
-        try {
-            i.getValue (temp);
-        }
-        catch (const cxxtools::SerializationError& e) {
-            log_error ("Error deserializing value for property '%s'", i.name ().c_str ());
-            continue;
-        }
-        m.emplace (std::make_pair (i.name (), temp));
-    }
-}
-
 void NUTDeviceList::load_mapping (const char *path_to_file)
 {
     _mappingLoaded = false;
-    if (!shared::is_file (path_to_file)) {
-        log_error ("'%s' is not a file", path_to_file);
-        return;
-    }
-    std::ifstream input (path_to_file);
-    if (!input) {
-        log_error ("Error opening file '%s'", path_to_file);
-        return;
-    }
 
-    cxxtools::SerializationInfo si;
-    cxxtools::JsonDeserializer deserializer (input);
     try {
-        deserializer.deserialize (si);
-    }
-    catch (const std::exception& e) {
-        log_error ("Error deserializing file '%s' to json", path_to_file);
-        return;
-    }
+        log_debug("Loading physics mapping...");
+        _physicsMapping = nutcommon::loadMapping(path_to_file, "physicsMapping");
+        log_debug("Number of entries loaded for physics mapping: %zu", _physicsMapping.size());
 
-    cxxtools::SerializationInfo *physicsMappingMember = si.findMember ("physicsMapping");
-    if (physicsMappingMember == NULL) {
-        log_error ("Configuration file for mapping '%s' does not contain property 'physicsMapping'", path_to_file);
-    }
-    else {
-        _physicsMapping.clear ();
-        s_deserialize_to_map (*physicsMappingMember, _physicsMapping);
-    }
+        log_debug("Loading inventory mapping...");
+        _inventoryMapping = nutcommon::loadMapping(path_to_file, "inventoryMapping");
+        log_debug("Number of entries loaded for inventory mapping: %zu", _inventoryMapping.size());
 
-    cxxtools::SerializationInfo *inventoryMappingMember = si.findMember ("inventoryMapping");
-    if (inventoryMappingMember == NULL) {
-        log_error ("Configuration file for mapping '%s' does not contain property 'inventoryMapping'", path_to_file);
+        _mappingLoaded = true;
     }
-    else {
-        _inventoryMapping.clear ();
-        s_deserialize_to_map (*inventoryMappingMember, _inventoryMapping);
+    catch (std::exception &e) {
+        log_error("Couldn't load mapping: %s", e.what());
     }
-
-    log_debug ("Number of entries loaded for physicsMapping '%zu'", _physicsMapping.size ());
-    log_debug ("Number of entries loaded for inventoryMapping '%zu'", _inventoryMapping.size ());
-    _mappingLoaded = true;
 }
 
 bool NUTDeviceList::mappingLoaded () const
@@ -825,9 +734,7 @@ nut_device_test (bool verbose)
 
     // test case: load the mappig file
     drivers::nut::NUTDeviceList self {};
-    const char* path = "src/mapping.conf";
-    if (zsys_file_exists ("_build/../src/mapping.conf"))
-        path = "_build/../src/mapping.conf";
+    const char* path = "src/selftest-ro/mapping.conf";
 
     self.load_mapping (path);
 

@@ -111,7 +111,7 @@ actor_commands (
     uint64_t sz = ftell (fp);\
     fclose (fp);\
     if (sz > 0)\
-        printf("STDERR_EMPTY() check failed, please review the stderr.txt in workspace root\n");\
+        printf("STDERR_EMPTY() check failed, please review stderr.txt\n");\
     assert (sz == 0);\
     }
 
@@ -132,6 +132,7 @@ actor_commands_test (bool verbose)
 
     //  @selftest
     static const char* endpoint = "ipc://fty-nut-server-test";
+    static const char* logErrPath = "src/selftest-rw/stderr.txt";
 
     // malamute broker
     zactor_t *malamute = zactor_new (mlm_server, (void*) "Malamute");
@@ -149,7 +150,7 @@ actor_commands_test (bool verbose)
     uint64_t actor_polling = 0;
 
     // --------------------------------------------------------------
-    FILE *fp = freopen ("stderr.txt", "w+", stderr);
+    FILE *fp = freopen (logErrPath, "w+", stderr);
     // empty message - expected fail
     message = zmsg_new ();
     assert (message);
@@ -163,7 +164,7 @@ actor_commands_test (bool verbose)
     STDERR_NON_EMPTY
 
     // --------------------------------------------------------------
-    fp = freopen ("stderr.txt", "w+", stderr);
+    fp = freopen (logErrPath, "w+", stderr);
     // empty string - expected fail
     message = zmsg_new ();
     assert (message);
@@ -178,7 +179,7 @@ actor_commands_test (bool verbose)
     STDERR_NON_EMPTY
 
     // --------------------------------------------------------------
-    fp = freopen ("stderr.txt", "w+", stderr);
+    fp = freopen (logErrPath, "w+", stderr);
     // unknown command - expected fail
     message = zmsg_new ();
     assert (message);
@@ -193,7 +194,7 @@ actor_commands_test (bool verbose)
     STDERR_NON_EMPTY
 
     // --------------------------------------------------------------
-    fp = freopen ("stderr.txt", "w+", stderr);
+    fp = freopen (logErrPath, "w+", stderr);
     // CONFIGURE - expected fail
     message = zmsg_new ();
     assert (message);
@@ -209,7 +210,7 @@ actor_commands_test (bool verbose)
     STDERR_NON_EMPTY
 
     // --------------------------------------------------------------
-    fp = freopen ("stderr.txt", "w+", stderr);
+    fp = freopen (logErrPath, "w+", stderr);
     // POLLING - expected fail
     message = zmsg_new ();
     assert (message);
@@ -225,7 +226,7 @@ actor_commands_test (bool verbose)
     STDERR_NON_EMPTY
 
     // --------------------------------------------------------------
-    fp = freopen ("stderr.txt", "w+", stderr);
+    fp = freopen (logErrPath, "w+", stderr);
     // POLLING - expected fail (in a sense)
     message = zmsg_new ();
     assert (message);
@@ -250,13 +251,13 @@ actor_commands_test (bool verbose)
     actor_polling = 0;
 
     // Prepare the error logger
-    fp = freopen ("stderr.txt", "w+", stderr);
+    fp = freopen (logErrPath, "w+", stderr);
 
     // CONFIGURE
     message = zmsg_new ();
     assert (message);
     zmsg_addstr (message, ACTION_CONFIGURE);
-    zmsg_addstr (message, "src/mapping.conf");
+    zmsg_addstr (message, "src/selftest-ro/mapping.conf");
     rv = actor_commands (client, &message, actor_polling, nut_agent);
     assert (rv == 0);
     assert (message == NULL);

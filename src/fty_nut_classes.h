@@ -32,17 +32,10 @@
 //  External API
 #include "../include/fty_nut.h"
 
-//  Extra headers
-#include "nut_mlm.h"
-
 //  Opaque class structures to allow forward references
 #ifndef CIDR_T_DEFINED
 typedef struct _cidr_t cidr_t;
 #define CIDR_T_DEFINED
-#endif
-#ifndef NUTSCAN_T_DEFINED
-typedef struct _nutscan_t nutscan_t;
-#define NUTSCAN_T_DEFINED
 #endif
 #ifndef ACTOR_COMMANDS_T_DEFINED
 typedef struct _actor_commands_t actor_commands_t;
@@ -89,6 +82,9 @@ typedef struct _asset_state_t asset_state_t;
 #define ASSET_STATE_T_DEFINED
 #endif
 
+//  Extra headers
+#include "nut_mlm.h"
+
 //  Internal API
 // common definitions and idioms from czmq_prelude.h, which are used in generated code
 #if ! defined(__CZMQ_PRELUDE_H_INCLUDED__)
@@ -129,7 +125,6 @@ safe_malloc (size_t size, const char *file, unsigned line)
 
 
 #include "cidr.h"
-#include "nutscan.h"
 #include "actor_commands.h"
 #include "ups_status.h"
 #include "nut_device.h"
@@ -149,11 +144,6 @@ safe_malloc (size_t size, const char *file, unsigned line)
 //  Self test of this class.
 FTY_NUT_PRIVATE void
     cidr_test (bool verbose);
-
-//  *** Draft method, defined for internal use only ***
-//  Self test of this class.
-FTY_NUT_PRIVATE void
-    nutscan_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.

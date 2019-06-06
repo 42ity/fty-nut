@@ -22,32 +22,7 @@
 #ifndef FTY_NUT_CONFIGURATOR_SERVER_H_INCLUDED
 #define FTY_NUT_CONFIGURATOR_SERVER_H_INCLUDED
 
-#include "nut_configurator.h"
-#include "state_manager.h"
-
-#include <string>
-#include <vector>
-
-class Autoconfig {
- public:
-    explicit Autoconfig(StateManager::Reader* reader);
-
-    void onPoll();
-    void onUpdate();
-    int timeout () const {return _timeout;}
-    void handleLimitations (fty_proto_t **message );
- private:
-    void setPollingInterval();
-    void addDeviceIfNeeded(const std::string& name, AssetState::Asset *asset);
-    void cleanupState();
-    int _traversal_color;
-    std::map<std::string,AutoConfigurationInfo> _configDevices;
-    std::unique_ptr<StateManager::Reader> _state_reader;
-
- protected:
-    int _timeout = 2000;
-};
-
+#include "fty_nut_library.h"
 
 #ifdef __cplusplus
 extern "C" {

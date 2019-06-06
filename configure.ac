@@ -107,6 +107,23 @@ else
     AC_MSG_RESULT([no])
 fi
 
+# Install Python Bindings
+AC_MSG_CHECKING([whether to install Python bindings])
+
+AC_ARG_ENABLE([bindings-python],
+    AS_HELP_STRING([--enable-bindings-python=yes/no],
+        [Install Python Bindings [default=no]]),
+    [ZPROJECT_BINDINGS_PYTHON=$enableval],
+    [ZPROJECT_BINDINGS_PYTHON=no])
+
+if test "x$ZPROJECT_BINDINGS_PYTHON" == "xyes"; then
+    AM_CONDITIONAL(ENABLE_BINDINGS_PYTHON, true)
+    AC_MSG_RESULT([yes])
+else
+    AM_CONDITIONAL(ENABLE_BINDINGS_PYTHON, false)
+    AC_MSG_RESULT([no])
+fi
+
 # See if clang-format is in PATH; the result unblocks the relevant recipes
 WITH_CLANG_FORMAT=""
 AS_IF([test x"$CLANG_FORMAT" = x],
@@ -137,532 +154,11 @@ AS_IF([test -n "${pkgconfigdir}" -a -d "${pkgconfigdir}"],
 
 # Will be used to add flags to pkg-config useful when apps want to statically link
 PKGCFG_LIBS_PRIVATE=""
+PKGCFG_NAMES_PRIVATE=""
 
 # Archive user supplied flags
 PREVIOUS_CFLAGS="${CFLAGS}"
 PREVIOUS_LIBS="${LIBS}"
-
-
-was_log4cplus_check_lib_detected=no
-
-search_log4cplus="yes"
-
-AC_ARG_WITH([log4cplus],
-    [
-        AS_HELP_STRING([--with-log4cplus],
-        [yes or no. Optionally specify log4cplus prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
-    ],
-    [
-        search_log4cplus="yes"
-    ],
-    [
-        search_log4cplus="yes"
-    ])
-AS_CASE([x"${with_log4cplus}"],
-    [xyes], [search_log4cplus="yes"],
-    [xno],  [search_log4cplus="no"])
-
-dnl We do not abort right now, because the maintainer/developer may have
-dnl something particular in mind, e.g. to build just parts of a project.
-AS_IF([test x"${search_log4cplus}" = xno],
-    [AC_MSG_WARN([Required dependency on log4cplus was explicitly disabled during configuration by '--with-log4cplus=no'; subsequent full build of fty-nut may fail])])
-
-AS_IF([test x"${search_log4cplus}" = xyes], [
-    # Archive previously detected and supplied flags
-    PRE_SEARCH_CFLAGS="${CFLAGS}"
-    PRE_SEARCH_LIBS="${LIBS}"
-
-    found_pkgconfig=""
-    PKG_CHECK_MODULES([log4cplus], [log4cplus >= 0.0.0],
-    [
-        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $log4cplus_LIBS"
-        was_log4cplus_check_lib_detected=pkgcfg
-        found_pkgconfig="log4cplus"
-    ],
-    [
-        AC_MSG_NOTICE([Package log4cplus not found; falling back to defined compilability tests])
-
-        log4cplus_synthetic_cflags=""
-        log4cplus_synthetic_libs="-llog4cplus"
-
-        if test -n "${with_log4cplus}" && test x"${with_log4cplus}" != xyes && test x"${with_log4cplus}" != xno; then
-            if test -r "${with_log4cplus}/include/log4cplus/logger.h"; then
-                log4cplus_synthetic_cflags="-I${with_log4cplus}/include"
-                log4cplus_synthetic_libs="-L${with_log4cplus}/lib -llog4cplus"
-            else
-            AC_MSG_ERROR([Header file ${with_log4cplus}/include/log4cplus/logger.h was not found. Please check log4cplus prefix])
-            fi
-        else
-            AC_CHECK_HEADER([log4cplus/logger.h], [],
-            AC_MSG_ERROR([Header file log4cplus/logger.h was not found in default search paths])
-                )
-        fi
-
-        AC_CHECK_LIB([log4cplus], [appender_test],
-            [
-                was_log4cplus_check_lib_detected=yes
-                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -llog4cplus"
-            ],
-            [AC_MSG_ERROR([cannot link with -llog4cplus, install log4cplus])])
-    ])
-
-dnl END of PKG_CHECK_MODULES and/or direct tests for log4cplus
-    AS_CASE(["x${was_log4cplus_check_lib_detected}"],
-        [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_log4cplus],["${found_pkgconfig}"])
-                CFLAGS="${log4cplus_CFLAGS} ${CFLAGS}"
-                LIBS="${log4cplus_LIBS} ${LIBS}"
-            ],
-        [xyes], [
-                AC_SUBST([pkgconfig_name_log4cplus],[""])
-                CFLAGS="${log4cplus_synthetic_cflags} ${CFLAGS}"
-                LDFLAGS="${log4cplus_synthetic_libs} ${LDFLAGS}"
-                LIBS="${log4cplus_synthetic_libs} ${LIBS}"
-
-                AC_SUBST([log4cplus_CFLAGS],[${log4cplus_synthetic_cflags}])
-                AC_SUBST([log4cplus_LIBS],[${log4cplus_synthetic_libs}])
-            ],
-        [xno], [
-                AC_SUBST([pkgconfig_name_log4cplus],[""])
-            AC_MSG_ERROR([Cannot find pkg-config metadata for log4cplus 0.0.0 or higher])
-    ])
-])
-dnl END of enabled attempts to search for log4cplus
-
-
-was_fty_common_logging_check_lib_detected=no
-
-search_libfty_common_logging="yes"
-
-AC_ARG_WITH([libfty_common_logging],
-    [
-        AS_HELP_STRING([--with-libfty_common_logging],
-        [yes or no. Optionally specify libfty_common_logging prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
-    ],
-    [
-        search_libfty_common_logging="yes"
-    ],
-    [
-        search_libfty_common_logging="yes"
-    ])
-AS_CASE([x"${with_libfty_common_logging}"],
-    [xyes], [search_libfty_common_logging="yes"],
-    [xno],  [search_libfty_common_logging="no"])
-
-dnl We do not abort right now, because the maintainer/developer may have
-dnl something particular in mind, e.g. to build just parts of a project.
-AS_IF([test x"${search_libfty_common_logging}" = xno],
-    [AC_MSG_WARN([Required dependency on fty_common_logging was explicitly disabled during configuration by '--with-libfty_common_logging=no'; subsequent full build of fty-nut may fail])])
-
-AS_IF([test x"${search_libfty_common_logging}" = xyes], [
-    # Archive previously detected and supplied flags
-    PRE_SEARCH_CFLAGS="${CFLAGS}"
-    PRE_SEARCH_LIBS="${LIBS}"
-
-    found_pkgconfig=""
-    PKG_CHECK_MODULES([fty_common_logging], [libfty_common_logging >= 0.0.0],
-    [
-        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $fty_common_logging_LIBS"
-        was_fty_common_logging_check_lib_detected=pkgcfg
-        found_pkgconfig="libfty_common_logging"
-    ],
-    [
-        AC_MSG_NOTICE([Package libfty_common_logging not found; falling back to defined compilability tests])
-
-        fty_common_logging_synthetic_cflags=""
-        fty_common_logging_synthetic_libs="-lfty-common-logging"
-
-        if test -n "${with_libfty_common_logging}" && test x"${with_libfty_common_logging}" != xyes && test x"${with_libfty_common_logging}" != xno; then
-            if test -r "${with_libfty_common_logging}/include/fty_log.h"; then
-                fty_common_logging_synthetic_cflags="-I${with_libfty_common_logging}/include"
-                fty_common_logging_synthetic_libs="-L${with_libfty_common_logging}/lib -lfty-common-logging"
-            else
-            AC_MSG_ERROR([Header file ${with_libfty_common_logging}/include/fty_log.h was not found. Please check libfty_common_logging prefix])
-            fi
-        else
-            AC_CHECK_HEADER([fty_log.h], [],
-            AC_MSG_ERROR([Header file fty_log.h was not found in default search paths])
-                )
-        fi
-
-        AC_CHECK_LIB([fty-common-logging], [fty_common_logging_selftest],
-            [
-                was_fty_common_logging_check_lib_detected=yes
-                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty-common-logging"
-            ],
-            [AC_MSG_ERROR([cannot link with -lfty-common-logging, install libfty_common_logging])])
-    ])
-
-dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common_logging
-    AS_CASE(["x${was_fty_common_logging_check_lib_detected}"],
-        [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_libfty_common_logging],["${found_pkgconfig}"])
-                CFLAGS="${fty_common_logging_CFLAGS} ${CFLAGS}"
-                LIBS="${fty_common_logging_LIBS} ${LIBS}"
-            ],
-        [xyes], [
-                AC_SUBST([pkgconfig_name_libfty_common_logging],[""])
-                CFLAGS="${fty_common_logging_synthetic_cflags} ${CFLAGS}"
-                LDFLAGS="${fty_common_logging_synthetic_libs} ${LDFLAGS}"
-                LIBS="${fty_common_logging_synthetic_libs} ${LIBS}"
-
-                AC_SUBST([fty_common_logging_CFLAGS],[${fty_common_logging_synthetic_cflags}])
-                AC_SUBST([fty_common_logging_LIBS],[${fty_common_logging_synthetic_libs}])
-            ],
-        [xno], [
-                AC_SUBST([pkgconfig_name_libfty_common_logging],[""])
-            AC_MSG_ERROR([Cannot find pkg-config metadata for libfty_common_logging 0.0.0 or higher])
-    ])
-])
-dnl END of enabled attempts to search for libfty_common_logging
-
-
-was_fty_common_check_lib_detected=no
-
-search_libfty_common="yes"
-
-AC_ARG_WITH([libfty_common],
-    [
-        AS_HELP_STRING([--with-libfty_common],
-        [yes or no. Optionally specify libfty_common prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
-    ],
-    [
-        search_libfty_common="yes"
-    ],
-    [
-        search_libfty_common="yes"
-    ])
-AS_CASE([x"${with_libfty_common}"],
-    [xyes], [search_libfty_common="yes"],
-    [xno],  [search_libfty_common="no"])
-
-dnl We do not abort right now, because the maintainer/developer may have
-dnl something particular in mind, e.g. to build just parts of a project.
-AS_IF([test x"${search_libfty_common}" = xno],
-    [AC_MSG_WARN([Required dependency on fty_common was explicitly disabled during configuration by '--with-libfty_common=no'; subsequent full build of fty-nut may fail])])
-
-AS_IF([test x"${search_libfty_common}" = xyes], [
-    # Archive previously detected and supplied flags
-    PRE_SEARCH_CFLAGS="${CFLAGS}"
-    PRE_SEARCH_LIBS="${LIBS}"
-
-    found_pkgconfig=""
-    PKG_CHECK_MODULES([fty_common], [libfty_common >= 0.0.0],
-    [
-        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $fty_common_LIBS"
-        was_fty_common_check_lib_detected=pkgcfg
-        found_pkgconfig="libfty_common"
-    ],
-    [
-        AC_MSG_NOTICE([Package libfty_common not found; falling back to defined compilability tests])
-
-        fty_common_synthetic_cflags=""
-        fty_common_synthetic_libs="-lfty-common"
-
-        if test -n "${with_libfty_common}" && test x"${with_libfty_common}" != xyes && test x"${with_libfty_common}" != xno; then
-            if test -r "${with_libfty_common}/include/fty_common.h"; then
-                fty_common_synthetic_cflags="-I${with_libfty_common}/include"
-                fty_common_synthetic_libs="-L${with_libfty_common}/lib -lfty-common"
-            else
-            AC_MSG_ERROR([Header file ${with_libfty_common}/include/fty_common.h was not found. Please check libfty_common prefix])
-            fi
-        else
-            AC_CHECK_HEADER([fty_common.h], [],
-            AC_MSG_ERROR([Header file fty_common.h was not found in default search paths])
-                )
-        fi
-
-        AC_CHECK_LIB([fty-common], [fty_common_selftest],
-            [
-                was_fty_common_check_lib_detected=yes
-                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty-common"
-            ],
-            [AC_MSG_ERROR([cannot link with -lfty-common, install libfty_common])])
-    ])
-
-dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common
-    AS_CASE(["x${was_fty_common_check_lib_detected}"],
-        [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_libfty_common],["${found_pkgconfig}"])
-                CFLAGS="${fty_common_CFLAGS} ${CFLAGS}"
-                LIBS="${fty_common_LIBS} ${LIBS}"
-            ],
-        [xyes], [
-                AC_SUBST([pkgconfig_name_libfty_common],[""])
-                CFLAGS="${fty_common_synthetic_cflags} ${CFLAGS}"
-                LDFLAGS="${fty_common_synthetic_libs} ${LDFLAGS}"
-                LIBS="${fty_common_synthetic_libs} ${LIBS}"
-
-                AC_SUBST([fty_common_CFLAGS],[${fty_common_synthetic_cflags}])
-                AC_SUBST([fty_common_LIBS],[${fty_common_synthetic_libs}])
-            ],
-        [xno], [
-                AC_SUBST([pkgconfig_name_libfty_common],[""])
-            AC_MSG_ERROR([Cannot find pkg-config metadata for libfty_common 0.0.0 or higher])
-    ])
-])
-dnl END of enabled attempts to search for libfty_common
-
-
-was_libsodium_check_lib_detected=no
-
-search_libsodium="yes"
-
-AC_ARG_WITH([libsodium],
-    [
-        AS_HELP_STRING([--with-libsodium],
-        [yes or no. Optionally specify libsodium prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
-    ],
-    [
-        search_libsodium="yes"
-    ],
-    [
-        search_libsodium="yes"
-    ])
-AS_CASE([x"${with_libsodium}"],
-    [xyes], [search_libsodium="yes"],
-    [xno],  [search_libsodium="no"])
-
-dnl We do not abort right now, because the maintainer/developer may have
-dnl something particular in mind, e.g. to build just parts of a project.
-AS_IF([test x"${search_libsodium}" = xno],
-    [AC_MSG_WARN([Required dependency on libsodium was explicitly disabled during configuration by '--with-libsodium=no'; subsequent full build of fty-nut may fail])])
-
-AS_IF([test x"${search_libsodium}" = xyes], [
-    # Archive previously detected and supplied flags
-    PRE_SEARCH_CFLAGS="${CFLAGS}"
-    PRE_SEARCH_LIBS="${LIBS}"
-
-    found_pkgconfig=""
-    PKG_CHECK_MODULES([libsodium], [libsodium >= 0.0.0],
-    [
-        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $libsodium_LIBS"
-        was_libsodium_check_lib_detected=pkgcfg
-        found_pkgconfig="libsodium"
-    ],
-    [
-        AC_MSG_NOTICE([Package libsodium not found; falling back to defined compilability tests])
-
-        libsodium_synthetic_cflags=""
-        libsodium_synthetic_libs="-lsodium"
-
-        if test -n "${with_libsodium}" && test x"${with_libsodium}" != xyes && test x"${with_libsodium}" != xno; then
-            if test -r "${with_libsodium}/include/sodium.h"; then
-                libsodium_synthetic_cflags="-I${with_libsodium}/include"
-                libsodium_synthetic_libs="-L${with_libsodium}/lib -lsodium"
-            else
-            AC_MSG_ERROR([Header file ${with_libsodium}/include/sodium.h was not found. Please check libsodium prefix])
-            fi
-        else
-            AC_CHECK_HEADER([sodium.h], [],
-            AC_MSG_ERROR([Header file sodium.h was not found in default search paths])
-                )
-        fi
-
-        AC_CHECK_LIB([sodium], [sodium_init],
-            [
-                was_libsodium_check_lib_detected=yes
-                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lsodium"
-            ],
-            [AC_MSG_ERROR([cannot link with -lsodium, install libsodium])])
-    ])
-
-dnl END of PKG_CHECK_MODULES and/or direct tests for libsodium
-    AS_CASE(["x${was_libsodium_check_lib_detected}"],
-        [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_libsodium],["${found_pkgconfig}"])
-                CFLAGS="${libsodium_CFLAGS} ${CFLAGS}"
-                LIBS="${libsodium_LIBS} ${LIBS}"
-            ],
-        [xyes], [
-                AC_SUBST([pkgconfig_name_libsodium],[""])
-                CFLAGS="${libsodium_synthetic_cflags} ${CFLAGS}"
-                LDFLAGS="${libsodium_synthetic_libs} ${LDFLAGS}"
-                LIBS="${libsodium_synthetic_libs} ${LIBS}"
-
-                AC_SUBST([libsodium_CFLAGS],[${libsodium_synthetic_cflags}])
-                AC_SUBST([libsodium_LIBS],[${libsodium_synthetic_libs}])
-            ],
-        [xno], [
-                AC_SUBST([pkgconfig_name_libsodium],[""])
-            AC_MSG_ERROR([Cannot find pkg-config metadata for libsodium 0.0.0 or higher])
-    ])
-])
-dnl END of enabled attempts to search for libsodium
-
-
-was_libzmq_check_lib_detected=no
-
-search_libzmq="yes"
-
-AC_ARG_WITH([libzmq],
-    [
-        AS_HELP_STRING([--with-libzmq],
-        [yes or no. Optionally specify libzmq prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
-    ],
-    [
-        search_libzmq="yes"
-    ],
-    [
-        search_libzmq="yes"
-    ])
-AS_CASE([x"${with_libzmq}"],
-    [xyes], [search_libzmq="yes"],
-    [xno],  [search_libzmq="no"])
-
-dnl We do not abort right now, because the maintainer/developer may have
-dnl something particular in mind, e.g. to build just parts of a project.
-AS_IF([test x"${search_libzmq}" = xno],
-    [AC_MSG_WARN([Required dependency on libzmq was explicitly disabled during configuration by '--with-libzmq=no'; subsequent full build of fty-nut may fail])])
-
-AS_IF([test x"${search_libzmq}" = xyes], [
-    # Archive previously detected and supplied flags
-    PRE_SEARCH_CFLAGS="${CFLAGS}"
-    PRE_SEARCH_LIBS="${LIBS}"
-
-    found_pkgconfig=""
-    PKG_CHECK_MODULES([libzmq], [libzmq >= 0.0.0],
-    [
-        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $libzmq_LIBS"
-        was_libzmq_check_lib_detected=pkgcfg
-        found_pkgconfig="libzmq"
-    ],
-    [
-        AC_MSG_NOTICE([Package libzmq not found; falling back to defined compilability tests])
-
-        libzmq_synthetic_cflags=""
-        libzmq_synthetic_libs="-lzmq"
-
-        if test -n "${with_libzmq}" && test x"${with_libzmq}" != xyes && test x"${with_libzmq}" != xno; then
-            if test -r "${with_libzmq}/include/zmq.h"; then
-                libzmq_synthetic_cflags="-I${with_libzmq}/include"
-                libzmq_synthetic_libs="-L${with_libzmq}/lib -lzmq"
-            else
-            AC_MSG_ERROR([Header file ${with_libzmq}/include/zmq.h was not found. Please check libzmq prefix])
-            fi
-        else
-            AC_CHECK_HEADER([zmq.h], [],
-            AC_MSG_ERROR([Header file zmq.h was not found in default search paths])
-                )
-        fi
-
-        AC_CHECK_LIB([zmq], [zmq_init],
-            [
-                was_libzmq_check_lib_detected=yes
-                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lzmq"
-            ],
-            [AC_MSG_ERROR([cannot link with -lzmq, install libzmq])])
-    ])
-
-dnl END of PKG_CHECK_MODULES and/or direct tests for libzmq
-    AS_CASE(["x${was_libzmq_check_lib_detected}"],
-        [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_libzmq],["${found_pkgconfig}"])
-                CFLAGS="${libzmq_CFLAGS} ${CFLAGS}"
-                LIBS="${libzmq_LIBS} ${LIBS}"
-            ],
-        [xyes], [
-                AC_SUBST([pkgconfig_name_libzmq],[""])
-                CFLAGS="${libzmq_synthetic_cflags} ${CFLAGS}"
-                LDFLAGS="${libzmq_synthetic_libs} ${LDFLAGS}"
-                LIBS="${libzmq_synthetic_libs} ${LIBS}"
-
-                AC_SUBST([libzmq_CFLAGS],[${libzmq_synthetic_cflags}])
-                AC_SUBST([libzmq_LIBS],[${libzmq_synthetic_libs}])
-            ],
-        [xno], [
-                AC_SUBST([pkgconfig_name_libzmq],[""])
-            AC_MSG_ERROR([Cannot find pkg-config metadata for libzmq 0.0.0 or higher])
-    ])
-])
-dnl END of enabled attempts to search for libzmq
-
-
-was_czmq_check_lib_detected=no
-
-search_libczmq="yes"
-
-AC_ARG_WITH([libczmq],
-    [
-        AS_HELP_STRING([--with-libczmq],
-        [yes or no. Optionally specify libczmq prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
-    ],
-    [
-        search_libczmq="yes"
-    ],
-    [
-        search_libczmq="yes"
-    ])
-AS_CASE([x"${with_libczmq}"],
-    [xyes], [search_libczmq="yes"],
-    [xno],  [search_libczmq="no"])
-
-dnl We do not abort right now, because the maintainer/developer may have
-dnl something particular in mind, e.g. to build just parts of a project.
-AS_IF([test x"${search_libczmq}" = xno],
-    [AC_MSG_WARN([Required dependency on czmq was explicitly disabled during configuration by '--with-libczmq=no'; subsequent full build of fty-nut may fail])])
-
-AS_IF([test x"${search_libczmq}" = xyes], [
-    # Archive previously detected and supplied flags
-    PRE_SEARCH_CFLAGS="${CFLAGS}"
-    PRE_SEARCH_LIBS="${LIBS}"
-
-    found_pkgconfig=""
-    PKG_CHECK_MODULES([czmq], [libczmq >= 3.0.2],
-    [
-        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $czmq_LIBS"
-        was_czmq_check_lib_detected=pkgcfg
-        found_pkgconfig="libczmq"
-    ],
-    [
-        AC_MSG_NOTICE([Package libczmq not found with needed constraints; falling back to defined compilability tests])
-
-        czmq_synthetic_cflags=""
-        czmq_synthetic_libs="-lczmq"
-
-        if test -n "${with_libczmq}" && test x"${with_libczmq}" != xyes && test x"${with_libczmq}" != xno; then
-            if test -r "${with_libczmq}/include/czmq.h"; then
-                czmq_synthetic_cflags="-I${with_libczmq}/include"
-                czmq_synthetic_libs="-L${with_libczmq}/lib -lczmq"
-            else
-            AC_MSG_ERROR([Header file ${with_libczmq}/include/czmq.h was not found. Please check libczmq prefix])
-            fi
-        else
-            AC_CHECK_HEADER([czmq.h], [],
-            AC_MSG_ERROR([Header file czmq.h was not found in default search paths])
-                )
-        fi
-
-        AC_CHECK_LIB([czmq], [zhashx_test],
-            [
-                was_czmq_check_lib_detected=yes
-                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lczmq"
-            ],
-            [AC_MSG_ERROR([cannot link with -lczmq, install libczmq])])
-    ])
-
-dnl END of PKG_CHECK_MODULES and/or direct tests for libczmq
-    AS_CASE(["x${was_czmq_check_lib_detected}"],
-        [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_libczmq],["${found_pkgconfig} >= 3.0.2"])
-                CFLAGS="${czmq_CFLAGS} ${CFLAGS}"
-                LIBS="${czmq_LIBS} ${LIBS}"
-            ],
-        [xyes], [
-                AC_SUBST([pkgconfig_name_libczmq],[""])
-                CFLAGS="${czmq_synthetic_cflags} ${CFLAGS}"
-                LDFLAGS="${czmq_synthetic_libs} ${LDFLAGS}"
-                LIBS="${czmq_synthetic_libs} ${LIBS}"
-
-                AC_SUBST([czmq_CFLAGS],[${czmq_synthetic_cflags}])
-                AC_SUBST([czmq_LIBS],[${czmq_synthetic_libs}])
-            ],
-        [xno], [
-                AC_SUBST([pkgconfig_name_libczmq],[""])
-            AC_MSG_ERROR([Cannot find pkg-config metadata for libczmq 3.0.2 or higher])
-    ])
-])
-dnl END of enabled attempts to search for libczmq
 
 
 was_cxxtools_check_lib_detected=no
@@ -697,7 +193,6 @@ AS_IF([test x"${search_cxxtools}" = xyes], [
     found_pkgconfig=""
     PKG_CHECK_MODULES([cxxtools], [cxxtools >= 0.0.0],
     [
-        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $cxxtools_LIBS"
         was_cxxtools_check_lib_detected=pkgcfg
         found_pkgconfig="cxxtools"
     ],
@@ -731,12 +226,11 @@ AS_IF([test x"${search_cxxtools}" = xyes], [
 dnl END of PKG_CHECK_MODULES and/or direct tests for cxxtools
     AS_CASE(["x${was_cxxtools_check_lib_detected}"],
         [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_cxxtools],["${found_pkgconfig}"])
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
                 CFLAGS="${cxxtools_CFLAGS} ${CFLAGS}"
                 LIBS="${cxxtools_LIBS} ${LIBS}"
             ],
         [xyes], [
-                AC_SUBST([pkgconfig_name_cxxtools],[""])
                 CFLAGS="${cxxtools_synthetic_cflags} ${CFLAGS}"
                 LDFLAGS="${cxxtools_synthetic_libs} ${LDFLAGS}"
                 LIBS="${cxxtools_synthetic_libs} ${LIBS}"
@@ -745,510 +239,10 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for cxxtools
                 AC_SUBST([cxxtools_LIBS],[${cxxtools_synthetic_libs}])
             ],
         [xno], [
-                AC_SUBST([pkgconfig_name_cxxtools],[""])
             AC_MSG_ERROR([Cannot find pkg-config metadata for cxxtools 0.0.0 or higher])
     ])
 ])
 dnl END of enabled attempts to search for cxxtools
-
-
-was_malamute_check_lib_detected=no
-
-search_libmlm="yes"
-
-AC_ARG_WITH([libmlm],
-    [
-        AS_HELP_STRING([--with-libmlm],
-        [yes or no. Optionally specify libmlm prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
-    ],
-    [
-        search_libmlm="yes"
-    ],
-    [
-        search_libmlm="yes"
-    ])
-AS_CASE([x"${with_libmlm}"],
-    [xyes], [search_libmlm="yes"],
-    [xno],  [search_libmlm="no"])
-
-dnl We do not abort right now, because the maintainer/developer may have
-dnl something particular in mind, e.g. to build just parts of a project.
-AS_IF([test x"${search_libmlm}" = xno],
-    [AC_MSG_WARN([Required dependency on malamute was explicitly disabled during configuration by '--with-libmlm=no'; subsequent full build of fty-nut may fail])])
-
-AS_IF([test x"${search_libmlm}" = xyes], [
-    # Archive previously detected and supplied flags
-    PRE_SEARCH_CFLAGS="${CFLAGS}"
-    PRE_SEARCH_LIBS="${LIBS}"
-
-    found_pkgconfig=""
-    PKG_CHECK_MODULES([malamute], [libmlm >= 1.0.0],
-    [
-        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $malamute_LIBS"
-        was_malamute_check_lib_detected=pkgcfg
-        found_pkgconfig="libmlm"
-    ],
-    [
-        AC_MSG_NOTICE([Package libmlm not found with needed constraints; falling back to defined compilability tests])
-
-        malamute_synthetic_cflags=""
-        malamute_synthetic_libs="-lmlm"
-
-        if test -n "${with_libmlm}" && test x"${with_libmlm}" != xyes && test x"${with_libmlm}" != xno; then
-            if test -r "${with_libmlm}/include/malamute.h"; then
-                malamute_synthetic_cflags="-I${with_libmlm}/include"
-                malamute_synthetic_libs="-L${with_libmlm}/lib -lmlm"
-            else
-            AC_MSG_ERROR([Header file ${with_libmlm}/include/malamute.h was not found. Please check libmlm prefix])
-            fi
-        else
-            AC_CHECK_HEADER([malamute.h], [],
-            AC_MSG_ERROR([Header file malamute.h was not found in default search paths])
-                )
-        fi
-
-        AC_CHECK_LIB([mlm], [mlm_server_test],
-            [
-                was_malamute_check_lib_detected=yes
-                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lmlm"
-            ],
-            [AC_MSG_ERROR([cannot link with -lmlm, install libmlm])])
-    ])
-
-dnl END of PKG_CHECK_MODULES and/or direct tests for libmlm
-    AS_CASE(["x${was_malamute_check_lib_detected}"],
-        [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_libmlm],["${found_pkgconfig} >= 1.0.0"])
-                CFLAGS="${malamute_CFLAGS} ${CFLAGS}"
-                LIBS="${malamute_LIBS} ${LIBS}"
-            ],
-        [xyes], [
-                AC_SUBST([pkgconfig_name_libmlm],[""])
-                CFLAGS="${malamute_synthetic_cflags} ${CFLAGS}"
-                LDFLAGS="${malamute_synthetic_libs} ${LDFLAGS}"
-                LIBS="${malamute_synthetic_libs} ${LIBS}"
-
-                AC_SUBST([malamute_CFLAGS],[${malamute_synthetic_cflags}])
-                AC_SUBST([malamute_LIBS],[${malamute_synthetic_libs}])
-            ],
-        [xno], [
-                AC_SUBST([pkgconfig_name_libmlm],[""])
-            AC_MSG_ERROR([Cannot find pkg-config metadata for libmlm 1.0.0 or higher])
-    ])
-])
-dnl END of enabled attempts to search for libmlm
-
-
-was_openssl_check_lib_detected=no
-
-search_openssl="yes"
-
-AC_ARG_WITH([openssl],
-    [
-        AS_HELP_STRING([--with-openssl],
-        [yes or no. Optionally specify openssl prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
-    ],
-    [
-        search_openssl="yes"
-    ],
-    [
-        search_openssl="yes"
-    ])
-AS_CASE([x"${with_openssl}"],
-    [xyes], [search_openssl="yes"],
-    [xno],  [search_openssl="no"])
-
-dnl We do not abort right now, because the maintainer/developer may have
-dnl something particular in mind, e.g. to build just parts of a project.
-AS_IF([test x"${search_openssl}" = xno],
-    [AC_MSG_WARN([Required dependency on openssl was explicitly disabled during configuration by '--with-openssl=no'; subsequent full build of fty-nut may fail])])
-
-AS_IF([test x"${search_openssl}" = xyes], [
-    # Archive previously detected and supplied flags
-    PRE_SEARCH_CFLAGS="${CFLAGS}"
-    PRE_SEARCH_LIBS="${LIBS}"
-
-    found_pkgconfig=""
-    PKG_CHECK_MODULES([openssl], [openssl >= 0.0.0],
-    [
-        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $openssl_LIBS"
-        was_openssl_check_lib_detected=pkgcfg
-        found_pkgconfig="openssl"
-    ],
-    [
-        AC_MSG_WARN([Attribute 'test' is not set on zproject dependency 'openssl' - please ensure it is set])
-    ])
-
-dnl END of PKG_CHECK_MODULES and/or direct tests for openssl
-    AS_CASE(["x${was_openssl_check_lib_detected}"],
-        [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_openssl],["${found_pkgconfig}"])
-                CFLAGS="${openssl_CFLAGS} ${CFLAGS}"
-                LIBS="${openssl_LIBS} ${LIBS}"
-            ],
-        [xyes], [
-                AC_SUBST([pkgconfig_name_openssl],[""])
-                CFLAGS="${openssl_synthetic_cflags} ${CFLAGS}"
-                LDFLAGS="${openssl_synthetic_libs} ${LDFLAGS}"
-                LIBS="${openssl_synthetic_libs} ${LIBS}"
-
-                AC_SUBST([openssl_CFLAGS],[${openssl_synthetic_cflags}])
-                AC_SUBST([openssl_LIBS],[${openssl_synthetic_libs}])
-            ],
-        [xno], [
-                AC_SUBST([pkgconfig_name_openssl],[""])
-            AC_MSG_ERROR([Cannot find pkg-config metadata for openssl 0.0.0 or higher])
-    ])
-])
-dnl END of enabled attempts to search for openssl
-
-
-was_fty_common_mlm_check_lib_detected=no
-
-search_libfty_common_mlm="yes"
-
-AC_ARG_WITH([libfty_common_mlm],
-    [
-        AS_HELP_STRING([--with-libfty_common_mlm],
-        [yes or no. Optionally specify libfty_common_mlm prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
-    ],
-    [
-        search_libfty_common_mlm="yes"
-    ],
-    [
-        search_libfty_common_mlm="yes"
-    ])
-AS_CASE([x"${with_libfty_common_mlm}"],
-    [xyes], [search_libfty_common_mlm="yes"],
-    [xno],  [search_libfty_common_mlm="no"])
-
-dnl We do not abort right now, because the maintainer/developer may have
-dnl something particular in mind, e.g. to build just parts of a project.
-AS_IF([test x"${search_libfty_common_mlm}" = xno],
-    [AC_MSG_WARN([Required dependency on fty_common_mlm was explicitly disabled during configuration by '--with-libfty_common_mlm=no'; subsequent full build of fty-nut may fail])])
-
-AS_IF([test x"${search_libfty_common_mlm}" = xyes], [
-    # Archive previously detected and supplied flags
-    PRE_SEARCH_CFLAGS="${CFLAGS}"
-    PRE_SEARCH_LIBS="${LIBS}"
-
-    found_pkgconfig=""
-    PKG_CHECK_MODULES([fty_common_mlm], [libfty_common_mlm >= 0.0.0],
-    [
-        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $fty_common_mlm_LIBS"
-        was_fty_common_mlm_check_lib_detected=pkgcfg
-        found_pkgconfig="libfty_common_mlm"
-    ],
-    [
-        AC_MSG_NOTICE([Package libfty_common_mlm not found; falling back to defined compilability tests])
-
-        fty_common_mlm_synthetic_cflags=""
-        fty_common_mlm_synthetic_libs="-lfty-common-mlm"
-
-        if test -n "${with_libfty_common_mlm}" && test x"${with_libfty_common_mlm}" != xyes && test x"${with_libfty_common_mlm}" != xno; then
-            if test -r "${with_libfty_common_mlm}/include/fty_common_mlm.h"; then
-                fty_common_mlm_synthetic_cflags="-I${with_libfty_common_mlm}/include"
-                fty_common_mlm_synthetic_libs="-L${with_libfty_common_mlm}/lib -lfty-common-mlm"
-            else
-            AC_MSG_ERROR([Header file ${with_libfty_common_mlm}/include/fty_common_mlm.h was not found. Please check libfty_common_mlm prefix])
-            fi
-        else
-            AC_CHECK_HEADER([fty_common_mlm.h], [],
-            AC_MSG_ERROR([Header file fty_common_mlm.h was not found in default search paths])
-                )
-        fi
-
-        AC_CHECK_LIB([fty-common-mlm], [fty_common_mlm_selftest],
-            [
-                was_fty_common_mlm_check_lib_detected=yes
-                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty-common-mlm"
-            ],
-            [AC_MSG_ERROR([cannot link with -lfty-common-mlm, install libfty_common_mlm])])
-    ])
-
-dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common_mlm
-    AS_CASE(["x${was_fty_common_mlm_check_lib_detected}"],
-        [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_libfty_common_mlm],["${found_pkgconfig}"])
-                CFLAGS="${fty_common_mlm_CFLAGS} ${CFLAGS}"
-                LIBS="${fty_common_mlm_LIBS} ${LIBS}"
-            ],
-        [xyes], [
-                AC_SUBST([pkgconfig_name_libfty_common_mlm],[""])
-                CFLAGS="${fty_common_mlm_synthetic_cflags} ${CFLAGS}"
-                LDFLAGS="${fty_common_mlm_synthetic_libs} ${LDFLAGS}"
-                LIBS="${fty_common_mlm_synthetic_libs} ${LIBS}"
-
-                AC_SUBST([fty_common_mlm_CFLAGS],[${fty_common_mlm_synthetic_cflags}])
-                AC_SUBST([fty_common_mlm_LIBS],[${fty_common_mlm_synthetic_libs}])
-            ],
-        [xno], [
-                AC_SUBST([pkgconfig_name_libfty_common_mlm],[""])
-            AC_MSG_ERROR([Cannot find pkg-config metadata for libfty_common_mlm 0.0.0 or higher])
-    ])
-])
-dnl END of enabled attempts to search for libfty_common_mlm
-
-
-was_tntdb_check_lib_detected=no
-
-search_tntdb="yes"
-
-AC_ARG_WITH([tntdb],
-    [
-        AS_HELP_STRING([--with-tntdb],
-        [yes or no. Optionally specify tntdb prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
-    ],
-    [
-        search_tntdb="yes"
-    ],
-    [
-        search_tntdb="yes"
-    ])
-AS_CASE([x"${with_tntdb}"],
-    [xyes], [search_tntdb="yes"],
-    [xno],  [search_tntdb="no"])
-
-dnl We do not abort right now, because the maintainer/developer may have
-dnl something particular in mind, e.g. to build just parts of a project.
-AS_IF([test x"${search_tntdb}" = xno],
-    [AC_MSG_WARN([Required dependency on tntdb was explicitly disabled during configuration by '--with-tntdb=no'; subsequent full build of fty-nut may fail])])
-
-AS_IF([test x"${search_tntdb}" = xyes], [
-    # Archive previously detected and supplied flags
-    PRE_SEARCH_CFLAGS="${CFLAGS}"
-    PRE_SEARCH_LIBS="${LIBS}"
-
-    found_pkgconfig=""
-    PKG_CHECK_MODULES([tntdb], [tntdb >= 0.0.0],
-    [
-        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $tntdb_LIBS"
-        was_tntdb_check_lib_detected=pkgcfg
-        found_pkgconfig="tntdb"
-    ],
-    [
-        AC_MSG_NOTICE([Package tntdb not found; falling back to defined compilability tests])
-
-        tntdb_synthetic_cflags=""
-        tntdb_synthetic_libs="-ltntdb"
-
-        if test -n "${with_tntdb}" && test x"${with_tntdb}" != xyes && test x"${with_tntdb}" != xno; then
-            if test -r "${with_tntdb}/include/tntdb.h"; then
-                tntdb_synthetic_cflags="-I${with_tntdb}/include"
-                tntdb_synthetic_libs="-L${with_tntdb}/lib -ltntdb"
-            else
-            AC_MSG_ERROR([Header file ${with_tntdb}/include/tntdb.h was not found. Please check tntdb prefix])
-            fi
-        else
-            AC_CHECK_HEADER([tntdb.h], [],
-            AC_MSG_ERROR([Header file tntdb.h was not found in default search paths])
-                )
-        fi
-
-        AC_CHECK_LIB([tntdb], [tntdb::connectCached],
-            [
-                was_tntdb_check_lib_detected=yes
-                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -ltntdb"
-            ],
-            [AC_MSG_ERROR([cannot link with -ltntdb, install tntdb])])
-    ])
-
-dnl END of PKG_CHECK_MODULES and/or direct tests for tntdb
-    AS_CASE(["x${was_tntdb_check_lib_detected}"],
-        [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_tntdb],["${found_pkgconfig}"])
-                CFLAGS="${tntdb_CFLAGS} ${CFLAGS}"
-                LIBS="${tntdb_LIBS} ${LIBS}"
-            ],
-        [xyes], [
-                AC_SUBST([pkgconfig_name_tntdb],[""])
-                CFLAGS="${tntdb_synthetic_cflags} ${CFLAGS}"
-                LDFLAGS="${tntdb_synthetic_libs} ${LDFLAGS}"
-                LIBS="${tntdb_synthetic_libs} ${LIBS}"
-
-                AC_SUBST([tntdb_CFLAGS],[${tntdb_synthetic_cflags}])
-                AC_SUBST([tntdb_LIBS],[${tntdb_synthetic_libs}])
-            ],
-        [xno], [
-                AC_SUBST([pkgconfig_name_tntdb],[""])
-            AC_MSG_ERROR([Cannot find pkg-config metadata for tntdb 0.0.0 or higher])
-    ])
-])
-dnl END of enabled attempts to search for tntdb
-
-
-was_fty_common_db_check_lib_detected=no
-
-search_libfty_common_db="yes"
-
-AC_ARG_WITH([libfty_common_db],
-    [
-        AS_HELP_STRING([--with-libfty_common_db],
-        [yes or no. Optionally specify libfty_common_db prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
-    ],
-    [
-        search_libfty_common_db="yes"
-    ],
-    [
-        search_libfty_common_db="yes"
-    ])
-AS_CASE([x"${with_libfty_common_db}"],
-    [xyes], [search_libfty_common_db="yes"],
-    [xno],  [search_libfty_common_db="no"])
-
-dnl We do not abort right now, because the maintainer/developer may have
-dnl something particular in mind, e.g. to build just parts of a project.
-AS_IF([test x"${search_libfty_common_db}" = xno],
-    [AC_MSG_WARN([Required dependency on fty_common_db was explicitly disabled during configuration by '--with-libfty_common_db=no'; subsequent full build of fty-nut may fail])])
-
-AS_IF([test x"${search_libfty_common_db}" = xyes], [
-    # Archive previously detected and supplied flags
-    PRE_SEARCH_CFLAGS="${CFLAGS}"
-    PRE_SEARCH_LIBS="${LIBS}"
-
-    found_pkgconfig=""
-    PKG_CHECK_MODULES([fty_common_db], [libfty_common_db >= 0.0.0],
-    [
-        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $fty_common_db_LIBS"
-        was_fty_common_db_check_lib_detected=pkgcfg
-        found_pkgconfig="libfty_common_db"
-    ],
-    [
-        AC_MSG_NOTICE([Package libfty_common_db not found; falling back to defined compilability tests])
-
-        fty_common_db_synthetic_cflags=""
-        fty_common_db_synthetic_libs="-lfty-common-db"
-
-        if test -n "${with_libfty_common_db}" && test x"${with_libfty_common_db}" != xyes && test x"${with_libfty_common_db}" != xno; then
-            if test -r "${with_libfty_common_db}/include/fty_common_db.h"; then
-                fty_common_db_synthetic_cflags="-I${with_libfty_common_db}/include"
-                fty_common_db_synthetic_libs="-L${with_libfty_common_db}/lib -lfty-common-db"
-            else
-            AC_MSG_ERROR([Header file ${with_libfty_common_db}/include/fty_common_db.h was not found. Please check libfty_common_db prefix])
-            fi
-        else
-            AC_CHECK_HEADER([fty_common_db.h], [],
-            AC_MSG_ERROR([Header file fty_common_db.h was not found in default search paths])
-                )
-        fi
-
-        AC_CHECK_LIB([fty-common-db], [fty_common_db_selftest],
-            [
-                was_fty_common_db_check_lib_detected=yes
-                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty-common-db"
-            ],
-            [AC_MSG_ERROR([cannot link with -lfty-common-db, install libfty_common_db])])
-    ])
-
-dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common_db
-    AS_CASE(["x${was_fty_common_db_check_lib_detected}"],
-        [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_libfty_common_db],["${found_pkgconfig}"])
-                CFLAGS="${fty_common_db_CFLAGS} ${CFLAGS}"
-                LIBS="${fty_common_db_LIBS} ${LIBS}"
-            ],
-        [xyes], [
-                AC_SUBST([pkgconfig_name_libfty_common_db],[""])
-                CFLAGS="${fty_common_db_synthetic_cflags} ${CFLAGS}"
-                LDFLAGS="${fty_common_db_synthetic_libs} ${LDFLAGS}"
-                LIBS="${fty_common_db_synthetic_libs} ${LIBS}"
-
-                AC_SUBST([fty_common_db_CFLAGS],[${fty_common_db_synthetic_cflags}])
-                AC_SUBST([fty_common_db_LIBS],[${fty_common_db_synthetic_libs}])
-            ],
-        [xno], [
-                AC_SUBST([pkgconfig_name_libfty_common_db],[""])
-            AC_MSG_ERROR([Cannot find pkg-config metadata for libfty_common_db 0.0.0 or higher])
-    ])
-])
-dnl END of enabled attempts to search for libfty_common_db
-
-
-was_fty_proto_check_lib_detected=no
-
-search_libfty_proto="yes"
-
-AC_ARG_WITH([libfty_proto],
-    [
-        AS_HELP_STRING([--with-libfty_proto],
-        [yes or no. Optionally specify libfty_proto prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
-    ],
-    [
-        search_libfty_proto="yes"
-    ],
-    [
-        search_libfty_proto="yes"
-    ])
-AS_CASE([x"${with_libfty_proto}"],
-    [xyes], [search_libfty_proto="yes"],
-    [xno],  [search_libfty_proto="no"])
-
-dnl We do not abort right now, because the maintainer/developer may have
-dnl something particular in mind, e.g. to build just parts of a project.
-AS_IF([test x"${search_libfty_proto}" = xno],
-    [AC_MSG_WARN([Required dependency on fty_proto was explicitly disabled during configuration by '--with-libfty_proto=no'; subsequent full build of fty-nut may fail])])
-
-AS_IF([test x"${search_libfty_proto}" = xyes], [
-    # Archive previously detected and supplied flags
-    PRE_SEARCH_CFLAGS="${CFLAGS}"
-    PRE_SEARCH_LIBS="${LIBS}"
-
-    found_pkgconfig=""
-    PKG_CHECK_MODULES([fty_proto], [libfty_proto >= 1.0.0],
-    [
-        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $fty_proto_LIBS"
-        was_fty_proto_check_lib_detected=pkgcfg
-        found_pkgconfig="libfty_proto"
-    ],
-    [
-        AC_MSG_NOTICE([Package libfty_proto not found with needed constraints; falling back to defined compilability tests])
-
-        fty_proto_synthetic_cflags=""
-        fty_proto_synthetic_libs="-lfty_proto"
-
-        if test -n "${with_libfty_proto}" && test x"${with_libfty_proto}" != xyes && test x"${with_libfty_proto}" != xno; then
-            if test -r "${with_libfty_proto}/include/ftyproto.h"; then
-                fty_proto_synthetic_cflags="-I${with_libfty_proto}/include"
-                fty_proto_synthetic_libs="-L${with_libfty_proto}/lib -lfty_proto"
-            else
-            AC_MSG_ERROR([Header file ${with_libfty_proto}/include/ftyproto.h was not found. Please check libfty_proto prefix])
-            fi
-        else
-            AC_CHECK_HEADER([ftyproto.h], [],
-            AC_MSG_ERROR([Header file ftyproto.h was not found in default search paths])
-                )
-        fi
-
-        AC_CHECK_LIB([fty_proto], [fty_proto_test],
-            [
-                was_fty_proto_check_lib_detected=yes
-                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty_proto"
-            ],
-            [AC_MSG_ERROR([cannot link with -lfty_proto, install libfty_proto])])
-    ])
-
-dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_proto
-    AS_CASE(["x${was_fty_proto_check_lib_detected}"],
-        [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_libfty_proto],["${found_pkgconfig} >= 1.0.0"])
-                CFLAGS="${fty_proto_CFLAGS} ${CFLAGS}"
-                LIBS="${fty_proto_LIBS} ${LIBS}"
-            ],
-        [xyes], [
-                AC_SUBST([pkgconfig_name_libfty_proto],[""])
-                CFLAGS="${fty_proto_synthetic_cflags} ${CFLAGS}"
-                LDFLAGS="${fty_proto_synthetic_libs} ${LDFLAGS}"
-                LIBS="${fty_proto_synthetic_libs} ${LIBS}"
-
-                AC_SUBST([fty_proto_CFLAGS],[${fty_proto_synthetic_cflags}])
-                AC_SUBST([fty_proto_LIBS],[${fty_proto_synthetic_libs}])
-            ],
-        [xno], [
-                AC_SUBST([pkgconfig_name_libfty_proto],[""])
-            AC_MSG_ERROR([Cannot find pkg-config metadata for libfty_proto 1.0.0 or higher])
-    ])
-])
-dnl END of enabled attempts to search for libfty_proto
 
 
 was_cidr_check_lib_detected=no
@@ -1283,7 +277,6 @@ AS_IF([test x"${search_cidr}" = xyes], [
     found_pkgconfig=""
     PKG_CHECK_MODULES([cidr], [cidr >= 0.0.0],
     [
-        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $cidr_LIBS"
         was_cidr_check_lib_detected=pkgcfg
         found_pkgconfig="cidr"
     ],
@@ -1317,12 +310,11 @@ AS_IF([test x"${search_cidr}" = xyes], [
 dnl END of PKG_CHECK_MODULES and/or direct tests for cidr
     AS_CASE(["x${was_cidr_check_lib_detected}"],
         [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_cidr],["${found_pkgconfig}"])
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
                 CFLAGS="${cidr_CFLAGS} ${CFLAGS}"
                 LIBS="${cidr_LIBS} ${LIBS}"
             ],
         [xyes], [
-                AC_SUBST([pkgconfig_name_cidr],[""])
                 CFLAGS="${cidr_synthetic_cflags} ${CFLAGS}"
                 LDFLAGS="${cidr_synthetic_libs} ${LDFLAGS}"
                 LIBS="${cidr_synthetic_libs} ${LIBS}"
@@ -1331,7 +323,6 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for cidr
                 AC_SUBST([cidr_LIBS],[${cidr_synthetic_libs}])
             ],
         [xno], [
-                AC_SUBST([pkgconfig_name_cidr],[""])
             AC_MSG_ERROR([Cannot find pkg-config metadata for cidr 0.0.0 or higher])
     ])
 ])
@@ -1370,7 +361,6 @@ AS_IF([test x"${search_libnutclient}" = xyes], [
     found_pkgconfig=""
     PKG_CHECK_MODULES([libnutclient], [libnutclient >= 0.0.0],
     [
-        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $libnutclient_LIBS"
         was_libnutclient_check_lib_detected=pkgcfg
         found_pkgconfig="libnutclient"
     ],
@@ -1404,12 +394,11 @@ AS_IF([test x"${search_libnutclient}" = xyes], [
 dnl END of PKG_CHECK_MODULES and/or direct tests for libnutclient
     AS_CASE(["x${was_libnutclient_check_lib_detected}"],
         [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_libnutclient],["${found_pkgconfig}"])
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
                 CFLAGS="${libnutclient_CFLAGS} ${CFLAGS}"
                 LIBS="${libnutclient_LIBS} ${LIBS}"
             ],
         [xyes], [
-                AC_SUBST([pkgconfig_name_libnutclient],[""])
                 CFLAGS="${libnutclient_synthetic_cflags} ${CFLAGS}"
                 LDFLAGS="${libnutclient_synthetic_libs} ${LDFLAGS}"
                 LIBS="${libnutclient_synthetic_libs} ${LIBS}"
@@ -1418,11 +407,1163 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for libnutclient
                 AC_SUBST([libnutclient_LIBS],[${libnutclient_synthetic_libs}])
             ],
         [xno], [
-                AC_SUBST([pkgconfig_name_libnutclient],[""])
             AC_MSG_ERROR([Cannot find pkg-config metadata for libnutclient 0.0.0 or higher])
     ])
 ])
 dnl END of enabled attempts to search for libnutclient
+
+
+was_log4cplus_check_lib_detected=no
+
+search_log4cplus="yes"
+
+AC_ARG_WITH([log4cplus],
+    [
+        AS_HELP_STRING([--with-log4cplus],
+        [yes or no. Optionally specify log4cplus prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_log4cplus="yes"
+    ],
+    [
+        search_log4cplus="yes"
+    ])
+AS_CASE([x"${with_log4cplus}"],
+    [xyes], [search_log4cplus="yes"],
+    [xno],  [search_log4cplus="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_log4cplus}" = xno],
+    [AC_MSG_WARN([Required dependency on log4cplus was explicitly disabled during configuration by '--with-log4cplus=no'; subsequent full build of fty-nut may fail])])
+
+AS_IF([test x"${search_log4cplus}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([log4cplus], [log4cplus >= 0.0.0],
+    [
+        was_log4cplus_check_lib_detected=pkgcfg
+        found_pkgconfig="log4cplus"
+    ],
+    [
+        AC_MSG_NOTICE([Package log4cplus not found; falling back to defined compilability tests])
+
+        log4cplus_synthetic_cflags=""
+        log4cplus_synthetic_libs="-llog4cplus"
+
+        if test -n "${with_log4cplus}" && test x"${with_log4cplus}" != xyes && test x"${with_log4cplus}" != xno; then
+            if test -r "${with_log4cplus}/include/log4cplus/logger.h"; then
+                log4cplus_synthetic_cflags="-I${with_log4cplus}/include"
+                log4cplus_synthetic_libs="-L${with_log4cplus}/lib -llog4cplus"
+            else
+            AC_MSG_ERROR([Header file ${with_log4cplus}/include/log4cplus/logger.h was not found. Please check log4cplus prefix])
+            fi
+        else
+            AC_CHECK_HEADER([log4cplus/logger.h], [],
+            AC_MSG_ERROR([Header file log4cplus/logger.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([log4cplus], [appender_test],
+            [
+                was_log4cplus_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -llog4cplus"
+            ],
+            [AC_MSG_ERROR([cannot link with -llog4cplus, install log4cplus])])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for log4cplus
+    AS_CASE(["x${was_log4cplus_check_lib_detected}"],
+        [xpkgcfg], [
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
+                CFLAGS="${log4cplus_CFLAGS} ${CFLAGS}"
+                LIBS="${log4cplus_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                CFLAGS="${log4cplus_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${log4cplus_synthetic_libs} ${LDFLAGS}"
+                LIBS="${log4cplus_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([log4cplus_CFLAGS],[${log4cplus_synthetic_cflags}])
+                AC_SUBST([log4cplus_LIBS],[${log4cplus_synthetic_libs}])
+            ],
+        [xno], [
+            AC_MSG_ERROR([Cannot find pkg-config metadata for log4cplus 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for log4cplus
+
+
+was_fty_common_logging_check_lib_detected=no
+
+search_libfty_common_logging="yes"
+
+AC_ARG_WITH([libfty_common_logging],
+    [
+        AS_HELP_STRING([--with-libfty_common_logging],
+        [yes or no. Optionally specify libfty_common_logging prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_libfty_common_logging="yes"
+    ],
+    [
+        search_libfty_common_logging="yes"
+    ])
+AS_CASE([x"${with_libfty_common_logging}"],
+    [xyes], [search_libfty_common_logging="yes"],
+    [xno],  [search_libfty_common_logging="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_libfty_common_logging}" = xno],
+    [AC_MSG_WARN([Required dependency on fty_common_logging was explicitly disabled during configuration by '--with-libfty_common_logging=no'; subsequent full build of fty-nut may fail])])
+
+AS_IF([test x"${search_libfty_common_logging}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([fty_common_logging], [libfty_common_logging >= 0.0.0],
+    [
+        was_fty_common_logging_check_lib_detected=pkgcfg
+        found_pkgconfig="libfty_common_logging"
+    ],
+    [
+        AC_MSG_NOTICE([Package libfty_common_logging not found; falling back to defined compilability tests])
+
+        fty_common_logging_synthetic_cflags=""
+        fty_common_logging_synthetic_libs="-lfty-common-logging"
+
+        if test -n "${with_libfty_common_logging}" && test x"${with_libfty_common_logging}" != xyes && test x"${with_libfty_common_logging}" != xno; then
+            if test -r "${with_libfty_common_logging}/include/fty_log.h"; then
+                fty_common_logging_synthetic_cflags="-I${with_libfty_common_logging}/include"
+                fty_common_logging_synthetic_libs="-L${with_libfty_common_logging}/lib -lfty-common-logging"
+            else
+            AC_MSG_ERROR([Header file ${with_libfty_common_logging}/include/fty_log.h was not found. Please check libfty_common_logging prefix])
+            fi
+        else
+            AC_CHECK_HEADER([fty_log.h], [],
+            AC_MSG_ERROR([Header file fty_log.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([fty-common-logging], [fty_common_logging_selftest],
+            [
+                was_fty_common_logging_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty-common-logging"
+            ],
+            [AC_MSG_ERROR([cannot link with -lfty-common-logging, install libfty_common_logging])])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common_logging
+    AS_CASE(["x${was_fty_common_logging_check_lib_detected}"],
+        [xpkgcfg], [
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
+                CFLAGS="${fty_common_logging_CFLAGS} ${CFLAGS}"
+                LIBS="${fty_common_logging_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                CFLAGS="${fty_common_logging_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${fty_common_logging_synthetic_libs} ${LDFLAGS}"
+                LIBS="${fty_common_logging_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([fty_common_logging_CFLAGS],[${fty_common_logging_synthetic_cflags}])
+                AC_SUBST([fty_common_logging_LIBS],[${fty_common_logging_synthetic_libs}])
+            ],
+        [xno], [
+            AC_MSG_ERROR([Cannot find pkg-config metadata for libfty_common_logging 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for libfty_common_logging
+
+
+was_fty_common_check_lib_detected=no
+
+search_libfty_common="yes"
+
+AC_ARG_WITH([libfty_common],
+    [
+        AS_HELP_STRING([--with-libfty_common],
+        [yes or no. Optionally specify libfty_common prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_libfty_common="yes"
+    ],
+    [
+        search_libfty_common="yes"
+    ])
+AS_CASE([x"${with_libfty_common}"],
+    [xyes], [search_libfty_common="yes"],
+    [xno],  [search_libfty_common="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_libfty_common}" = xno],
+    [AC_MSG_WARN([Required dependency on fty_common was explicitly disabled during configuration by '--with-libfty_common=no'; subsequent full build of fty-nut may fail])])
+
+AS_IF([test x"${search_libfty_common}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([fty_common], [libfty_common >= 0.0.0],
+    [
+        was_fty_common_check_lib_detected=pkgcfg
+        found_pkgconfig="libfty_common"
+    ],
+    [
+        AC_MSG_NOTICE([Package libfty_common not found; falling back to defined compilability tests])
+
+        fty_common_synthetic_cflags=""
+        fty_common_synthetic_libs="-lfty-common"
+
+        if test -n "${with_libfty_common}" && test x"${with_libfty_common}" != xyes && test x"${with_libfty_common}" != xno; then
+            if test -r "${with_libfty_common}/include/fty_common.h"; then
+                fty_common_synthetic_cflags="-I${with_libfty_common}/include"
+                fty_common_synthetic_libs="-L${with_libfty_common}/lib -lfty-common"
+            else
+            AC_MSG_ERROR([Header file ${with_libfty_common}/include/fty_common.h was not found. Please check libfty_common prefix])
+            fi
+        else
+            AC_CHECK_HEADER([fty_common.h], [],
+            AC_MSG_ERROR([Header file fty_common.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([fty-common], [fty_common_selftest],
+            [
+                was_fty_common_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty-common"
+            ],
+            [AC_MSG_ERROR([cannot link with -lfty-common, install libfty_common])])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common
+    AS_CASE(["x${was_fty_common_check_lib_detected}"],
+        [xpkgcfg], [
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
+                CFLAGS="${fty_common_CFLAGS} ${CFLAGS}"
+                LIBS="${fty_common_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                CFLAGS="${fty_common_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${fty_common_synthetic_libs} ${LDFLAGS}"
+                LIBS="${fty_common_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([fty_common_CFLAGS],[${fty_common_synthetic_cflags}])
+                AC_SUBST([fty_common_LIBS],[${fty_common_synthetic_libs}])
+            ],
+        [xno], [
+            AC_MSG_ERROR([Cannot find pkg-config metadata for libfty_common 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for libfty_common
+
+
+was_tntdb_check_lib_detected=no
+
+search_tntdb="yes"
+
+AC_ARG_WITH([tntdb],
+    [
+        AS_HELP_STRING([--with-tntdb],
+        [yes or no. Optionally specify tntdb prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_tntdb="yes"
+    ],
+    [
+        search_tntdb="yes"
+    ])
+AS_CASE([x"${with_tntdb}"],
+    [xyes], [search_tntdb="yes"],
+    [xno],  [search_tntdb="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_tntdb}" = xno],
+    [AC_MSG_WARN([Required dependency on tntdb was explicitly disabled during configuration by '--with-tntdb=no'; subsequent full build of fty-nut may fail])])
+
+AS_IF([test x"${search_tntdb}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([tntdb], [tntdb >= 0.0.0],
+    [
+        was_tntdb_check_lib_detected=pkgcfg
+        found_pkgconfig="tntdb"
+    ],
+    [
+        AC_MSG_NOTICE([Package tntdb not found; falling back to defined compilability tests])
+
+        tntdb_synthetic_cflags=""
+        tntdb_synthetic_libs="-ltntdb"
+
+        if test -n "${with_tntdb}" && test x"${with_tntdb}" != xyes && test x"${with_tntdb}" != xno; then
+            if test -r "${with_tntdb}/include/tntdb.h"; then
+                tntdb_synthetic_cflags="-I${with_tntdb}/include"
+                tntdb_synthetic_libs="-L${with_tntdb}/lib -ltntdb"
+            else
+            AC_MSG_ERROR([Header file ${with_tntdb}/include/tntdb.h was not found. Please check tntdb prefix])
+            fi
+        else
+            AC_CHECK_HEADER([tntdb.h], [],
+            AC_MSG_ERROR([Header file tntdb.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([tntdb], [tntdb::connectCached],
+            [
+                was_tntdb_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -ltntdb"
+            ],
+            [AC_MSG_ERROR([cannot link with -ltntdb, install tntdb])])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for tntdb
+    AS_CASE(["x${was_tntdb_check_lib_detected}"],
+        [xpkgcfg], [
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
+                CFLAGS="${tntdb_CFLAGS} ${CFLAGS}"
+                LIBS="${tntdb_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                CFLAGS="${tntdb_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${tntdb_synthetic_libs} ${LDFLAGS}"
+                LIBS="${tntdb_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([tntdb_CFLAGS],[${tntdb_synthetic_cflags}])
+                AC_SUBST([tntdb_LIBS],[${tntdb_synthetic_libs}])
+            ],
+        [xno], [
+            AC_MSG_ERROR([Cannot find pkg-config metadata for tntdb 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for tntdb
+
+
+was_libsodium_check_lib_detected=no
+
+search_libsodium="yes"
+
+AC_ARG_WITH([libsodium],
+    [
+        AS_HELP_STRING([--with-libsodium],
+        [yes or no. Optionally specify libsodium prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_libsodium="yes"
+    ],
+    [
+        search_libsodium="yes"
+    ])
+AS_CASE([x"${with_libsodium}"],
+    [xyes], [search_libsodium="yes"],
+    [xno],  [search_libsodium="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_libsodium}" = xno],
+    [AC_MSG_WARN([Required dependency on libsodium was explicitly disabled during configuration by '--with-libsodium=no'; subsequent full build of fty-nut may fail])])
+
+AS_IF([test x"${search_libsodium}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([libsodium], [libsodium >= 0.0.0],
+    [
+        was_libsodium_check_lib_detected=pkgcfg
+        found_pkgconfig="libsodium"
+    ],
+    [
+        AC_MSG_NOTICE([Package libsodium not found; falling back to defined compilability tests])
+
+        libsodium_synthetic_cflags=""
+        libsodium_synthetic_libs="-lsodium"
+
+        if test -n "${with_libsodium}" && test x"${with_libsodium}" != xyes && test x"${with_libsodium}" != xno; then
+            if test -r "${with_libsodium}/include/sodium.h"; then
+                libsodium_synthetic_cflags="-I${with_libsodium}/include"
+                libsodium_synthetic_libs="-L${with_libsodium}/lib -lsodium"
+            else
+            AC_MSG_ERROR([Header file ${with_libsodium}/include/sodium.h was not found. Please check libsodium prefix])
+            fi
+        else
+            AC_CHECK_HEADER([sodium.h], [],
+            AC_MSG_ERROR([Header file sodium.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([sodium], [sodium_init],
+            [
+                was_libsodium_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lsodium"
+            ],
+            [AC_MSG_ERROR([cannot link with -lsodium, install libsodium])])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for libsodium
+    AS_CASE(["x${was_libsodium_check_lib_detected}"],
+        [xpkgcfg], [
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
+                CFLAGS="${libsodium_CFLAGS} ${CFLAGS}"
+                LIBS="${libsodium_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                CFLAGS="${libsodium_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${libsodium_synthetic_libs} ${LDFLAGS}"
+                LIBS="${libsodium_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([libsodium_CFLAGS],[${libsodium_synthetic_cflags}])
+                AC_SUBST([libsodium_LIBS],[${libsodium_synthetic_libs}])
+            ],
+        [xno], [
+            AC_MSG_ERROR([Cannot find pkg-config metadata for libsodium 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for libsodium
+
+
+was_libzmq_check_lib_detected=no
+
+search_libzmq="yes"
+
+AC_ARG_WITH([libzmq],
+    [
+        AS_HELP_STRING([--with-libzmq],
+        [yes or no. Optionally specify libzmq prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_libzmq="yes"
+    ],
+    [
+        search_libzmq="yes"
+    ])
+AS_CASE([x"${with_libzmq}"],
+    [xyes], [search_libzmq="yes"],
+    [xno],  [search_libzmq="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_libzmq}" = xno],
+    [AC_MSG_WARN([Required dependency on libzmq was explicitly disabled during configuration by '--with-libzmq=no'; subsequent full build of fty-nut may fail])])
+
+AS_IF([test x"${search_libzmq}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([libzmq], [libzmq >= 0.0.0],
+    [
+        was_libzmq_check_lib_detected=pkgcfg
+        found_pkgconfig="libzmq"
+    ],
+    [
+        AC_MSG_NOTICE([Package libzmq not found; falling back to defined compilability tests])
+
+        libzmq_synthetic_cflags=""
+        libzmq_synthetic_libs="-lzmq"
+
+        if test -n "${with_libzmq}" && test x"${with_libzmq}" != xyes && test x"${with_libzmq}" != xno; then
+            if test -r "${with_libzmq}/include/zmq.h"; then
+                libzmq_synthetic_cflags="-I${with_libzmq}/include"
+                libzmq_synthetic_libs="-L${with_libzmq}/lib -lzmq"
+            else
+            AC_MSG_ERROR([Header file ${with_libzmq}/include/zmq.h was not found. Please check libzmq prefix])
+            fi
+        else
+            AC_CHECK_HEADER([zmq.h], [],
+            AC_MSG_ERROR([Header file zmq.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([zmq], [zmq_init],
+            [
+                was_libzmq_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lzmq"
+            ],
+            [AC_MSG_ERROR([cannot link with -lzmq, install libzmq])])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for libzmq
+    AS_CASE(["x${was_libzmq_check_lib_detected}"],
+        [xpkgcfg], [
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
+                CFLAGS="${libzmq_CFLAGS} ${CFLAGS}"
+                LIBS="${libzmq_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                CFLAGS="${libzmq_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${libzmq_synthetic_libs} ${LDFLAGS}"
+                LIBS="${libzmq_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([libzmq_CFLAGS],[${libzmq_synthetic_cflags}])
+                AC_SUBST([libzmq_LIBS],[${libzmq_synthetic_libs}])
+            ],
+        [xno], [
+            AC_MSG_ERROR([Cannot find pkg-config metadata for libzmq 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for libzmq
+
+
+was_czmq_check_lib_detected=no
+
+search_libczmq="yes"
+
+AC_ARG_WITH([libczmq],
+    [
+        AS_HELP_STRING([--with-libczmq],
+        [yes or no. Optionally specify libczmq prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_libczmq="yes"
+    ],
+    [
+        search_libczmq="yes"
+    ])
+AS_CASE([x"${with_libczmq}"],
+    [xyes], [search_libczmq="yes"],
+    [xno],  [search_libczmq="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_libczmq}" = xno],
+    [AC_MSG_WARN([Required dependency on czmq was explicitly disabled during configuration by '--with-libczmq=no'; subsequent full build of fty-nut may fail])])
+
+AS_IF([test x"${search_libczmq}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([czmq], [libczmq >= 3.0.2],
+    [
+        was_czmq_check_lib_detected=pkgcfg
+        found_pkgconfig="libczmq"
+    ],
+    [
+        AC_MSG_NOTICE([Package libczmq not found with needed constraints; falling back to defined compilability tests])
+
+        czmq_synthetic_cflags=""
+        czmq_synthetic_libs="-lczmq"
+
+        if test -n "${with_libczmq}" && test x"${with_libczmq}" != xyes && test x"${with_libczmq}" != xno; then
+            if test -r "${with_libczmq}/include/czmq.h"; then
+                czmq_synthetic_cflags="-I${with_libczmq}/include"
+                czmq_synthetic_libs="-L${with_libczmq}/lib -lczmq"
+            else
+            AC_MSG_ERROR([Header file ${with_libczmq}/include/czmq.h was not found. Please check libczmq prefix])
+            fi
+        else
+            AC_CHECK_HEADER([czmq.h], [],
+            AC_MSG_ERROR([Header file czmq.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([czmq], [zhashx_test],
+            [
+                was_czmq_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lczmq"
+            ],
+            [AC_MSG_ERROR([cannot link with -lczmq, install libczmq])])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for libczmq
+    AS_CASE(["x${was_czmq_check_lib_detected}"],
+        [xpkgcfg], [
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig} >= 3.0.2"
+                CFLAGS="${czmq_CFLAGS} ${CFLAGS}"
+                LIBS="${czmq_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                CFLAGS="${czmq_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${czmq_synthetic_libs} ${LDFLAGS}"
+                LIBS="${czmq_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([czmq_CFLAGS],[${czmq_synthetic_cflags}])
+                AC_SUBST([czmq_LIBS],[${czmq_synthetic_libs}])
+            ],
+        [xno], [
+            AC_MSG_ERROR([Cannot find pkg-config metadata for libczmq 3.0.2 or higher])
+    ])
+])
+dnl END of enabled attempts to search for libczmq
+
+
+was_malamute_check_lib_detected=no
+
+search_libmlm="yes"
+
+AC_ARG_WITH([libmlm],
+    [
+        AS_HELP_STRING([--with-libmlm],
+        [yes or no. Optionally specify libmlm prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_libmlm="yes"
+    ],
+    [
+        search_libmlm="yes"
+    ])
+AS_CASE([x"${with_libmlm}"],
+    [xyes], [search_libmlm="yes"],
+    [xno],  [search_libmlm="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_libmlm}" = xno],
+    [AC_MSG_WARN([Required dependency on malamute was explicitly disabled during configuration by '--with-libmlm=no'; subsequent full build of fty-nut may fail])])
+
+AS_IF([test x"${search_libmlm}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([malamute], [libmlm >= 1.0.0],
+    [
+        was_malamute_check_lib_detected=pkgcfg
+        found_pkgconfig="libmlm"
+    ],
+    [
+        AC_MSG_NOTICE([Package libmlm not found with needed constraints; falling back to defined compilability tests])
+
+        malamute_synthetic_cflags=""
+        malamute_synthetic_libs="-lmlm"
+
+        if test -n "${with_libmlm}" && test x"${with_libmlm}" != xyes && test x"${with_libmlm}" != xno; then
+            if test -r "${with_libmlm}/include/malamute.h"; then
+                malamute_synthetic_cflags="-I${with_libmlm}/include"
+                malamute_synthetic_libs="-L${with_libmlm}/lib -lmlm"
+            else
+            AC_MSG_ERROR([Header file ${with_libmlm}/include/malamute.h was not found. Please check libmlm prefix])
+            fi
+        else
+            AC_CHECK_HEADER([malamute.h], [],
+            AC_MSG_ERROR([Header file malamute.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([mlm], [mlm_server_test],
+            [
+                was_malamute_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lmlm"
+            ],
+            [AC_MSG_ERROR([cannot link with -lmlm, install libmlm])])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for libmlm
+    AS_CASE(["x${was_malamute_check_lib_detected}"],
+        [xpkgcfg], [
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig} >= 1.0.0"
+                CFLAGS="${malamute_CFLAGS} ${CFLAGS}"
+                LIBS="${malamute_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                CFLAGS="${malamute_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${malamute_synthetic_libs} ${LDFLAGS}"
+                LIBS="${malamute_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([malamute_CFLAGS],[${malamute_synthetic_cflags}])
+                AC_SUBST([malamute_LIBS],[${malamute_synthetic_libs}])
+            ],
+        [xno], [
+            AC_MSG_ERROR([Cannot find pkg-config metadata for libmlm 1.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for libmlm
+
+
+was_fty_proto_check_lib_detected=no
+
+search_libfty_proto="yes"
+
+AC_ARG_WITH([libfty_proto],
+    [
+        AS_HELP_STRING([--with-libfty_proto],
+        [yes or no. Optionally specify libfty_proto prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_libfty_proto="yes"
+    ],
+    [
+        search_libfty_proto="yes"
+    ])
+AS_CASE([x"${with_libfty_proto}"],
+    [xyes], [search_libfty_proto="yes"],
+    [xno],  [search_libfty_proto="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_libfty_proto}" = xno],
+    [AC_MSG_WARN([Required dependency on fty_proto was explicitly disabled during configuration by '--with-libfty_proto=no'; subsequent full build of fty-nut may fail])])
+
+AS_IF([test x"${search_libfty_proto}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([fty_proto], [libfty_proto >= 1.0.0],
+    [
+        was_fty_proto_check_lib_detected=pkgcfg
+        found_pkgconfig="libfty_proto"
+    ],
+    [
+        AC_MSG_NOTICE([Package libfty_proto not found with needed constraints; falling back to defined compilability tests])
+
+        fty_proto_synthetic_cflags=""
+        fty_proto_synthetic_libs="-lfty_proto"
+
+        if test -n "${with_libfty_proto}" && test x"${with_libfty_proto}" != xyes && test x"${with_libfty_proto}" != xno; then
+            if test -r "${with_libfty_proto}/include/ftyproto.h"; then
+                fty_proto_synthetic_cflags="-I${with_libfty_proto}/include"
+                fty_proto_synthetic_libs="-L${with_libfty_proto}/lib -lfty_proto"
+            else
+            AC_MSG_ERROR([Header file ${with_libfty_proto}/include/ftyproto.h was not found. Please check libfty_proto prefix])
+            fi
+        else
+            AC_CHECK_HEADER([ftyproto.h], [],
+            AC_MSG_ERROR([Header file ftyproto.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([fty_proto], [fty_proto_test],
+            [
+                was_fty_proto_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty_proto"
+            ],
+            [AC_MSG_ERROR([cannot link with -lfty_proto, install libfty_proto])])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_proto
+    AS_CASE(["x${was_fty_proto_check_lib_detected}"],
+        [xpkgcfg], [
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig} >= 1.0.0"
+                CFLAGS="${fty_proto_CFLAGS} ${CFLAGS}"
+                LIBS="${fty_proto_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                CFLAGS="${fty_proto_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${fty_proto_synthetic_libs} ${LDFLAGS}"
+                LIBS="${fty_proto_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([fty_proto_CFLAGS],[${fty_proto_synthetic_cflags}])
+                AC_SUBST([fty_proto_LIBS],[${fty_proto_synthetic_libs}])
+            ],
+        [xno], [
+            AC_MSG_ERROR([Cannot find pkg-config metadata for libfty_proto 1.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for libfty_proto
+
+
+was_fty_common_db_check_lib_detected=no
+
+search_libfty_common_db="yes"
+
+AC_ARG_WITH([libfty_common_db],
+    [
+        AS_HELP_STRING([--with-libfty_common_db],
+        [yes or no. Optionally specify libfty_common_db prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_libfty_common_db="yes"
+    ],
+    [
+        search_libfty_common_db="yes"
+    ])
+AS_CASE([x"${with_libfty_common_db}"],
+    [xyes], [search_libfty_common_db="yes"],
+    [xno],  [search_libfty_common_db="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_libfty_common_db}" = xno],
+    [AC_MSG_WARN([Required dependency on fty_common_db was explicitly disabled during configuration by '--with-libfty_common_db=no'; subsequent full build of fty-nut may fail])])
+
+AS_IF([test x"${search_libfty_common_db}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([fty_common_db], [libfty_common_db >= 0.0.0],
+    [
+        was_fty_common_db_check_lib_detected=pkgcfg
+        found_pkgconfig="libfty_common_db"
+    ],
+    [
+        AC_MSG_NOTICE([Package libfty_common_db not found; falling back to defined compilability tests])
+
+        fty_common_db_synthetic_cflags=""
+        fty_common_db_synthetic_libs="-lfty-common-db"
+
+        if test -n "${with_libfty_common_db}" && test x"${with_libfty_common_db}" != xyes && test x"${with_libfty_common_db}" != xno; then
+            if test -r "${with_libfty_common_db}/include/fty_common_db.h"; then
+                fty_common_db_synthetic_cflags="-I${with_libfty_common_db}/include"
+                fty_common_db_synthetic_libs="-L${with_libfty_common_db}/lib -lfty-common-db"
+            else
+            AC_MSG_ERROR([Header file ${with_libfty_common_db}/include/fty_common_db.h was not found. Please check libfty_common_db prefix])
+            fi
+        else
+            AC_CHECK_HEADER([fty_common_db.h], [],
+            AC_MSG_ERROR([Header file fty_common_db.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([fty-common-db], [fty_common_db_selftest],
+            [
+                was_fty_common_db_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty-common-db"
+            ],
+            [AC_MSG_ERROR([cannot link with -lfty-common-db, install libfty_common_db])])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common_db
+    AS_CASE(["x${was_fty_common_db_check_lib_detected}"],
+        [xpkgcfg], [
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
+                CFLAGS="${fty_common_db_CFLAGS} ${CFLAGS}"
+                LIBS="${fty_common_db_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                CFLAGS="${fty_common_db_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${fty_common_db_synthetic_libs} ${LDFLAGS}"
+                LIBS="${fty_common_db_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([fty_common_db_CFLAGS],[${fty_common_db_synthetic_cflags}])
+                AC_SUBST([fty_common_db_LIBS],[${fty_common_db_synthetic_libs}])
+            ],
+        [xno], [
+            AC_MSG_ERROR([Cannot find pkg-config metadata for libfty_common_db 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for libfty_common_db
+
+
+was_openssl_check_lib_detected=no
+
+search_openssl="yes"
+
+AC_ARG_WITH([openssl],
+    [
+        AS_HELP_STRING([--with-openssl],
+        [yes or no. Optionally specify openssl prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_openssl="yes"
+    ],
+    [
+        search_openssl="yes"
+    ])
+AS_CASE([x"${with_openssl}"],
+    [xyes], [search_openssl="yes"],
+    [xno],  [search_openssl="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_openssl}" = xno],
+    [AC_MSG_WARN([Required dependency on openssl was explicitly disabled during configuration by '--with-openssl=no'; subsequent full build of fty-nut may fail])])
+
+AS_IF([test x"${search_openssl}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([openssl], [openssl >= 0.0.0],
+    [
+        was_openssl_check_lib_detected=pkgcfg
+        found_pkgconfig="openssl"
+    ],
+    [
+        AC_MSG_WARN([Attribute 'test' is not set on zproject dependency 'openssl' - please ensure it is set])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for openssl
+    AS_CASE(["x${was_openssl_check_lib_detected}"],
+        [xpkgcfg], [
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
+                CFLAGS="${openssl_CFLAGS} ${CFLAGS}"
+                LIBS="${openssl_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                CFLAGS="${openssl_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${openssl_synthetic_libs} ${LDFLAGS}"
+                LIBS="${openssl_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([openssl_CFLAGS],[${openssl_synthetic_cflags}])
+                AC_SUBST([openssl_LIBS],[${openssl_synthetic_libs}])
+            ],
+        [xno], [
+            AC_MSG_ERROR([Cannot find pkg-config metadata for openssl 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for openssl
+
+
+was_fty_common_mlm_check_lib_detected=no
+
+search_libfty_common_mlm="yes"
+
+AC_ARG_WITH([libfty_common_mlm],
+    [
+        AS_HELP_STRING([--with-libfty_common_mlm],
+        [yes or no. Optionally specify libfty_common_mlm prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_libfty_common_mlm="yes"
+    ],
+    [
+        search_libfty_common_mlm="yes"
+    ])
+AS_CASE([x"${with_libfty_common_mlm}"],
+    [xyes], [search_libfty_common_mlm="yes"],
+    [xno],  [search_libfty_common_mlm="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_libfty_common_mlm}" = xno],
+    [AC_MSG_WARN([Required dependency on fty_common_mlm was explicitly disabled during configuration by '--with-libfty_common_mlm=no'; subsequent full build of fty-nut may fail])])
+
+AS_IF([test x"${search_libfty_common_mlm}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([fty_common_mlm], [libfty_common_mlm >= 0.0.0],
+    [
+        was_fty_common_mlm_check_lib_detected=pkgcfg
+        found_pkgconfig="libfty_common_mlm"
+    ],
+    [
+        AC_MSG_NOTICE([Package libfty_common_mlm not found; falling back to defined compilability tests])
+
+        fty_common_mlm_synthetic_cflags=""
+        fty_common_mlm_synthetic_libs="-lfty-common-mlm"
+
+        if test -n "${with_libfty_common_mlm}" && test x"${with_libfty_common_mlm}" != xyes && test x"${with_libfty_common_mlm}" != xno; then
+            if test -r "${with_libfty_common_mlm}/include/fty_common_mlm.h"; then
+                fty_common_mlm_synthetic_cflags="-I${with_libfty_common_mlm}/include"
+                fty_common_mlm_synthetic_libs="-L${with_libfty_common_mlm}/lib -lfty-common-mlm"
+            else
+            AC_MSG_ERROR([Header file ${with_libfty_common_mlm}/include/fty_common_mlm.h was not found. Please check libfty_common_mlm prefix])
+            fi
+        else
+            AC_CHECK_HEADER([fty_common_mlm.h], [],
+            AC_MSG_ERROR([Header file fty_common_mlm.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([fty-common-mlm], [fty_common_mlm_selftest],
+            [
+                was_fty_common_mlm_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty-common-mlm"
+            ],
+            [AC_MSG_ERROR([cannot link with -lfty-common-mlm, install libfty_common_mlm])])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common_mlm
+    AS_CASE(["x${was_fty_common_mlm_check_lib_detected}"],
+        [xpkgcfg], [
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
+                CFLAGS="${fty_common_mlm_CFLAGS} ${CFLAGS}"
+                LIBS="${fty_common_mlm_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                CFLAGS="${fty_common_mlm_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${fty_common_mlm_synthetic_libs} ${LDFLAGS}"
+                LIBS="${fty_common_mlm_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([fty_common_mlm_CFLAGS],[${fty_common_mlm_synthetic_cflags}])
+                AC_SUBST([fty_common_mlm_LIBS],[${fty_common_mlm_synthetic_libs}])
+            ],
+        [xno], [
+            AC_MSG_ERROR([Cannot find pkg-config metadata for libfty_common_mlm 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for libfty_common_mlm
+
+
+was_fty_security_wallet_check_lib_detected=no
+
+search_libfty_security_wallet="yes"
+
+AC_ARG_WITH([libfty_security_wallet],
+    [
+        AS_HELP_STRING([--with-libfty_security_wallet],
+        [yes or no. Optionally specify libfty_security_wallet prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_libfty_security_wallet="yes"
+    ],
+    [
+        search_libfty_security_wallet="yes"
+    ])
+AS_CASE([x"${with_libfty_security_wallet}"],
+    [xyes], [search_libfty_security_wallet="yes"],
+    [xno],  [search_libfty_security_wallet="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_libfty_security_wallet}" = xno],
+    [AC_MSG_WARN([Required dependency on fty_security_wallet was explicitly disabled during configuration by '--with-libfty_security_wallet=no'; subsequent full build of fty-nut may fail])])
+
+AS_IF([test x"${search_libfty_security_wallet}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([fty_security_wallet], [libfty_security_wallet >= 0.0.0],
+    [
+        was_fty_security_wallet_check_lib_detected=pkgcfg
+        found_pkgconfig="libfty_security_wallet"
+    ],
+    [
+        AC_MSG_NOTICE([Package libfty_security_wallet not found; falling back to defined compilability tests])
+
+        fty_security_wallet_synthetic_cflags=""
+        fty_security_wallet_synthetic_libs="-lfty-security-wallet"
+
+        if test -n "${with_libfty_security_wallet}" && test x"${with_libfty_security_wallet}" != xyes && test x"${with_libfty_security_wallet}" != xno; then
+            if test -r "${with_libfty_security_wallet}/include/fty_security_wallet.h"; then
+                fty_security_wallet_synthetic_cflags="-I${with_libfty_security_wallet}/include"
+                fty_security_wallet_synthetic_libs="-L${with_libfty_security_wallet}/lib -lfty-security-wallet"
+            else
+            AC_MSG_ERROR([Header file ${with_libfty_security_wallet}/include/fty_security_wallet.h was not found. Please check libfty_security_wallet prefix])
+            fi
+        else
+            AC_CHECK_HEADER([fty_security_wallet.h], [],
+            AC_MSG_ERROR([Header file fty_security_wallet.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([fty-security-wallet], [fty_security_wallet_test],
+            [
+                was_fty_security_wallet_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty-security-wallet"
+            ],
+            [AC_MSG_ERROR([cannot link with -lfty-security-wallet, install libfty_security_wallet])])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_security_wallet
+    AS_CASE(["x${was_fty_security_wallet_check_lib_detected}"],
+        [xpkgcfg], [
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
+                CFLAGS="${fty_security_wallet_CFLAGS} ${CFLAGS}"
+                LIBS="${fty_security_wallet_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                CFLAGS="${fty_security_wallet_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${fty_security_wallet_synthetic_libs} ${LDFLAGS}"
+                LIBS="${fty_security_wallet_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([fty_security_wallet_CFLAGS],[${fty_security_wallet_synthetic_cflags}])
+                AC_SUBST([fty_security_wallet_LIBS],[${fty_security_wallet_synthetic_libs}])
+            ],
+        [xno], [
+            AC_MSG_ERROR([Cannot find pkg-config metadata for libfty_security_wallet 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for libfty_security_wallet
+
+
+was_fty_common_nut_check_lib_detected=no
+
+search_libfty_common_nut="yes"
+
+AC_ARG_WITH([libfty_common_nut],
+    [
+        AS_HELP_STRING([--with-libfty_common_nut],
+        [yes or no. Optionally specify libfty_common_nut prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_libfty_common_nut="yes"
+    ],
+    [
+        search_libfty_common_nut="yes"
+    ])
+AS_CASE([x"${with_libfty_common_nut}"],
+    [xyes], [search_libfty_common_nut="yes"],
+    [xno],  [search_libfty_common_nut="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_libfty_common_nut}" = xno],
+    [AC_MSG_WARN([Required dependency on fty_common_nut was explicitly disabled during configuration by '--with-libfty_common_nut=no'; subsequent full build of fty-nut may fail])])
+
+AS_IF([test x"${search_libfty_common_nut}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([fty_common_nut], [libfty_common_nut >= 0.0.0],
+    [
+        was_fty_common_nut_check_lib_detected=pkgcfg
+        found_pkgconfig="libfty_common_nut"
+    ],
+    [
+        AC_MSG_NOTICE([Package libfty_common_nut not found; falling back to defined compilability tests])
+
+        fty_common_nut_synthetic_cflags=""
+        fty_common_nut_synthetic_libs="-lfty-common-nut"
+
+        if test -n "${with_libfty_common_nut}" && test x"${with_libfty_common_nut}" != xyes && test x"${with_libfty_common_nut}" != xno; then
+            if test -r "${with_libfty_common_nut}/include/fty_common_nut.h"; then
+                fty_common_nut_synthetic_cflags="-I${with_libfty_common_nut}/include"
+                fty_common_nut_synthetic_libs="-L${with_libfty_common_nut}/lib -lfty-common-nut"
+            else
+            AC_MSG_ERROR([Header file ${with_libfty_common_nut}/include/fty_common_nut.h was not found. Please check libfty_common_nut prefix])
+            fi
+        else
+            AC_CHECK_HEADER([fty_common_nut.h], [],
+            AC_MSG_ERROR([Header file fty_common_nut.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([fty-common-nut], [fty_common_nut_selftest],
+            [
+                was_fty_common_nut_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty-common-nut"
+            ],
+            [AC_MSG_ERROR([cannot link with -lfty-common-nut, install libfty_common_nut])])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common_nut
+    AS_CASE(["x${was_fty_common_nut_check_lib_detected}"],
+        [xpkgcfg], [
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
+                CFLAGS="${fty_common_nut_CFLAGS} ${CFLAGS}"
+                LIBS="${fty_common_nut_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                CFLAGS="${fty_common_nut_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${fty_common_nut_synthetic_libs} ${LDFLAGS}"
+                LIBS="${fty_common_nut_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([fty_common_nut_CFLAGS],[${fty_common_nut_synthetic_cflags}])
+                AC_SUBST([fty_common_nut_LIBS],[${fty_common_nut_synthetic_libs}])
+            ],
+        [xno], [
+            AC_MSG_ERROR([Cannot find pkg-config metadata for libfty_common_nut 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for libfty_common_nut
 
 
 was_fty_shm_check_lib_detected=no
@@ -1457,7 +1598,6 @@ AS_IF([test x"${search_libfty_shm}" = xyes], [
     found_pkgconfig=""
     PKG_CHECK_MODULES([fty_shm], [libfty_shm >= 1.0.0],
     [
-        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $fty_shm_LIBS"
         was_fty_shm_check_lib_detected=pkgcfg
         found_pkgconfig="libfty_shm"
     ],
@@ -1491,12 +1631,11 @@ AS_IF([test x"${search_libfty_shm}" = xyes], [
 dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_shm
     AS_CASE(["x${was_fty_shm_check_lib_detected}"],
         [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_libfty_shm],["${found_pkgconfig} >= 1.0.0"])
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig} >= 1.0.0"
                 CFLAGS="${fty_shm_CFLAGS} ${CFLAGS}"
                 LIBS="${fty_shm_LIBS} ${LIBS}"
             ],
         [xyes], [
-                AC_SUBST([pkgconfig_name_libfty_shm],[""])
                 CFLAGS="${fty_shm_synthetic_cflags} ${CFLAGS}"
                 LDFLAGS="${fty_shm_synthetic_libs} ${LDFLAGS}"
                 LIBS="${fty_shm_synthetic_libs} ${LIBS}"
@@ -1505,7 +1644,6 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_shm
                 AC_SUBST([fty_shm_LIBS],[${fty_shm_synthetic_libs}])
             ],
         [xno], [
-                AC_SUBST([pkgconfig_name_libfty_shm],[""])
             AC_MSG_ERROR([Cannot find pkg-config metadata for libfty_shm 1.0.0 or higher])
     ])
 ])
@@ -1516,6 +1654,7 @@ CFLAGS="${PREVIOUS_CFLAGS}"
 LIBS="${PREVIOUS_LIBS}"
 
 AC_SUBST(pkg_config_libs_private, $PKGCFG_LIBS_PRIVATE)
+AC_SUBST(pkg_config_names_private, $PKGCFG_NAMES_PRIVATE)
 
 # Platform specific checks
 fty_nut_on_mingw32="no"
@@ -1849,7 +1988,7 @@ AC_CONFIG_FILES([Makefile
                  src/fty-nut.cfg
                  src/fty-nut-command.cfg
                  src/fty-nut-configurator.cfg
-                 ])
+                ])
 
 AM_COND_IF([WITH_SYSTEMD_UNITS],
     [AC_CONFIG_FILES([
@@ -1901,6 +2040,7 @@ echo Build docs.................... : $fty_nut_build_doc
 echo Build host.................... : $BUILD_HOST
 echo Build user.................... : $USER
 echo Draft API..................... : $enable_drafts
+echo Python Bindings............... : $ZPROJECT_BINDINGS_PYTHON
 echo Install dir................... : $prefix
 echo Install man pages............. : $fty_nut_install_man
 
@@ -1920,6 +2060,7 @@ echo Configure complete! Now proceed with:
 echo "    - 'make'               compile the project"
 echo "    - 'make check'         run the project's selftest"
 echo "    - 'make install'       install the project to $prefix"
+echo "    - 'make bindings       install enabled language bindings (Python, etc)"
 echo
 echo Further options are:
 echo "    - 'make callcheck'     run the project's selftest with valgrind to"
