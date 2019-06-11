@@ -187,9 +187,13 @@ nutcommon::DeviceConfigurations::const_iterator NUTConfigurator::selectBestConfi
         if (bCanNetXml) {
             log_debug("NetXML capable device => Use NetXML.");
             bestConfig = getNetXMLConfiguration(configs);
-        } else {
+        }
+        else if (bCanSnmp) {
             log_debug("SNMP capable device => Use SNMP.");
             bestConfig = getBestSnmpMibConfiguration(configs);
+        }
+        else {
+            log_debug("Unsure of device type => Use first configuration.");
         }
     }
 
@@ -254,7 +258,7 @@ nutcommon::DeviceConfigurations NUTConfigurator::getConfigurationFromUpsConfBloc
     std::string UBA = info.asset->upsconf_block(); // UpsconfBlockAsset - as stored in contents of the asset.
     char SEP = UBA.at(0);
     if (SEP == '\0' || UBA.at(1) == '\0') {
-        log_info("Device '%s' is configured with an empty explicit upsconf_block from its asset (adding asset name as NUT device-tag with no config).");
+        log_info("Device '%s' is configured with an empty explicit upsconf_block from its asset (adding asset name as NUT device-tag with no config).", name.c_str());
         configs = { { { "name", name } } };
     }
     else {
@@ -262,10 +266,10 @@ nutcommon::DeviceConfigurations NUTConfigurator::getConfigurationFromUpsConfBloc
         std::string UBN = UBA.substr(1); //UpsconfBlockNut - with EOL chars, without leading SEP character.
         std::replace(UBN.begin(), UBN.end(), SEP, '\n');
         if ( UBN.at(0) == '[' ) {
-            log_info("Device '%s' is configured with a complete explicit upsconf_block from its asset, including a custom NUT device-tag:\n%s\n", UBN.c_str());
+            log_info("Device '%s' is configured with a complete explicit upsconf_block from its asset, including a custom NUT device-tag:\n%s", name.c_str(), UBN.c_str());
             configs = nutcommon::parseConfigurationFile(UBN);
         } else {
-            log_info("Device '%s' is configured with a content-only explicit upsconf_block from its asset (prepending asset name as NUT device-tag):\n%s\n", UBN.c_str());
+            log_info("Device '%s' is configured with a content-only explicit upsconf_block from its asset (prepending asset name as NUT device-tag):\n%s", name.c_str(), UBN.c_str());
             configs = nutcommon::parseConfigurationFile(std::string("[") + name + "]\n" + UBN + "\n");
         }
     }
