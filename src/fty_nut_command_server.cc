@@ -127,7 +127,7 @@ send_error(mlm_client_t *client, const std::string &address, const std::string &
     zmsg_t *error = zmsg_new();
     zmsg_addstr(error, "ERROR");
     zmsg_addstr(error, uuid.c_str());
-    zmsg_addstr(error, reason.c_str());
+    zmsg_addstr(error, JSONIFY(reason.c_str()).c_str());
 
     send_reply(client, address, command, &error);
 }
@@ -207,7 +207,7 @@ treat_pending_commands(nut::Client &nutClient, mlm_client_t *client, PendingComm
                 try {
                     switch (nutClient.getTrackingResult(id)) {
                         case nut::FAILURE:
-                            command.errMsg = "Failure to execute command";
+                            command.errMsg = TRANSLATE_ME("Failed to execute command on power device.");
                             return true;
                         case nut::SUCCESS:
                             return true;
