@@ -11,6 +11,8 @@
     <target name = "debian" />
     <target name = "redhat" />
     <target name = "travis" >
+        <option name = "dist" value = "trusty" />
+        <option name = "shadow_gcc" value = "2" />
         <!-- option name = "clangformat_implem" value = "autotools" / -->
         <option name = "use_cmake" value = "0" />
         <!-- option name = "clangformat_require_good" value = "1" / -->
@@ -36,6 +38,7 @@
         <option name = "use_checkout_explicit" value = "1" />
     </target>
 
+    <classfilename use-cxx-gcc-4-9 = "true" />
     <include filename = "license.xml" />
     <version major = "1" minor = "0" patch = "0" />
     <abi current = "1" revision = "0" age = "0" />
@@ -225,7 +228,9 @@
     </use>
 
     <use project = "fty_shm" libname = "libfty_shm" header="fty_shm.h" min_major = "1" test = "fty_shm_test"
-        repository = "https://github.com/42ity/fty-shm.git" />
+        repository = "https://github.com/42ity/fty-shm.git"
+        release = "master"
+    />
 
     <header name = "nut_mlm" private = "1">Malamute connection helpers</header>
     <class name = "cidr"            private = "1">C++ Wrapper around libcidr</class>
