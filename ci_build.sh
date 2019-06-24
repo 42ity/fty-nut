@@ -735,7 +735,7 @@ default|default-Werror|default-with-docs|valgrind|clang-format-check)
         BASE_PWD=${PWD}
         echo "`date`: INFO: Building prerequisite 'fty_shm' from Git repository..." >&2
         cd ./tmp-deps
-        $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/fty-shm.git fty_shm
+        $CI_TIME git clone --quiet --depth 1 -b master https://github.com/42ity/fty-shm.git fty_shm
         cd ./fty_shm
         CCACHE_BASEDIR=${PWD}
         export CCACHE_BASEDIR
@@ -754,7 +754,10 @@ default|default-Werror|default-with-docs|valgrind|clang-format-check)
             $CI_TIME autoconf || \
             $CI_TIME autoreconf -fiv
         fi
-        $CI_TIME ./configure "${CONFIG_OPTS[@]}"
+        ( # Custom additional options for fty_shm
+            CONFIG_OPTS+=("--enable-gcc-std-regex=no")
+            $CI_TIME ./configure "${CONFIG_OPTS[@]}"
+        )
         $CI_TIME make -j4
         $CI_TIME make install
         cd "${BASE_PWD}"
