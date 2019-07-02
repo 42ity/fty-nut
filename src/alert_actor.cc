@@ -65,7 +65,7 @@ alert_actor_commands (
             zmsg_destroy (message_p);
             return 0;
         }
-        timeout = atoi(polling) * 1000;
+        timeout = atoi (polling) * 1000;
         if (timeout == 0) {
             log_error ("aa: invalid POLLING value '%s', using default instead", polling);
             timeout = 30000;
@@ -88,35 +88,35 @@ alert_actor (zsock_t *pipe, void *args)
     uint64_t polling = 30000;
     const char *endpoint = static_cast<const char *>(args);
 
-    MlmClientGuard client(mlm_client_new());
+    MlmClientGuard client (mlm_client_new ());
     if (!client) {
         log_fatal ("mlm_client_new () failed");
         return;
     }
-    if (mlm_client_connect(client, endpoint, 5000, ACTOR_ALERT_NAME) < 0) {
-        log_error("client %s failed to connect", ACTOR_ALERT_NAME);
+    if (mlm_client_connect (client, endpoint, 5000, ACTOR_ALERT_NAME) < 0) {
+        log_error ("client %s failed to connect", ACTOR_ALERT_NAME);
         return;
     }
-    if (mlm_client_set_producer(client, FTY_PROTO_STREAM_ALERTS_SYS) < 0) {
-        log_error("mlm_client_set_producer (stream = '%s') failed",
+    if (mlm_client_set_producer (client, FTY_PROTO_STREAM_ALERTS_SYS) < 0) {
+        log_error ("mlm_client_set_producer (stream = '%s') failed",
                 FTY_PROTO_STREAM_ALERTS_SYS);
         return;
     }
 
-    MlmClientGuard mb_client(mlm_client_new());
+    MlmClientGuard mb_client (mlm_client_new ());
     if (!mb_client) {
        log_fatal ("mlm_client_new () failed");
        return;
     }
-    if (mlm_client_connect(mb_client, endpoint, 5000, ACTOR_ALERT_MB_NAME) < 0) {
-        log_error("client %s failed to connect", ACTOR_ALERT_MB_NAME);
+    if (mlm_client_connect (mb_client, endpoint, 5000, ACTOR_ALERT_MB_NAME) < 0) {
+        log_error ("client %s failed to connect", ACTOR_ALERT_MB_NAME);
         return;
     }
 
-    Devices devices(NutStateManager.getReader());
+    Devices devices (NutStateManager.getReader ());
     devices.setPollingMs (polling);
 
-    ZpollerGuard poller(zpoller_new(pipe, mlm_client_msgpipe(client), NULL));
+    ZpollerGuard poller (zpoller_new (pipe, mlm_client_msgpipe (client), NULL));
     if (!poller) {
         log_fatal ("zpoller_new () failed");
         return;
@@ -169,17 +169,17 @@ alert_actor_test (bool verbose)
     assert (malamute);
     zstr_sendx (malamute, "BIND", endpoint, NULL);
 
-    fty_proto_t *msg = fty_proto_new(FTY_PROTO_ASSET);
-    assert(msg);
-    fty_proto_set_name(msg, "mydevice");
-    fty_proto_set_operation(msg, FTY_PROTO_ASSET_OP_CREATE);
-    fty_proto_aux_insert(msg, "type", "device");
-    fty_proto_aux_insert(msg, "subtype", "ups");
-    fty_proto_ext_insert(msg, "ip.1", "192.0.2.1");
-    std::shared_ptr<AssetState::Asset> asset(new AssetState::Asset(msg));
-    fty_proto_destroy(&msg);
+    fty_proto_t *msg = fty_proto_new (FTY_PROTO_ASSET);
+    assert (msg);
+    fty_proto_set_name (msg, "mydevice");
+    fty_proto_set_operation (msg, FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert (msg, "type", "device");
+    fty_proto_aux_insert (msg, "subtype", "ups");
+    fty_proto_ext_insert (msg, "ip.1", "192.0.2.1");
+    std::shared_ptr<AssetState::Asset> asset (new AssetState::Asset (msg));
+    fty_proto_destroy (&msg);
 
-    Device dev(asset);
+    Device dev (asset);
     std::map<std::string,std::vector<std::string> > alerts = {
         { "ambient.temperature.status", {"critical-high", "", ""} },
         { "ambient.temperature.high.warning", {"80", "", ""} },
@@ -187,10 +187,10 @@ alert_actor_test (bool verbose)
         { "ambient.temperature.low.warning", {"10", "", ""} },
         { "ambient.temperature.low.critical", {"5", "", ""} },
     };
-    dev.addAlert("ambient.temperature", alerts);
+    dev.addAlert ("ambient.temperature", alerts);
     dev._alerts["ambient.temperature"].status = "critical-high";
     StateManager manager;
-    Devices devs(manager.getReader());
+    Devices devs (manager.getReader ());
     devs._devices["mydevice"] = dev;
 
     mlm_client_t *client = mlm_client_new ();
@@ -226,8 +226,14 @@ alert_actor_test (bool verbose)
         assert (msg);
         assert (streq (mlm_client_subject (rfc_evaluator), "rfc-evaluator-rules"));
 
-        printf ("    rule command\n");
+        printf ("    rule uuid\n");
         char *item = zmsg_popstr (msg);
+        assert (item);
+        assert (streq (item, "fty-nut"));
+        zstr_free (&item);
+
+        printf ("    rule command\n");
+        item = zmsg_popstr (msg);
         assert (item);
         assert (streq (item, "ADD"));
         zstr_free (&item);
@@ -248,7 +254,7 @@ alert_actor_test (bool verbose)
         assert (which);
         zmsg_t *msg = mlm_client_recv (alert_list);
         assert (msg);
-        assert (is_fty_proto(msg));
+        assert (is_fty_proto (msg));
         fty_proto_t *bp = fty_proto_decode (&msg);
         assert (bp);
 
@@ -276,7 +282,7 @@ alert_actor_test (bool verbose)
         assert (which);
         zmsg_t *msg = mlm_client_recv (alert_list);
         assert (msg);
-        assert (is_fty_proto(msg));
+        assert (is_fty_proto (msg));
         fty_proto_t *bp = fty_proto_decode (&msg);
         assert (bp);
         assert (streq (fty_proto_command (bp), "ALERT"));
@@ -289,9 +295,9 @@ alert_actor_test (bool verbose)
     }
 
     zpoller_destroy (&poller);
-    mlm_client_destroy(&client);
-    mlm_client_destroy(&alert_list);
-    mlm_client_destroy(&rfc_evaluator);
+    mlm_client_destroy (&client);
+    mlm_client_destroy (&alert_list);
+    mlm_client_destroy (&rfc_evaluator);
     zactor_destroy (&malamute);
     //  @end
     printf (" OK\n");
