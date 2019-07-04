@@ -46,6 +46,9 @@ using namespace shared;
 
 #define NUT_PART_STORE "/var/lib/fty/fty-nut/devices"
 
+// Forward declaration
+static bool canModbus(const nutcommon::DeviceConfiguration &config);
+
 static std::string s_getPollingInterval()
 {
     std::string polling = "30";
@@ -112,7 +115,7 @@ static bool isUps(const nutcommon::DeviceConfiguration &config)
 {
     return !(isEpdu(config) || isAts(config));
 }
-
+src/nut_configurator.cc
 static bool canSnmp(const nutcommon::DeviceConfiguration &config)
 {
     // Match MIBs.
