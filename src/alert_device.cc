@@ -324,26 +324,51 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
 
     char *ruleName = zsys_sprintf ("%s@%s", alert_name, asset_name);
     char *rule = zsys_sprintf (
-        "{ \"threshold\" : {"
-        "  \"rule_name\"     : \"%s\","
-        "  \"rule_source\"   : \"NUT\","
-        "  \"rule_class\"    : \"Device internal\","
-        "  \"rule_hierarchy\": \"internal.device\","
-        "  \"rule_desc\"     : %s,"
-        "  \"target\"        : \"%s\","
-        "  \"element\"       : \"%s\","
-        "  \"values_unit\"   : \"%s\","
-        "  \"values\"        : ["
-        "    { \"low_warning\"  : \"%s\"},"
-        "    { \"low_critical\" : \"%s\"},"
-        "    { \"high_warning\"  : \"%s\"},"
-        "    { \"high_critical\" : \"%s\"}"
-        "    ],"
-        "  \"results\"       : ["
-        "    { \"low_critical\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is critically low for {{ename}}.)\", \"variables\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\", \"assetLink\" : \"%s\" } } } } },"
-        "    { \"low_warning\"   : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is low for {{ename}}.)\", \"variables\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\", \"assetLink\" : \"%s\" } } } } },"
-        "    { \"high_warning\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is high for {{ename}}.)\", \"variables\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\", \"assetLink\" : \"%s\" } } } } },"
-        "    { \"high_critical\" : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is critically high for {{ename}}.)\", \"variables\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\", \"assetLink\" : \"%s\" } } } } } ] } } ",
+        "{  \"threshold\"       : {"
+        "   \"name\"            : \"%s\","
+        "   \"source\"          : \"NUT\","
+        "   \"class\"           : \"Device internal\","
+        "   \"hierarchy\"       : \"internal.device\","
+        "   \"categories\"      : [ \"CAT_ALL\", \"CAT_OTHER\" ],"
+        "   \"description\"     : \"%s\","
+        "   \"metrics\"         : \"%s\","
+        "   \"assets\"          : \"%s\","
+        "   \"values_unit\"     : \"%s\","
+        "   \"values\"          : ["
+        "       { \"low_warning\"  : \"%s\"},"
+        "       { \"low_critical\" : \"%s\"},"
+        "       { \"high_warning\"  : \"%s\"},"
+        "       { \"high_critical\" : \"%s\"}"
+        "   ],"
+        "   \"results\"       : ["
+        "       { \"low_critical\"  : {"
+        "           \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}],"
+        "           \"severity\":\"CRITICAL\","
+        "           \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is critically low for {{ename}}.)\","
+        "               \"variables\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\","
+        "               \"assetLink\" : \"%s\" } } }"
+        "           }"
+        "       },"
+        "       { \"low_warning\"   : {"
+        "           \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}],"
+        "           \"severity\":\"WARNING\" ,"
+        "           \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is low for {{ename}}.)\","
+        "               \"variables\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\","
+        "               \"assetLink\" : \"%s\" } } } } },"
+        "       { \"high_warning\"  : {"
+        "           \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}],"
+        "           \"severity\":\"WARNING\" ,"
+        "           \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is high for {{ename}}.)\","
+        "               \"variables\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\","
+        "               \"assetLink\" : \"%s\" } } } } },"
+        "       { \"high_critical\" : {"
+        "           \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}],"
+        "           \"severity\":\"CRITICAL\","
+        "           \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is critically high for {{ename}}.)\","
+        "               \"variables\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\","
+        "               \"assetLink\" : \"%s\" } } } } }"
+        "   ]"
+        "} } ",
         ruleName,
         s_rule_desc (alert.name).c_str (),
         ruleName,
@@ -367,6 +392,7 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
         asset_name);
 
     log_debug ("aa: publishing rule %s", ruleName);
+    zmsg_addstr (message, "fty-nut"); // uuid, don't need to be unique for now
     zmsg_addstr (message, "ADD");
     zmsg_addstr (message, rule);
     if (mlm_client_sendto (client, "fty-alert-engine", "rfc-evaluator-rules", NULL, 1000, &message) == 0) {
