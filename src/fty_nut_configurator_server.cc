@@ -1,7 +1,9 @@
 /*  =========================================================================
     fty_nut_configurator_server - fty nut configurator actor
 
-    Copyright (C) 2014 - 2017 Eaton
+    Copyright (C)
+        2014 - 2017 Eaton
+        2019        Arnaud Quette <arnaud.quette@free.fr>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -164,7 +166,7 @@ void Autoconfig::handleLimitations( fty_proto_t **message )
             || (it.second.asset->subtype() == "epdu")
             || (it.second.asset->subtype() == "powermeter")) {
             // number is after the dash of the asset iname
-            num_id = stoi(it.first.substr(it.second.asset->subtype() + 1));
+            num_id = stoi(it.first.substr(it.second.asset->subtype().length() + 1));
             power_devices_list.push_back(make_pair(it.first, num_id));
         }
     }

@@ -371,6 +371,10 @@ nutcommon::DeviceConfigurations NUTConfigurator::getConfigurationFromScanningDev
         {
             log_info("Scanning Modbus TCP protocol at '%s'...", IP.c_str());
             nutcommon::scanDeviceRangeModbusTCP(nutcommon::ScanRangeOptions(IP, scanTimeout), configs);
+            int scanDeviceRangeModbusTCP(
+                const ScanRangeOptions& scanOptions,
+                const CredentialsModbus& credentials,
+                DeviceConfigurations& out);
         }
     }
 
