@@ -117,7 +117,7 @@ static bool isUps(const nutcommon::DeviceConfiguration &config)
 {
     return !(isEpdu(config) || isAts(config));
 }
-f
+
 static bool canSnmp(const nutcommon::DeviceConfiguration &config)
 {
     // Match MIBs.
