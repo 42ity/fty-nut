@@ -57,6 +57,7 @@ class NUTConfigurator {
  private:
     nutcommon::DeviceConfigurations::const_iterator getBestSnmpMibConfiguration(const nutcommon::DeviceConfigurations &configs);
     nutcommon::DeviceConfigurations::const_iterator getNetXMLConfiguration(const nutcommon::DeviceConfigurations &configs);
+    nutcommon::DeviceConfigurations::const_iterator getModbusConfiguration(const nutcommon::DeviceConfigurations &configs);
     nutcommon::DeviceConfigurations::const_iterator selectBestConfiguration(const nutcommon::DeviceConfigurations &configs);
     void updateNUTConfig();
     nutcommon::DeviceConfigurations getConfigurationFromUpsConfBlock(const std::string &name, const AutoConfigurationInfo &info);

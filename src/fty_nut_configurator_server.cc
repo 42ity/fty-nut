@@ -159,10 +159,10 @@ void Autoconfig::handleLimitations( fty_proto_t **message )
     std::vector<pairsi> power_devices_list;
     for( auto &it : _configDevices) {
         int num_id = 0;
-        if (it.second.asset->subtype() == "ups"
-            || it.second.asset->subtype() == "sts")
-            || it.second.asset->subtype() == "epdu")
-            || it.second.asset->subtype() == "powermeter") {
+        if ((it.second.asset->subtype() == "ups")
+            || (it.second.asset->subtype() == "sts")
+            || (it.second.asset->subtype() == "epdu")
+            || (it.second.asset->subtype() == "powermeter")) {
             // number is after the dash of the asset iname
             num_id = stoi(it.first.substr(it.second.asset->subtype() + 1));
             power_devices_list.push_back(make_pair(it.first, num_id));
