@@ -115,7 +115,7 @@ static bool isUps(const nutcommon::DeviceConfiguration &config)
 {
     return !(isEpdu(config) || isAts(config));
 }
-
+f
 static bool canSnmp(const nutcommon::DeviceConfiguration &config)
 {
     // Match MIBs.
@@ -368,7 +368,7 @@ nutcommon::DeviceConfigurations NUTConfigurator::getConfigurationFromScanningDev
         // FIXME: check for Modbus RTU (serial)
         {
             log_info("Scanning Modbus TCP protocol at '%s'...", IP.c_str());
-            nutcommon::scanDeviceRangeModbus(nutcommon::ScanRangeOptions(IP, scanTimeout), configs);
+            nutcommon::scanDeviceRangeModbusTCP(nutcommon::ScanRangeOptions(IP, scanTimeout), configs);
         }
     }
 
