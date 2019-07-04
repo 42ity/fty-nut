@@ -80,7 +80,7 @@ bool AssetState::handleAssetMessage(fty_proto_t* message)
         return false;
     std::string subtype(fty_proto_aux_string (message, "subtype", ""));
     AssetMap* map;
-    if (subtype == "epdu" || subtype == "ups" || subtype == "sts")
+    if (subtype == "epdu" || subtype == "ups" || subtype == "sts" || subtype == "powermeter" )
         map = &powerdevices_;
     else if (subtype == "sensor") {
         // skip sensors connected to rackcontrollers

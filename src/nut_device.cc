@@ -157,7 +157,9 @@ void NUTDevice::commitChanges() {
 
 void NUTDevice::updateInventory(const std::string& varName, const std::string& inventory) {
     // NUT bug type pdu => epdu
+    // FIXME...
     if( varName == "type" && inventory == "pdu" ) { return updateInventory(varName, "epdu"); }
+    if( varName == "type" && inventory == "power-meter" ) { return updateInventory(varName, "powermeter"); }
     if( _inventory.count( varName ) == 0 ) {
         // this is new value
         struct NUTInventoryValue ivalue;
@@ -524,6 +526,7 @@ void NUTDevice::NUTValuesTransformation (const std::string &prefix, std::map< st
         auto it = vars.find (prefix + "device.type");
         if( it != vars.end() ) {
             if( ! it->second.empty() && it->second[0] == "pdu" ) it->second[0] = "epdu";
+            if( ! it->second.empty() && it->second[0] == "power-meter" ) it->second[0] = "powermeter";
         }
     }
     // sum the realpower from output information

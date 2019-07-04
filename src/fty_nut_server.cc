@@ -93,6 +93,7 @@ get_initial_assets(StateManager::Writer& state_writer, mlm_client_t *client,
     zmsg_addstr(msg, "ups");
     zmsg_addstr(msg, "epdu");
     zmsg_addstr(msg, "sts");
+    zmsg_addstr(msg, "powermeter");
     zmsg_addstr(msg, "sensor");
     zmsg_addstr(msg, "sensorgpio");
     if (mlm_client_sendto(client, "asset-agent", "ASSETS", NULL, 5000, &msg) < 0) {

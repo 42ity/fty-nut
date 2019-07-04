@@ -58,6 +58,9 @@ static std::string s_getPollingInterval()
     return polling;
 }
 
+// FIXME:
+// * is{Epdu,Ats,Ups,...} should use device.type, once fty-nut-config uses fty-discovery
+// * provide a generic device.type accessor too
 static bool isEpdu(const nutcommon::DeviceConfiguration &config)
 {
     static const std::set<std::string> epdusMibs = {
@@ -98,6 +101,13 @@ static bool isAts(const nutcommon::DeviceConfiguration &config)
     return false;
 }
 
+static bool isPowerMeter(const nutcommon::DeviceConfiguration &config)
+{
+    // FIXME: not easilly doable without device.type!
+    // For now, trick it using a shortcut
+    return canModbus(config);
+}
+
 static bool isUps(const nutcommon::DeviceConfiguration &config)
 {
     return !(isEpdu(config) || isAts(config));
@@ -122,6 +132,19 @@ static bool canNetXml(const nutcommon::DeviceConfiguration &config)
     auto driverIt = config.find("driver");
     if (driverIt != config.end()) {
         if (driverIt->second == "netxml-ups") {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static bool canModbus(const nutcommon::DeviceConfiguration &config)
+{
+    // Match driver.
+    auto driverIt = config.find("driver");
+    if (driverIt != config.end()) {
+        if (driverIt->second == "nutdrv_modbus") {
             return true;
         }
     }
@@ -169,6 +192,21 @@ nutcommon::DeviceConfigurations::const_iterator NUTConfigurator::getNetXMLConfig
     });
 }
 
+nutcommon::DeviceConfigurations::const_iterator NUTConfigurator::getModbusConfiguration(const nutcommon::DeviceConfigurations &configs)
+{
+    // FIXME: will depends on nut-scanner WRT Modbus DMF
+    // need to get "tcp_port" and "slave_id"
+    return std::find_if(configs.cbegin(), configs.cend(), [](const nutcommon::DeviceConfiguration &config) {
+        auto mibsIt = config.find("driver");
+        if (mibsIt != config.end()) {
+            if (mibsIt->second == "nutdrv_modbus") {
+                return true;
+            }
+        }
+        return false;
+    });
+}
+
 nutcommon::DeviceConfigurations::const_iterator NUTConfigurator::selectBestConfiguration(const nutcommon::DeviceConfigurations &configs)
 {
     bool bIsEpdu    = std::any_of(configs.begin(), configs.end(), isEpdu);
@@ -176,7 +214,8 @@ nutcommon::DeviceConfigurations::const_iterator NUTConfigurator::selectBestConfi
     bool bIsAts     = std::any_of(configs.begin(), configs.end(), isAts);
     bool bCanSnmp   = std::any_of(configs.begin(), configs.end(), canSnmp);
     bool bCanNetXml = std::any_of(configs.begin(), configs.end(), canNetXml);
-    log_debug("Configurations: %d; isEpdu: %i; isUps: %i; isAts: %i; canSnmp: %i; canNetXml: %i.", configs.size(), bIsEpdu, bIsUps, bIsAts, bCanSnmp, bCanNetXml);
+    bool bCanModbus   = std::any_of(configs.begin(), configs.end(), canModbus);
+    log_debug("Configurations: %d; isEpdu: %i; isUps: %i; isAts: %i; canSnmp: %i; canNetXml: %i; canModbus: %i.", configs.size(), bIsEpdu, bIsUps, bIsAts, bCanSnmp, bCanNetXml, bCanModbus);
 
     nutcommon::DeviceConfigurations::const_iterator bestConfig = configs.begin();
 
@@ -191,6 +230,9 @@ nutcommon::DeviceConfigurations::const_iterator NUTConfigurator::selectBestConfi
         else if (bCanSnmp) {
             log_debug("SNMP capable device => Use SNMP.");
             bestConfig = getBestSnmpMibConfiguration(configs);
+        } else if (bCanModbus) {
+            log_debug("Modbus capable device => Use Modbus.");
+            bestConfig = getModbusConfiguration(configs);
         }
         else {
             log_debug("Unsure of device type => Use first configuration.");
@@ -318,6 +360,12 @@ nutcommon::DeviceConfigurations NUTConfigurator::getConfigurationFromScanningDev
         {
             log_info("Scanning NetXML protocol at '%s'...", IP.c_str());
             nutcommon::scanDeviceRangeNetXML(nutcommon::ScanRangeOptions(IP, scanTimeout), configs);
+        }
+        // Modbus TCP scan
+        // FIXME: check for Modbus RTU (serial)
+        {
+            log_info("Scanning Modbus TCP protocol at '%s'...", IP.c_str());
+            nutcommon::scanDeviceRangeModbus(nutcommon::ScanRangeOptions(IP, scanTimeout), configs);
         }
     }
 
