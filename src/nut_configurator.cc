@@ -217,6 +217,7 @@ nutcommon::DeviceConfigurations::const_iterator NUTConfigurator::selectBestConfi
     bool bIsEpdu    = std::any_of(configs.begin(), configs.end(), isEpdu);
     bool bIsUps     = std::any_of(configs.begin(), configs.end(), isUps);
     bool bIsAts     = std::any_of(configs.begin(), configs.end(), isAts);
+    bool bIsPowerMeter     = std::any_of(configs.begin(), configs.end(), isPowerMeter);
     bool bCanSnmp   = std::any_of(configs.begin(), configs.end(), canSnmp);
     bool bCanNetXml = std::any_of(configs.begin(), configs.end(), canNetXml);
     bool bCanModbus   = std::any_of(configs.begin(), configs.end(), canModbus);
@@ -370,11 +371,7 @@ nutcommon::DeviceConfigurations NUTConfigurator::getConfigurationFromScanningDev
         // FIXME: check for Modbus RTU (serial)
         {
             log_info("Scanning Modbus TCP protocol at '%s'...", IP.c_str());
-            nutcommon::scanDeviceRangeModbusTCP(nutcommon::ScanRangeOptions(IP, scanTimeout), configs);
-            int scanDeviceRangeModbusTCP(
-                const ScanRangeOptions& scanOptions,
-                const CredentialsModbus& credentials,
-                DeviceConfigurations& out);
+            nutcommon::scanDeviceRangeModbusTCP(nutcommon::ScanRangeOptions(IP, scanTimeout), nullptr, configs);
         }
     }
 
