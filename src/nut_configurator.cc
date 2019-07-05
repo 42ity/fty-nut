@@ -370,8 +370,11 @@ nutcommon::DeviceConfigurations NUTConfigurator::getConfigurationFromScanningDev
         // Modbus TCP scan
         // FIXME: check for Modbus RTU (serial)
         {
+            // Fake Modbus credential, to please compiler
+            nutcommon::CredentialsModbus credential("dummy");
+
             log_info("Scanning Modbus TCP protocol at '%s'...", IP.c_str());
-            nutcommon::scanDeviceRangeModbusTCP(nutcommon::ScanRangeOptions(IP, scanTimeout), nullptr, configs);
+            nutcommon::scanDeviceRangeModbusTCP(nutcommon::ScanRangeOptions(IP, scanTimeout), credential, configs);
         }
     }
 
