@@ -106,12 +106,12 @@ static bool isAts(const nutcommon::DeviceConfiguration &config)
     return false;
 }
 
-static bool isPowerMeter(const nutcommon::DeviceConfiguration &config)
+/* static bool isPowerMeter(const nutcommon::DeviceConfiguration &config)
 {
     // FIXME: not easilly doable without device.type!
     // For now, trick it using a shortcut
     return canModbus(config);
-}
+} */
 
 static bool isUps(const nutcommon::DeviceConfiguration &config)
 {
@@ -217,7 +217,7 @@ nutcommon::DeviceConfigurations::const_iterator NUTConfigurator::selectBestConfi
     bool bIsEpdu    = std::any_of(configs.begin(), configs.end(), isEpdu);
     bool bIsUps     = std::any_of(configs.begin(), configs.end(), isUps);
     bool bIsAts     = std::any_of(configs.begin(), configs.end(), isAts);
-    bool bIsPowerMeter     = std::any_of(configs.begin(), configs.end(), isPowerMeter);
+    //bool bIsPowerMeter     = std::any_of(configs.begin(), configs.end(), isPowerMeter);
     bool bCanSnmp   = std::any_of(configs.begin(), configs.end(), canSnmp);
     bool bCanNetXml = std::any_of(configs.begin(), configs.end(), canNetXml);
     bool bCanModbus   = std::any_of(configs.begin(), configs.end(), canModbus);
