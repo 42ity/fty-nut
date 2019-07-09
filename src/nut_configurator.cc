@@ -327,7 +327,7 @@ nutcommon::DeviceConfigurations NUTConfigurator::getConfigurationFromUpsConfBloc
 
 nutcommon::DeviceConfigurations NUTConfigurator::getConfigurationFromScanningDevice(const std::string &name, const AutoConfigurationInfo &info)
 {
-    const int scanTimeout = 10;
+    const int scanTimeout = 30; // create a .cfg param, as in fty-discovery, or better make a MB to it!
     const std::string& IP = info.asset->IP();
     nutcommon::DeviceConfigurations configs;
 
