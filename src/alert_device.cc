@@ -62,7 +62,7 @@ Device::addAlert (const std::string& quantity, const std::map<std::string,std::v
             return;
         } else {
             // This entry is in the list, but was not refreshed in this
-            // run of scanAlerts(). Initialize "alert" from this value
+            // run of scanAlerts (). Initialize "alert" from this value
             // and below we will put it back into the list, overwriting
             // the old existing value.
             updatingalert = true;
@@ -195,11 +195,11 @@ Device::scanCapabilities (nut::TcpClient& conn)
     retval = 1;
 
 cleanup:
-    for (auto it = _alerts.begin() ; it != _alerts.end() ; ) {
+    for (auto it = _alerts.begin () ; it != _alerts.end () ; ) {
         if (!it->second.ruleRescanned) {
             // Remove the obsolete entry not touched by current scan
             // or where addAlert errored out and returned early
-            _alerts.erase(it++);
+            _alerts.erase (it++);
         } else {
             ++it;
         }
@@ -330,7 +330,7 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
         "   \"class\"           : \"Device internal\","
         "   \"hierarchy\"       : \"internal.device\","
         "   \"categories\"      : [ \"CAT_ALL\", \"CAT_OTHER\" ],"
-        "   \"description\"     : \"%s\","
+        "   \"description\"     : %s,"
         "   \"metrics\"         : \"%s\","
         "   \"assets\"          : \"%s\","
         "   \"values_unit\"     : \"%s\","
@@ -367,7 +367,20 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
         "           \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is critically high for {{ename}}.)\","
         "               \"variables\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\","
         "               \"assetLink\" : \"%s\" } } } } }"
-        "   ]"
+        "   ],"
+        "   \"evaluation\"      : \"function main (v1)"
+        "                               if tonumber (v1) <= tonumber (low_critical) then"
+        "                                   return 'low_critical';"
+        "                               elseif tonumber (v1) <= tonumber (low_warning) then"
+        "                                   return 'low_critical';"
+        "                               elseif tonumber (v1) <= tonumber (low_warning) then"
+        "                                   return 'low_critical';"
+        "                               elseif tonumber (v1) <= tonumber (low_warning) then"
+        "                                   return 'low_critical';"
+        "                               else"
+        "                                   return 'ok';"
+        "                               end;"
+        "                           end\""
         "} } ",
         ruleName,
         s_rule_desc (alert.name).c_str (),
