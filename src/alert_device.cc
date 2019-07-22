@@ -323,7 +323,7 @@ std::string Device::getRuleTemplate (mlm_client_t *client) {
         char *corr_id = zmsg_popstr (resp);
         char *command = zmsg_popstr (resp);
         char *param = zmsg_popstr (resp);
-        if (streq (corr_id, "fty-nut") && streq (command, "OK"))
+        if (streq (corr_id, "fty-nut") && streq (command, "OK") && param != nullptr)
             result = param;
         zstr_free (&command);
         zstr_free (&corr_id);
