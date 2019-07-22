@@ -31,6 +31,7 @@
 #include <fty_log.h>
 #include "nut_mlm.h"
 #include <fty_common_mlm.h>
+#include <stdio.h>
 
 int
 actor_commands (
@@ -86,7 +87,7 @@ actor_commands (
             zmsg_destroy (message_p);
             return 0;
         }
-        timeout = atoi(polling) * 1000;
+        timeout = atoi (polling) * 1000;
         if (timeout == 0) {
             log_error ("invalid POLLING value '%s', using default instead", polling);
             timeout = 30000;
@@ -111,7 +112,7 @@ actor_commands (
     uint64_t sz = ftell (fp);\
     fclose (fp);\
     if (sz > 0)\
-        printf("STDERR_EMPTY() check failed, please review stderr.txt\n");\
+        printf ("STDERR_EMPTY () check failed, please review stderr.txt\n");\
     assert (sz == 0);\
     }
 
@@ -121,7 +122,7 @@ actor_commands (
     uint64_t sz = ftell (fp);\
     fclose (fp);\
     if (sz == 0)\
-        printf("STDERR_NON_EMPTY() check failed\n");\
+        printf ("STDERR_NON_EMPTY () check failed\n");\
     assert (sz > 0);\
     }
 
@@ -141,15 +142,16 @@ actor_commands_test (bool verbose)
 
     mlm_client_t *client = mlm_client_new ();
     assert (client);
-    assert(mlm_client_connect(client, endpoint, 5000, "test-agent") == 0);
+    assert (mlm_client_connect (client, endpoint, 5000, "test-agent") == 0);
 
     zmsg_t *message = NULL;
 
     StateManager manager;
-    NUTAgent nut_agent(manager.getReader());
+    NUTAgent nut_agent (manager.getReader ());
     uint64_t actor_polling = 0;
 
     // --------------------------------------------------------------
+    fclose (stderr);
     FILE *fp = freopen (logErrPath, "w+", stderr);
     // empty message - expected fail
     message = zmsg_new ();
@@ -289,6 +291,7 @@ actor_commands_test (bool verbose)
     assert (nut_agent.TTL () == 300);
 
     STDERR_NON_EMPTY
+    stderr = fdopen (1, "w");
 
     zmsg_destroy (&message);
     mlm_client_destroy (&client);

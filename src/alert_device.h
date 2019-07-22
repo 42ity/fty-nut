@@ -45,16 +45,16 @@ struct DeviceAlert {
 
 class Device {
  public:
-    Device () : _asset(nullptr), _scanned(false) { };
+    Device () : _asset (nullptr), _scanned (false) { };
     explicit Device (std::shared_ptr<AssetState::Asset> asset) :
-        _asset(asset),
-        _nutName(asset->name()),
-        _scanned(false)
+        _asset (asset),
+        _nutName (asset->name ()),
+        _scanned (false)
     { };
     Device (std::shared_ptr<AssetState::Asset> asset, const std::string& nut) :
-        _asset(asset),
-        _nutName(nut),
-        _scanned(false)
+        _asset (asset),
+        _nutName (nut),
+        _scanned (false)
     { };
 
     void assetPtr (std::shared_ptr<AssetState::Asset> asset) { _asset = asset; }
@@ -63,11 +63,11 @@ class Device {
     std::string nutName () const { return _nutName; }
     std::string assetName () const
     {
-        return _asset ? _asset->name() : std::string();
+        return _asset ? _asset->name () : std::string ();
     }
     int chain () const
     {
-        return _asset ? _asset->daisychain() : 0;
+        return _asset ? _asset->daisychain () : 0;
     }
     int scanned () const { return _scanned; }
 
@@ -84,6 +84,7 @@ class Device {
     std::string _nutName;
     bool _scanned;
 
+
     std::map <std::string, DeviceAlert> _alerts;
 
     void addAlert (
@@ -91,9 +92,10 @@ class Device {
         const std::map<std::string,std::vector<std::string> >& variables
     );
     void publishAlert (mlm_client_t *client, DeviceAlert& alert, uint64_t ttl);
+    std::string getRuleTemplate (mlm_client_t *client);
     void publishRule (mlm_client_t *client, DeviceAlert& alert);
     void fixAlertLimits (DeviceAlert& alert);
-    std::string daisychainPrefix() const;
+    std::string daisychainPrefix () const;
 };
 
 //  Self test of this class
