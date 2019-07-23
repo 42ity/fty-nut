@@ -246,9 +246,12 @@ alert_actor_test (bool verbose)
             "'ok'; end; end\" } }";
         mlm_client_sendtox (rfc_evaluator2, "agent-nut-alert", "rfc-evaluator-rules", "fty-nut", "OK",
                 rule_template.c_str (), NULL);
+        sleep (1);
         mlm_client_sendtox (rfc_evaluator1, "agent-nut-alert", "rfc-evaluator-rules", "fty-nut", "OK", NULL);
+        sleep (1);
     }
     devs.publishRules (client);
+    sleep (1);
     {
         // verify queries have been sent as well
         void *which = zpoller_wait (poller, 1000);
