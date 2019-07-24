@@ -198,9 +198,13 @@ alert_actor_test (bool verbose)
     mlm_client_connect (client, endpoint, 1000, "agent-nut-alert");
     mlm_client_set_producer (client, FTY_PROTO_STREAM_ALERTS_SYS);
 
-    mlm_client_t *rfc_evaluator = mlm_client_new ();
-    assert (rfc_evaluator);
-    mlm_client_connect (rfc_evaluator, endpoint, 1000, "fty-alert-engine");
+    mlm_client_t *rfc_evaluator1 = mlm_client_new ();
+    assert (rfc_evaluator1);
+    mlm_client_connect (rfc_evaluator1, endpoint, 1000, "fty-alert-engine");
+
+    mlm_client_t *rfc_evaluator2 = mlm_client_new ();
+    assert (rfc_evaluator2);
+    mlm_client_connect (rfc_evaluator2, endpoint, 1000, "fty-autoconfig");
 
     mlm_client_t *alert_list = mlm_client_new ();
     assert (alert_list);
@@ -209,22 +213,75 @@ alert_actor_test (bool verbose)
 
     zpoller_t *poller = zpoller_new (
         mlm_client_msgpipe (client),
-        mlm_client_msgpipe (rfc_evaluator),
+        mlm_client_msgpipe (rfc_evaluator1),
+        mlm_client_msgpipe (rfc_evaluator2),
         mlm_client_msgpipe (alert_list),
         NULL);
     assert (poller);
 
-    mlm_client_sendtox (rfc_evaluator, "agent-nut-alert", "rfc-evaluator-rules", "OK", NULL);
+    {
+        // no multithreading, so responses need to be prepared in advance in order
+        std::string rule_template = "{ \"threshold\" : { \"name\" : __name__, \"source\" : \"NUT\", \"class\" : "
+            "\"Device internal\", \"hierarchy\" : \"internal.device\", \"categories\" : [ \"CAT_ALL\", \"CAT_OTHER\" "
+            "], \"description\" : __description__, \"metrics\" : __metrics__, \"assets\" : __assets__, \"values_unit\""
+            " : __values_unit__, \"values\" : [ { \"low_warning\" : __low_warning__ }, { \"low_critical\" : "
+            "__low_critical__ }, { \"high_warning\" : __high_warning__ }, { \"high_critical\" : __high_critical__ } "
+            "], \"results\" : [ { \"low_critical\" : { \"action\" : [ { \"action\" : \"EMAIL\" }, { \"action\" : "
+            "\"SMS\" } ], \"severity\" : \"CRITICAL\", \"description\" : { \"key\" : \"{{alert_name}} "
+            "is critically low for {{ename}}.\", \"variables\" : { \"alert_name\" : __alert_name__, \"ename\" : { "
+            "\"value\" : __ename__, \"assetLink\" : __name__ } } } } }, { \"low_warning\" : { \"action\" : [ { "
+            "\"action\" : \"EMAIL\" }, { \"action\": \"SMS\" } ], \"severity\" : \"WARNING\", \"description\" : { "
+            "\"key\" : \"{{alert_name}} is low for {{ename}}.\", \"variables\" : { \"alert_name\" : "
+            "__alert_name__, \"ename\" : { \"value\" : __ename__, \"assetLink\" : __name__ } } } } }, { "
+            "\"high_warning\" : { \"action\" : [ { \"action\": \"EMAIL\" }, { \"action\": \"SMS\" } ], \"severity\" : "
+            "\"WARNING\", \"description\" : { \"key\" : \"{{alert_name}} is high for {{ename}}.\", "
+            "\"variables\" : { \"alert_name\" : __alert_name__, \"ename\" : { \"value\" : __ename__, \"assetLink\" : "
+            "__name__ } } } } }, { \"high_critical\" : { \"action\" : [ { \"action\": \"EMAIL\" }, { \"action\": "
+            "\"SMS\" } ], \"severity\" : \"CRITICAL\", \"description\" : { \"key\" : \"{{alert_name}} "
+            "is critically high for {{ename}}.\", \"variables\" : { \"alert_name\" : __alert_name__, \"ename\" : { "
+            "\"value\" : __ename__, \"assetLink\" : __name__ } } } } } ], \"evaluation\" : \"function main (v1) if "
+            "tonumber (v1) <= tonumber (low_critical) then return 'low_critical'; elseif tonumber (v1) <= tonumber "
+            "(low_warning) then return 'low_critical'; elseif tonumber (v1) <= tonumber (low_warning) then return "
+            "'low_critical'; elseif tonumber (v1) <= tonumber (low_warning) then return 'low_critical'; else return "
+            "'ok'; end; end\" } }";
+        mlm_client_sendtox (rfc_evaluator2, "agent-nut-alert", "rfc-evaluator-rules", "fty-nut", "OK",
+                rule_template.c_str (), NULL);
+        sleep (1);
+        mlm_client_sendtox (rfc_evaluator1, "agent-nut-alert", "rfc-evaluator-rules", "fty-nut", "OK", NULL);
+        sleep (1);
+    }
     devs.publishRules (client);
+    sleep (1);
+    {
+        // verify queries have been sent as well
+        void *which = zpoller_wait (poller, 1000);
+        assert (which);
+        zmsg_t *msg = mlm_client_recv (rfc_evaluator2);
+        assert (msg);
+        assert (streq (mlm_client_subject (rfc_evaluator2), "rfc-evaluator-rules"));
+        char *item = zmsg_popstr (msg);
+        assert (item);
+        assert (streq (item, "fty-nut"));
+        zstr_free (&item);
+        item = zmsg_popstr (msg);
+        assert (item);
+        assert (streq (item, "GET_TEMPLATE"));
+        zstr_free (&item);
+        item = zmsg_popstr (msg);
+        assert (item);
+        assert (streq (item, "__metric__@__nut_template__"));
+        zstr_free (&item);
+        zmsg_destroy (&msg);
+    }
 
     // check rule message
     {
         printf ("\n    recvrule\n");
         void *which = zpoller_wait (poller, 1000);
         assert (which);
-        zmsg_t *msg = mlm_client_recv (rfc_evaluator);
+        zmsg_t *msg = mlm_client_recv (rfc_evaluator1);
         assert (msg);
-        assert (streq (mlm_client_subject (rfc_evaluator), "rfc-evaluator-rules"));
+        assert (streq (mlm_client_subject (rfc_evaluator1), "rfc-evaluator-rules"));
 
         printf ("    rule uuid\n");
         char *item = zmsg_popstr (msg);
@@ -297,7 +354,8 @@ alert_actor_test (bool verbose)
     zpoller_destroy (&poller);
     mlm_client_destroy (&client);
     mlm_client_destroy (&alert_list);
-    mlm_client_destroy (&rfc_evaluator);
+    mlm_client_destroy (&rfc_evaluator1);
+    mlm_client_destroy (&rfc_evaluator2);
     zactor_destroy (&malamute);
     //  @end
     printf (" OK\n");

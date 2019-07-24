@@ -312,6 +312,28 @@ s_rule_desc (const std::string& alert_name)
         return "{}";
 }
 
+std::string Device::getRuleTemplate (mlm_client_t *client) {
+    zmsg_t *message = zmsg_new ();
+    zmsg_addstr (message, "fty-nut"); // uuid, don't need to be unique for now
+    zmsg_addstr (message, "GET_TEMPLATE");
+    zmsg_addstr (message, "__metric__@__nut_template__");
+    std::string result;
+    if (mlm_client_sendto (client, "fty-autoconfig", "rfc-evaluator-rules", NULL, 1000, &message) == 0) {
+        zmsg_t *resp = mlm_client_recv (client);
+        char *corr_id = zmsg_popstr (resp);
+        char *command = zmsg_popstr (resp);
+        char *param = zmsg_popstr (resp);
+        if (streq (corr_id, "fty-nut") && streq (command, "OK") && param != nullptr)
+            result = param;
+        zstr_free (&command);
+        zstr_free (&corr_id);
+        zstr_free (&param);
+        zmsg_destroy (&resp);
+    }
+    zmsg_destroy (&message);
+    return result;
+}
+
 void
 Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
 {
@@ -319,112 +341,49 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
 
     zmsg_t *message = zmsg_new ();
     assert (message);
-    const char *alert_name = alert.name.c_str ();
-    const char *asset_name = assetName ().c_str ();
 
-    char *ruleName = zsys_sprintf ("%s@%s", alert_name, asset_name);
-    char *rule = zsys_sprintf (
-        "{  \"threshold\"       : {"
-        "   \"name\"            : \"%s\","
-        "   \"source\"          : \"NUT\","
-        "   \"class\"           : \"Device internal\","
-        "   \"hierarchy\"       : \"internal.device\","
-        "   \"categories\"      : [ \"CAT_ALL\", \"CAT_OTHER\" ],"
-        "   \"description\"     : %s,"
-        "   \"metrics\"         : \"%s\","
-        "   \"assets\"          : \"%s\","
-        "   \"values_unit\"     : \"%s\","
-        "   \"values\"          : ["
-        "       { \"low_warning\"  : \"%s\"},"
-        "       { \"low_critical\" : \"%s\"},"
-        "       { \"high_warning\"  : \"%s\"},"
-        "       { \"high_critical\" : \"%s\"}"
-        "   ],"
-        "   \"results\"       : ["
-        "       { \"low_critical\"  : {"
-        "           \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}],"
-        "           \"severity\":\"CRITICAL\","
-        "           \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is critically low for {{ename}}.)\","
-        "               \"variables\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\","
-        "               \"assetLink\" : \"%s\" } } }"
-        "           }"
-        "       },"
-        "       { \"low_warning\"   : {"
-        "           \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}],"
-        "           \"severity\":\"WARNING\" ,"
-        "           \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is low for {{ename}}.)\","
-        "               \"variables\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\","
-        "               \"assetLink\" : \"%s\" } } } } },"
-        "       { \"high_warning\"  : {"
-        "           \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}],"
-        "           \"severity\":\"WARNING\" ,"
-        "           \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is high for {{ename}}.)\","
-        "               \"variables\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\","
-        "               \"assetLink\" : \"%s\" } } } } },"
-        "       { \"high_critical\" : {"
-        "           \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}],"
-        "           \"severity\":\"CRITICAL\","
-        "           \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is critically high for {{ename}}.)\","
-        "               \"variables\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\","
-        "               \"assetLink\" : \"%s\" } } } } }"
-        "   ],"
-        "   \"evaluation\"      : \"function main (v1)"
-        "                               if tonumber (v1) <= tonumber (low_critical) then"
-        "                                   return 'low_critical';"
-        "                               elseif tonumber (v1) <= tonumber (low_warning) then"
-        "                                   return 'low_critical';"
-        "                               elseif tonumber (v1) <= tonumber (low_warning) then"
-        "                                   return 'low_critical';"
-        "                               elseif tonumber (v1) <= tonumber (low_warning) then"
-        "                                   return 'low_critical';"
-        "                               else"
-        "                                   return 'ok';"
-        "                               end;"
-        "                           end\""
-        "} } ",
-        ruleName,
-        s_rule_desc (alert.name).c_str (),
-        ruleName,
-        asset_name,
-        s_values_unit (alert.name).c_str (),
-        alert.lowWarning.c_str (),
-        alert.lowCritical.c_str (),
-        alert.highWarning.c_str (),
-        alert.highCritical.c_str (),
-        alert_name,
-        asset_name,
-        asset_name,
-        alert_name,
-        asset_name,
-        asset_name,
-        alert_name,
-        asset_name,
-        asset_name,
-        alert_name,
-        asset_name,
-        asset_name);
+    std::string rule_name = alert.name + "@" + assetName ();
+    std::string rule = getRuleTemplate (client);
+    if (rule.empty ()) {
+        log_error ("No template received from fty-autoconfig, unable to continue");
+        zmsg_destroy (&message);
+        return;
+    }
+    std::vector<std::pair<std::string, std::string>> replacements = {{"__name__", rule_name},
+        {"__description__", s_rule_desc (alert.name)}, {"__metrics__", rule_name}, {"__assets__", assetName ()},
+        {"__values_unit__", s_values_unit (alert.name)}, {"__low_warning__", alert.lowWarning},
+        {"__low_critical__", alert.lowCritical}, {"__high_warning__", alert.highWarning},
+        {"__high_critical__", alert.highCritical}, {"__alert_name__", alert.name}, {"__ename__", assetName ()}};
+    for (auto one_replacement : replacements) {
+        auto pos = rule.find (one_replacement.first);
+        while (pos != std::string::npos) {
+            rule.replace (pos, one_replacement.first.length (), one_replacement.second);
+            pos = rule.find (one_replacement.first, pos);
+        }
+    }
 
-    log_debug ("aa: publishing rule %s", ruleName);
+    log_debug ("aa: publishing rule %s", rule_name.c_str ());
     zmsg_addstr (message, "fty-nut"); // uuid, don't need to be unique for now
     zmsg_addstr (message, "ADD");
-    zmsg_addstr (message, rule);
+    zmsg_addstr (message, rule.c_str ());
     if (mlm_client_sendto (client, "fty-alert-engine", "rfc-evaluator-rules", NULL, 1000, &message) == 0) {
         zmsg_t *resp = mlm_client_recv (client);
+        char *uuid = zmsg_popstr (resp);
         char *result = zmsg_popstr (resp);
         char *reason = zmsg_popstr (resp);
 
-        if (streq (result, "OK") || streq (reason, "ALREADY_EXISTS"))
+        if (streq (uuid, "fty-nut") && (streq (result, "OK") || streq (reason, "ALREADY_EXISTS")))
             alert.rulePublished = true;
         else
-            log_error ("Error %s when requesting %s to ADD rule \n%s.", reason, mlm_client_sender (client), rule);
+            log_error ("Error %s when requesting %s to ADD rule \n%s.", reason, mlm_client_sender (client),
+                    rule.c_str ());
 
+        zstr_free (&uuid);
         zstr_free (&reason);
         zstr_free (&result);
         zmsg_destroy (&resp);
     };
 
-    zstr_free (&rule);
-    zstr_free (&ruleName);
     zmsg_destroy (&message);
 }
 
