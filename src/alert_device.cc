@@ -350,7 +350,7 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
         return;
     }
     std::vector<std::pair<std::string, std::string>> replacements = {{"__name__", rule_name},
-        {"__description__", s_rule_desc (alert.name)}, {"__metrics__", rule_name}, {"__assets__", assetName ()},
+        {"\"__description__\"", s_rule_desc (alert.name)}, {"__metrics__", rule_name}, {"__assets__", assetName ()}, // description contains json, so we need to replace "" as well
         {"__values_unit__", s_values_unit (alert.name)}, {"__low_warning__", alert.lowWarning},
         {"__low_critical__", alert.lowCritical}, {"__high_warning__", alert.highWarning},
         {"__high_critical__", alert.highCritical}, {"__alert_name__", alert.name}, {"__ename__", assetName ()}};
