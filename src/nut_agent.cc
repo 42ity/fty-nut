@@ -224,12 +224,20 @@ void NUTAgent::advertisePhysics ()
             const auto &alarms = device.second.property ("ups.alarm");
             uint16_t bitfield = 0;
             int bit = 0;
+            int internal_failure_bit = 0;
             for (const auto &i : alarmsList) {
                 if (alarms.find(i) != std::string::npos) {
                     bitfield |= (1 << bit);
                     has_alarms = true;
                 }
+                if (i == "Internal UPS fault!") {
+                    internal_failure_bit = bit;
+                }
                 bit++;
+            }
+            // TODO FIXME I hate this kind of fix, but it was to be quick and dirty
+            if (alarms.find("Internal failure!") != std::string::npos) {
+                bitfield |= (1 << internal_failure_bit);
             }
             int r = fty::shm::write_metric(device.second.assetName (), "ups.alarm", std::to_string (bitfield), "", _ttl);
             if( r != 0 )
