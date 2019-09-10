@@ -166,12 +166,12 @@ void AssetState::recompute()
     // fancy sorting...
     allowed_powerdevices_.clear();
     AssetMap::const_iterator end;
-    if (license_limit_ < 0 || static_cast<size_t>(license_limit_) >= powerdevices_.size()) {
+    //if (license_limit_ < 0 || static_cast<size_t>(license_limit_) >= powerdevices_.size()) {
         end = powerdevices_.end();
-    } else {
+    /*} else {
         end = powerdevices_.begin();
         std::advance(end, license_limit_);
-    }
+    }*/
     allowed_powerdevices_ = AssetMap(powerdevices_.cbegin(), end);
 }
 
