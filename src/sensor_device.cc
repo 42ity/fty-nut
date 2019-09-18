@@ -28,7 +28,7 @@
 
 void Sensor::update (nut::TcpClient &conn)
 {
-    log_debug ("sa: updating temperature and humidity from NUT device %s", _nutMaster.c_str());
+    log_debug ("sa: updating sensor(s) temperature and humidity from NUT device %s", _nutMaster.c_str());
     auto nutDevice = conn.getDevice(_nutMaster);
     if (! nutDevice.isOk()) {
         log_debug ("sa: NUT device %s is not ready", _nutMaster.c_str());
@@ -52,30 +52,44 @@ void Sensor::update (nut::TcpClient &conn)
         } else {
             _humidity =  humidity[0];
             log_debug ("sa: %shumidity on %s is %s", prefix.c_str (), location().c_str (), _humidity.c_str());
-
         }
 
         _contacts.clear();
 
-        std::string state = nutDevice.getVariableValue (prefix + "contacts.1.status")[0];
-        if (state != "unknown" && state != "bad")
-            _contacts.push_back (state);
-        else
-            log_debug ("sa: %scontact.1.status state %s", prefix.c_str (), state.c_str ());
-
-        state = nutDevice.getVariableValue (prefix + "contacts.2.status")[0];
-        if (state != "unknown" && state != "bad")
-            _contacts.push_back (state);
-        else
-            log_debug ("sa: %scontact.2.status state %s", prefix.c_str (), state.c_str ());
-
-        log_debug ("sa: %scontact.status on %s: contact.1 %s, contact.2 %s",
-                   prefix.c_str (),
-                   location().c_str (),
-                   nutDevice.getVariableValue (prefix + "contacts.1.status")[0].c_str (),
-                   nutDevice.getVariableValue (prefix + "contacts.2.status")[0].c_str ()
-        );
-
+        for (int i = 1 ; i <= 2 ; i++) {
+            std::string baseVar = prefix + "contacts." + std::to_string(i);
+            std::string state = nutDevice.getVariableValue (baseVar + ".status")[0];
+            if (state != "unknown" && state != "bad") {
+                // process new status style (active / inactive), found on EMP002
+                // WRT the polarity configured
+                if (state == "active" || state == "inactive") {
+                    std::string contactConfig = nutDevice.getVariableValue (baseVar + ".config")[0];
+                    if (!contactConfig.empty()) {
+                        if (contactConfig == "normal-opened") {
+                            if (state == "active")
+                                state = "closed";
+                            else
+                                state = "opened";
+                        }
+                        else {
+                            if (state == "active")
+                                state = "opened";
+                            else
+                                state = "closed";
+                        }
+                    }
+                    else {
+                        // FIXME: what to do here? break or?
+                        log_debug ("sa: new style dry-contact status, but missing config");
+                    }
+                }
+                _contacts.push_back (state);
+                log_debug ("sa: %scontact.%i.status state %s", prefix.c_str (), i, state.c_str ());
+            }
+            else {
+                log_debug ("sa: %scontact.%i.status state '%s' not supported and discarded", prefix.c_str (), i, state.c_str ());
+            }
+        }
     } catch (...) {}
 }
 
@@ -93,8 +107,8 @@ std::string Sensor::topicSuffixExternal (const std::string& gpiPort) const
 
 void Sensor::publish (mlm_client_t *client, int ttl)
 {
-    log_debug ("sa: publishing temperature '%s' and humidity '%s' on '%s'",
-               _temperature.c_str(), _humidity.c_str(),  location().c_str());
+    log_debug ("sa: publishing temperature '%s' and humidity '%s' on '%s' from sensor '%s'",
+               _temperature.c_str(), _humidity.c_str(), location().c_str(), assetName().c_str());
 
     if (! _temperature.empty()) {
         zhash_t *aux = zhash_new ();
@@ -112,8 +126,8 @@ void Sensor::publish (mlm_client_t *client, int ttl)
         zhash_destroy (&aux);
         if (msg) {
             std::string topic = "temperature" + topicSuffix();
-            log_debug ("sending new temperature for element_src = '%s', value = '%s'",
-                       location().c_str (), _temperature.c_str ());
+            log_debug ("sending new temperature for element_src = '%s', value = '%s' on topic '%s'",
+                       location().c_str (), _temperature.c_str (), topic.c_str());
             int r = mlm_client_send (client, topic.c_str (), &msg);
             if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
             zmsg_destroy (&msg);
@@ -135,8 +149,8 @@ void Sensor::publish (mlm_client_t *client, int ttl)
         zhash_destroy (&aux);
         if (msg) {
             std::string topic = "humidity" + topicSuffix();
-            log_debug ("sending new humidity for element_src = '%s', value = '%s'",
-                       location().c_str (), _humidity.c_str ());
+            log_debug ("sending new humidity for element_src = '%s', value = '%s' on topic '%s'",
+                       location().c_str (), _humidity.c_str (), topic.c_str());
             int r = mlm_client_send (client, topic.c_str (), &msg);
             if( r != 0 ) log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
             zmsg_destroy (&msg);
@@ -180,8 +194,9 @@ void Sensor::publish (mlm_client_t *client, int ttl)
                     zmsg_destroy (&msg);
                 }
             }
-            else
+            else {
                 log_debug ("I did not find any child for %s on port %s", assetName().c_str (), extport.c_str ());
+            }
             ++gpiPort;
         }
     }
@@ -204,6 +219,7 @@ std::string Sensor::nutPrefix() const
     std::string prefix;
     if (chain() != 0)  prefix = "device." + std::to_string(chain()) + ".";
     prefix += "ambient.";
+    // Only add port index when different than 0
     if (port() != "0") {
         prefix += port() + ".";
     }
