@@ -52,7 +52,6 @@ void Sensor::update (nut::TcpClient &conn)
         } else {
             _humidity =  humidity[0];
             log_debug ("sa: %shumidity on %s is %s", prefix.c_str (), location().c_str (), _humidity.c_str());
-
         }
 
         _contacts.clear();
@@ -87,8 +86,9 @@ void Sensor::update (nut::TcpClient &conn)
                 _contacts.push_back (state);
                 log_debug ("sa: %scontact.%i.status state %s", prefix.c_str (), i, state.c_str ());
             }
-            else
+            else {
                 log_debug ("sa: %scontact.%i.status state '%s' not supported and discarded", prefix.c_str (), i, state.c_str ());
+            }
         }
     } catch (...) {}
 }
@@ -194,8 +194,9 @@ void Sensor::publish (mlm_client_t *client, int ttl)
                     zmsg_destroy (&msg);
                 }
             }
-            else
+            else {
                 log_debug ("I did not find any child for %s on port %s", assetName().c_str (), extport.c_str ());
+            }
             ++gpiPort;
         }
     }
