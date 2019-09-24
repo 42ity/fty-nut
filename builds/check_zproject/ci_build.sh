@@ -9,23 +9,23 @@ set -ex
 # Note: certain zproject scripts that deal with deeper dependencies expect that
 # such checkouts are directly in the same parent directory as "this" project.
 cd "$REPO_DIR/.."
-git clone --quiet --depth 1 -b release/IPM-2.0.0 https://github.com/42ity/cxxtools.git cxxtools
-git clone --quiet --depth 1 -b release/IPM-2.0.0 https://github.com/42ity/libcidr.git cidr
-git clone --quiet --depth 1 -b release/IPM-2.0.0 https://github.com/42ity/nut.git libnutclient
-git clone --quiet --depth 1 -b release/IPM-2.0.0 https://github.com/42ity/log4cplus.git log4cplus
-git clone --quiet --depth 1 -b release/IPM-2.0.0 https://github.com/42ity/fty-common-logging.git fty-common-logging
-git clone --quiet --depth 1 -b release/IPM-2.0.0 https://github.com/42ity/fty-common.git fty-common
-git clone --quiet --depth 1 -b release/IPM-2.0.0 https://github.com/42ity/tntdb.git tntdb
-git clone --quiet --depth 1 -b release/IPM-2.0.0 https://github.com/42ity/libsodium.git libsodium
-git clone --quiet --depth 1 -b release/IPM-2.0.0 https://github.com/42ity/libzmq.git libzmq
-git clone --quiet --depth 1 -b release/IPM-2.0.0 https://github.com/42ity/czmq.git czmq
-git clone --quiet --depth 1 -b release/IPM-2.0.0 https://github.com/42ity/malamute.git malamute
-git clone --quiet --depth 1 -b release/IPM-2.0.0 https://github.com/42ity/fty-proto.git fty-proto
-git clone --quiet --depth 1 -b release/IPM-2.0.0 https://github.com/42ity/fty-common-db.git fty-common-db
-git clone --quiet --depth 1 -b release/IPM-2.0.0 https://github.com/42ity/fty-common-mlm.git fty-common-mlm
-git clone --quiet --depth 1 -b release/IPM-2.0.0 https://github.com/42ity/fty-security-wallet.git fty-security-wallet
-git clone --quiet --depth 1 -b release/IPM-2.0.0 https://github.com/42ity/fty-common-nut.git fty-common-nut
-git clone --quiet --depth 1 -b release/IPM-2.0.0 https://github.com/42ity/fty-shm.git fty_shm
+git clone --quiet --depth 1 -b release/IPM-2.0.1 https://github.com/42ity/cxxtools.git cxxtools
+git clone --quiet --depth 1 -b release/IPM-2.0.1 https://github.com/42ity/libcidr.git cidr
+git clone --quiet --depth 1 -b release/IPM-2.0.1 https://github.com/42ity/nut.git libnutclient
+git clone --quiet --depth 1 -b release/IPM-2.0.1 https://github.com/42ity/log4cplus.git log4cplus
+git clone --quiet --depth 1 -b release/IPM-2.0.1 https://github.com/42ity/fty-common-logging.git fty-common-logging
+git clone --quiet --depth 1 -b release/IPM-2.0.1 https://github.com/42ity/fty-common.git fty-common
+git clone --quiet --depth 1 -b release/IPM-2.0.1 https://github.com/42ity/tntdb.git tntdb
+git clone --quiet --depth 1 -b release/IPM-2.0.1 https://github.com/42ity/libsodium.git libsodium
+git clone --quiet --depth 1 -b release/IPM-2.0.1 https://github.com/42ity/libzmq.git libzmq
+git clone --quiet --depth 1 -b release/IPM-2.0.1 https://github.com/42ity/czmq.git czmq
+git clone --quiet --depth 1 -b release/IPM-2.0.1 https://github.com/42ity/malamute.git malamute
+git clone --quiet --depth 1 -b release/IPM-2.0.1 https://github.com/42ity/fty-proto.git fty-proto
+git clone --quiet --depth 1 -b release/IPM-2.0.1 https://github.com/42ity/fty-common-db.git fty-common-db
+git clone --quiet --depth 1 -b release/IPM-2.0.1 https://github.com/42ity/fty-common-mlm.git fty-common-mlm
+git clone --quiet --depth 1 -b release/IPM-2.0.1 https://github.com/42ity/fty-security-wallet.git fty-security-wallet
+git clone --quiet --depth 1 -b release/IPM-2.0.1 https://github.com/42ity/fty-common-nut.git fty-common-nut
+git clone --quiet --depth 1 -b release/IPM-2.0.1 https://github.com/42ity/fty-shm.git fty_shm
 cd -
 
 if ! ((command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list zproject >/dev/null 2>&1) || \
