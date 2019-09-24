@@ -57,7 +57,7 @@ void Sensors::updateSensorList ()
     auto& devices = deviceState.getPowerDevices();
     auto& sensors = deviceState.getSensors();
 
-    log_debug("sa: updating device list");
+    log_debug("sa: updating sensors list");
 
     log_debug ("sa: %zd sensors in assets", sensors.size());
     _sensors.clear ();
@@ -69,23 +69,32 @@ void Sensors::updateSensorList ()
             log_debug ("sa: sensor %s ignored (no location)", name.c_str());
             continue;
         }
+        log_debug ("sa: checking sensor %s (location: %s, port '%s')", name.c_str(), parent_name.c_str(), i.second->port().c_str());
 
-        // is it connected to UPS/epdu?
+        // is it connected to UPS/epdu/ATS?
         const auto parent_it = devices.find(parent_name);
         if (parent_it == devices.cend()) {
+            log_debug ("sa: sensor parent '%s' not found", parent_name.c_str());
             // Connected to a sensor?
             if (sensors.count(parent_name)) {
                 // give parent his child
                 const std::string& port = i.second->port();
                 if (!port.empty()) {
                     _sensors[parent_name].addChild (port, name);
+                    // FIXME: support multiple children
+                    log_debug ("sa: sensor %s has port '%s')", name.c_str(), port.c_str());
                 }
+                else
+                    log_debug ("sa: sensor %s has no port)", name.c_str());
             }
             else
                 log_debug ("sa: sensor '%s' ignored (location is unknown/not a power device/not a sensor '%s')", name.c_str(), parent_name.c_str());
 
             continue;
         }
+        else
+            log_debug ("sa: sensor parent found: '%s'", parent_name.c_str());
+
         const AssetState::Asset *parent = parent_it->second.get();
         const std::string& ip = parent->IP();
         int chain = parent->daisychain();
@@ -95,6 +104,7 @@ void Sensors::updateSensorList ()
         if (chain <= 1) {
             // connected to standalone ups or chain master
             _sensors[name] = Sensor(i.second.get(), parent, children);
+            log_debug ("sa: adding sensor, with parent (not daisy): '%s'", parent_name.c_str());
         } else {
             // ugh, sensor connected to daisy chain device
             auto master = deviceState.ip2master(ip);

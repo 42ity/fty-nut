@@ -151,14 +151,39 @@ Device::scanCapabilities (nut::TcpClient& conn)
         if (! nutDevice.isOk ()) { throw std::runtime_error ("device " + assetName () + " is not configured in NUT yet"); }
         auto vars = nutDevice.getVariableValues ();
         if (vars.empty ()) return 0;
-        if (vars.find (prefix + "ambient.temperature.status") != vars.cend ()) {
-            addAlert ("ambient.temperature", vars);
-            _scanned = true;
+
+        // Sensors handling
+        if (vars.find (prefix + "ambient.count") != vars.cend ()) {
+            // New style sensor(s) (EMP002: ambient collection, with index)
+            auto sensor_count_var = vars.find (prefix + "ambient.count");
+            int sensors_count = std::stoi (sensor_count_var->second[0]);
+            log_debug ("aa: found %i sensor(s)", sensors_count);
+            for (int a=1; a<=sensors_count; a++) {
+                std::string current_sensor = "ambient." + std::to_string (a) + ".temperature.status";
+                if (vars.find (prefix + current_sensor) != vars.cend ()) {
+                    addAlert (current_sensor, vars);
+                    _scanned = true;
+                }
+                current_sensor = "ambient." + std::to_string (a) + ".humidity.status";
+                if (vars.find (prefix + current_sensor) != vars.cend ()) {
+                    addAlert (current_sensor, vars);
+                    _scanned = true;
+                }
+            }
         }
-        if (vars.find (prefix + "ambient.humidity.status") != vars.cend ()) {
-            addAlert ("ambient.humidity", vars);
-            _scanned = true;
+        else {
+            // Legacy sensor (EMP001: ambient collection, without index)
+            if (vars.find (prefix + "ambient.temperature.status") != vars.cend ()) {
+                addAlert ("ambient.temperature", vars);
+                _scanned = true;
+            }
+            if (vars.find (prefix + "ambient.humidity.status") != vars.cend ()) {
+                addAlert ("ambient.humidity", vars);
+                _scanned = true;
+            }
         }
+
+        // Input handling
         for (int a=1; a<=3; a++) {
             std::string q = "input.L" + std::to_string (a) + ".current";
             if (vars.find (prefix + q + ".status") != vars.cend ()) {
@@ -171,6 +196,8 @@ Device::scanCapabilities (nut::TcpClient& conn)
                 _scanned = true;
             }
         }
+
+        // Outlets groups handling
         for (int a=1; a<=1000; a++) {
             int found = 0;
             std::string q = "outlet.group." + std::to_string (a) + ".current";
