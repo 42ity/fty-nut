@@ -36,6 +36,29 @@ void Sensor::update (nut::TcpClient &conn)
     }
     try {
         std::string prefix = nutPrefix();
+
+        // Translate NUT keys into 42ity keys.
+        /* FIXME: sensor should also have an updateInventory() method, since EMP002
+           provide inventory data (mfr, model, serial, ...)
+           However, limitations exists in the current performMapping, where indexed-to-unitary
+           conversion fail (like ambient.1.mfr -> manufacturer)
+        {
+            auto mappedInventory = nutcommon::performMapping(mapping("sensorInventoryMapping"), scalarVars, prefixId);
+            for (auto value : mappedInventory) {
+                updateInventory(value.first, value.second);
+            }
+        } */
+
+        try {
+            // Check for actual sensor presence, if ambient.present is available!
+            auto sensorPresent = nutDevice.getVariableValue (prefix + "present");
+            log_debug ("sa: sensor '%s' presence: '%s'", prefix.c_str(), sensorPresent[0].c_str());
+            if ((!sensorPresent.empty ()) && (sensorPresent[0] != "yes")) {
+                log_debug ("sa: sensor '%s' is not present or disconnected on NUT device %s", prefix.c_str(), _nutMaster.c_str());
+                return;
+            }
+        } catch (...) {}
+
         log_debug ("sa: getting %stemperature from %s", prefix.c_str(), _nutMaster.c_str());
         auto temperature = nutDevice.getVariableValue (prefix + "temperature");
         if (temperature.empty ()) {
