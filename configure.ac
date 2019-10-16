@@ -1398,6 +1398,90 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common_mlm
 dnl END of enabled attempts to search for libfty_common_mlm
 
 
+was_fty_common_socket_check_lib_detected=no
+
+search_libfty_common_socket="yes"
+
+AC_ARG_WITH([libfty_common_socket],
+    [
+        AS_HELP_STRING([--with-libfty_common_socket],
+        [yes or no. Optionally specify libfty_common_socket prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_libfty_common_socket="yes"
+    ],
+    [
+        search_libfty_common_socket="yes"
+    ])
+AS_CASE([x"${with_libfty_common_socket}"],
+    [xyes], [search_libfty_common_socket="yes"],
+    [xno],  [search_libfty_common_socket="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_libfty_common_socket}" = xno],
+    [AC_MSG_WARN([Required dependency on fty_common_socket was explicitly disabled during configuration by '--with-libfty_common_socket=no'; subsequent full build of fty-nut may fail])])
+
+AS_IF([test x"${search_libfty_common_socket}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([fty_common_socket], [libfty_common_socket >= 0.0.0],
+    [
+        was_fty_common_socket_check_lib_detected=pkgcfg
+        found_pkgconfig="libfty_common_socket"
+    ],
+    [
+        AC_MSG_NOTICE([Package libfty_common_socket not found; falling back to defined compilability tests])
+
+        fty_common_socket_synthetic_cflags=""
+        fty_common_socket_synthetic_libs="-lfty-common-socket"
+
+        if test -n "${with_libfty_common_socket}" && test x"${with_libfty_common_socket}" != xyes && test x"${with_libfty_common_socket}" != xno; then
+            if test -r "${with_libfty_common_socket}/include/fty_common_socket.h"; then
+                fty_common_socket_synthetic_cflags="-I${with_libfty_common_socket}/include"
+                fty_common_socket_synthetic_libs="-L${with_libfty_common_socket}/lib -lfty-common-socket"
+            else
+            AC_MSG_ERROR([Header file ${with_libfty_common_socket}/include/fty_common_socket.h was not found. Please check libfty_common_socket prefix])
+            fi
+        else
+            AC_CHECK_HEADER([fty_common_socket.h], [],
+            AC_MSG_ERROR([Header file fty_common_socket.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([fty-common-socket], [fty_common_socket_selftest],
+            [
+                was_fty_common_socket_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty-common-socket"
+            ],
+            [AC_MSG_ERROR([cannot link with -lfty-common-socket, install libfty_common_socket])])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common_socket
+    AS_CASE(["x${was_fty_common_socket_check_lib_detected}"],
+        [xpkgcfg], [
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
+                CFLAGS="${fty_common_socket_CFLAGS} ${CFLAGS}"
+                LIBS="${fty_common_socket_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                CFLAGS="${fty_common_socket_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${fty_common_socket_synthetic_libs} ${LDFLAGS}"
+                LIBS="${fty_common_socket_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([fty_common_socket_CFLAGS],[${fty_common_socket_synthetic_cflags}])
+                AC_SUBST([fty_common_socket_LIBS],[${fty_common_socket_synthetic_libs}])
+            ],
+        [xno], [
+            AC_MSG_ERROR([Cannot find pkg-config metadata for libfty_common_socket 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for libfty_common_socket
+
+
 was_fty_security_wallet_check_lib_detected=no
 
 search_libfty_security_wallet="yes"

@@ -27,13 +27,14 @@ AM_CPPFLAGS = \
     ${fty_common_db_CFLAGS} \
     ${openssl_CFLAGS} \
     ${fty_common_mlm_CFLAGS} \
+    ${fty_common_socket_CFLAGS} \
     ${fty_security_wallet_CFLAGS} \
     ${fty_common_nut_CFLAGS} \
     ${fty_shm_CFLAGS} \
     -D__STDC_FORMAT_MACROS \
     -I$(srcdir)/include
 
-project_libs = ${cxxtools_LIBS} ${cidr_LIBS} ${libnutclient_LIBS} ${log4cplus_LIBS} ${fty_common_logging_LIBS} ${fty_common_LIBS} ${tntdb_LIBS} ${libsodium_LIBS} ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${fty_proto_LIBS} ${fty_common_db_LIBS} ${openssl_LIBS} ${fty_common_mlm_LIBS} ${fty_security_wallet_LIBS} ${fty_common_nut_LIBS} ${fty_shm_LIBS}
+project_libs = ${cxxtools_LIBS} ${cidr_LIBS} ${libnutclient_LIBS} ${log4cplus_LIBS} ${fty_common_logging_LIBS} ${fty_common_LIBS} ${tntdb_LIBS} ${libsodium_LIBS} ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${fty_proto_LIBS} ${fty_common_db_LIBS} ${openssl_LIBS} ${fty_common_mlm_LIBS} ${fty_common_socket_LIBS} ${fty_security_wallet_LIBS} ${fty_common_nut_LIBS} ${fty_shm_LIBS}
 
 SUBDIRS = doc
 SUBDIRS += include
@@ -69,6 +70,7 @@ EXTRA_DIST += \
     Findfty_common_db.cmake \
     Findopenssl.cmake \
     Findfty_common_mlm.cmake \
+    Findfty_common_socket.cmake \
     Findfty_security_wallet.cmake \
     Findfty_common_nut.cmake \
     Findfty_shm.cmake \
