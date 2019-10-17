@@ -173,7 +173,7 @@ get_commands(nut::Client &nut, tntdb::Connection &conn, mlm_client_t *client, co
 }
 
 static void
-do_commands(nut::Client &nut, tntdb::Connection &conn, mlm_client_t *client, const std::string &address, const std::string &uuid, zmsg_t *msg, PendingCommands &pendingCommands)
+do_native_commands(nut::Client &nut, tntdb::Connection &conn, mlm_client_t *client, const std::string &address, const std::string &uuid, zmsg_t *msg, PendingCommands &pendingCommands)
 {
     ZstrGuard asset(zmsg_popstr(msg));
 
@@ -186,7 +186,6 @@ do_commands(nut::Client &nut, tntdb::Connection &conn, mlm_client_t *client, con
     while (zmsg_size(msg)) {
         ZstrGuard cmd(zmsg_popstr(msg));
         ZstrGuard data(zmsg_popstr(msg));
-
         auto device = asset_to_mapped_device(conn, std::string(asset));
         const auto prefix = device.daisy_chain ? std::string("device.") + std::to_string(device.daisy_chain) + "." : "";
         trackingIDs.emplace_back(nut.executeDeviceCommand(device.name, prefix + cmd.get(), data.get()));
@@ -195,6 +194,29 @@ do_commands(nut::Client &nut, tntdb::Connection &conn, mlm_client_t *client, con
     // Store pending command data for further processing.
     pendingCommands.emplace_back(trackingIDs, address, uuid);
     log_debug("Sent %d NUT commands, correlation ID='%s'.", trackingIDs.size(), uuid.c_str());
+}
+
+static void
+do_commands(nut::Client &nut, tntdb::Connection &conn, mlm_client_t *client, const std::string &address, const std::string &uuid, zmsg_t *msg, PendingCommands &pendingCommands)
+{
+    std::string s_action;
+    std::string s_asset;
+    std::string s_delay;
+
+    ZstrGuard action(zmsg_popstr(msg));   // action to execute
+    s_action = action.get();
+
+    if( s_action == "SHUTDOWN_ASSET_POWER_SOURCES" ) {
+        if (zmsg_size(msg) != 2) {
+            throw std::runtime_error("INVALID_REQUEST");
+        }
+
+        ZstrGuard asset(zmsg_popstr(msg)); // asset on which compute action
+        ZstrGuard delay(zmsg_popstr(msg)); // delay beafore action
+
+        s_asset  = asset.get();
+        s_delay  = delay.get();
+    }
 }
 
 static void
@@ -352,6 +374,9 @@ fty_nut_command_server(zsock_t *pipe, void *args)
 
                 if (streq(action, "GET_COMMANDS")) {
                     get_commands(nutClient, conn, client, sender, uuid.get(), msg);
+                }
+                else if (streq(action, "DO_NATIVE_COMMANDS")) {
+                    do_native_commands(nutClient, conn, client, sender, uuid.get(), msg, pendingCommands);
                 }
                 else if (streq(action, "DO_COMMANDS")) {
                     do_commands(nutClient, conn, client, sender, uuid.get(), msg, pendingCommands);
