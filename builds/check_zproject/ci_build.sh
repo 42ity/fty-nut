@@ -23,6 +23,7 @@ git clone --quiet --depth 1 -b 1.0-FTY-master https://github.com/42ity/malamute.
 git clone --quiet --depth 1 -b master https://github.com/42ity/fty-proto.git fty-proto
 git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common-db.git fty-common-db
 git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common-mlm.git fty-common-mlm
+git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common-socket.git fty-common-socket
 git clone --quiet --depth 1 -b master https://github.com/42ity/fty-security-wallet.git fty-security-wallet
 git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common-nut.git fty-common-nut
 git clone --quiet --depth 1 -b master https://github.com/42ity/fty-shm.git fty_shm

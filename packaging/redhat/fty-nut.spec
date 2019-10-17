@@ -70,6 +70,7 @@ BuildRequires:  fty-proto-devel >= 1.0.0
 BuildRequires:  fty-common-db-devel
 BuildRequires:  openssl-devel
 BuildRequires:  fty-common-mlm-devel
+BuildRequires:  fty-common-socket-devel
 BuildRequires:  fty-security-wallet-devel
 BuildRequires:  fty-common-nut-devel
 BuildRequires:  fty_shm-devel >= 1.0.0
@@ -111,6 +112,7 @@ Requires:       fty-proto-devel >= 1.0.0
 Requires:       fty-common-db-devel
 Requires:       openssl-devel
 Requires:       fty-common-mlm-devel
+Requires:       fty-common-socket-devel
 Requires:       fty-security-wallet-devel
 Requires:       fty-common-nut-devel
 Requires:       fty_shm-devel >= 1.0.0
