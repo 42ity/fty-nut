@@ -187,7 +187,7 @@ where
 * 'descriptionN' is the description of 'commandN'
 
 The following request performs one or more actions on an asset:
-* "DO_COMMANDS"/'uuid'/'asset'/('commandN'/'argumentN')*
+* "DO_NATIVE_COMMANDS"/'uuid'/'asset'/('commandN'/'argumentN')*
 
 where
 * '/' indicates a multipart string message

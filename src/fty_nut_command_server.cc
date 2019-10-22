@@ -260,10 +260,10 @@ treat_pending_commands(nut::Client &nutClient, mlm_client_t *client, PendingComm
             zmsg_t *reply = zmsg_new();
             zmsg_addstr(reply, "OK");
             zmsg_addstr(reply, it->uuid.c_str());
-            send_reply(client, it->address, "DO_COMMANDS", &reply);
+            send_reply(client, it->address, "DO_NATIVE_COMMANDS", &reply);
         }
         else {
-            send_error(client, it->address, "DO_COMMANDS", it->errMsg, it->uuid.c_str());
+            send_error(client, it->address, "DO_NATIVE_COMMANDS", it->errMsg, it->uuid.c_str());
         }
     }
 
