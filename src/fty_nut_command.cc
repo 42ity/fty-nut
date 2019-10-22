@@ -30,22 +30,19 @@
 
 #include "nut_mlm.h"
 
-const char *NUT_USER_ENV = "NUT_USER";
-const char *NUT_PASS_ENV = "NUT_PASSWD";
-
 int main (int argc, char *argv [])
 {
-    std::string nutHost = "localhost";
-    std::string nutUsername = getenv(NUT_USER_ENV) ? getenv(NUT_USER_ENV) : "";
-    std::string nutPassword = getenv(NUT_PASS_ENV) ? getenv(NUT_PASS_ENV) : "";
+    // Build database URL
+    DBConn::dbpath();
+
+    // Create default configuration
+    ftynut::NutCommandConnector::Parameters commandParameters;
     std::string logConfig = "/etc/fty/ftylog.cfg";
+    std::string logVerbose = "false";
     std::string configFile;
 
-    bool verbose = false;
-    int argn;
-    ManageFtyLog::setInstanceFtylog("fty-nut-command");
-
-    for (argn = 1; argn < argc; argn++) {
+    // Parse command-line arguments
+    for (int argn = 1; argn < argc; argn++) {
         if (streq (argv [argn], "--help")
         ||  streq (argv [argn], "-h")) {
             puts ("fty-nut-command [options] ...");
@@ -57,7 +54,7 @@ int main (int argc, char *argv [])
         else
         if (streq (argv [argn], "--verbose")
         ||  streq (argv [argn], "-v"))
-            verbose = true;
+            logVerbose = "true";
         else
         if (streq (argv [argn], "--config")
             ||  streq (argv [argn], "-c")) {
@@ -65,64 +62,50 @@ int main (int argc, char *argv [])
             configFile = argv [argn];
         }
         else {
-            printf ("Unknown option: %s\n", argv [argn]);
+            std::cerr << "Unknown option: " << argv[argn] << std::endl;
             return 1;
         }
     }
 
-    if (configFile != "") {
-        log_info ("Loading config file '%s'...", configFile.c_str());
-        zconfig_t *cfg = zconfig_load(configFile.c_str());
+    // Parse configuration file
+    if (!configFile.empty()) {
+        ZconfigGuard cfg(zconfig_load(configFile.c_str()));
         if (cfg) {
-            logConfig = zconfig_get(cfg, "log/config", "");
-            nutHost        = zconfig_get(cfg, "nut/host", nutHost.c_str());
-            nutUsername    = zconfig_get(cfg, "nut/username", nutUsername.c_str());
-            nutPassword    = zconfig_get(cfg, "nut/password", nutPassword.c_str());
-            log_info ("Config file loaded.");
+            std::map<std::string, std::string&> properties {
+                { "log/config", logConfig },
+                { "log/verbose", logVerbose },
+                { "nut/host", commandParameters.nutHost },
+                { "nut/username", commandParameters.nutUsername },
+                { "nut/password", commandParameters.nutPassword }
+            } ;
+            for (auto& property : properties) {
+                property.second = zconfig_get(cfg.get(), property.first.c_str(), std::string(property.second).c_str());
+            }
         }
         else {
-            log_info ("Couldn't load config file.");
+            std::cerr << "Couldn't load config file " << configFile << std::endl;
+            return EXIT_FAILURE;
         }
     }
 
-    ManageFtyLog::getInstanceFtylog()->setConfigFile(logConfig);
-    if (verbose)
+    // Set up logging.
+    ManageFtyLog::setInstanceFtylog(commandParameters.agentName, logConfig);
+    if (!configFile.empty()) {
+        log_info ("Loaded config file '%s'.", configFile.c_str());
+    }
+
+    bool verbose;
+    std::stringstream(logVerbose) >> verbose;
+
+    if (verbose) {
         ManageFtyLog::getInstanceFtylog()->setVeboseMode();
-
-    // Build database URL
-    DBConn::dbpath();
-
-    log_info ("fty_nut_command  ");
-    zactor_t *server = zactor_new (fty_nut_command_server, MLM_ENDPOINT_VOID);
-
-    zstr_sendm (server, "CONFIGURATION");
-    zstr_sendm (server, nutHost.c_str());
-    zstr_sendm (server, nutUsername.c_str());
-    zstr_sendm (server, nutPassword.c_str());
-    zstr_send (server, DBConn::url.c_str());
-
-    int r = EXIT_SUCCESS;
-
-    // code from src/malamute.c, under MPL
-    //  Accept and print any message back from server
-    while (true) {
-        ZstrGuard message (zstr_recv (server));
-        if (message) {
-            if (streq (message, "NUT_CONNECTION_FAILURE")) {
-                log_fatal ("Failed to communicate with NUT server, aborting...");
-                r = EXIT_FAILURE;
-                break;
-            }
-            else {
-                puts (message.get());
-            }
-        }
-        else {
-            puts ("interrupted");
-            break;
-        }
+        log_trace ("Verbose mode OK");
     }
 
-    zactor_destroy (&server);
-    return r;
+    // Launch workers
+    ftynut::NutCommandConnector nutCommandConnector(commandParameters);
+
+    sleep(2000000);
+
+    return EXIT_SUCCESS;
 }

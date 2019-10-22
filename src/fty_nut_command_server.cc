@@ -28,17 +28,305 @@
 
 #include "fty_nut_command_server.h"
 
+#include <functional>
+
+namespace ftynut {
+
+constexpr auto NUT_USER_ENV = "NUT_USER";
+constexpr auto NUT_PASS_ENV = "NUT_PASSWD";
+
+#if 0
+constexpr auto AGENT_NAME_KEY =                   "agentName";
+constexpr auto AGENT_NAME =                       "fty-srr";
+constexpr auto ENDPOINT_KEY =                     "endPoint";
+//constexpr auto DEFAULT_ENDPOINT =                 "ipc://@/malamute";
+//constexpr auto DEFAULT_LOG_CONFIG =               "/etc/fty/ftylog.cfg";
+constexpr auto SRR_QUEUE_NAME_KEY =               "queueName";
+constexpr auto SRR_MSG_QUEUE_NAME =               "ETN.Q.IPMCORE.SRR";
+#endif
+
+static void connectToNutServer(nut::TcpClient& client, const std::string& nutHost, const std::string& nutUsername, const std::string& nutPassword) {
+    try {
+        client.connect(nutHost);
+        client.authenticate(nutUsername, nutPassword);
+        client.setFeature(nut::TcpClient::TRACKING, true);
+        log_trace("Connected to NUT server '%s'.", nutHost.c_str());
+    }
+    catch (std::exception &e) {
+        log_error("Error while connecting to NUT server: %s.", e.what());
+        throw;
+    }
+}
+
+/**
+ * \brief Algorithm for emitting a number of objects from an object.
+ */
+template <class InputIt, class OutputIt, class UnaryOperation> OutputIt emit(InputIt i_first, OutputIt o_first, UnaryOperation unary_op) {
+    while (i_first != o_first) {
+        auto emitted = unary_op(*i_first++);
+        for (auto it = emitted.begin(); it != emitted.end(); it++) {
+            *o_first++ = *it;
+        }
+    }
+    return o_first;
+}
+
+/**
+ * \brief Map from 42ity daisy-chained to NUT command.
+ */
+static dto::commands::Command daisyChainedToNutCommand(tntdb::Connection &conn, const dto::commands::Command &job) {
+    dto::commands::Command command = job;
+
+    auto daisy_chain = DBAssets::select_daisy_chain(conn, job.asset);
+    if (daisy_chain.status && daisy_chain.item.size() != 0) {
+        for (const auto &i : daisy_chain.item) {
+            if (i.second == job.asset) {
+                command.asset = daisy_chain.item.begin()->second;
+                if (!job.target.empty()) {
+                    command.target = "device." + std::to_string(i.first);
+                }
+                else {
+                    command.target = "device." + std::to_string(i.first) + "." + job.target;
+                }
+                break;
+            }
+        }
+    }
+
+    return command;
+}
+
+NutCommandManager::NutCommandWorker::NutCommandWorker(const std::string& nutHost, const std::string& nutUsername, const std::string& nutPassword, CompletionCallback callback) :
+    m_nutHost(nutHost),
+    m_nutUsername(nutUsername),
+    m_nutPassword(nutPassword),
+    m_callback(callback),
+    m_worker(std::bind(&NutCommandManager::NutCommandWorker::mainloop, this)),
+    m_stopped(false)
+{
+}
+
+NutCommandManager::NutCommandWorker::~NutCommandWorker() {
+    std::lock_guard<std::mutex> lk(m_mutex);
+    m_stopped = true;
+    m_cv.notify_one();
+    m_worker.join();
+}
+
+NutCommandManager::NutCommandWorker::NutTrackingIds NutCommandManager::NutCommandWorker::submitWork(const dto::commands::Commands &jobs) {
+    NutTrackingIds ids;
+
+    nut::TcpClient client;
+    connectToNutServer(client, m_nutHost, m_nutUsername, m_nutPassword);
+
+    for (const auto &job : jobs) {
+        std::string nutCommand = job.target.empty() ?
+            job.command :
+            job.target + "." + job.command;
+
+        log_debug("Executing NUT command '%s' argument '%s' on asset '%s'.", nutCommand.c_str(), job.argument.c_str(), job.asset.c_str());
+        auto id = client.executeDeviceCommand(job.asset, job.command, job.argument);
+        ids.insert(id);
+        log_trace("NUT job ID: %s.", id.c_str());
+    }
+
+    {
+        std::lock_guard<std::mutex> lk(m_mutex);
+        for (const auto& id : ids) {
+            m_pendingCommands.emplace_back(id);
+            m_cv.notify_one();
+        }
+    }
+
+    return ids;
+}
+
+void NutCommandManager::NutCommandWorker::mainloop() {
+    while (!m_stopped) {
+        std::unique_lock<std::mutex> lk(m_mutex);
+        m_cv.wait_for(lk, std::chrono::seconds(2));
+
+        if (!m_pendingCommands.empty()) {
+            nut::TcpClient client;
+            connectToNutServer(client, m_nutHost, m_nutUsername, m_nutPassword);
+
+            // Store completed commands here to not hold the mutex while calling callbacks.
+            std::vector<std::pair<nut::TrackingID, bool>> jobsCompleted;
+
+            // Mark and sweep completed NUT commands.
+            auto treated = std::remove_if(m_pendingCommands.begin(), m_pendingCommands.end(),
+                [&client, &jobsCompleted, this](nut::TrackingID &id) -> bool {
+                    auto result = client.getTrackingResult(id);
+                    switch (result) {
+                        case nut::FAILURE:
+                        case nut::SUCCESS:
+                            jobsCompleted.emplace_back(id, result == nut::SUCCESS);
+                            return true;
+                        default:
+                            return false;
+                    }
+                }
+            );
+
+            m_pendingCommands.erase(treated, m_pendingCommands.end());
+
+            // Call callbacks without holding the mutex.
+            lk.unlock();
+            for (auto jobCompleted : jobsCompleted) {
+                log_trace("NUT job ID '%s' finished with %s.", jobCompleted.first.c_str(), jobCompleted.second ? "success" : "failure");
+                m_callback(jobCompleted.first, jobCompleted.second);
+            }
+        }
+    }
+}
+
+NutCommandManager::NutCommandManager(const std::string& nutHost, const std::string& nutUsername, const std::string& nutPassword, const std::string& dbConn, CompletionCallback callback) :
+    m_worker(nutHost, nutUsername, nutPassword, std::bind(&NutCommandManager::completionCallback, this, std::placeholders::_1, std::placeholders::_2)),
+    m_dbConn(dbConn),
+    m_callback(callback)
+{
+}
+
+void NutCommandManager::submitWork(const std::string &correlationId, const dto::commands::Commands &jobs) {
+    for (const auto& job : jobs) {
+        log_info("Performing command '%s' target '%s' argument '%s' on asset '%s'.",
+            job.command.c_str(),
+            job.target.c_str(),
+            job.argument.c_str(),
+            job.asset.c_str()
+        );
+    }
+
+    auto conn = tntdb::connectCached(m_dbConn);
+
+    // Convert 42ity jobs to NUT commands.
+    dto::commands::Commands nutJobs;
+    std::transform(jobs.begin(), jobs.end(), std::back_inserter(nutJobs), std::bind(daisyChainedToNutCommand, std::ref(conn), std::placeholders::_1));
+
+    std::lock_guard<std::mutex> lk(m_mutex);
+    m_jobs.emplace_back(correlationId, m_worker.submitWork(nutJobs));
+}
+
+void NutCommandManager::completionCallback(nut::TrackingID id, bool result) {
+    // Store completed jobs here to not hold the mutex while calling callbacks.
+    std::vector<std::pair<std::string, bool>> jobsCompleted;
+
+    {
+        std::lock_guard<std::mutex> lk(m_mutex);
+
+        // Mark jobs with no outstanding NUT tracking IDs as terminated.
+        auto jobsTreated = std::remove_if(m_jobs.begin(), m_jobs.end(),
+            [&id, &result, &jobsCompleted](Job &job) -> bool {
+                // Clear NUT tracking IDs of completed commands.
+                auto it = job.ids.find(id);
+                if (it != job.ids.end()) {
+                    job.ids.erase(it);
+                    job.success &= job.success;
+                }
+                bool done = job.ids.empty();
+                if (done) {
+                    jobsCompleted.emplace_back(job.correlationId, job.success);
+                }
+                return done;
+            }
+        );
+
+        m_jobs.erase(jobsTreated, m_jobs.end());
+    }
+
+    // Signal completed jobs without holding the mutex.
+    for (auto jobCompleted : jobsCompleted) {
+        m_callback(jobCompleted.first, jobCompleted.second);
+    }
+}
+
+NutCommandConnector::Parameters::Parameters() :
+    endpoint(MLM_ENDPOINT),
+    agentName("fty-nut-command"),
+    nutHost("localhost"),
+    nutUsername(getenv(NUT_USER_ENV) ? getenv(NUT_USER_ENV) : ""),
+    nutPassword(getenv(NUT_PASS_ENV) ? getenv(NUT_PASS_ENV) : ""),
+    dbUrl(DBConn::url)
+{
+}
+
+NutCommandConnector::NutCommandConnector(NutCommandConnector::Parameters params) :
+    m_parameters(params),
+    m_manager(params.nutHost, params.nutUsername, params.nutPassword, params.dbUrl, std::bind(&NutCommandConnector::completionCallback, this, std::placeholders::_1, std::placeholders::_2))
+{
+    m_msgBus = messagebus::MlmMessageBus(m_parameters.endpoint, m_parameters.agentName);
+    m_msgBus->connect();
+
+    auto fct = std::bind(&NutCommandConnector::handleRequest, this, std::placeholders::_1);
+    m_msgBus->receive("ETN.Q.IPMCORE.NUTCOMMAND", fct);
+}
+
+NutCommandConnector::~NutCommandConnector() {
+    std::lock_guard<std::mutex> lk(m_mutex);
+    delete m_msgBus;
+}
+
+void NutCommandConnector::handleRequest(messagebus::Message msg) {
+    if ((msg.metaData().count(messagebus::Message::SUBJECT) == 0) ||
+        (msg.metaData().count(messagebus::Message::COORELATION_ID) == 0)) {
+        log_error("Missing subject/correlationID in request.");
+        return;
+    }
+
+    const auto& subject = msg.metaData()[messagebus::Message::SUBJECT];
+    const auto& correlationId = msg.metaData()[messagebus::Message::COORELATION_ID];
+    if (subject == "PerformCommands") {
+        dto::commands::PerformCommandsQueryDto query;
+        msg.userData() >> query;
+
+        std::lock_guard<std::mutex> lk(m_mutex);
+
+        try {
+            log_trace("Handling PerformCommands correlation ID=%s.", correlationId.c_str());
+            m_pendingJobs.emplace(std::make_pair(correlationId, msg.metaData()));
+            m_manager.submitWork(correlationId, query.commands);
+        }
+        catch (std::exception &e) {
+            log_error("Exception while processing command PerformCommands: %s.", e.what());
+            m_pendingJobs.erase(correlationId);
+            buildAndSendReply(msg.metaData(), false);
+        }
+    }
+    else {
+        log_error("Unknown subject '%s' in request.", subject.c_str());
+    }
+}
+
+void NutCommandConnector::completionCallback(std::string correlationId, bool result) {
+    messagebus::MetaData job;
+    {
+        std::lock_guard<std::mutex> lk(m_mutex);
+        job = m_pendingJobs.at(correlationId);
+        m_pendingJobs.erase(correlationId);
+    }
+
+    log_trace("PerformCommands correlation ID=%s finished with %s.", correlationId.c_str(), result ? "success" : "failure");
+    buildAndSendReply(job, result);
+}
+
+void NutCommandConnector::buildAndSendReply(const messagebus::MetaData &sender, bool result) {
+    messagebus::Message message;
+    message.metaData()[messagebus::Message::COORELATION_ID] = sender.at(messagebus::Message::COORELATION_ID);
+    message.metaData()[messagebus::Message::SUBJECT] = sender.at(messagebus::Message::SUBJECT);
+    message.metaData()[messagebus::Message::STATUS] = result ? "ok" : "ko";
+    message.metaData()[messagebus::Message::TO] = sender.at(messagebus::Message::REPLY_TO);
+    m_msgBus->sendReply(sender.at(messagebus::Message::REPLY_TO), message);
+}
+
+}
+
+#if 0
+
+
 const char *COMMAND_SUBJECT = "power-actions";
 const char *ACTOR_COMMAND_NAME = "fty-nut-command";
 const int TIMEOUT = 5;
 
-struct MappedDevice
-{
-    MappedDevice(const std::string &n, int d) : name(n), daisy_chain(d) {}
-
-    std::string name;
-    int daisy_chain;
-};
 
 struct PendingCommand
 {
@@ -56,51 +344,6 @@ typedef std::list<PendingCommand> PendingCommands;
 //
 // Helpers
 //
-
-static MappedDevice
-asset_to_mapped_device(tntdb::Connection &conn, const std::string &asset)
-{
-    auto daisy_chain = DBAssets::select_daisy_chain(conn, asset);
-    if (!daisy_chain.status) {
-        throw std::runtime_error(daisy_chain.msg);
-    }
-    if (daisy_chain.item.size() == 0) {
-        return MappedDevice(asset, 0);
-    }
-    else {
-        int daisy_number = 0;
-        for (const auto &i : daisy_chain.item) {
-            if (i.second == asset) {
-                daisy_number = i.first;
-                break;
-            }
-        }
-        return MappedDevice(daisy_chain.item.begin()->second, daisy_number);
-    }
-}
-
-static std::set<std::string>
-get_commands_nut(nut::Client &nut, const MappedDevice &asset)
-{
-    const auto cmds = nut.getDeviceCommandNames(asset.name);
-
-    if (asset.daisy_chain != 0) {
-        // Device is daisy-chained, filter out and rename commands
-        const std::string pattern = std::string("device.") + std::to_string(asset.daisy_chain) + ".";
-        std::set<std::string> output;
-
-        for (const auto &i : cmds) {
-            if (i.find(pattern) != std::string::npos) {
-                std::string fakeName = i;
-                output.insert(fakeName.erase(0, pattern.length()));
-            }
-        }
-        return output;
-    }
-    else {
-        return cmds;
-    }
-}
 
 static void
 send_reply(mlm_client_t *client, const std::string &address, const std::string &command, zmsg_t **msg)
@@ -137,7 +380,7 @@ send_error(mlm_client_t *client, const std::string &address, const std::string &
 //
 
 static void
-get_commands(nut::Client &nut, tntdb::Connection &conn, mlm_client_t *client, const std::string &address, const std::string &uuid, zmsg_t *msg)
+get_commands(nut::TcpClient &nut, tntdb::Connection &conn, mlm_client_t *client, const std::string &address, const std::string &uuid, zmsg_t *msg)
 {
     std::vector<std::pair<std::string, std::set<std::string>>> replyData;
     std::map<std::string, MappedDevice> mappedDevices;
@@ -173,7 +416,7 @@ get_commands(nut::Client &nut, tntdb::Connection &conn, mlm_client_t *client, co
 }
 
 static void
-do_native_commands(nut::Client &nut, tntdb::Connection &conn, mlm_client_t *client, const std::string &address, const std::string &uuid, zmsg_t *msg, PendingCommands &pendingCommands)
+do_native_commands(nut::TcpClient &nut, tntdb::Connection &conn, mlm_client_t *client, const std::string &address, const std::string &uuid, zmsg_t *msg, PendingCommands &pendingCommands)
 {
     ZstrGuard asset(zmsg_popstr(msg));
 
@@ -197,7 +440,7 @@ do_native_commands(nut::Client &nut, tntdb::Connection &conn, mlm_client_t *clie
 }
 
 static void
-do_commands(nut::Client &nut, tntdb::Connection &conn, mlm_client_t *client, const std::string &address, const std::string &uuid, zmsg_t *msg, PendingCommands &pendingCommands)
+do_commands(nut::TcpClient &nut, tntdb::Connection &conn, mlm_client_t *client, const std::string &address, const std::string &uuid, zmsg_t *msg, PendingCommands &pendingCommands)
 {
     std::string s_action;
     std::string s_asset;
@@ -220,7 +463,7 @@ do_commands(nut::Client &nut, tntdb::Connection &conn, mlm_client_t *client, con
 }
 
 static void
-treat_pending_commands(nut::Client &nutClient, mlm_client_t *client, PendingCommands &pendingCommands)
+treat_pending_commands(nut::TcpClient &nutClient, mlm_client_t *client, PendingCommands &pendingCommands)
 {
     // Check if any pending commands are completed.
     for (auto &command : pendingCommands) {
@@ -334,7 +577,7 @@ fty_nut_command_server(zsock_t *pipe, void *args)
                     log_info("Authenticating to NUT server '%s' as '%s'...", host.get(), username.get());
                     nutClient.authenticate(nutUsername, nutPassword);
                     log_info("Authenticated to NUT server '%s' as '%s'.", host.get(), username.get());
-                    nutClient.setFeature(nut::Client::TRACKING, true);
+                    nutClient.setFeature(nut::TcpClient::TRACKING, true);
 
                     ZstrGuard databaseURL(zmsg_popstr(msg));
                     dbURL = databaseURL.get();
@@ -437,5 +680,14 @@ fty_nut_command_server_test(bool verbose)
     zactor_destroy (&self);
     zactor_destroy (&mlm);
     //  @end
+    printf ("OK\n");
+}
+
+#endif
+
+void
+fty_nut_command_server_test(bool verbose)
+{
+    printf(" * fty_nut_command_server: ");
     printf ("OK\n");
 }

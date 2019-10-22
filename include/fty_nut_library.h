@@ -41,6 +41,7 @@
 #include <fty_common_nut.h>
 #include <fty_shm.h>
 #include <fty_common_messagebus.h>
+#include <fty_common_dto.h>
 
 //  FTY_NUT version macros for compile-time API detection
 #define FTY_NUT_VERSION_MAJOR 1
