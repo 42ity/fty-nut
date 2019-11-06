@@ -73,6 +73,7 @@ pkg_deps_prereqs_source: &pkg_deps_prereqs_source
     - libfty-proto-dev
     - libfty-common-db-dev
     - libfty-common-mlm-dev
+    - libfty-common-socket-dev
     - libfty-security-wallet-dev
     - libfty-common-nut-dev
     - libfty-shm-dev
