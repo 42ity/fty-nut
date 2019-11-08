@@ -466,7 +466,7 @@ void NUTDevice::NUTFixMissingLoad (const std::string& prefix, std::map< std::str
                 const auto it1 = vars.find (prefix + "ups.L1.load");
                 const auto it2 = vars.find (prefix + "ups.L2.load");
                 const auto it3 = vars.find (prefix + "ups.L3.load");
-                if ((it1 != vars.cend ()) && (it2 != vars.cend ()) && (it2 != vars.cend ())) {
+                if ((it1 != vars.cend ()) && (it2 != vars.cend ()) && (it3 != vars.cend ())) {
                     std::string load = std::to_string(
                         (std::stod (it1->second[0]) + std::stod (it2->second[0]) + std::stod (it3->second[0]))/3.0
                     );
@@ -483,7 +483,7 @@ void NUTDevice::NUTFixMissingLoad (const std::string& prefix, std::map< std::str
                         const auto it1 = vars.find (prefix + "output.L1.realpower");
                         const auto it2 = vars.find (prefix + "output.L2.realpower");
                         const auto it3 = vars.find (prefix + "output.L3.realpower");
-                        if ((it1 != vars.cend ()) && (it2 != vars.cend ()) && (it2 != vars.cend ())) {
+                        if ((it1 != vars.cend ()) && (it2 != vars.cend ()) && (it3 != vars.cend ())) {
                             std::string load = std::to_string(
                                 round ((std::stod (it1->second[0]) + std::stod (it2->second[0]) + std::stod (it3->second[0]))/max_power*100.0)
                             );
