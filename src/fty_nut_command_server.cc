@@ -36,16 +36,6 @@ namespace ftynut {
 constexpr auto NUT_USER_ENV = "NUT_USER";
 constexpr auto NUT_PASS_ENV = "NUT_PASSWD";
 
-#if 0
-constexpr auto AGENT_NAME_KEY =                   "agentName";
-constexpr auto AGENT_NAME =                       "fty-srr";
-constexpr auto ENDPOINT_KEY =                     "endPoint";
-//constexpr auto DEFAULT_ENDPOINT =                 "ipc://@/malamute";
-//constexpr auto DEFAULT_LOG_CONFIG =               "/etc/fty/ftylog.cfg";
-constexpr auto SRR_QUEUE_NAME_KEY =               "queueName";
-constexpr auto SRR_MSG_QUEUE_NAME =               "ETN.Q.IPMCORE.SRR";
-#endif
-
 template<class InputIt, class OutputIt, class naryOperation>
 OutputIt expand(InputIt first1, InputIt last1, OutputIt d_first, naryOperation nary_op) {
     while (first1 != last1) {
