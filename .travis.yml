@@ -77,6 +77,8 @@ pkg_deps_prereqs_source: &pkg_deps_prereqs_source
     - libfty-security-wallet-dev
     - libfty-common-nut-dev
     - libfty-shm-dev
+    - libfty-common-messagebus-dev
+    - libfty-common-dto-dev
 
 # NOTE: Our forks are checked out and built without pkg dependencies in use
 pkg_deps_prereqs: &pkg_deps_prereqs
