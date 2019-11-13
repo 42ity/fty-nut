@@ -50,8 +50,12 @@
         release = "2.2-FTY-master"
         />
 
-    <use project = "cidr" test = "cidr_alloc" header = "libcidr.h"
-        debian_name = "libcidr0-dev" redhat_name = "libcidr-devel"
+    <use project = "cidr"
+        libname = "libcidr"
+        test = "cidr_alloc"
+        header = "libcidr.h"
+        debian_name = "libcidr0-dev"
+        redhat_name = "libcidr-devel"
         repository = "https://github.com/42ity/libcidr.git"
         release = "1.2.3-FTY-master"
         />
