@@ -161,41 +161,4 @@ D: 17-11-13 15:05:57     action=''
 
 ### Mailbox Requests
 
-fty-nut-command responds to messages with subject `power-actions`. It is
-important to note that fty-nut-command hides the details of daisy-chained NUT
-devices to its clients by offering an uniform interface across daisy-chained
-devices and their hosts.
-
-The following request queries all known commands of an asset:
-* "GET_COMMANDS"/'uuid'/('assetN')*...
-
-where
-* '/' indicates a multipart string message
-* 'uuid' is a client-provided string returned in the reply
-* 'assetN' is a list of asset names, one per message part
-
-fty-nut-command will respond back with either:
-* "OK"/'uuid'/("ASSET"/'assetN'/('commandN'/'descriptionN')\*)\*
-* "ERROR"/'uuid'/'reason'
-
-where
-* '/' indicates a multipart string message
-* 'uuid' is the client-provided string in the request
-* "ASSET" is a constant delimiter string
-* 'assetN' is an internal asset name
-* 'commandN' is a command provided by 'assetN'
-* 'descriptionN' is the description of 'commandN'
-
-The following request performs one or more actions on an asset:
-* "DO_COMMANDS"/'uuid'/'asset'/('commandN'/'argumentN')*
-
-where
-* '/' indicates a multipart string message
-* 'uuid' is the client-provided string in the request
-* 'asset' is an internal asset name
-* 'commandN' is a command for the asset
-* 'argumentN' is an argument for 'commandN', set to empty string if not used
-
-fty-nut-command will respond back with either:
-* "OK"/'uuid'
-* "ERROR"/'uuid'/'reason'
+fty-nut-command has a fty-common-messagebus interface for power commands.
