@@ -93,7 +93,7 @@ static dto::commands::Command ftyDaisyChainToNutCommand(tntdb::Connection &conn,
         for (const auto &i : daisy_chain.item) {
             if (i.second == job.asset) {
                 command.asset = daisy_chain.item.begin()->second;
-                if (!job.target.empty()) {
+                if (job.target.empty()) {
                     command.target = "device." + std::to_string(i.first);
                 }
                 else {
