@@ -71,11 +71,11 @@ BuildRequires:  fty-common-db-devel
 BuildRequires:  openssl-devel
 BuildRequires:  fty-common-mlm-devel
 BuildRequires:  fty-common-socket-devel
+BuildRequires:  fty-common-messagebus-devel
+BuildRequires:  fty-common-dto-devel
 BuildRequires:  fty-security-wallet-devel
 BuildRequires:  fty-common-nut-devel
 BuildRequires:  fty_shm-devel >= 1.0.0
-BuildRequires:  fty-common-messagebus-devel
-BuildRequires:  fty-common-dto-devel
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
@@ -115,11 +115,11 @@ Requires:       fty-common-db-devel
 Requires:       openssl-devel
 Requires:       fty-common-mlm-devel
 Requires:       fty-common-socket-devel
+Requires:       fty-common-messagebus-devel
+Requires:       fty-common-dto-devel
 Requires:       fty-security-wallet-devel
 Requires:       fty-common-nut-devel
 Requires:       fty_shm-devel >= 1.0.0
-Requires:       fty-common-messagebus-devel
-Requires:       fty-common-dto-devel
 
 %description devel
 nut (network ups tools) daemon wrapper/proxy development tools

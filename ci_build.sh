@@ -694,6 +694,72 @@ default|default-Werror|default-with-docs|valgrind|clang-format-check)
         cd "${BASE_PWD}"
     fi
 
+    # Start of recipe for dependency: fty-common-messagebus
+    if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_common_messagebus-dev >/dev/null 2>&1) || \
+           (command -v brew >/dev/null 2>&1 && brew ls --versions fty-common-messagebus >/dev/null 2>&1) \
+    ; then
+        echo ""
+        BASE_PWD=${PWD}
+        echo "`date`: INFO: Building prerequisite 'fty-common-messagebus' from Git repository..." >&2
+        cd ./tmp-deps
+        $CI_TIME git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common-messagebus.git fty-common-messagebus
+        cd ./fty-common-messagebus
+        CCACHE_BASEDIR=${PWD}
+        export CCACHE_BASEDIR
+        git --no-pager log --oneline -n1
+        if [ -e autogen.sh ]; then
+            $CI_TIME ./autogen.sh 2> /dev/null
+        fi
+        if [ -e buildconf ]; then
+            $CI_TIME ./buildconf 2> /dev/null
+        fi
+        if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
+            $CI_TIME libtoolize --copy --force && \
+            $CI_TIME aclocal -I . && \
+            $CI_TIME autoheader && \
+            $CI_TIME automake --add-missing --copy && \
+            $CI_TIME autoconf || \
+            $CI_TIME autoreconf -fiv
+        fi
+        $CI_TIME ./configure "${CONFIG_OPTS[@]}"
+        $CI_TIME make -j4
+        $CI_TIME make install
+        cd "${BASE_PWD}"
+    fi
+
+    # Start of recipe for dependency: fty-common-dto
+    if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_common_dto-dev >/dev/null 2>&1) || \
+           (command -v brew >/dev/null 2>&1 && brew ls --versions fty-common-dto >/dev/null 2>&1) \
+    ; then
+        echo ""
+        BASE_PWD=${PWD}
+        echo "`date`: INFO: Building prerequisite 'fty-common-dto' from Git repository..." >&2
+        cd ./tmp-deps
+        $CI_TIME git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common-dto.git fty-common-dto
+        cd ./fty-common-dto
+        CCACHE_BASEDIR=${PWD}
+        export CCACHE_BASEDIR
+        git --no-pager log --oneline -n1
+        if [ -e autogen.sh ]; then
+            $CI_TIME ./autogen.sh 2> /dev/null
+        fi
+        if [ -e buildconf ]; then
+            $CI_TIME ./buildconf 2> /dev/null
+        fi
+        if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
+            $CI_TIME libtoolize --copy --force && \
+            $CI_TIME aclocal -I . && \
+            $CI_TIME autoheader && \
+            $CI_TIME automake --add-missing --copy && \
+            $CI_TIME autoconf || \
+            $CI_TIME autoreconf -fiv
+        fi
+        $CI_TIME ./configure "${CONFIG_OPTS[@]}"
+        $CI_TIME make -j4
+        $CI_TIME make install
+        cd "${BASE_PWD}"
+    fi
+
     # Start of recipe for dependency: fty-security-wallet
     if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_security_wallet-dev >/dev/null 2>&1) || \
            (command -v brew >/dev/null 2>&1 && brew ls --versions fty-security-wallet >/dev/null 2>&1) \
@@ -791,72 +857,6 @@ default|default-Werror|default-with-docs|valgrind|clang-format-check)
             CONFIG_OPTS+=("--enable-gcc-std-regex=no")
             $CI_TIME ./configure "${CONFIG_OPTS[@]}"
         )
-        $CI_TIME make -j4
-        $CI_TIME make install
-        cd "${BASE_PWD}"
-    fi
-
-    # Start of recipe for dependency: fty-common-messagebus
-    if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_common_messagebus-dev >/dev/null 2>&1) || \
-           (command -v brew >/dev/null 2>&1 && brew ls --versions fty-common-messagebus >/dev/null 2>&1) \
-    ; then
-        echo ""
-        BASE_PWD=${PWD}
-        echo "`date`: INFO: Building prerequisite 'fty-common-messagebus' from Git repository..." >&2
-        cd ./tmp-deps
-        $CI_TIME git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common-messagebus.git fty-common-messagebus
-        cd ./fty-common-messagebus
-        CCACHE_BASEDIR=${PWD}
-        export CCACHE_BASEDIR
-        git --no-pager log --oneline -n1
-        if [ -e autogen.sh ]; then
-            $CI_TIME ./autogen.sh 2> /dev/null
-        fi
-        if [ -e buildconf ]; then
-            $CI_TIME ./buildconf 2> /dev/null
-        fi
-        if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
-            $CI_TIME libtoolize --copy --force && \
-            $CI_TIME aclocal -I . && \
-            $CI_TIME autoheader && \
-            $CI_TIME automake --add-missing --copy && \
-            $CI_TIME autoconf || \
-            $CI_TIME autoreconf -fiv
-        fi
-        $CI_TIME ./configure "${CONFIG_OPTS[@]}"
-        $CI_TIME make -j4
-        $CI_TIME make install
-        cd "${BASE_PWD}"
-    fi
-
-    # Start of recipe for dependency: fty-common-dto
-    if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_common_dto-dev >/dev/null 2>&1) || \
-           (command -v brew >/dev/null 2>&1 && brew ls --versions fty-common-dto >/dev/null 2>&1) \
-    ; then
-        echo ""
-        BASE_PWD=${PWD}
-        echo "`date`: INFO: Building prerequisite 'fty-common-dto' from Git repository..." >&2
-        cd ./tmp-deps
-        $CI_TIME git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common-dto.git fty-common-dto
-        cd ./fty-common-dto
-        CCACHE_BASEDIR=${PWD}
-        export CCACHE_BASEDIR
-        git --no-pager log --oneline -n1
-        if [ -e autogen.sh ]; then
-            $CI_TIME ./autogen.sh 2> /dev/null
-        fi
-        if [ -e buildconf ]; then
-            $CI_TIME ./buildconf 2> /dev/null
-        fi
-        if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
-            $CI_TIME libtoolize --copy --force && \
-            $CI_TIME aclocal -I . && \
-            $CI_TIME autoheader && \
-            $CI_TIME automake --add-missing --copy && \
-            $CI_TIME autoconf || \
-            $CI_TIME autoreconf -fiv
-        fi
-        $CI_TIME ./configure "${CONFIG_OPTS[@]}"
         $CI_TIME make -j4
         $CI_TIME make install
         cd "${BASE_PWD}"
