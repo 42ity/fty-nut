@@ -52,7 +52,6 @@ static void connectToNutServer(nut::TcpClient& client, const std::string& nutHos
         client.connect(nutHost);
         client.authenticate(nutUsername, nutPassword);
         client.setFeature(nut::TcpClient::TRACKING, true);
-        log_trace("Connected to NUT server '%s'.", nutHost.c_str());
     }
     catch (std::exception &e) {
         log_error("Error while connecting to NUT server: %s.", e.what());
@@ -350,93 +349,34 @@ void queryPowerChainPowerCommands(nut::TcpClient& client, tntdb::Connection& con
     }
 }
 
-NutCommandManager::NutCommandWorker::NutCommandWorker(const std::string& nutHost, const std::string& nutUsername, const std::string& nutPassword, CompletionCallback callback) :
-    m_nutHost(nutHost),
-    m_nutUsername(nutUsername),
-    m_nutPassword(nutPassword),
-    m_callback(callback),
-    m_worker(std::bind(&NutCommandManager::NutCommandWorker::mainloop, this)),
-    m_stopped(false)
-{
+static std::string buildCommandMessage(const dto::commands::Command &job) {
+    std::stringstream msg;
+    msg << "Command '" << job.command << "' target '" << job.target << "' argument '" << job.argument << "' on asset '" << job.asset << "'";
+    return msg.str();
 }
 
-NutCommandManager::NutCommandWorker::~NutCommandWorker() {
-    std::lock_guard<std::mutex> lk(m_mutex);
-    m_stopped = true;
-    m_cv.notify_one();
-    m_worker.join();
-}
-
-NutCommandManager::NutCommandWorker::NutTrackingIds NutCommandManager::NutCommandWorker::submitWork(const dto::commands::Commands &jobs) {
-    NutTrackingIds ids;
-
-    nut::TcpClient client;
-    connectToNutServer(client, m_nutHost, m_nutUsername, m_nutPassword);
-
-    for (const auto &job : jobs) {
-        std::string nutCommand = job.target.empty() ?
-            job.command :
-            job.target + "." + job.command;
-
-        log_info("Executing NUT command '%s' argument '%s' on asset '%s'.", nutCommand.c_str(), job.argument.c_str(), job.asset.c_str());
-        auto id = client.executeDeviceCommand(job.asset, nutCommand, job.argument);
-        ids.insert(id);
-        log_debug("NUT job ID: %s.", id.c_str());
+static std::string buildCommandResultErrorMessage(const dto::commands::Command &job, nut::TrackingResult result) {
+    std::stringstream err;
+    err << buildCommandMessage(job);
+    switch (result) {
+        case nut::UNKNOWN:
+            err << " result is missing." << std::endl;
+            break;
+        case nut::FAILURE:
+            err << " failed." << std::endl;
+            break;
+        case nut::INVALID_ARGUMENT:
+            err << " has an invalid argument." << std::endl;
+            break;
+        default:
+            err << " encountered an unknown error." << std::endl;
+            break;
     }
-
-    {
-        std::lock_guard<std::mutex> lk(m_mutex);
-        for (const auto& id : ids) {
-            m_pendingCommands.emplace_back(id);
-            m_cv.notify_one();
-        }
-    }
-
-    return ids;
+    return err.str();
 }
 
-void NutCommandManager::NutCommandWorker::mainloop() {
-    while (!m_stopped) {
-        std::unique_lock<std::mutex> lk(m_mutex);
-        m_cv.wait_for(lk, std::chrono::seconds(2));
 
-        if (!m_pendingCommands.empty()) {
-            nut::TcpClient client;
-            connectToNutServer(client, m_nutHost, m_nutUsername, m_nutPassword);
-
-            // Store completed commands here to not hold the mutex while calling callbacks.
-            std::vector<std::pair<nut::TrackingID, bool>> jobsCompleted;
-
-            // Mark and sweep completed NUT commands.
-            auto treated = std::remove_if(m_pendingCommands.begin(), m_pendingCommands.end(),
-                [&client, &jobsCompleted, this](nut::TrackingID &id) -> bool {
-                    auto result = client.getTrackingResult(id);
-                    switch (result) {
-                        case nut::FAILURE:
-                        case nut::SUCCESS:
-                            jobsCompleted.emplace_back(id, result == nut::SUCCESS);
-                            return true;
-                        default:
-                            return false;
-                    }
-                }
-            );
-
-            m_pendingCommands.erase(treated, m_pendingCommands.end());
-
-            // Call callbacks without holding the mutex.
-            lk.unlock();
-            for (auto jobCompleted : jobsCompleted) {
-                log_debug("NUT job ID '%s' finished with %s.", jobCompleted.first.c_str(), jobCompleted.second ? "success" : "failure");
-                m_callback(jobCompleted.first, jobCompleted.second);
-            }
-        }
-    }
-}
-
-NutCommandManager::NutCommandManager(const std::string& nutHost, const std::string& nutUsername, const std::string& nutPassword, const std::string& dbConn, CompletionCallback callback) :
-    m_worker(nutHost, nutUsername, nutPassword, std::bind(&NutCommandManager::completionCallback, this, std::placeholders::_1, std::placeholders::_2)),
-    m_callback(callback),
+NutCommandManager::NutCommandManager(const std::string& nutHost, const std::string& nutUsername, const std::string& nutPassword, const std::string& dbConn) :
     m_nutHost(nutHost),
     m_nutUsername(nutUsername),
     m_nutPassword(nutPassword),
@@ -457,16 +397,10 @@ dto::commands::CommandDescriptions NutCommandManager::getCommands(const std::str
     return reply;
 }
 
-void NutCommandManager::submitWork(const std::string &correlationId, const dto::commands::Commands &jobs) {
-    for (const auto& job : jobs) {
-        log_info("Performing command '%s' target '%s' argument '%s' on asset '%s'.",
-            job.command.c_str(),
-            job.target.c_str(),
-            job.argument.c_str(),
-            job.asset.c_str()
-        );
-    }
-
+dto::commands::Commands NutCommandManager::computeCommands(const dto::commands::Commands &jobs) {
+    // Connect to stuff.
+    nut::TcpClient client;
+    connectToNutServer(client, m_nutHost, m_nutUsername, m_nutPassword);
     auto conn = tntdb::connectCached(m_dbConn);
 
     // Translate 42ity high-level commands to 42ity real commands.
@@ -477,40 +411,58 @@ void NutCommandManager::submitWork(const std::string &correlationId, const dto::
     dto::commands::Commands nutJobs;
     std::transform(translatedJobs.begin(), translatedJobs.end(), std::back_inserter(nutJobs), std::bind(ftyDaisyChainToNutCommand, std::ref(conn), std::placeholders::_1));
 
-    std::lock_guard<std::mutex> lk(m_mutex);
-    m_jobs.emplace_back(correlationId, m_worker.submitWork(nutJobs));
+    return nutJobs;
 }
 
-void NutCommandManager::completionCallback(nut::TrackingID id, bool result) {
-    // Store completed jobs here to not hold the mutex while calling callbacks.
-    std::vector<std::pair<std::string, bool>> jobsCompleted;
+void NutCommandManager::performCommands(const dto::commands::Commands &jobs) {
+    std::stringstream errorMessageStream;
 
-    {
-        std::lock_guard<std::mutex> lk(m_mutex);
+    // Connect to NUT.
+    nut::TcpClient client;
+    connectToNutServer(client, m_nutHost, m_nutUsername, m_nutPassword);
 
-        // Mark jobs with no outstanding NUT tracking IDs as terminated.
-        auto jobsTreated = std::remove_if(m_jobs.begin(), m_jobs.end(),
-            [&id, &result, &jobsCompleted](Job &job) -> bool {
-                // Clear NUT tracking IDs of completed commands.
-                auto it = job.ids.find(id);
-                if (it != job.ids.end()) {
-                    job.ids.erase(it);
-                    job.success &= result;
-                }
-                bool done = job.ids.empty();
-                if (done) {
-                    jobsCompleted.emplace_back(job.correlationId, job.success);
-                }
-                return done;
-            }
-        );
+    // Submit jobs to NUT.
+    std::map<nut::TrackingID, const dto::commands::Command&> ids;
 
-        m_jobs.erase(jobsTreated, m_jobs.end());
+    for (const auto &job : jobs) {
+        const std::string nutCommand = job.target.empty() ?
+            job.command :
+            job.target + "." + job.command;
+
+        try {
+            auto id = client.executeDeviceCommand(job.asset, nutCommand, job.argument);
+            ids.emplace(id, job);
+        }
+        catch (...) {
+            errorMessageStream << buildCommandMessage(job) << " couldn't be submitted.";
+        }
     }
 
-    // Signal completed jobs without holding the mutex.
-    for (auto jobCompleted : jobsCompleted) {
-        m_callback(jobCompleted.first, jobCompleted.second);
+    // Collect results of NUT jobs.
+    while (!ids.empty()) {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+
+        for (auto it = ids.begin(); it != ids.end(); ) {
+            auto result = client.getTrackingResult(it->first);
+
+            switch (result) {
+                case nut::PENDING:
+                    break;
+                case nut::SUCCESS:
+                    it = ids.erase(it);
+                    break;
+                default:
+                    errorMessageStream << buildCommandResultErrorMessage(it->second, result);
+                    it = ids.erase(it);
+                    break;
+            }
+        }
+    }
+
+    // Report errors, if any.
+    const std::string errorMessage = errorMessageStream.str();
+    if (!errorMessage.empty()) {
+        throw std::runtime_error(errorMessage);
     }
 }
 
@@ -526,85 +478,101 @@ NutCommandConnector::Parameters::Parameters() :
 
 NutCommandConnector::NutCommandConnector(NutCommandConnector::Parameters params) :
     m_parameters(params),
-    m_manager(params.nutHost, params.nutUsername, params.nutPassword, params.dbUrl, std::bind(&NutCommandConnector::completionCallback, this, std::placeholders::_1, std::placeholders::_2))
+    m_manager(params.nutHost, params.nutUsername, params.nutPassword, params.dbUrl),
+    m_dispatcher({
+        { "GetCommands", std::bind(&NutCommandConnector::requestGetCommands, this, std::placeholders::_1) },
+        { "PerformCommands", std::bind(&NutCommandConnector::requestPerformCommands, this, std::placeholders::_1) }
+    }),
+    m_msgBus(messagebus::MlmMessageBus(params.endpoint, params.agentName))
 {
-    m_msgBus = messagebus::MlmMessageBus(m_parameters.endpoint, m_parameters.agentName);
     m_msgBus->connect();
-
-    auto fct = std::bind(&NutCommandConnector::handleRequest, this, std::placeholders::_1);
-    m_msgBus->receive("ETN.Q.IPMCORE.POWERACTION", fct);
-}
-
-NutCommandConnector::~NutCommandConnector() {
-    std::lock_guard<std::mutex> lk(m_mutex);
-    delete m_msgBus;
+    m_msgBus->receive("ETN.Q.IPMCORE.POWERACTION", std::bind(&NutCommandConnector::handleRequest, this, std::placeholders::_1));
 }
 
 void NutCommandConnector::handleRequest(messagebus::Message msg) {
     if ((msg.metaData().count(messagebus::Message::SUBJECT) == 0) ||
-        (msg.metaData().count(messagebus::Message::COORELATION_ID) == 0)) {
-        log_error("Missing subject/correlationID in request.");
+        (msg.metaData().count(messagebus::Message::COORELATION_ID) == 0) ||
+        (msg.metaData().count(messagebus::Message::REPLY_TO) == 0)) {
+        log_error("Missing subject/correlationID/replyTo in request.");
         return;
     }
 
-    const auto& subject = msg.metaData()[messagebus::Message::SUBJECT];
-    const auto& correlationId = msg.metaData()[messagebus::Message::COORELATION_ID];
-    if (subject == "PerformCommands") {
-        dto::commands::PerformCommandsQueryDto query;
-        msg.userData() >> query;
+    auto subject = msg.metaData()[messagebus::Message::SUBJECT];
+    auto corrId = msg.metaData()[messagebus::Message::COORELATION_ID];
+    log_info("Received %s (%s) request.", subject.c_str(), corrId.c_str());
 
-        std::lock_guard<std::mutex> lk(m_mutex);
+    try {
+        auto result = m_dispatcher(subject, msg.userData());
 
-        try {
-            log_trace("Handling PerformCommands correlation ID=%s.", correlationId.c_str());
-            m_pendingJobs.emplace(std::make_pair(correlationId, msg.metaData()));
-            m_manager.submitWork(correlationId, query.commands);
-        }
-        catch (std::exception &e) {
-            log_error("Exception while processing command PerformCommands: %s.", e.what());
-            m_pendingJobs.erase(correlationId);
-            buildAndSendReply(msg.metaData(), false);
-        }
+        log_info("Request %s (%s) performed successfully.", subject.c_str(), corrId.c_str());
+        sendReply(msg.metaData(), true, result);
     }
-    else if (subject == "GetCommands") {
-        dto::commands::GetCommandsQueryDto query;
-        msg.userData() >> query;
-
-        dto::commands::GetCommandsReplyDto reply = m_manager.getCommands(query.asset);
-        messagebus::UserData replyData;
-        replyData << reply;
-        buildAndSendReply(msg.metaData(), true, replyData);
-    }
-    else {
-        log_error("Unknown subject '%s' in request.", subject.c_str());
+    catch (std::exception& e) {
+        log_error("Exception while processing %s (%s): %s", subject.c_str(), corrId.c_str(), e.what());
+        sendReply(msg.metaData(), false, { e.what() });
     }
 }
 
-void NutCommandConnector::completionCallback(std::string correlationId, bool result) {
-    messagebus::MetaData job;
+void NutCommandConnector::sendReply(const messagebus::MetaData& metadataRequest, bool status, const messagebus::UserData& dataReply) {
+    messagebus::Message reply;
+
+    reply.metaData() = {
+        { messagebus::Message::COORELATION_ID, metadataRequest.at(messagebus::Message::COORELATION_ID) },
+        { messagebus::Message::SUBJECT, metadataRequest.at(messagebus::Message::SUBJECT) },
+        { messagebus::Message::STATUS, status ? "ok" : "ko" },
+        { messagebus::Message::TO, metadataRequest.at(messagebus::Message::REPLY_TO) }
+    } ;
+    reply.userData() = dataReply;
+
+    m_msgBus->sendReply(reply.metaData().at(messagebus::Message::TO), reply);
+}
+
+messagebus::UserData NutCommandConnector::requestGetCommands(messagebus::UserData data) {
+    dto::commands::GetCommandsQueryDto query;
+    data >> query;
+
+    messagebus::UserData reply;
+    auto commands = m_manager.getCommands(query.asset);
+
     {
-        std::lock_guard<std::mutex> lk(m_mutex);
-        job = m_pendingJobs.at(correlationId);
-        m_pendingJobs.erase(correlationId);
+        std::stringstream logMessage;
+        logMessage << "Asset '" << query.asset << "' has the following commands:" << std::endl;
+        for (const auto& i : commands) {
+            logMessage << "\t" << i.command << " - " << i.description << std::endl;
+        }
+        log_trace("%s", logMessage.str().c_str());
     }
 
-    if (result) {
-        log_info("PerformCommands correlation ID=%s finished with %s.", correlationId.c_str(), "success");
-    }
-    else {
-        log_error("PerformCommands correlation ID=%s finished with %s.", correlationId.c_str(), "failure");
-    }
-    buildAndSendReply(job, result);
+    reply << commands;
+    return reply;
 }
 
-void NutCommandConnector::buildAndSendReply(const messagebus::MetaData &sender, bool result, const messagebus::UserData &data) {
-    messagebus::Message message;
-    message.metaData()[messagebus::Message::COORELATION_ID] = sender.at(messagebus::Message::COORELATION_ID);
-    message.metaData()[messagebus::Message::SUBJECT] = sender.at(messagebus::Message::SUBJECT);
-    message.metaData()[messagebus::Message::STATUS] = result ? "ok" : "ko";
-    message.metaData()[messagebus::Message::TO] = sender.at(messagebus::Message::REPLY_TO);
-    message.userData() = data;
-    m_msgBus->sendReply(sender.at(messagebus::Message::REPLY_TO), message);
+messagebus::UserData NutCommandConnector::requestPerformCommands(messagebus::UserData data) {
+    dto::commands::PerformCommandsQueryDto query;
+    data >> query;
+
+    {
+        std::stringstream logMessage;
+        logMessage << "Commands requested:" << std::endl;
+        for (const auto& i : query.commands) {
+            logMessage << "\t" << buildCommandMessage(i) << std::endl;
+        }
+        log_debug("%s", logMessage.str().c_str());
+    }
+
+    auto computedCommands = m_manager.computeCommands(query.commands);
+
+    {
+        std::stringstream logMessage;
+        logMessage << "Effective commands computed:" << std::endl;
+        for (const auto& i : computedCommands) {
+            logMessage << "\t" << buildCommandMessage(i) << std::endl;
+        }
+        log_trace("%s", logMessage.str().c_str());
+    }
+
+    m_manager.performCommands(computedCommands);
+    return {};
 }
 
 }
