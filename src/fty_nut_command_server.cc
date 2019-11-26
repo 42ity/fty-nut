@@ -126,7 +126,7 @@ static std::vector<std::string> nutDaisyChainedToSingleDevice(const std::string&
 /**
  * \brief Translate high-level 42ity power source command to low-level 42ity command(s).
  */
-static dto::commands::Commands ftyTranslatePowerSourceCommand(const std::string& asset, const std::string& commandType) {
+static dto::commands::Commands ftyTranslatePowerSourceCommand(const std::string& asset, const std::string& commandType, const std::string& argument) {
     dto::commands::Commands result;
 
     /**
@@ -176,6 +176,7 @@ static dto::commands::Commands ftyTranslatePowerSourceCommand(const std::string&
                 command.command = commandType;
                 command.asset = realAsset;
                 command.target = "outlet." + realOutlet;
+                command.argument = argument;
 
                 result.push_back(command);
             }
@@ -196,15 +197,37 @@ static dto::commands::Commands ftyTranslatePowerSourceCommand(const std::string&
 static dto::commands::Commands ftyTranslateHighLevelCommand(const dto::commands::Command &command) {
     dto::commands::Commands result;
 
-    const std::map<std::string, std::string> powerSourceCommandMapping = {
+    const static std::map<std::string, std::string> powerSourceCommandMapping = {
         { "powersource.cycle", "load.cycle" },
+        { "powersource.cycle.delay", "load.cycle.delay" },
         { "powersource.off", "load.off" },
-        { "powersource.on", "load.on" }
+        { "powersource.off.delay", "load.off.delay" },
+        { "powersource.off.stagger", "load.off.delay" },
+        { "powersource.on", "load.on" },
+        { "powersource.on.delay", "load.on.delay" },
+        { "powersource.on.stagger", "load.on.delay" }
+    } ;
+
+    const static std::set<std::string> powerSourceStaggerCommands = {
+        { "powersource.off.stagger" },
+        { "powersource.on.stagger" }
     } ;
 
     auto commandMapping = powerSourceCommandMapping.find(command.command);
+
     if (commandMapping != powerSourceCommandMapping.end()) {
-        result = ftyTranslatePowerSourceCommand(command.asset, commandMapping->second);
+        result = ftyTranslatePowerSourceCommand(command.asset, commandMapping->second, command.argument);
+
+        if (powerSourceStaggerCommands.count(command.command)) {
+            // Patch up delay for staggered commands.
+            const int delay = std::stoi(command.argument);
+            int delayAccumulated = delay;
+
+            for (auto& staggerCommand : result) {
+                staggerCommand.argument = std::to_string(delayAccumulated);
+                delayAccumulated += delay;
+            }
+        }
     }
     else {
         // Pass-through the command.
@@ -303,23 +326,28 @@ void queryPowerChainPowerCommands(nut::TcpClient& client, tntdb::Connection& con
      * FIXME: always indicate power chain power commands, not checking for any
      * semblance of validity, i.e. we bluff.
      */
-    dto::commands::CommandDescription powerSourceOn;
-    powerSourceOn.asset = asset;
-    powerSourceOn.command = "powersource.on";
-    powerSourceOn.description = "Switch on power source(s) of asset";
-    commandDescriptions.push_back(powerSourceOn);
+    const static std::vector<std::pair<std::string, std::string>> generatedCommands = {
+        { "powersource.on", "Switch on power source(s) of asset" },
+        { "powersource.on.delay", "Switch on power source(s) of asset with delay (seconds)" },
+        { "powersource.on.stagger", "Switch on power source(s) of asset with stagger (seconds)" },
+        { "powersource.off", "Shut off on power source(s) of asset" },
+        { "powersource.off.delay", "Shut off on power source(s) of asset with delay (seconds)" },
+        { "powersource.off.stagger", "Shut off on power source(s) of asset with stagger (seconds)" },
+        { "powersource.cycle", "Cycle power source(s) of asset" },
+        { "powersource.cycle.delay", "Cycle power source(s) of asset with delay (seconds)" },
+    } ;
 
-    dto::commands::CommandDescription powerSourceOff;
-    powerSourceOff.asset = asset;
-    powerSourceOff.command = "powersource.off";
-    powerSourceOff.description = "Shut off power source(s) of asset";
-    commandDescriptions.push_back(powerSourceOff);
+    auto fct = [&asset](const std::string& command, const std::string& description) -> dto::commands::CommandDescription {
+        dto::commands::CommandDescription commandDescription;
+        commandDescription.asset = asset;
+        commandDescription.command = command;
+        commandDescription.description = description;
+        return commandDescription;
+    } ;
 
-    dto::commands::CommandDescription powerSourceCycle;
-    powerSourceCycle.asset = asset;
-    powerSourceCycle.command = "powersource.cycle";
-    powerSourceCycle.description = "Cycle power source(s) of asset";
-    commandDescriptions.push_back(powerSourceCycle);
+    for (const auto& generatedCommand : generatedCommands) {
+        commandDescriptions.push_back(fct(generatedCommand.first, generatedCommand.second));
+    }
 }
 
 NutCommandManager::NutCommandWorker::NutCommandWorker(const std::string& nutHost, const std::string& nutUsername, const std::string& nutPassword, CompletionCallback callback) :
