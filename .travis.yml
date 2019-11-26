@@ -66,6 +66,7 @@ pkg_deps_prereqs_source: &pkg_deps_prereqs_source
     - libnutclient-dev
     - libfty-common-logging-dev
     - libfty-common-dev
+    - libfty-common-mlm-dev
     - tntdb-dev
     - libzmq3-dev
     - libczmq-dev

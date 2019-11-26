@@ -60,6 +60,7 @@ BuildRequires:  libcidr-devel
 BuildRequires:  nut-devel
 BuildRequires:  fty-common-logging-devel
 BuildRequires:  fty-common-devel
+BuildRequires:  fty-common-mlm-devel
 BuildRequires:  tntdb-devel
 BuildRequires:  zeromq-devel
 BuildRequires:  czmq-devel
@@ -96,6 +97,7 @@ Requires:       libcidr-devel
 Requires:       nut-devel
 Requires:       fty-common-logging-devel
 Requires:       fty-common-devel
+Requires:       fty-common-mlm-devel
 Requires:       tntdb-devel
 Requires:       zeromq-devel
 Requires:       czmq-devel

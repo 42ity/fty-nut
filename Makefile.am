@@ -17,6 +17,7 @@ AM_CPPFLAGS = \
     ${libnutclient_CFLAGS} \
     ${fty_common_logging_CFLAGS} \
     ${fty_common_CFLAGS} \
+    ${fty_common_mlm_CFLAGS} \
     ${tntdb_CFLAGS} \
     ${libzmq_CFLAGS} \
     ${czmq_CFLAGS} \
@@ -28,7 +29,7 @@ AM_CPPFLAGS = \
     -D__STDC_FORMAT_MACROS \
     -I$(srcdir)/include
 
-project_libs = ${cxxtools_LIBS} ${cidr_LIBS} ${libnutclient_LIBS} ${fty_common_logging_LIBS} ${fty_common_LIBS} ${tntdb_LIBS} ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${fty_proto_LIBS} ${fty_common_db_LIBS} ${fty_common_nut_LIBS} ${fty_shm_LIBS}
+project_libs = ${cxxtools_LIBS} ${cidr_LIBS} ${libnutclient_LIBS} ${fty_common_logging_LIBS} ${fty_common_LIBS} ${fty_common_mlm_LIBS} ${tntdb_LIBS} ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${fty_proto_LIBS} ${fty_common_db_LIBS} ${fty_common_nut_LIBS} ${fty_shm_LIBS}
 
 SUBDIRS = doc
 SUBDIRS += include
@@ -54,6 +55,7 @@ EXTRA_DIST += \
     Findlibnutclient.cmake \
     Findfty_common_logging.cmake \
     Findfty_common.cmake \
+    Findfty_common_mlm.cmake \
     Findtntdb.cmake \
     Findlibzmq.cmake \
     Findczmq.cmake \

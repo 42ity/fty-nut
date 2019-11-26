@@ -3,6 +3,7 @@
    fty-nut -> libnutclient;
    fty-nut -> fty-common-logging;
    fty-nut -> fty-common;
+   fty-nut -> fty-common-mlm;
    fty-nut -> tntdb;
    fty-nut -> libzmq;
    fty-nut -> czmq;

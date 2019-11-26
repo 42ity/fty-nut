@@ -81,6 +81,10 @@
         repository = "https://github.com/42ity/fty-common.git"
         test = "fty_common_selftest" />
 
+    <use project = "fty-common-mlm" libname = "libfty_common_mlm" header = "fty_common_mlm.h"
+        repository = "https://github.com/42ity/fty-common-mlm.git"
+        test = "fty_common_mlm_selftest"/>
+
     <!-- TODO: Move into fty-common-db? Or is this dependency used directly? -->
     <use project = "tntdb"
         test = "tntdb::connectCached"
