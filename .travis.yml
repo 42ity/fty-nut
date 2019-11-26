@@ -74,6 +74,7 @@ pkg_deps_prereqs_source: &pkg_deps_prereqs_source
     - libfty-proto-dev
     - libfty-common-db-dev
     - libfty-common-nut-dev
+    - libfty-common-socket-dev
     - libfty-shm-dev
 
 # NOTE: Our forks are checked out and built without pkg dependencies in use

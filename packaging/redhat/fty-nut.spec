@@ -68,6 +68,7 @@ BuildRequires:  malamute-devel
 BuildRequires:  fty-proto-devel >= 1.0.0
 BuildRequires:  fty-common-db-devel
 BuildRequires:  fty-common-nut-devel
+BuildRequires:  fty-common-socket-devel
 BuildRequires:  fty_shm-devel >= 1.0.0
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
@@ -105,6 +106,7 @@ Requires:       malamute-devel
 Requires:       fty-proto-devel >= 1.0.0
 Requires:       fty-common-db-devel
 Requires:       fty-common-nut-devel
+Requires:       fty-common-socket-devel
 Requires:       fty_shm-devel >= 1.0.0
 
 %description devel

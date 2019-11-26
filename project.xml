@@ -104,6 +104,10 @@
     <use project = "fty-common-nut" libname = "libfty_common_nut" header = "fty_common_nut.h"
             repository = "https://github.com/42ity/fty-common-nut.git"
             test = "fty_common_nut_selftest" />
+    
+    <use project = "fty-common-socket" libname = "libfty_common_socket" header = "fty_common_socket.h"
+            repository = "https://github.com/42ity/fty-common-socket.git"
+            test = "fty_common_socket_selftest" />
 
     <use project = "fty_shm" libname = "libfty_shm" header="fty_shm.h"
         min_major = "1"

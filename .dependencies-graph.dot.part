@@ -11,4 +11,5 @@
    fty-nut -> fty-proto;
    fty-nut -> fty-common-db;
    fty-nut -> fty-common-nut;
+   fty-nut -> fty-common-socket;
    fty-nut -> fty_shm;

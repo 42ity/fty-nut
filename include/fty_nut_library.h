@@ -40,6 +40,7 @@
 #include <ftyproto.h>
 #include <fty_common_db.h>
 #include <fty_common_nut.h>
+#include <fty_common_socket.h>
 #include <fty_shm.h>
 
 //  FTY_NUT version macros for compile-time API detection
