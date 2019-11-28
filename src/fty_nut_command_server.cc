@@ -33,9 +33,94 @@
 
 namespace ftynut {
 
+/**
+ * Function helpers.
+ *
+ * These isolate the side-effects of power command requests so that the
+ * power command compute mechanism can be tested without a fully-blown
+ * 42ity setup. In short, these interfaces are mockable.
+ */
+using DeviceCommandRequester = std::function<std::set<std::string>(const std::string&)>;
+using DaisyChainRequester = std::function<std::map<int, std::string>(const std::string&)>;
+using TopologyRequester = std::function<std::vector<std::pair<std::string, int>>(const std::string&)>;
+
+/**
+ * 42ity function helpers.
+ *
+ * These are the canonical function helpers for everyday usage.
+ */
+static std::set<std::string> deviceCommandRequesterNut(nut::TcpClient& client, const std::string& asset) {
+    std::set<std::string> rawNutCommands;
+
+    try {
+        rawNutCommands = client.getDeviceCommandNames(asset);
+    }
+    catch (...) {
+        // Treat errors as if the asset has no commands.
+    }
+
+    return rawNutCommands;
+}
+
+static std::map<int, std::string> daisyChainRequesterDatabase(tntdb::Connection &conn, const std::string& asset) {
+    auto daisyChain = DBAssets::select_daisy_chain(conn, asset);
+    if (daisyChain.status && daisyChain.item.size() != 0) {
+        return daisyChain.item;
+    }
+
+    // Treat errors as if the asset has no power chain.
+    return { };
+}
+
+static std::vector<std::pair<std::string, int>> topologyRequesterFty(const std::string& asset) {
+    std::vector<std::pair<std::string, int>> result;
+
+    /// XXX: make this suck less.
+    const auto clientId = messagebus::getClientId("_-fty-nut-command-powerchain-requester");
+    MlmClientGuard mClient(mlm_client_new());
+    mlm_client_connect(mClient.get(), MLM_ENDPOINT, 1000, clientId.c_str());
+
+    // Request direct power topology of asset.
+    zmsg_t *request = zmsg_new();
+    zmsg_addstr(request, "REQUEST");
+    zmsg_addstr(request, "xxx");
+    zmsg_addstr(request, "POWER_TO");
+    zmsg_addstr(request, asset.c_str());
+    mlm_client_sendto(mClient.get(), "asset-agent", "TOPOLOGY", nullptr, 1000, &request);
+    ZpollerGuard poller(zpoller_new(mlm_client_msgpipe(mClient.get()), nullptr));
+
+    if (zpoller_wait(poller.get(), 1000)) {
+        ZmsgGuard reply(mlm_client_recv(mClient.get()));
+        ZstrGuard replyCorrId(zmsg_popstr(reply.get()));
+        ZstrGuard replyType(zmsg_popstr(reply.get()));
+        ZstrGuard replySubtype(zmsg_popstr(reply.get()));
+        ZstrGuard replyAsset(zmsg_popstr(reply.get()));
+        ZstrGuard replyResult(zmsg_popstr(reply.get()));
+        ZstrGuard replyData(zmsg_popstr(reply.get()));
+
+        if (streq(replyResult.get(), "OK")) {
+            cxxtools::SerializationInfo si;
+            std::istringstream s(replyData.get());
+            cxxtools::JsonDeserializer json(s);
+            json.deserialize(si);
+
+            for (const auto& chain : si.getMember("powerchains")) {
+                std::string realAsset, realOutlet;
+                chain.getMember("src-id").getValue(realAsset);
+                chain.getMember("src-socket").getValue(realOutlet);
+
+                result.emplace_back(realAsset, std::stoi(realOutlet));
+            }
+        }
+    }
+
+    return result;
+}
+
 constexpr auto NUT_USER_ENV = "NUT_USER";
 constexpr auto NUT_PASS_ENV = "NUT_PASSWD";
 
+// Like std::transform, but callable may return 0, 1 or n objects.
 template<class InputIt, class OutputIt, class naryOperation>
 OutputIt expand(InputIt first1, InputIt last1, OutputIt d_first, naryOperation nary_op) {
     while (first1 != last1) {
@@ -52,7 +137,6 @@ static void connectToNutServer(nut::TcpClient& client, const std::string& nutHos
         client.connect(nutHost);
         client.authenticate(nutUsername, nutPassword);
         client.setFeature(nut::TcpClient::TRACKING, true);
-        log_trace("Connected to NUT server '%s'.", nutHost.c_str());
     }
     catch (std::exception &e) {
         log_error("Error while connecting to NUT server: %s.", e.what());
@@ -63,19 +147,19 @@ static void connectToNutServer(nut::TcpClient& client, const std::string& nutHos
 /**
  * \brief Returns NUT device and daisychain index from FTY asset.
  */
-static std::pair<std::string, int> getNutDeviceFromFtyDaisyChain(tntdb::Connection &conn, const std::string& asset) {
+static std::pair<std::string, int> getNutDeviceFromFtyDaisyChain(DaisyChainRequester daisyChainRequester, const std::string& asset) {
     std::pair<std::string, int> result { asset, -1 };
 
     // Check if asset is daisy-chained.
-    auto daisyChain = DBAssets::select_daisy_chain(conn, asset);
-    if (daisyChain.status && daisyChain.item.size() != 0) {
-        for (const auto &i : daisyChain.item) {
+    auto daisyChain = daisyChainRequester(asset);
+    if (!daisyChain.empty() && daisyChain.begin()->first == 1) {
+        for (const auto &i : daisyChain) {
             if (i.second == asset) {
                 result.second = i.first;
                 break;
             }
         }
-        result.first = daisyChain.item.begin()->second;
+        result.first = daisyChain.begin()->second; // NUT driver is based on the host of the daisy-chain.
     }
 
     return result;
@@ -84,15 +168,15 @@ static std::pair<std::string, int> getNutDeviceFromFtyDaisyChain(tntdb::Connecti
 /**
  * \brief Map from 42ity daisy-chained command to NUT command.
  */
-static dto::commands::Command ftyDaisyChainToNutCommand(tntdb::Connection &conn, const dto::commands::Command &job) {
+static dto::commands::Command ftyDaisyChainToNutCommand(DaisyChainRequester daisyChainRequester, const dto::commands::Command &job) {
     dto::commands::Command command = job;
 
-    auto daisy_chain = DBAssets::select_daisy_chain(conn, job.asset);
-    if (daisy_chain.status && daisy_chain.item.size() != 0) {
+    auto daisyChain = daisyChainRequester(job.asset);
+    if (!daisyChain.empty() && daisyChain.begin()->first == 1) {
         // Daisy-chained, walk the chain until we find asset we're interested in.
-        for (const auto &i : daisy_chain.item) {
+        for (const auto &i : daisyChain) {
             if (i.second == job.asset) {
-                command.asset = daisy_chain.item.begin()->second;
+                command.asset = daisyChain.begin()->second; // NUT driver is based on the host of the daisy-chain.
                 if (job.target.empty()) {
                     command.target = "device." + std::to_string(i.first);
                 }
@@ -126,61 +210,19 @@ static std::vector<std::string> nutDaisyChainedToSingleDevice(const std::string&
 /**
  * \brief Translate high-level 42ity power source command to low-level 42ity command(s).
  */
-static dto::commands::Commands ftyTranslatePowerSourceCommand(const std::string& asset, const std::string& commandType, const std::string& argument) {
+static dto::commands::Commands ftyTranslatePowerSourceCommand(TopologyRequester topologyRequester, const std::string& asset, const std::string& commandType, const std::string& argument) {
     dto::commands::Commands result;
 
-    /**
-     * XXX: this is quite quick'n dirty, but we don't have a good way to
-     * interface with old-style mailboxes yet from modern code.
-     */
-    const auto clientId = messagebus::getClientId("_-fty-nut-command-powerchain-requester");
-    MlmClientGuard mClient(mlm_client_new());
-    mlm_client_connect(mClient.get(), MLM_ENDPOINT, 1000, clientId.c_str());
+    const auto powerSources = topologyRequester(asset);
+    for (const auto& powerSource : powerSources) {
+        dto::commands::Command command = {
+            powerSource.first,
+            commandType,
+            "outlet." + std::to_string(powerSource.second),
+            argument
+        } ;
 
-    // Request direct power topology of asset.
-    zmsg_t *request = zmsg_new();
-    zmsg_addstr(request, "REQUEST");
-    zmsg_addstr(request, "xxx");
-    zmsg_addstr(request, "POWER_TO");
-    zmsg_addstr(request, asset.c_str());
-    mlm_client_sendto(mClient.get(), "asset-agent", "TOPOLOGY", nullptr, 1000, &request);
-    ZpollerGuard poller(zpoller_new(mlm_client_msgpipe(mClient.get()), nullptr));
-
-    if (zpoller_wait(poller.get(), 1000)) {
-        ZmsgGuard reply(mlm_client_recv(mClient.get()));
-        ZstrGuard replyCorrId(zmsg_popstr(reply.get()));
-        ZstrGuard replyType(zmsg_popstr(reply.get()));
-        ZstrGuard replySubtype(zmsg_popstr(reply.get()));
-        ZstrGuard replyAsset(zmsg_popstr(reply.get()));
-        ZstrGuard replyResult(zmsg_popstr(reply.get()));
-        ZstrGuard replyData(zmsg_popstr(reply.get()));
-
-        if (streq(replyResult.get(), "OK")) {
-            cxxtools::SerializationInfo si;
-            std::istringstream s(replyData.get());
-            cxxtools::JsonDeserializer json(s);
-            json.deserialize(si);
-
-            /**
-             * For every component of the power chain, generate the
-             * corresponding 42ity low-level power command. Don't check for
-             * validity as NUT will eventually complain if commands don't
-             * actually exist.
-             */
-            for (const auto& chain : si.getMember("powerchains")) {
-                std::string realAsset, realOutlet;
-                chain.getMember("src-id").getValue(realAsset);
-                chain.getMember("src-socket").getValue(realOutlet);
-
-                dto::commands::Command command;
-                command.command = commandType;
-                command.asset = realAsset;
-                command.target = "outlet." + realOutlet;
-                command.argument = argument;
-
-                result.push_back(command);
-            }
-        }
+        result.emplace_back(command);
     }
 
     // Beyond plain old errors, do not allow empty powerchains.
@@ -194,9 +236,10 @@ static dto::commands::Commands ftyTranslatePowerSourceCommand(const std::string&
 /**
  * \brief Translate high-level 42ity commands to low-level 42ity commands.
  */
-static dto::commands::Commands ftyTranslateHighLevelCommand(const dto::commands::Command &command) {
+static dto::commands::Commands ftyTranslateHighLevelCommand(TopologyRequester topologyRequester, const dto::commands::Command &command) {
     dto::commands::Commands result;
 
+    // Map to convert power chain power commands to simple power commands.
     const static std::map<std::string, std::string> powerSourceCommandMapping = {
         { "powersource.cycle", "load.cycle" },
         { "powersource.cycle.delay", "load.cycle.delay" },
@@ -216,7 +259,7 @@ static dto::commands::Commands ftyTranslateHighLevelCommand(const dto::commands:
     auto commandMapping = powerSourceCommandMapping.find(command.command);
 
     if (commandMapping != powerSourceCommandMapping.end()) {
-        result = ftyTranslatePowerSourceCommand(command.asset, commandMapping->second, command.argument);
+        result = ftyTranslatePowerSourceCommand(topologyRequester, command.asset, commandMapping->second, command.argument);
 
         if (powerSourceStaggerCommands.count(command.command)) {
             // Patch up delay for staggered commands.
@@ -240,8 +283,10 @@ static dto::commands::Commands ftyTranslateHighLevelCommand(const dto::commands:
 /**
  * \brief Convert from NUT commands to 42ity high-level commands.
  */
-void nutCommandsToFtyCommands(const std::string& asset, const std::vector<std::string>& rawNutCommands, dto::commands::CommandDescriptions& commandDescriptions) {
-    // Stuff to convert NUT outlet commands to 42ity commands.
+static dto::commands::CommandDescriptions nutCommandsToFtyCommands(const std::string& asset, const std::vector<std::string>& rawNutCommands) {
+    dto::commands::CommandDescriptions result;
+
+    // Map to convert NUT outlet commands to 42ity commands.
     const static std::map<std::string, std::string> outletDescriptions {
         { "load.cycle", "Power cycle outlet" },
         { "load.cycle.delay", "Power cycle outlet with delay (seconds)" },
@@ -259,7 +304,7 @@ void nutCommandsToFtyCommands(const std::string& asset, const std::vector<std::s
         std::smatch outletMatches;
 
         if (std::regex_match(rawNutCommand, outletMatches, outletRegex)) {
-            // NUT command is about an outlet, convert it to 42ity command.
+            // NUT command is about an outlet or outlet group, convert it to 42ity command.
             const std::string& type = outletMatches[1].str();
             const std::string& outlet = outletMatches[2].str();
             const std::string& command = outletMatches[3].str();
@@ -288,26 +333,25 @@ void nutCommandsToFtyCommands(const std::string& asset, const std::vector<std::s
 
     // Collect all commands.
     for (const auto &ftyCommand : ftyCommands) {
-        commandDescriptions.push_back(ftyCommand.second);
+        result.push_back(ftyCommand.second);
     }
     for (const auto &unrecognizedCommand : unrecognizedCommands) {
-        commandDescriptions.push_back(unrecognizedCommand);
+        result.push_back(unrecognizedCommand);
     }
+
+    return result;
 }
 
-void queryNativePowerCommands(nut::TcpClient& client, tntdb::Connection& conn, const std::string& asset, dto::commands::CommandDescriptions& commandDescriptions) {
+/**
+ * These are the "high-level" functions for power commands. There're the ones
+ * unit-tested below and use the utilities defined above.
+ */
+static dto::commands::CommandDescriptions queryNativePowerCommands(DeviceCommandRequester deviceCommandRequester, DaisyChainRequester daisyChainRequester, const std::string& asset) {
     // Grab NUT device.
     std::string nutDevice;
     int nutIndex;
-    std::tie(nutDevice, nutIndex) = getNutDeviceFromFtyDaisyChain(conn, asset);
-
-    // Grab NUT commands - don't care if it errors out.
-    std::set<std::string> rawNutCommands;
-    try {
-        rawNutCommands = client.getDeviceCommandNames(nutDevice);
-    }
-    catch (...) {
-    }
+    std::tie(nutDevice, nutIndex) = getNutDeviceFromFtyDaisyChain(daisyChainRequester, asset);
+    std::set<std::string> rawNutCommands = deviceCommandRequester(nutDevice);
 
     // Deal with NUT to 42ity daisy-chain convertion.
     std::vector<std::string> nutCommands;
@@ -318,10 +362,12 @@ void queryNativePowerCommands(nut::TcpClient& client, tntdb::Connection& conn, c
         std::copy(rawNutCommands.begin(), rawNutCommands.end(), std::back_inserter(nutCommands));
     }
 
-    nutCommandsToFtyCommands(asset, nutCommands, commandDescriptions);
+    return nutCommandsToFtyCommands(asset, nutCommands);
 }
 
-void queryPowerChainPowerCommands(nut::TcpClient& client, tntdb::Connection& conn, const std::string& asset, dto::commands::CommandDescriptions& commandDescriptions) {
+static dto::commands::CommandDescriptions queryPowerChainPowerCommands(const std::string& asset) {
+    dto::commands::CommandDescriptions result;
+
     /**
      * FIXME: always indicate power chain power commands, not checking for any
      * semblance of validity, i.e. we bluff.
@@ -346,97 +392,53 @@ void queryPowerChainPowerCommands(nut::TcpClient& client, tntdb::Connection& con
     } ;
 
     for (const auto& generatedCommand : generatedCommands) {
-        commandDescriptions.push_back(fct(generatedCommand.first, generatedCommand.second));
-    }
-}
-
-NutCommandManager::NutCommandWorker::NutCommandWorker(const std::string& nutHost, const std::string& nutUsername, const std::string& nutPassword, CompletionCallback callback) :
-    m_nutHost(nutHost),
-    m_nutUsername(nutUsername),
-    m_nutPassword(nutPassword),
-    m_callback(callback),
-    m_worker(std::bind(&NutCommandManager::NutCommandWorker::mainloop, this)),
-    m_stopped(false)
-{
-}
-
-NutCommandManager::NutCommandWorker::~NutCommandWorker() {
-    std::lock_guard<std::mutex> lk(m_mutex);
-    m_stopped = true;
-    m_cv.notify_one();
-    m_worker.join();
-}
-
-NutCommandManager::NutCommandWorker::NutTrackingIds NutCommandManager::NutCommandWorker::submitWork(const dto::commands::Commands &jobs) {
-    NutTrackingIds ids;
-
-    nut::TcpClient client;
-    connectToNutServer(client, m_nutHost, m_nutUsername, m_nutPassword);
-
-    for (const auto &job : jobs) {
-        std::string nutCommand = job.target.empty() ?
-            job.command :
-            job.target + "." + job.command;
-
-        log_info("Executing NUT command '%s' argument '%s' on asset '%s'.", nutCommand.c_str(), job.argument.c_str(), job.asset.c_str());
-        auto id = client.executeDeviceCommand(job.asset, nutCommand, job.argument);
-        ids.insert(id);
-        log_debug("NUT job ID: %s.", id.c_str());
+        result.push_back(fct(generatedCommand.first, generatedCommand.second));
     }
 
-    {
-        std::lock_guard<std::mutex> lk(m_mutex);
-        for (const auto& id : ids) {
-            m_pendingCommands.emplace_back(id);
-            m_cv.notify_one();
-        }
-    }
-
-    return ids;
+    return result;
 }
 
-void NutCommandManager::NutCommandWorker::mainloop() {
-    while (!m_stopped) {
-        std::unique_lock<std::mutex> lk(m_mutex);
-        m_cv.wait_for(lk, std::chrono::seconds(2));
+static dto::commands::Commands computePowerCommands(DaisyChainRequester daisyChainRequester, TopologyRequester topologyRequester, const dto::commands::Commands& jobs) {
+    // Translate 42ity high-level commands to 42ity real commands.
+    dto::commands::Commands translatedJobs;
+    expand(jobs.begin(), jobs.end(), std::back_inserter(translatedJobs), std::bind(ftyTranslateHighLevelCommand, std::ref(topologyRequester), std::placeholders::_1));
 
-        if (!m_pendingCommands.empty()) {
-            nut::TcpClient client;
-            connectToNutServer(client, m_nutHost, m_nutUsername, m_nutPassword);
+    // Convert 42ity commands to NUT commands.
+    dto::commands::Commands nutJobs;
+    std::transform(translatedJobs.begin(), translatedJobs.end(), std::back_inserter(nutJobs), std::bind(ftyDaisyChainToNutCommand, std::ref(daisyChainRequester), std::placeholders::_1));
 
-            // Store completed commands here to not hold the mutex while calling callbacks.
-            std::vector<std::pair<nut::TrackingID, bool>> jobsCompleted;
-
-            // Mark and sweep completed NUT commands.
-            auto treated = std::remove_if(m_pendingCommands.begin(), m_pendingCommands.end(),
-                [&client, &jobsCompleted, this](nut::TrackingID &id) -> bool {
-                    auto result = client.getTrackingResult(id);
-                    switch (result) {
-                        case nut::FAILURE:
-                        case nut::SUCCESS:
-                            jobsCompleted.emplace_back(id, result == nut::SUCCESS);
-                            return true;
-                        default:
-                            return false;
-                    }
-                }
-            );
-
-            m_pendingCommands.erase(treated, m_pendingCommands.end());
-
-            // Call callbacks without holding the mutex.
-            lk.unlock();
-            for (auto jobCompleted : jobsCompleted) {
-                log_debug("NUT job ID '%s' finished with %s.", jobCompleted.first.c_str(), jobCompleted.second ? "success" : "failure");
-                m_callback(jobCompleted.first, jobCompleted.second);
-            }
-        }
-    }
+    return nutJobs;
 }
 
-NutCommandManager::NutCommandManager(const std::string& nutHost, const std::string& nutUsername, const std::string& nutPassword, const std::string& dbConn, CompletionCallback callback) :
-    m_worker(nutHost, nutUsername, nutPassword, std::bind(&NutCommandManager::completionCallback, this, std::placeholders::_1, std::placeholders::_2)),
-    m_callback(callback),
+// NutCommandManager
+
+static std::string buildCommandMessage(const dto::commands::Command &job) {
+    std::stringstream msg;
+    msg << "Command '" << job.command << "' target '" << job.target << "' argument '" << job.argument << "' on asset '" << job.asset << "'";
+    return msg.str();
+}
+
+static std::string buildCommandResultErrorMessage(const dto::commands::Command &job, nut::TrackingResult result) {
+    std::stringstream err;
+    err << buildCommandMessage(job);
+    switch (result) {
+        case nut::UNKNOWN:
+            err << " result is missing." << std::endl;
+            break;
+        case nut::FAILURE:
+            err << " failed." << std::endl;
+            break;
+        case nut::INVALID_ARGUMENT:
+            err << " has an invalid argument." << std::endl;
+            break;
+        default:
+            err << " encountered an unknown error." << std::endl;
+            break;
+    }
+    return err.str();
+}
+
+NutCommandManager::NutCommandManager(const std::string& nutHost, const std::string& nutUsername, const std::string& nutPassword, const std::string& dbConn) :
     m_nutHost(nutHost),
     m_nutUsername(nutUsername),
     m_nutPassword(nutPassword),
@@ -447,72 +449,92 @@ NutCommandManager::NutCommandManager(const std::string& nutHost, const std::stri
 dto::commands::CommandDescriptions NutCommandManager::getCommands(const std::string &asset) {
     dto::commands::CommandDescriptions reply;
 
+    // Connect to stuff.
     auto conn = tntdb::connectCached(m_dbConn);
     nut::TcpClient client;
     connectToNutServer(client, m_nutHost, m_nutUsername, m_nutPassword);
 
-    queryNativePowerCommands(client, conn, asset, reply);
-    queryPowerChainPowerCommands(client, conn, asset, reply);
+    // Prepare our data query function helpers.
+    DeviceCommandRequester deviceCommandRequester = std::bind(deviceCommandRequesterNut, std::ref(client), std::placeholders::_1);
+    DaisyChainRequester daisyChainRequester = std::bind(daisyChainRequesterDatabase, std::ref(conn), std::placeholders::_1);
+
+    // Query native power commands.
+    auto nativeCommands = queryNativePowerCommands(deviceCommandRequester, daisyChainRequester, asset);
+    reply.insert(reply.end(), std::make_move_iterator(nativeCommands.begin()), std::make_move_iterator(nativeCommands.end()));
+
+    // Query power chain power commands.
+    auto powerchainCommands = queryPowerChainPowerCommands(asset);
+    reply.insert(reply.end(), std::make_move_iterator(powerchainCommands.begin()), std::make_move_iterator(powerchainCommands.end()));
 
     return reply;
 }
 
-void NutCommandManager::submitWork(const std::string &correlationId, const dto::commands::Commands &jobs) {
-    for (const auto& job : jobs) {
-        log_info("Performing command '%s' target '%s' argument '%s' on asset '%s'.",
-            job.command.c_str(),
-            job.target.c_str(),
-            job.argument.c_str(),
-            job.asset.c_str()
-        );
-    }
-
+dto::commands::Commands NutCommandManager::computeCommands(const dto::commands::Commands &jobs) {
+    // Connect to stuff.
+    nut::TcpClient client;
+    connectToNutServer(client, m_nutHost, m_nutUsername, m_nutPassword);
     auto conn = tntdb::connectCached(m_dbConn);
 
-    // Translate 42ity high-level commands to 42ity real commands.
-    dto::commands::Commands translatedJobs;
-    expand(jobs.begin(), jobs.end(), std::back_inserter(translatedJobs), ftyTranslateHighLevelCommand);
+    // Prepare our data query function helpers.
+    DaisyChainRequester daisyChainRequester = std::bind(daisyChainRequesterDatabase, std::ref(conn), std::placeholders::_1);
+    TopologyRequester topologyRequester = &topologyRequesterFty;
 
-    // Convert 42ity commands to NUT commands.
-    dto::commands::Commands nutJobs;
-    std::transform(translatedJobs.begin(), translatedJobs.end(), std::back_inserter(nutJobs), std::bind(ftyDaisyChainToNutCommand, std::ref(conn), std::placeholders::_1));
-
-    std::lock_guard<std::mutex> lk(m_mutex);
-    m_jobs.emplace_back(correlationId, m_worker.submitWork(nutJobs));
+    return computePowerCommands(daisyChainRequester, topologyRequester, jobs);
 }
 
-void NutCommandManager::completionCallback(nut::TrackingID id, bool result) {
-    // Store completed jobs here to not hold the mutex while calling callbacks.
-    std::vector<std::pair<std::string, bool>> jobsCompleted;
+void NutCommandManager::performCommands(const dto::commands::Commands &jobs) {
+    std::stringstream errorMessageStream;
 
-    {
-        std::lock_guard<std::mutex> lk(m_mutex);
+    // Connect to NUT.
+    nut::TcpClient client;
+    connectToNutServer(client, m_nutHost, m_nutUsername, m_nutPassword);
 
-        // Mark jobs with no outstanding NUT tracking IDs as terminated.
-        auto jobsTreated = std::remove_if(m_jobs.begin(), m_jobs.end(),
-            [&id, &result, &jobsCompleted](Job &job) -> bool {
-                // Clear NUT tracking IDs of completed commands.
-                auto it = job.ids.find(id);
-                if (it != job.ids.end()) {
-                    job.ids.erase(it);
-                    job.success &= result;
-                }
-                bool done = job.ids.empty();
-                if (done) {
-                    jobsCompleted.emplace_back(job.correlationId, job.success);
-                }
-                return done;
+    // Submit jobs to NUT.
+    std::map<nut::TrackingID, const dto::commands::Command&> ids;
+
+    for (const auto &job : jobs) {
+        const std::string nutCommand = job.target.empty() ?
+            job.command :
+            job.target + "." + job.command;
+
+        try {
+            auto id = client.executeDeviceCommand(job.asset, nutCommand, job.argument);
+            ids.emplace(id, job);
+        }
+        catch (...) {
+            errorMessageStream << buildCommandMessage(job) << " couldn't be submitted.";
+        }
+    }
+
+    // Collect results of NUT jobs.
+    while (!ids.empty()) {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+
+        for (auto it = ids.begin(); it != ids.end(); ) {
+            auto result = client.getTrackingResult(it->first);
+
+            switch (result) {
+                case nut::PENDING:
+                    break;
+                case nut::SUCCESS:
+                    it = ids.erase(it);
+                    break;
+                default:
+                    errorMessageStream << buildCommandResultErrorMessage(it->second, result);
+                    it = ids.erase(it);
+                    break;
             }
-        );
-
-        m_jobs.erase(jobsTreated, m_jobs.end());
+        }
     }
 
-    // Signal completed jobs without holding the mutex.
-    for (auto jobCompleted : jobsCompleted) {
-        m_callback(jobCompleted.first, jobCompleted.second);
+    // Report errors, if any.
+    const std::string errorMessage = errorMessageStream.str();
+    if (!errorMessage.empty()) {
+        throw std::runtime_error(errorMessage);
     }
 }
+
+// NutCommandConnector
 
 NutCommandConnector::Parameters::Parameters() :
     endpoint(MLM_ENDPOINT),
@@ -526,92 +548,306 @@ NutCommandConnector::Parameters::Parameters() :
 
 NutCommandConnector::NutCommandConnector(NutCommandConnector::Parameters params) :
     m_parameters(params),
-    m_manager(params.nutHost, params.nutUsername, params.nutPassword, params.dbUrl, std::bind(&NutCommandConnector::completionCallback, this, std::placeholders::_1, std::placeholders::_2))
+    m_manager(params.nutHost, params.nutUsername, params.nutPassword, params.dbUrl),
+    m_dispatcher({
+        { "GetCommands", std::bind(&NutCommandConnector::requestGetCommands, this, std::placeholders::_1) },
+        { "PerformCommands", std::bind(&NutCommandConnector::requestPerformCommands, this, std::placeholders::_1) }
+    }),
+    m_msgBus(messagebus::MlmMessageBus(params.endpoint, params.agentName))
 {
-    m_msgBus = messagebus::MlmMessageBus(m_parameters.endpoint, m_parameters.agentName);
     m_msgBus->connect();
-
-    auto fct = std::bind(&NutCommandConnector::handleRequest, this, std::placeholders::_1);
-    m_msgBus->receive("ETN.Q.IPMCORE.POWERACTION", fct);
-}
-
-NutCommandConnector::~NutCommandConnector() {
-    std::lock_guard<std::mutex> lk(m_mutex);
-    delete m_msgBus;
+    m_msgBus->receive("ETN.Q.IPMCORE.POWERACTION", std::bind(&NutCommandConnector::handleRequest, this, std::placeholders::_1));
 }
 
 void NutCommandConnector::handleRequest(messagebus::Message msg) {
     if ((msg.metaData().count(messagebus::Message::SUBJECT) == 0) ||
-        (msg.metaData().count(messagebus::Message::COORELATION_ID) == 0)) {
-        log_error("Missing subject/correlationID in request.");
+        (msg.metaData().count(messagebus::Message::COORELATION_ID) == 0) ||
+        (msg.metaData().count(messagebus::Message::REPLY_TO) == 0)) {
+        log_error("Missing subject/correlationID/replyTo in request.");
         return;
     }
 
-    const auto& subject = msg.metaData()[messagebus::Message::SUBJECT];
-    const auto& correlationId = msg.metaData()[messagebus::Message::COORELATION_ID];
-    if (subject == "PerformCommands") {
-        dto::commands::PerformCommandsQueryDto query;
-        msg.userData() >> query;
+    auto subject = msg.metaData()[messagebus::Message::SUBJECT];
+    auto corrId = msg.metaData()[messagebus::Message::COORELATION_ID];
+    log_info("Received %s (%s) request.", subject.c_str(), corrId.c_str());
 
-        std::lock_guard<std::mutex> lk(m_mutex);
+    try {
+        auto result = m_dispatcher(subject, msg.userData());
 
-        try {
-            log_trace("Handling PerformCommands correlation ID=%s.", correlationId.c_str());
-            m_pendingJobs.emplace(std::make_pair(correlationId, msg.metaData()));
-            m_manager.submitWork(correlationId, query.commands);
-        }
-        catch (std::exception &e) {
-            log_error("Exception while processing command PerformCommands: %s.", e.what());
-            m_pendingJobs.erase(correlationId);
-            buildAndSendReply(msg.metaData(), false);
-        }
+        log_info("Request %s (%s) performed successfully.", subject.c_str(), corrId.c_str());
+        sendReply(msg.metaData(), true, result);
     }
-    else if (subject == "GetCommands") {
-        dto::commands::GetCommandsQueryDto query;
-        msg.userData() >> query;
-
-        dto::commands::GetCommandsReplyDto reply = m_manager.getCommands(query.asset);
-        messagebus::UserData replyData;
-        replyData << reply;
-        buildAndSendReply(msg.metaData(), true, replyData);
-    }
-    else {
-        log_error("Unknown subject '%s' in request.", subject.c_str());
+    catch (std::exception& e) {
+        log_error("Exception while processing %s (%s): %s", subject.c_str(), corrId.c_str(), e.what());
+        sendReply(msg.metaData(), false, { e.what() });
     }
 }
 
-void NutCommandConnector::completionCallback(std::string correlationId, bool result) {
-    messagebus::MetaData job;
+void NutCommandConnector::sendReply(const messagebus::MetaData& metadataRequest, bool status, const messagebus::UserData& dataReply) {
+    messagebus::Message reply;
+
+    reply.metaData() = {
+        { messagebus::Message::COORELATION_ID, metadataRequest.at(messagebus::Message::COORELATION_ID) },
+        { messagebus::Message::SUBJECT, metadataRequest.at(messagebus::Message::SUBJECT) },
+        { messagebus::Message::STATUS, status ? "ok" : "ko" },
+        { messagebus::Message::TO, metadataRequest.at(messagebus::Message::REPLY_TO) }
+    } ;
+    reply.userData() = dataReply;
+
+    m_msgBus->sendReply(reply.metaData().at(messagebus::Message::TO), reply);
+}
+
+messagebus::UserData NutCommandConnector::requestGetCommands(messagebus::UserData data) {
+    dto::commands::GetCommandsQueryDto query;
+    data >> query;
+
+    messagebus::UserData reply;
+    auto commands = m_manager.getCommands(query.asset);
+
     {
-        std::lock_guard<std::mutex> lk(m_mutex);
-        job = m_pendingJobs.at(correlationId);
-        m_pendingJobs.erase(correlationId);
+        std::stringstream logMessage;
+        logMessage << "Asset '" << query.asset << "' has the following commands:" << std::endl;
+        for (const auto& i : commands) {
+            logMessage << "\t" << i.command << " - " << i.description << std::endl;
+        }
+        log_trace("%s", logMessage.str().c_str());
     }
 
-    if (result) {
-        log_info("PerformCommands correlation ID=%s finished with %s.", correlationId.c_str(), "success");
-    }
-    else {
-        log_error("PerformCommands correlation ID=%s finished with %s.", correlationId.c_str(), "failure");
-    }
-    buildAndSendReply(job, result);
+    reply << commands;
+    return reply;
 }
 
-void NutCommandConnector::buildAndSendReply(const messagebus::MetaData &sender, bool result, const messagebus::UserData &data) {
-    messagebus::Message message;
-    message.metaData()[messagebus::Message::COORELATION_ID] = sender.at(messagebus::Message::COORELATION_ID);
-    message.metaData()[messagebus::Message::SUBJECT] = sender.at(messagebus::Message::SUBJECT);
-    message.metaData()[messagebus::Message::STATUS] = result ? "ok" : "ko";
-    message.metaData()[messagebus::Message::TO] = sender.at(messagebus::Message::REPLY_TO);
-    message.userData() = data;
-    m_msgBus->sendReply(sender.at(messagebus::Message::REPLY_TO), message);
+messagebus::UserData NutCommandConnector::requestPerformCommands(messagebus::UserData data) {
+    dto::commands::PerformCommandsQueryDto query;
+    data >> query;
+
+    {
+        std::stringstream logMessage;
+        logMessage << "Commands requested:" << std::endl;
+        for (const auto& i : query.commands) {
+            logMessage << "\t" << buildCommandMessage(i) << std::endl;
+        }
+        log_debug("%s", logMessage.str().c_str());
+    }
+
+    auto computedCommands = m_manager.computeCommands(query.commands);
+
+    {
+        std::stringstream logMessage;
+        logMessage << "Effective commands computed:" << std::endl;
+        for (const auto& i : computedCommands) {
+            logMessage << "\t" << buildCommandMessage(i) << std::endl;
+        }
+        log_trace("%s", logMessage.str().c_str());
+    }
+
+    m_manager.performCommands(computedCommands);
+    return {};
 }
 
 }
+
+// Unit tests.
 
 void
 fty_nut_command_server_test(bool verbose)
 {
-    printf(" * fty_nut_command_server: ");
-    printf ("OK\n");
+    /**
+     * Test setup:
+     *  - epdu-1 : standalone EPDU with two outlets.
+     *  - epdu-2 : daisy-chain host EPDU with three outlets.
+     *  - epdu-3 : daisy-chain device 1 EPDU with three outlets.
+     *  - server-4: server with one power source connected to epdu-1.
+     *  - server-5: server with two power sources connected to epdu-2 and epdu-3.
+     *
+     * Tests consist of calling the functions with a set of input data and
+     * checking that the results are as expected.
+     */
+
+    /**
+     * Callables defining our mock data-center without having to instanciate
+     * a full 42ity environment.
+     */
+    auto generateEpduCommands = [](int outlets, int devices) -> std::set<std::string> {
+        const static std::vector<std::string> commandList = {
+            ".load.cycle",
+            ".load.cycle.delay",
+            ".load.off",
+            ".load.off.delay",
+            ".load.on",
+            ".load.on.delay"
+        } ;
+
+        std::set<std::string> commands;
+        for (int i = 1; i <= devices; i++) {
+            const std::string prefix = (devices == 1) ? "" : "device." + std::to_string(i) + ".";
+
+            for (int j = 1; j <= outlets; j++) {
+                for (const auto& command : commandList) {
+                    commands.insert(prefix + "outlet." + std::to_string(j) + command);
+                }
+            }
+        }
+        return commands;
+    } ;
+
+    ftynut::DeviceCommandRequester deviceCommandRequester = [&generateEpduCommands](const std::string& asset) -> std::set<std::string> {
+        const std::map<std::string, std::set<std::string>> assetCommands = {
+            { "epdu-1", generateEpduCommands(2, 1) },
+            { "epdu-2", generateEpduCommands(3, 2) },
+            { "epdu-3", {} },
+            { "server-4", {} },
+            { "server-5", {} }
+        } ;
+
+        return assetCommands.at(asset);
+    } ;
+
+    ftynut::DaisyChainRequester daisyChainRequester = [](const std::string& asset) -> std::map<int, std::string> {
+        const static std::map<int, std::string> doubleDaisyChain = {
+            { 1, "epdu-2" },
+            { 2, "epdu-3" }
+        } ;
+
+        const static std::map<std::string, std::map<int, std::string>> daisyChains = {
+            { "epdu-1", { } },
+            { "epdu-2", doubleDaisyChain },
+            { "epdu-3", doubleDaisyChain },
+            { "server-4", { } },
+            { "server-5", { } }
+        } ;
+
+        return daisyChains.at(asset);
+    } ;
+
+    ftynut::TopologyRequester topologyRequester = [](const std::string& asset) -> std::vector<std::pair<std::string, int>> {
+        const static std::map<std::string, std::vector<std::pair<std::string, int>>> topologies = {
+            { "epdu-1", {} },
+            { "epdu-2", {} },
+            { "epdu-3", {} },
+            { "server-4", { { "epdu-1", 2 } } },
+            { "server-5", { { "epdu-2", 3 }, { "epdu-3", 1 } } }
+        } ;
+
+        return topologies.at(asset);
+    } ;
+
+    // Actual unit tests.
+
+    std::cerr << " * fty_nut_command_server: " << std::endl;
+
+    {
+        std::cerr << "  - queryNativePowerCommands: ";
+
+        const static std::map<std::string, dto::commands::CommandDescriptions> expectedAssetCommands = {
+            { "epdu-1", {
+                dto::commands::CommandDescription({ "epdu-1", "load.cycle",       "", { "outlet.1", "outlet.2" } }),
+                dto::commands::CommandDescription({ "epdu-1", "load.cycle.delay", "", { "outlet.1", "outlet.2" } }),
+                dto::commands::CommandDescription({ "epdu-1", "load.off",         "", { "outlet.1", "outlet.2" } }),
+                dto::commands::CommandDescription({ "epdu-1", "load.off.delay",   "", { "outlet.1", "outlet.2" } }),
+                dto::commands::CommandDescription({ "epdu-1", "load.on",          "", { "outlet.1", "outlet.2" } }),
+                dto::commands::CommandDescription({ "epdu-1", "load.on.delay",    "", { "outlet.1", "outlet.2" } }) } },
+            { "epdu-2", {
+                dto::commands::CommandDescription({ "epdu-2", "load.cycle",       "", { "outlet.1", "outlet.2", "outlet.3" } }),
+                dto::commands::CommandDescription({ "epdu-2", "load.cycle.delay", "", { "outlet.1", "outlet.2", "outlet.3" } }),
+                dto::commands::CommandDescription({ "epdu-2", "load.off",         "", { "outlet.1", "outlet.2", "outlet.3" } }),
+                dto::commands::CommandDescription({ "epdu-2", "load.off.delay",   "", { "outlet.1", "outlet.2", "outlet.3" } }),
+                dto::commands::CommandDescription({ "epdu-2", "load.on",          "", { "outlet.1", "outlet.2", "outlet.3" } }),
+                dto::commands::CommandDescription({ "epdu-2", "load.on.delay",    "", { "outlet.1", "outlet.2", "outlet.3" } }) } },
+            { "epdu-3", {
+                dto::commands::CommandDescription({ "epdu-3", "load.cycle",       "", { "outlet.1", "outlet.2", "outlet.3" } }),
+                dto::commands::CommandDescription({ "epdu-3", "load.cycle.delay", "", { "outlet.1", "outlet.2", "outlet.3" } }),
+                dto::commands::CommandDescription({ "epdu-3", "load.off",         "", { "outlet.1", "outlet.2", "outlet.3" } }),
+                dto::commands::CommandDescription({ "epdu-3", "load.off.delay",   "", { "outlet.1", "outlet.2", "outlet.3" } }),
+                dto::commands::CommandDescription({ "epdu-3", "load.on",          "", { "outlet.1", "outlet.2", "outlet.3" } }),
+                dto::commands::CommandDescription({ "epdu-3", "load.on.delay",    "", { "outlet.1", "outlet.2", "outlet.3" } }) } }
+        } ;
+
+        for (const auto& expectedAssetCommand : expectedAssetCommands) {
+            const auto& assetName = expectedAssetCommand.first;
+            const auto& assetCommands = expectedAssetCommand.second;
+
+            auto commandDescriptions = ftynut::queryNativePowerCommands(deviceCommandRequester, daisyChainRequester, assetName);
+
+            assert(assetCommands.size() == commandDescriptions.size());
+            for (size_t i = 0; i < assetCommands.size(); i++) {
+                assert(assetCommands[i].asset == commandDescriptions[i].asset);
+                assert(assetCommands[i].command == commandDescriptions[i].command);
+
+                assert(assetCommands[i].targets.size() == commandDescriptions[i].targets.size());
+                for (size_t j = 0; j < assetCommands[i].targets.size(); j++) {
+                    assert(assetCommands[i].targets[j] == commandDescriptions[i].targets[j]);
+                }
+            }
+        }
+
+        std::cerr << "OK" << std::endl;
+    }
+
+    {
+        std::cerr << "  - queryPowerChainPowerCommands: ";
+        /// FIXME: Actually test this function (no need to as long as it's stubbed).
+        std::cerr << "OK" << std::endl;
+    }
+
+    {
+        std::cerr << "  - computePowerCommands: ";
+
+        const static dto::commands::Commands commands = {
+            dto::commands::Command({ "epdu-1",      "load.off",                 "outlet.1", ""  }),
+            dto::commands::Command({ "epdu-1",      "load.on.delay",            "outlet.2", "3" }),
+            dto::commands::Command({ "epdu-2",      "load.cycle",               "outlet.1", ""  }),
+            dto::commands::Command({ "epdu-3",      "load.cycle",               "outlet.3", ""  }),
+            dto::commands::Command({ "server-4",    "powersource.off",          "",         ""  }),
+            dto::commands::Command({ "server-5",    "powersource.cycle",        "",         ""  }),
+            dto::commands::Command({ "server-5",    "powersource.off.delay",    "",         "3" }),
+            dto::commands::Command({ "server-5",    "powersource.on.stagger",   "",         "3" })
+        } ;
+
+        const static std::vector<dto::commands::Commands> expectedResults = {
+            {
+                dto::commands::Command({ "epdu-1", "load.off", "outlet.1", "" })
+            },
+            {
+                dto::commands::Command({ "epdu-1", "load.on.delay", "outlet.2", "3" })
+            },
+            {
+                dto::commands::Command({ "epdu-2", "load.cycle", "device.1.outlet.1", "" })
+            },
+            {
+                dto::commands::Command({ "epdu-2", "load.cycle", "device.2.outlet.3", "" })
+            },
+            {
+                dto::commands::Command({ "epdu-1", "load.off", "outlet.2", "" })
+            },
+            {
+                dto::commands::Command({ "epdu-2", "load.cycle", "device.1.outlet.3", "" }),
+                dto::commands::Command({ "epdu-2", "load.cycle", "device.2.outlet.1", "" })
+            },
+            {
+                dto::commands::Command({ "epdu-2", "load.off.delay", "device.1.outlet.3", "3" }),
+                dto::commands::Command({ "epdu-2", "load.off.delay", "device.2.outlet.1", "3" })
+            },
+            {
+                dto::commands::Command({ "epdu-2", "load.on.delay", "device.1.outlet.3", "3" }),
+                dto::commands::Command({ "epdu-2", "load.on.delay", "device.2.outlet.1", "6" })
+            }
+        } ;
+
+        assert(commands.size() == expectedResults.size());
+
+        for (size_t i = 0; i < commands.size(); i++) {
+            auto result = ftynut::computePowerCommands(daisyChainRequester, topologyRequester, { commands[i] });
+
+            assert(result.size() == expectedResults[i].size());
+            for (size_t j = 0; j < expectedResults[i].size(); j++) {
+                assert(result[j].asset      == expectedResults[i][j].asset);
+                assert(result[j].command    == expectedResults[i][j].command);
+                assert(result[j].target     == expectedResults[i][j].target);
+                assert(result[j].argument   == expectedResults[i][j].argument);
+            }
+        }
+
+        std::cerr << "OK" << std::endl;
+    }
 }
