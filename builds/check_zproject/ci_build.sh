@@ -20,7 +20,7 @@ git clone --quiet --depth 1 https://github.com/zeromq/libzmq.git libzmq
 git clone --quiet --depth 1 https://github.com/zeromq/czmq.git czmq
 git clone --quiet --depth 1 https://github.com/zeromq/malamute.git malamute
 git clone --quiet --depth 1 https://github.com/42ity/fty-proto.git fty-proto
-git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common-db.git fty-common-db
+git clone --quiet --depth 1 https://github.com/42ity/fty-common-db.git fty-common-db
 git clone --quiet --depth 1 https://github.com/42ity/fty-common-nut.git fty-common-nut
 git clone --quiet --depth 1 https://github.com/42ity/fty-common-socket.git fty-common-socket
 git clone --quiet --depth 1 https://github.com/42ity/fty-shm.git fty_shm
