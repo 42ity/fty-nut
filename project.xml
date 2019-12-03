@@ -98,7 +98,6 @@
 
     <use project = "fty-common-db" libname = "libfty_common_db" header = "fty_common_db.h"
         repository = "https://github.com/42ity/fty-common-db.git"
-        release = "master"
         test = "fty_common_db_selftest" />
 
     <use project = "fty-common-nut" libname = "libfty_common_nut" header = "fty_common_nut.h"
