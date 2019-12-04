@@ -594,7 +594,7 @@ void NutCommandConnector::sendReply(const messagebus::MetaData& metadataRequest,
     } ;
     reply.userData() = dataReply;
 
-    m_msgBus->sendReply(reply.metaData().at(messagebus::Message::TO), reply);
+    m_msgBus->sendReply("ETN.R.IPMCORE.POWERACTION", reply);
 }
 
 messagebus::UserData NutCommandConnector::requestGetCommands(messagebus::UserData data) {
