@@ -43,6 +43,7 @@
 #include <fty_security_wallet.h>
 #include <fty_common_nut.h>
 #include <fty_shm.h>
+#include <fty_common_messagebus.h>
 
 //  FTY_NUT version macros for compile-time API detection
 #define FTY_NUT_VERSION_MAJOR 1
@@ -110,6 +111,8 @@ typedef struct _fty_nut_command_server_t fty_nut_command_server_t;
 #define FTY_NUT_COMMAND_SERVER_T_DEFINED
 typedef struct _fty_nut_configurator_server_t fty_nut_configurator_server_t;
 #define FTY_NUT_CONFIGURATOR_SERVER_T_DEFINED
+typedef struct _fty_nut_configuration_server_t fty_nut_configuration_server_t;
+#define FTY_NUT_CONFIGURATION_SERVER_T_DEFINED
 typedef struct _alert_actor_t alert_actor_t;
 #define ALERT_ACTOR_T_DEFINED
 typedef struct _sensor_actor_t sensor_actor_t;
@@ -120,6 +123,7 @@ typedef struct _sensor_actor_t sensor_actor_t;
 #include "fty_nut_server.h"
 #include "fty_nut_command_server.h"
 #include "fty_nut_configurator_server.h"
+#include "fty_nut_configuration_server.h"
 #include "alert_actor.h"
 #include "sensor_actor.h"
 

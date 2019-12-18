@@ -71,6 +71,7 @@ BuildRequires:  fty-common-socket-devel
 BuildRequires:  fty-security-wallet-devel
 BuildRequires:  fty-common-nut-devel
 BuildRequires:  fty_shm-devel >= 1.0.0
+BuildRequires:  fty-common-messagebus-devel
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
@@ -110,6 +111,7 @@ Requires:       fty-common-socket-devel
 Requires:       fty-security-wallet-devel
 Requires:       fty-common-nut-devel
 Requires:       fty_shm-devel >= 1.0.0
+Requires:       fty-common-messagebus-devel
 
 %description devel
 nut (network ups tools) daemon wrapper/proxy development tools
@@ -146,6 +148,8 @@ find %{buildroot} -name '*.la' | xargs rm -f
 %{_mandir}/man1/fty-nut*
 %{_bindir}/fty-nut-command
 %{_mandir}/man1/fty-nut-command*
+%{_bindir}/fty-nut-configuration
+%{_mandir}/man1/fty-nut-configuration*
 %{_bindir}/fty-nut-configurator
 %{_mandir}/man1/fty-nut-configurator*
 %{_bindir}/fty-nutconfig
@@ -154,16 +158,18 @@ find %{buildroot} -name '*.la' | xargs rm -f
 %{SYSTEMD_UNIT_DIR}/fty-nut.service
 %config(noreplace) %{_sysconfdir}/fty-nut/fty-nut-command.cfg
 %{SYSTEMD_UNIT_DIR}/fty-nut-command.service
+%config(noreplace) %{_sysconfdir}/fty-nut/fty-nut-configuration.cfg
+%{SYSTEMD_UNIT_DIR}/fty-nut-configuration.service
 %config(noreplace) %{_sysconfdir}/fty-nut/fty-nut-configurator.cfg
 %{SYSTEMD_UNIT_DIR}/fty-nut-configurator.service
 %dir %{_sysconfdir}/fty-nut
 %if 0%{?suse_version} > 1315
 %post
-%systemd_post fty-nut.service fty-nut-command.service fty-nut-configurator.service
+%systemd_post fty-nut.service fty-nut-command.service fty-nut-configuration.service fty-nut-configurator.service
 %preun
-%systemd_preun fty-nut.service fty-nut-command.service fty-nut-configurator.service
+%systemd_preun fty-nut.service fty-nut-command.service fty-nut-configuration.service fty-nut-configurator.service
 %postun
-%systemd_postun_with_restart fty-nut.service fty-nut-command.service fty-nut-configurator.service
+%systemd_postun_with_restart fty-nut.service fty-nut-command.service fty-nut-configuration.service fty-nut-configurator.service
 %endif
 
 %changelog

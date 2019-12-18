@@ -1505,6 +1505,90 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_shm
 dnl END of enabled attempts to search for libfty_shm
 
 
+was_fty_common_messagebus_check_lib_detected=no
+
+search_libfty_common_messagebus="yes"
+
+AC_ARG_WITH([libfty_common_messagebus],
+    [
+        AS_HELP_STRING([--with-libfty_common_messagebus],
+        [yes or no. Optionally specify libfty_common_messagebus prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_libfty_common_messagebus="yes"
+    ],
+    [
+        search_libfty_common_messagebus="yes"
+    ])
+AS_CASE([x"${with_libfty_common_messagebus}"],
+    [xyes], [search_libfty_common_messagebus="yes"],
+    [xno],  [search_libfty_common_messagebus="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_libfty_common_messagebus}" = xno],
+    [AC_MSG_WARN([Required dependency on fty_common_messagebus was explicitly disabled during configuration by '--with-libfty_common_messagebus=no'; subsequent full build of fty-nut may fail])])
+
+AS_IF([test x"${search_libfty_common_messagebus}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([fty_common_messagebus], [libfty_common_messagebus >= 0.0.0],
+    [
+        was_fty_common_messagebus_check_lib_detected=pkgcfg
+        found_pkgconfig="libfty_common_messagebus"
+    ],
+    [
+        AC_MSG_NOTICE([Package libfty_common_messagebus not found; falling back to defined compilability tests])
+
+        fty_common_messagebus_synthetic_cflags=""
+        fty_common_messagebus_synthetic_libs="-lfty-common-messagebus"
+
+        if test -n "${with_libfty_common_messagebus}" && test x"${with_libfty_common_messagebus}" != xyes && test x"${with_libfty_common_messagebus}" != xno; then
+            if test -r "${with_libfty_common_messagebus}/include/fty_common_messagebus.h"; then
+                fty_common_messagebus_synthetic_cflags="-I${with_libfty_common_messagebus}/include"
+                fty_common_messagebus_synthetic_libs="-L${with_libfty_common_messagebus}/lib -lfty-common-messagebus"
+            else
+            AC_MSG_ERROR([Header file ${with_libfty_common_messagebus}/include/fty_common_messagebus.h was not found. Please check libfty_common_messagebus prefix])
+            fi
+        else
+            AC_CHECK_HEADER([fty_common_messagebus.h], [],
+            AC_MSG_ERROR([Header file fty_common_messagebus.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([fty-common-messagebus], [fty_common_messagebus_selftest],
+            [
+                was_fty_common_messagebus_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty-common-messagebus"
+            ],
+            [AC_MSG_ERROR([cannot link with -lfty-common-messagebus, install libfty_common_messagebus])])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common_messagebus
+    AS_CASE(["x${was_fty_common_messagebus_check_lib_detected}"],
+        [xpkgcfg], [
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
+                CFLAGS="${fty_common_messagebus_CFLAGS} ${CFLAGS}"
+                LIBS="${fty_common_messagebus_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                CFLAGS="${fty_common_messagebus_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${fty_common_messagebus_synthetic_libs} ${LDFLAGS}"
+                LIBS="${fty_common_messagebus_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([fty_common_messagebus_CFLAGS],[${fty_common_messagebus_synthetic_cflags}])
+                AC_SUBST([fty_common_messagebus_LIBS],[${fty_common_messagebus_synthetic_libs}])
+            ],
+        [xno], [
+            AC_MSG_ERROR([Cannot find pkg-config metadata for libfty_common_messagebus 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for libfty_common_messagebus
+
+
 CFLAGS="${PREVIOUS_CFLAGS}"
 LIBS="${PREVIOUS_LIBS}"
 
@@ -1720,6 +1804,16 @@ AC_ARG_ENABLE([fty-nut-command],
 AM_CONDITIONAL([ENABLE_FTY_NUT_COMMAND], [test x$enable_fty_nut_command != xno])
 AM_COND_IF([ENABLE_FTY_NUT_COMMAND], [AC_MSG_NOTICE([ENABLE_FTY_NUT_COMMAND defined])])
 
+# Check for fty-nut-configuration intent
+AC_ARG_ENABLE([fty-nut-configuration],
+    AS_HELP_STRING([--enable-fty-nut-configuration],
+        [Compile and install 'fty-nut-configuration' [default=yes]]),
+    [enable_fty_nut_configuration=$enableval],
+    [enable_fty_nut_configuration=yes])
+
+AM_CONDITIONAL([ENABLE_FTY_NUT_CONFIGURATION], [test x$enable_fty_nut_configuration != xno])
+AM_COND_IF([ENABLE_FTY_NUT_CONFIGURATION], [AC_MSG_NOTICE([ENABLE_FTY_NUT_CONFIGURATION defined])])
+
 # Check for fty-nut-configurator intent
 AC_ARG_ENABLE([fty-nut-configurator],
     AS_HELP_STRING([--enable-fty-nut-configurator],
@@ -1903,6 +1997,7 @@ AC_CONFIG_FILES([Makefile
                  src/libfty_nut.pc
                  src/fty-nut.cfg
                  src/fty-nut-command.cfg
+                 src/fty-nut-configuration.cfg
                  src/fty-nut-configurator.cfg
                 ])
 
@@ -1910,6 +2005,7 @@ AM_COND_IF([WITH_SYSTEMD_UNITS],
     [AC_CONFIG_FILES([
                  src/fty-nut.service
                  src/fty-nut-command.service
+                 src/fty-nut-configuration.service
                  src/fty-nut-configurator.service
     ])],
     [])

@@ -17,6 +17,8 @@ fty_nut_command_server.txt
 fty_nut_command_server.doc
 fty_nut_configurator_server.txt
 fty_nut_configurator_server.doc
+fty_nut_configuration_server.txt
+fty_nut_configuration_server.doc
 alert_actor.txt
 alert_actor.doc
 sensor_actor.txt
@@ -25,6 +27,8 @@ fty-nut.txt
 fty-nut.doc
 fty-nut-command.txt
 fty-nut-command.doc
+fty-nut-configuration.txt
+fty-nut-configuration.doc
 fty-nut-configurator.txt
 fty-nut-configurator.doc
 

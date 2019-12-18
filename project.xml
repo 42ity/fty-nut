@@ -123,6 +123,10 @@
         <add_config_opts>--enable-gcc-std-regex=no</add_config_opts>
     </use>
 
+    <use project = "fty-common-messagebus" libname = "libfty_common_messagebus" header = "fty_common_messagebus.h"
+        repository = "https://github.com/42ity/fty-common-messagebus.git"
+        test = "fty_common_messagebus_selftest"/>
+
     <header name = "nut_mlm" private = "1">Malamute connection helpers</header>
     <class name = "cidr"            private = "1">C++ Wrapper around libcidr</class>
 
@@ -139,6 +143,7 @@
     <class name = "fty-nut-server" state = "stable">fty nut actor</class>
     <class name = "fty-nut-command-server" state = "stable">fty nut command actor</class>
     <class name = "fty-nut-configurator-server" state = "stable">fty nut configurator actor</class>
+    <class name = "fty-nut-configuration-server" state = "stable">fty nut configuration actor</class>
     <class name = "alert actor" state = "stable">actor handling device alerts and thresholds</class>
     <class name = "sensor actor" state = "stable">actor handling sensors attached to UPS/ePDU</class>
 
@@ -148,6 +153,7 @@
 
     <main name = "fty-nut" service = "1" />
     <main name = "fty-nut-command" service = "1" />
+    <main name = "fty-nut-configuration" service = "1" />
     <main name = "fty-nut-configurator" service = "1" />
     <bin name = "fty-nutconfig" />
     <bin name = "fty-dmf" />

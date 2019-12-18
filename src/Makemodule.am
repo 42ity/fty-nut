@@ -26,6 +26,7 @@ src_libfty_nut_la_SOURCES = \
     src/fty_nut_server.cc \
     src/fty_nut_command_server.cc \
     src/fty_nut_configurator_server.cc \
+    src/fty_nut_configuration_server.cc \
     src/alert_actor.cc \
     src/sensor_actor.cc \
     src/state_manager.cc \
@@ -88,6 +89,19 @@ systemdsystemunit_DATA += src/fty-nut-command.service
 endif #WITH_SYSTEMD_UNITS
 endif #ENABLE_FTY_NUT_COMMAND
 
+if ENABLE_FTY_NUT_CONFIGURATION
+bin_PROGRAMS += src/fty-nut-configuration
+src_fty_nut_configuration_CPPFLAGS = ${AM_CPPFLAGS}
+src_fty_nut_configuration_LDADD = ${program_libs}
+src_fty_nut_configuration_SOURCES = src/fty_nut_configuration.cc
+src_fty_nut_configuration_config_DATA =
+src_fty_nut_configuration_config_DATA += src/fty-nut-configuration.cfg
+src_fty_nut_configuration_configdir = $(sysconfdir)/fty-nut
+if WITH_SYSTEMD_UNITS
+systemdsystemunit_DATA += src/fty-nut-configuration.service
+endif #WITH_SYSTEMD_UNITS
+endif #ENABLE_FTY_NUT_CONFIGURATION
+
 if ENABLE_FTY_NUT_CONFIGURATOR
 bin_PROGRAMS += src/fty-nut-configurator
 src_fty_nut_configurator_CPPFLAGS = ${AM_CPPFLAGS}
@@ -118,6 +132,7 @@ dist_bin_SCRIPTS = \
 src: \
 		src/fty-nut \
 		src/fty-nut-command \
+		src/fty-nut-configuration \
 		src/fty-nut-configurator \
 		src/fty_nut_selftest \
 		src/libfty_nut.la
