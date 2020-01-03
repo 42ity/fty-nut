@@ -30,6 +30,8 @@
 
 #include <forward_list>
 #include <regex>
+#include <future>
+#include <fty_common_nut_credentials.h>
 
 namespace fty
 {
@@ -67,7 +69,7 @@ auto confSnmpCom =  [](const nutcommon::DeviceConfiguration& conf) -> std::strin
  * \param end End of collection.
  * \param a First element to check.
  * \param b Second element to check.
- * \return True iff a is before b in collection (missing elements are considered to be at the end of the collection).
+ * \return True if a is before b in collection (missing elements are considered to be at the end of the collection).
  */
 template <typename It, typename Val> bool isBefore(It start, It end , const Val& a, const Val& b) {
     const auto itA = std::find(start, end, a);
@@ -245,7 +247,7 @@ struct ComputeAssetConfigurationUpdateResult {
     nutcommon::DeviceConfigurations newConfigurations;
     /// \brief Unknown, unassessable configuration.
     nutcommon::DeviceConfigurations unknownStateConfigurations;
-} ;
+};
 
 /**
  * \brief Sort NUT driver configurations into categories from known and detected configurations.
@@ -272,7 +274,28 @@ ComputeAssetConfigurationUpdateResult computeAssetConfigurationUpdate(const nutc
     for (const auto& knownConfiguration : knownConfigurations) {
         if (canDeviceConfigurationWorkingStateBeAssessed(knownConfiguration)) {
             // This is a known NUT driver, classify it as working or non-working.
-            const auto& detectedFingerprintIterator = detectedFingerprints.find(extractConfigurationFingerprint(knownConfiguration));
+            // TODO: Don't work ???
+            //const auto& detectedFingerprintIterator = detectedFingerprints.find(extractConfigurationFingerprint(knownConfiguration));
+            nutcommon::DeviceConfiguration conf = extractConfigurationFingerprint(knownConfiguration);
+            auto detectedFingerprintIterator = detectedFingerprints.end();
+            auto it_detectedFingerprints = detectedFingerprints.begin();
+            while (it_detectedFingerprints != detectedFingerprints.end()) {
+                bool find = true;
+                auto it = it_detectedFingerprints->begin();
+                while (it != it_detectedFingerprints->end()) {
+                    auto it_conf = conf.find(it->first);
+                    if (it_conf == conf.end() || (it_conf != conf.end() && it_conf->second != it->second)) {
+                        find = false;
+                        break;
+                    }
+                    it ++;
+                }
+                if (find) {
+                    detectedFingerprintIterator = it_detectedFingerprints;
+                    break;
+                }
+                it_detectedFingerprints ++;
+            }
             if (detectedFingerprintIterator != detectedFingerprints.end()) {
                 // NUT driver configuration seems to work.
                 result.workingConfigurations.push_back(knownConfiguration);
@@ -396,13 +419,16 @@ std::vector<size_t> sortDeviceConfigurationPreferred(fty_proto_t* asset, const n
     std::sort(indexes.begin(), indexes.end(), [&configurations, &asset](size_t a, size_t b) {
         /**
          * This is a fairly complicated sort function. Here, we try to return
-         * true iff confA is better than confB.
+         * true if confA is better than confB.
          *
          * This to keep in mind:
          * - std::sort expects a total order.
          * - Total sort means if we return true for a condition, we must return false in the "mirror" condition.
          */
-        const std::string type = fty_proto_type(asset);
+
+        // TODO: Don't work ???
+        //const std::string type = fty_proto_type(asset);
+        const std::string type = "ups";
         const auto& confA = configurations[a];
         const auto& confB = configurations[b];
 
@@ -466,7 +492,7 @@ std::vector<size_t> sortDeviceConfigurationPreferred(fty_proto_t* asset, const n
  * \param types Device configuration types to match against.
  * \return Iterator to best device configuration type match, or end of collection if no suitable match found.
  */
-DeviceConfigurationTypes::const_iterator matchDeviceConfigurationToBestDeviceConfigurationType(fty_proto_t* asset, const nutcommon::DeviceConfiguration& configuration, const DeviceConfigurationTypes& types)
+DeviceConfigurationInfoDetails::const_iterator matchDeviceConfigurationToBestDeviceConfigurationType(fty_proto_t* asset, const nutcommon::DeviceConfiguration& configuration, const DeviceConfigurationInfoDetails& types)
 {
     auto bestMatch = types.end();
 
@@ -506,7 +532,7 @@ DeviceConfigurationTypes::const_iterator matchDeviceConfigurationToBestDeviceCon
  * \param type Device configuration type work with.
  * \return Non-default attributes from device configuration.
  */
-nutcommon::DeviceConfiguration getAttributesFromDeviceConfiguration(const nutcommon::DeviceConfiguration& configuration, const DeviceConfigurationType& type)
+nutcommon::DeviceConfiguration getAttributesFromDeviceConfiguration(const nutcommon::DeviceConfiguration& configuration, const DeviceConfigurationInfoDetail& type)
 {
     nutcommon::DeviceConfiguration result = configuration;
 
@@ -546,47 +572,124 @@ nutcommon::DeviceConfiguration getAttributesFromDeviceConfiguration(const nutcom
 fty_proto_t* fetchProtoFromAssetName(const std::string& assetName)
 {
     /// TODO: fetch fty_proto_t from asset name by querying fty-asset.
-    fty_proto_t* asset = fty_proto_new(FTY_PROTO_ASSET);
+    /*fty_proto_t* asset = fty_proto_new(FTY_PROTO_ASSET);
     fty_proto_set_type(asset, "epdu");
-    fty_proto_ext_insert(asset, "ip.1", "10.130.32.117");
-    return asset;
+    fty_proto_ext_insert(asset, "ip.1", "10.130.35.91");
+    return asset;*/
+
+    fty_proto_t *res = nullptr;
+
+    const auto clientId = messagebus::getClientId("fty-nut-configuration-requester");
+    MlmClientGuard mClient(mlm_client_new());
+    mlm_client_connect(mClient.get(), MLM_ENDPOINT, 1000, clientId.c_str());
+
+    // Request details of asset.
+    zmsg_t *request = zmsg_new();
+    ZuuidGuard uuid(zuuid_new());
+    const char *uuid_canonical = zuuid_str_canonical(uuid.get());
+    zmsg_addstr(request, "GET");
+    zmsg_addstr(request, uuid_canonical);
+    zmsg_addstr(request, assetName.c_str());
+    int r = mlm_client_sendto(mClient.get(), AGENT_FTY_ASSET, "ASSET_DETAIL", nullptr, 1000, &request);
+    if (r != 0) {
+        log_error ("Request ASSET_DETAIL failed for %s (r: %d)", assetName.c_str(), r);
+        zmsg_destroy(&request);
+        return res;
+    }
+    zmsg_destroy(&request);
+    ZpollerGuard poller(zpoller_new(mlm_client_msgpipe(mClient.get()), nullptr));
+    if (zpoller_wait(poller.get(), 1000)) {
+        //ZmsgGuard reply(mlm_client_recv(mClient.get()));
+        zmsg_t *reply = mlm_client_recv(mClient.get());
+        ZstrGuard uuid_recv(zmsg_popstr(reply));
+        // Check uuid matching
+        if (!streq(uuid_recv.get(), uuid_canonical)) {
+            log_error ("UUID doesn't match (%s, %s, %s)", assetName.c_str(), uuid_canonical, uuid_recv.get());
+        }
+        // Test if it a fty_proto msg
+        else if (fty_proto_is(reply)) {
+            res = fty_proto_decode(&reply);
+        }
+        else {
+            log_error("Reply not a fty_proto msg (%s)", assetName.c_str());
+        }
+        //fty_proto_print(res);
+        zmsg_destroy(&reply);
+    }
+    return res;
 }
 
 // ConfigurationManager
 
 ConfigurationManager::ConfigurationManager(const std::string& dbConn) : m_poolScanners(8), m_dbConn(dbConn)
 {
-    scanAssetConfigurations("epdu-7");
-    //automaticAssetConfigurationPrioritySort("epdu-7");
-}
-
-void ConfigurationManager::automaticAssetConfigurationPrioritySort(const std::string& assetName)
-{
-    /// TODO: query all device configurations for asset, sort with sortDeviceConfigurationPreferred() and update priorities with modify_config_priorities().
-}
-
-void ConfigurationManager::scanAssetConfigurations(const std::string& assetName)
-{
+    std::string assetName = "epdu-53";
+    //std::string assetName = "ups-56";
     fty_proto_t* asset = fetchProtoFromAssetName(assetName);
     if (!asset) {
         throw std::runtime_error("Unknown asset " + assetName);
     }
+    scanAssetConfigurations(asset);
+    automaticAssetConfigurationPrioritySort(asset);
+
+    fty_proto_destroy(&asset);
+}
+
+void ConfigurationManager::automaticAssetConfigurationPrioritySort(fty_proto_t* asset)
+{
+    /// TODO: query all device configurations for asset, sort with sortDeviceConfigurationPreferred() and update priorities with modify_config_priorities().
+    if (!asset) {
+        throw std::runtime_error("asset not defined");
+    }
+
+    std::string assetName = fty_proto_name(asset);
+
+    auto conn = tntdb::connectCached(m_dbConn);
+    // Get all configurations for asset
+    DeviceConfigurationInfos knownWorkingDatabaseConfigurations = get_all_config_list(conn, assetName);
+    // Extract array of device configurations from knownWorkingDatabaseConfigurations.
+    nutcommon::DeviceConfigurations knownWorkingConfigurations;
+    std::transform(
+        knownWorkingDatabaseConfigurations.begin(),
+        knownWorkingDatabaseConfigurations.end(),
+        std::back_inserter(knownWorkingConfigurations),
+        [](const DeviceConfigurationInfos::value_type& val) -> nutcommon::DeviceConfiguration {
+            return val.attributes;
+        }
+    );
+    //  Get order of preference for asset's driver configurations
+    std::vector<size_t> indexes = sortDeviceConfigurationPreferred(asset, knownWorkingConfigurations);
+    // Modify configuration order preference in database
+    std::vector<size_t> newConfigurationIdOrder;
+    for(const auto& index : indexes) {
+        newConfigurationIdOrder.push_back(knownWorkingDatabaseConfigurations.at(index).id);
+    }
+    modify_config_priorities(conn, assetName, newConfigurationIdOrder);
+}
+
+void ConfigurationManager::scanAssetConfigurations(fty_proto_t* asset)
+{
+    if (!asset) {
+        throw std::runtime_error("asset not defined");
+    }
+
+    std::string assetName = fty_proto_name(asset);
 
     auto conn = tntdb::connectCached(m_dbConn);
     auto credentialsSNMPv1 = nutcommon::getCredentialsSNMPv1();
     auto credentialsSNMPv3 = nutcommon::getCredentialsSNMPv3();
 
     /// Fetch all known device configurations of asset.
-    DeviceConfigurationIds knownDatabaseConfigurations = get_all_config_list(conn, assetName);
+    DeviceConfigurationInfos knownDatabaseConfigurations = get_all_config_list(conn, assetName);
     // Extract array of device configurations from knownDatabaseConfigurations.
     nutcommon::DeviceConfigurations knownConfigurations;
     std::transform(
         knownDatabaseConfigurations.begin(),
         knownDatabaseConfigurations.end(),
         std::back_inserter(knownConfigurations),
-        [](const DeviceConfigurationIds::value_type& val) -> nutcommon::DeviceConfiguration {
-            return val.second;
-        } 
+        [](const DeviceConfigurationInfos::value_type& val) -> nutcommon::DeviceConfiguration {
+            return val.attributes;
+        }
     );
 
     // Compute update sets from device scan and known configurations.
@@ -620,9 +723,9 @@ void ConfigurationManager::scanAssetConfigurations(const std::string& assetName)
             bool matched = false;
 
             for (const auto& configurationDatabase : knownDatabaseConfigurations) {
-                if (isDeviceConfigurationSubsetOf(configuration, configurationDatabase.second)) {
-                    log_info("Marking device configuration ID %u for asset %s as %s.", configurationDatabase.first.c_str(), assetName.c_str(), updateOrder.second ? "working" : "non-working");
-                    set_config_working(conn, configurationDatabase.first, updateOrder.second);
+                if (isDeviceConfigurationSubsetOf(configuration, configurationDatabase.attributes)) {
+                    log_info("Marking device configuration ID %u for asset %s as %s.", configurationDatabase.id, assetName.c_str(), updateOrder.second ? "working" : "non-working");
+                    set_config_working(conn, configurationDatabase.id, updateOrder.second);
                     matched = true;
                     break;
                 }
@@ -649,16 +752,61 @@ void ConfigurationManager::scanAssetConfigurations(const std::string& assetName)
                 continue;
             }
 
-            auto attributes = getAttributesFromDeviceConfiguration(newConfiguration, *bestDeviceConfigurationType);
+            // TODO ???
+            //auto attributes = getAttributesFromDeviceConfiguration(newConfiguration, *bestDeviceConfigurationType);
+            auto attributes = newConfiguration;
             /// TODO: Match security document in database from newConfiguration.
-            auto secwID = 0;
+            secw::Id secwID = "";
+            // If found community entry, consider that it is Snmpv1
+            if (newConfiguration.count("community")) {
+               std::string password = newConfiguration.at("community");
+               // Search password in security wallet
+               for (auto it = credentialsSNMPv1.begin(); it != credentialsSNMPv1.end(); it++) {
+                   if (it->community == password) {
+                       secwID = it->documentId;
+                       break;
+                   }
+               }
+            }
+            // If found secName entry, consider that it is Snmpv3
+            else if (newConfiguration.count("secName")) {
+                std::string secName = newConfiguration.at("secName");
+                if (newConfiguration.count("secLevel")) {
+                    std::string secLevel = newConfiguration.at("secLevel");
+                    std::string authProtocol, authPassword;
+                    std::string privProtocol, privPassword;
+                    if (secLevel != "noAuthNoPriv") {
+                        if (newConfiguration.count("authProtocol")) authProtocol = newConfiguration.at("authProtocol");
+                        if (newConfiguration.count("authPassword")) authPassword = newConfiguration.at("authPassword");
+                        if (secLevel != "authNoPriv") {
+                            if (newConfiguration.count("privProtocol")) privProtocol = newConfiguration.at("privProtocol");
+                            if (newConfiguration.count("privPassword")) privPassword = newConfiguration.at("privPassword");
+                        }
+                    }
+                    // Search security name and other attributes in security wallet
+                    for (auto it = credentialsSNMPv3.begin(); it != credentialsSNMPv3.end(); it++) {
+                        if (it->secName == secName && it->authProtocol == authProtocol && it->authPassword == authPassword &&
+                            it->privProtocol == privProtocol && it->privPassword == privPassword) {
+                            secwID = it->documentId;
+                            break;
+                        }
+                    }
+                }
+            }
+            std::cout << "secwID=" << secwID << std::endl;
+            std::set<secw::Id> secw_document_id_list;
+            if (!secwID.empty()) {
+                // TODO: add several documents ???
+                secw_document_id_list.insert(secwID);
+            }
+            else {
+                log_warning("No document security found for configuration of asset %s", assetName.c_str());
+            }
 
-            auto configId = insert_config(conn, assetName, bestDeviceConfigurationType->id, true, true, attributes);
+            auto configId = insert_config(conn, assetName, bestDeviceConfigurationType->id, true, true, secw_document_id_list, attributes);
             log_info("Created new device configuration ID %u for asset %s (driver=%s, port=%s).", configId, assetName.c_str(), newConfiguration.at("driver").c_str(), newConfiguration.at("port").c_str());
         }
     }
-
-    fty_proto_destroy(&asset);
 }
 
 // ConfigurationConnector
@@ -989,8 +1137,8 @@ XML:driver="netxml-ups",port="http://10.130.33.140",desc="EPDU MA 0U (C20 16A 1P
 SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",snmp_version="v3",secLevel="noAuthNoPriv",secName="public"
 R"xxx(SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="private"
 )xxx");
-        const fty::nut::DeviceConfigurationTypes configurationTypes = {
-            fty::nut::DeviceConfigurationType({
+        const fty::nut::DeviceConfigurationInfoDetails configurationTypes = {
+            fty::nut::DeviceConfigurationInfoDetail({
                 0,
                 "NetXML protocol",
                 {
@@ -999,7 +1147,7 @@ R"xxx(SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)2
                 },
                 {},
             }),
-            fty::nut::DeviceConfigurationType({
+            fty::nut::DeviceConfigurationInfoDetail({
                 1,
                 "SNMPv1 protocol",
                 {
@@ -1010,7 +1158,7 @@ R"xxx(SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)2
                     "Snmpv1"
                 },
             }),
-            fty::nut::DeviceConfigurationType({
+            fty::nut::DeviceConfigurationInfoDetail({
                 2,
                 "SNMPv3 protocol",
                 {

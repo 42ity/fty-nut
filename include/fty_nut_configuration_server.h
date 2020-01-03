@@ -35,9 +35,9 @@ class ConfigurationManager
         ConfigurationManager(const std::string& dbConn);
         ~ConfigurationManager() = default;
 
-        void automaticAssetConfigurationPrioritySort(const std::string& asset);
-        void scanAssetConfigurations(const std::string& asset);
-    
+        void automaticAssetConfigurationPrioritySort(fty_proto_t* asset);
+        void scanAssetConfigurations(fty_proto_t* asset);
+
     private:
         messagebus::PoolWorker m_poolScanners;
         std::string m_dbConn;
