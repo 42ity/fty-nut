@@ -623,7 +623,8 @@ fty_proto_t* fetchProtoFromAssetName(const std::string& assetName)
 
 ConfigurationManager::ConfigurationManager(const std::string& dbConn) : m_poolScanners(8), m_dbConn(dbConn)
 {
-    std::string assetName = "epdu-53";
+    std::string assetName = "epdu-7";
+    //std::string assetName = "ups-9";
     //std::string assetName = "ups-56";
     fty_proto_t* asset = fetchProtoFromAssetName(assetName);
     if (!asset) {
@@ -654,6 +655,8 @@ void ConfigurationManager::automaticAssetConfigurationPrioritySort(fty_proto_t* 
         knownWorkingDatabaseConfigurations.end(),
         std::back_inserter(knownWorkingConfigurations),
         [](const DeviceConfigurationInfos::value_type& val) -> nutcommon::DeviceConfiguration {
+            /// TODO: Add security document attributes.
+            /// TODO: Instanciate configurations.
             return val.attributes;
         }
     );
@@ -665,6 +668,27 @@ void ConfigurationManager::automaticAssetConfigurationPrioritySort(fty_proto_t* 
         newConfigurationIdOrder.push_back(knownWorkingDatabaseConfigurations.at(index).id);
     }
     modify_config_priorities(conn, assetName, newConfigurationIdOrder);
+}
+
+nutcommon::DeviceConfiguration instanciateSecurityWalletDocument(const nutcommon::CredentialsSNMPv1 &creds)
+{
+    return {{ "community", creds.community }};
+}
+
+nutcommon::DeviceConfiguration instanciateSecurityWalletDocument(const nutcommon::CredentialsSNMPv3 &creds)
+{
+    nutcommon::DeviceConfiguration result {
+        { "snmp_version", "v3" },
+        { "secName", creds.secName },
+        { "secLevel", creds.privPassword.empty() ? (creds.authPassword.empty() ? "noAuthNoPriv" : "authNoPriv") : "authPriv" },
+    } ;
+
+    if (!creds.authPassword.empty()) { result["authPassword"] = creds.authPassword; }
+    if (!creds.authProtocol.empty()) { result["authProtocol"] = creds.authProtocol; }
+    if (!creds.privPassword.empty()) { result["privPassword"] = creds.privPassword; }
+    if (!creds.privProtocol.empty()) { result["privProtocol"] = creds.privProtocol; }
+
+    return result;
 }
 
 void ConfigurationManager::scanAssetConfigurations(fty_proto_t* asset)
@@ -687,8 +711,33 @@ void ConfigurationManager::scanAssetConfigurations(fty_proto_t* asset)
         knownDatabaseConfigurations.begin(),
         knownDatabaseConfigurations.end(),
         std::back_inserter(knownConfigurations),
-        [](const DeviceConfigurationInfos::value_type& val) -> nutcommon::DeviceConfiguration {
-            return val.attributes;
+        [&asset, &credentialsSNMPv1, &credentialsSNMPv3](const DeviceConfigurationInfos::value_type& val) -> nutcommon::DeviceConfiguration {
+            nutcommon::DeviceConfiguration conf = val.attributes;
+
+            /// XXX: need better way to deal with this.
+            for (const auto& secwDocumentId : val.secwDocumentIdList) {
+                auto itCredSnmpV1 = std::find_if(credentialsSNMPv1.begin(), credentialsSNMPv1.end(),
+                    [&secwDocumentId](const nutcommon::CredentialsSNMPv1& cred) {
+                        return cred.documentId == secwDocumentId;
+                    }
+                );
+                auto itCredSnmpV3 = std::find_if(credentialsSNMPv3.begin(), credentialsSNMPv3.end(),
+                    [&secwDocumentId](const nutcommon::CredentialsSNMPv3& cred) {
+                        return cred.documentId == secwDocumentId;
+                    }
+                );
+
+                if (itCredSnmpV1 != credentialsSNMPv1.end()) {
+                    auto cred = instanciateSecurityWalletDocument(*itCredSnmpV1);
+                    conf.insert(cred.begin(), cred.end());
+                }
+                else if (itCredSnmpV3 != credentialsSNMPv3.end()) {
+                    auto cred = instanciateSecurityWalletDocument(*itCredSnmpV3);
+                    conf.insert(cred.begin(), cred.end());
+                }
+            }
+
+            return instanciateDeviceConfigurationFromTemplate(asset, conf);
         }
     );
 
@@ -722,13 +771,15 @@ void ConfigurationManager::scanAssetConfigurations(fty_proto_t* asset)
         for (const auto& configuration : updateOrder.first) {
             bool matched = false;
 
-            for (const auto& configurationDatabase : knownDatabaseConfigurations) {
-                if (isDeviceConfigurationSubsetOf(configuration, configurationDatabase.attributes)) {
-                    log_info("Marking device configuration ID %u for asset %s as %s.", configurationDatabase.id, assetName.c_str(), updateOrder.second ? "working" : "non-working");
-                    set_config_working(conn, configurationDatabase.id, updateOrder.second);
+            size_t cpt = 0;
+            for (const auto& configurationDatabase : knownConfigurations) {
+                if (isDeviceConfigurationSubsetOf(configuration, configurationDatabase)) {
+                    log_info("Marking device configuration ID %u for asset %s as %s.", knownDatabaseConfigurations[cpt].id, assetName.c_str(), updateOrder.second ? "working" : "non-working");
+                    set_config_working(conn, knownDatabaseConfigurations[cpt].id, updateOrder.second);
                     matched = true;
                     break;
                 }
+                cpt++;
             }
 
             if (matched == false) {
@@ -753,8 +804,8 @@ void ConfigurationManager::scanAssetConfigurations(fty_proto_t* asset)
             }
 
             // TODO ???
-            //auto attributes = getAttributesFromDeviceConfiguration(newConfiguration, *bestDeviceConfigurationType);
-            auto attributes = newConfiguration;
+            auto attributes = getAttributesFromDeviceConfiguration(newConfiguration, *bestDeviceConfigurationType);
+            //auto attributes = newConfiguration;
             /// TODO: Match security document in database from newConfiguration.
             secw::Id secwID = "";
             // If found community entry, consider that it is Snmpv1
