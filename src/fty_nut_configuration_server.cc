@@ -130,7 +130,7 @@ std::vector<std::string> getNetworkAddressesFromAsset(fty_proto_t* asset)
     std::vector<std::string> addresses;
     for (const auto& prefix : prefixes) {
         const char* address;
-        for (int i = 1; (address = fty_proto_ext_string(asset, (prefix + std::to_string(i)).c_str(), nullptr)); i++) {
+        for (size_t i = 1; (address = fty_proto_ext_string(asset, (prefix + std::to_string(i)).c_str(), nullptr)); i++) {
             addresses.emplace_back(address);
         }
     }
@@ -248,6 +248,57 @@ struct ComputeAssetConfigurationUpdateResult {
     /// \brief Unknown, unassessable configuration.
     nutcommon::DeviceConfigurations unknownStateConfigurations;
 };
+
+/**
+ * \brief Pretty-print ComputeAssetConfigurationUpdateResult.
+ * \param os Output stream.
+ * \param results ComputeAssetConfigurationUpdateResult.
+ * \return Output stream.
+ */
+std::string serialize( const ComputeAssetConfigurationUpdateResult& results)
+{
+    std::stringstream ss;
+
+    for (const auto& result : std::vector<std::pair<const char*, const nutcommon::DeviceConfigurations&>>({
+        { "Working configurations:", results.workingConfigurations },
+        { "Non-working configurations:", results.nonWorkingConfigurations },
+        { "New configurations:", results.newConfigurations },
+        { "Unknown state configurations:", results.unknownStateConfigurations },
+    })) {
+        ss << result.first << std::endl;
+        for (const auto& configuration : result.second) {
+            ss << configuration << std::endl;
+        }
+    }
+
+    return ss.str();
+}
+
+/**
+ * \brief Pretty-print set of security document IDs.
+ * \param secwIDs Set of security document IDs to serialize.
+ * \return String of security document IDs.
+ */
+std::string serialize(const std::set<secw::Id>& secwIDs) {
+    std::stringstream ss;
+
+    for (auto itSecwID = secwIDs.begin(); itSecwID != secwIDs.end(); itSecwID++) {
+        if (itSecwID != secwIDs.begin()) {
+            ss << "; ";
+        }
+        ss << *itSecwID;
+    }
+
+    return ss.str();
+}
+
+std::string serialize(const nutcommon::DeviceConfiguration& conf) {
+    std::stringstream ss;
+
+    ss << conf;
+
+    return ss.str();
+}
 
 /**
  * \brief Sort NUT driver configurations into categories from known and detected configurations.
@@ -525,7 +576,6 @@ DeviceConfigurationInfoDetails::const_iterator matchDeviceConfigurationToBestDev
     return bestMatch;
 }
 
-
 /**
  * \brief Get non-default attributes from device configuration.
  * \param configuration Device configuration to extract non-default attributes from.
@@ -619,63 +669,12 @@ fty_proto_t* fetchProtoFromAssetName(const std::string& assetName)
     return res;
 }
 
-// ConfigurationManager
-
-ConfigurationManager::ConfigurationManager(const std::string& dbConn) : m_poolScanners(8), m_dbConn(dbConn)
-{
-    std::string assetName = "epdu-7";
-    //std::string assetName = "ups-9";
-    //std::string assetName = "ups-56";
-    fty_proto_t* asset = fetchProtoFromAssetName(assetName);
-    if (!asset) {
-        throw std::runtime_error("Unknown asset " + assetName);
-    }
-    scanAssetConfigurations(asset);
-    automaticAssetConfigurationPrioritySort(asset);
-
-    fty_proto_destroy(&asset);
-}
-
-void ConfigurationManager::automaticAssetConfigurationPrioritySort(fty_proto_t* asset)
-{
-    /// TODO: query all device configurations for asset, sort with sortDeviceConfigurationPreferred() and update priorities with modify_config_priorities().
-    if (!asset) {
-        throw std::runtime_error("asset not defined");
-    }
-
-    std::string assetName = fty_proto_name(asset);
-
-    auto conn = tntdb::connectCached(m_dbConn);
-    // Get all configurations for asset
-    DeviceConfigurationInfos knownWorkingDatabaseConfigurations = get_all_config_list(conn, assetName);
-    // Extract array of device configurations from knownWorkingDatabaseConfigurations.
-    nutcommon::DeviceConfigurations knownWorkingConfigurations;
-    std::transform(
-        knownWorkingDatabaseConfigurations.begin(),
-        knownWorkingDatabaseConfigurations.end(),
-        std::back_inserter(knownWorkingConfigurations),
-        [](const DeviceConfigurationInfos::value_type& val) -> nutcommon::DeviceConfiguration {
-            /// TODO: Add security document attributes.
-            /// TODO: Instanciate configurations.
-            return val.attributes;
-        }
-    );
-    //  Get order of preference for asset's driver configurations
-    std::vector<size_t> indexes = sortDeviceConfigurationPreferred(asset, knownWorkingConfigurations);
-    // Modify configuration order preference in database
-    std::vector<size_t> newConfigurationIdOrder;
-    for(const auto& index : indexes) {
-        newConfigurationIdOrder.push_back(knownWorkingDatabaseConfigurations.at(index).id);
-    }
-    modify_config_priorities(conn, assetName, newConfigurationIdOrder);
-}
-
-nutcommon::DeviceConfiguration instanciateSecurityWalletDocument(const nutcommon::CredentialsSNMPv1 &creds)
+nutcommon::DeviceConfiguration instanciateSecurityWalletDocument(const nutcommon::CredentialsSNMPv1& creds)
 {
     return {{ "community", creds.community }};
 }
 
-nutcommon::DeviceConfiguration instanciateSecurityWalletDocument(const nutcommon::CredentialsSNMPv3 &creds)
+nutcommon::DeviceConfiguration instanciateSecurityWalletDocument(const nutcommon::CredentialsSNMPv3& creds)
 {
     nutcommon::DeviceConfiguration result {
         { "snmp_version", "v3" },
@@ -691,173 +690,233 @@ nutcommon::DeviceConfiguration instanciateSecurityWalletDocument(const nutcommon
     return result;
 }
 
-void ConfigurationManager::scanAssetConfigurations(fty_proto_t* asset)
+nutcommon::DeviceConfiguration ftyToNutDeviceConfiguration(const DeviceConfigurationInfo& conf, const std::vector<nutcommon::CredentialsSNMPv1>& credentialsSNMPv1, const std::vector<nutcommon::CredentialsSNMPv3>& credentialsSNMPv3)
 {
-    if (!asset) {
-        throw std::runtime_error("asset not defined");
+    nutcommon::DeviceConfiguration results = conf.attributes;
+
+    /// XXX: improve security document instanciation.
+    for (const auto& secwDocumentId : conf.secwDocumentIdList) {
+        auto itCredSnmpV1 = std::find_if(credentialsSNMPv1.begin(), credentialsSNMPv1.end(),
+            [&secwDocumentId](const nutcommon::CredentialsSNMPv1& cred) {
+                return cred.documentId == secwDocumentId;
+            }
+        );
+        auto itCredSnmpV3 = std::find_if(credentialsSNMPv3.begin(), credentialsSNMPv3.end(),
+            [&secwDocumentId](const nutcommon::CredentialsSNMPv3& cred) {
+                return cred.documentId == secwDocumentId;
+            }
+        );
+
+        if (itCredSnmpV1 != credentialsSNMPv1.end()) {
+            auto cred = instanciateSecurityWalletDocument(*itCredSnmpV1);
+            results.insert(cred.begin(), cred.end());
+        }
+        else if (itCredSnmpV3 != credentialsSNMPv3.end()) {
+            auto cred = instanciateSecurityWalletDocument(*itCredSnmpV3);
+            results.insert(cred.begin(), cred.end());
+        }
     }
 
-    std::string assetName = fty_proto_name(asset);
+    return results;
+}
 
-    auto conn = tntdb::connectCached(m_dbConn);
-    auto credentialsSNMPv1 = nutcommon::getCredentialsSNMPv1();
-    auto credentialsSNMPv3 = nutcommon::getCredentialsSNMPv3();
+std::set<secw::Id> matchSecurityDocumentIDsFromDeviceConfiguration(const nutcommon::DeviceConfiguration& conf, const std::vector<nutcommon::CredentialsSNMPv1>& credsV1, const std::vector<nutcommon::CredentialsSNMPv3>& credsV3)
+{
+    std::set<secw::Id> result;
 
-    /// Fetch all known device configurations of asset.
-    DeviceConfigurationInfos knownDatabaseConfigurations = get_all_config_list(conn, assetName);
-    // Extract array of device configurations from knownDatabaseConfigurations.
-    nutcommon::DeviceConfigurations knownConfigurations;
-    std::transform(
-        knownDatabaseConfigurations.begin(),
-        knownDatabaseConfigurations.end(),
-        std::back_inserter(knownConfigurations),
-        [&asset, &credentialsSNMPv1, &credentialsSNMPv3](const DeviceConfigurationInfos::value_type& val) -> nutcommon::DeviceConfiguration {
-            nutcommon::DeviceConfiguration conf = val.attributes;
+    auto itCommunity = conf.find("community");
+    auto itSecName = conf.find("secName");
 
-            /// XXX: need better way to deal with this.
-            for (const auto& secwDocumentId : val.secwDocumentIdList) {
-                auto itCredSnmpV1 = std::find_if(credentialsSNMPv1.begin(), credentialsSNMPv1.end(),
-                    [&secwDocumentId](const nutcommon::CredentialsSNMPv1& cred) {
-                        return cred.documentId == secwDocumentId;
-                    }
-                );
-                auto itCredSnmpV3 = std::find_if(credentialsSNMPv3.begin(), credentialsSNMPv3.end(),
-                    [&secwDocumentId](const nutcommon::CredentialsSNMPv3& cred) {
-                        return cred.documentId == secwDocumentId;
-                    }
-                );
-
-                if (itCredSnmpV1 != credentialsSNMPv1.end()) {
-                    auto cred = instanciateSecurityWalletDocument(*itCredSnmpV1);
-                    conf.insert(cred.begin(), cred.end());
-                }
-                else if (itCredSnmpV3 != credentialsSNMPv3.end()) {
-                    auto cred = instanciateSecurityWalletDocument(*itCredSnmpV3);
-                    conf.insert(cred.begin(), cred.end());
-                }
+    if (itCommunity != conf.end()) {
+        // Match SNMPv1 security document.
+        for (const auto& credSNMPv1 : credsV1) {
+            if (itCommunity->second == credSNMPv1.community) {
+                result.emplace(credSNMPv1.documentId);
+                break;
             }
+        }
+    }
+    if (itSecName != conf.end()) {
+        // Match SNMPv3 security document.
+        auto itAuthProtocol = conf.find("authProtocol");
+        auto itAuthPassword = conf.find("authPassword");
+        auto itPrivProtocol = conf.find("privProtocol");
+        auto itPrivPassword = conf.find("privPassword");
 
-            return instanciateDeviceConfigurationFromTemplate(asset, conf);
+        const std::string& secName = itSecName->second;
+        const std::string& authProtocol = (itAuthProtocol != conf.end()) ? itAuthProtocol->second : "";
+        const std::string& authPassword = (itAuthPassword != conf.end()) ? itAuthPassword->second : "";
+        const std::string& privProtocol = (itPrivProtocol != conf.end()) ? itPrivProtocol->second : "";
+        const std::string& privPassword = (itPrivPassword != conf.end()) ? itPrivPassword->second : "";
+
+        for (const auto& credSNMPv3 : credsV3) {
+            if (credSNMPv3.secName == secName &&
+                credSNMPv3.authProtocol == authProtocol &&
+                credSNMPv3.authPassword == authPassword &&
+                credSNMPv3.privProtocol == privProtocol &&
+                credSNMPv3.privPassword == privPassword) {
+                result.emplace(credSNMPv3.documentId);
+                break;
+            }
+        }
+    }
+
+    return result;
+}
+
+nutcommon::DeviceConfigurations instanciateDatabaseConfigurations(const DeviceConfigurationInfos& dbConfs, fty_proto_t* asset, const std::vector<nutcommon::CredentialsSNMPv1>& credentialsSNMPv1, const std::vector<nutcommon::CredentialsSNMPv3>& credentialsSNMPv3)
+{
+    nutcommon::DeviceConfigurations result;
+    std::transform(
+        dbConfs.begin(),
+        dbConfs.end(),
+        std::back_inserter(result),
+        [&asset, &credentialsSNMPv1, &credentialsSNMPv3](const DeviceConfigurationInfos::value_type& val) -> nutcommon::DeviceConfiguration {
+            return instanciateDeviceConfigurationFromTemplate(asset,
+                ftyToNutDeviceConfiguration(val, credentialsSNMPv1, credentialsSNMPv3)
+            );
+        }
+    );
+    return result;
+}
+
+// ConfigurationManager
+
+ConfigurationManager::ConfigurationManager(const std::string& dbConn) : m_poolScanners(8), m_dbConn(dbConn)
+{
+    //std::string assetName = "epdu-7";
+    std::string assetName = "ups-9";
+    //std::string assetName = "ups-56";
+    fty_proto_t* asset = fetchProtoFromAssetName(assetName);
+    if (!asset) {
+        throw std::runtime_error("Unknown asset " + assetName);
+    }
+    scanAssetConfigurations(asset);
+    automaticAssetConfigurationPrioritySort(asset);
+
+    fty_proto_destroy(&asset);
+}
+
+/**
+ * \brief Reorder asset's driver configuration priorities according to the
+ * software's preferences.
+ * \param asset Asset to process.
+ */
+void ConfigurationManager::automaticAssetConfigurationPrioritySort(fty_proto_t* asset)
+{
+    auto conn = tntdb::connectCached(m_dbConn);
+    const auto credentialsSNMPv1 = nutcommon::getCredentialsSNMPv1();
+    const auto credentialsSNMPv3 = nutcommon::getCredentialsSNMPv3();
+    const std::string assetName = fty_proto_name(asset);
+
+    // Fetch all configurations to sort.
+    const DeviceConfigurationInfos knownDatabaseConfigurations = get_all_config_list(conn, assetName);
+    const nutcommon::DeviceConfigurations knownConfigurations = instanciateDatabaseConfigurations(knownDatabaseConfigurations, asset, credentialsSNMPv1, credentialsSNMPv3);
+
+    // Compute new order of driver configuration.
+    const std::vector<size_t> sortedIndexes = sortDeviceConfigurationPreferred(asset, knownConfigurations);
+    std::vector<size_t> newConfigurationOrder;
+    std::transform(sortedIndexes.begin(), sortedIndexes.end(), std::back_inserter(newConfigurationOrder),
+        [&knownDatabaseConfigurations](size_t sortedIndex) -> size_t {
+            return knownDatabaseConfigurations[sortedIndex].id;
         }
     );
 
-    // Compute update sets from device scan and known configurations.
-    auto detectedConfigurations = assetScanDrivers(m_poolScanners, asset, credentialsSNMPv1, credentialsSNMPv3);
-    auto results = computeAssetConfigurationUpdate(knownConfigurations, detectedConfigurations);
+    modify_config_priorities(conn, assetName, newConfigurationOrder);
+}
 
-    // Write debug logs of computeAssetConfigurationUpdate().
-    {
-        std::stringstream ss;
-        for (const auto& result : std::vector<std::pair<const char*, const nutcommon::DeviceConfigurations&>>({
-            { "Working configurations:", results.workingConfigurations },
-            { "Non-working configurations:", results.nonWorkingConfigurations },
-            { "New configurations:", results.newConfigurations },
-            { "Unknown state configurations:", results.unknownStateConfigurations },
-        })) {
-            ss << result.first << std::endl;
-            for (const auto &configuration : result.second) {
-                ss << configuration << std::endl;
-            }
-        }
-        log_debug("Summary of device configurations after scan for asset %s:\n%s", assetName.c_str(), ss.str().c_str());
-    }
+/**
+ * \brief Scan an asset and update driver configurations in database.
+ * \param asset Asset to process.
+ *
+ * This method detects working configurations on the asset and updates the
+ * driver configuration database in response. The basic workflow is:
+ *  1. Scan the asset,
+ *  2. Compute DB updates from detected and from known driver configurations,
+ *  3. Mark existing configurations as working or non-working,
+ *  4. Persist newly-discovered driver configurations in database.
+ */
+void ConfigurationManager::scanAssetConfigurations(fty_proto_t* asset)
+{
+    /// Step 0: Grab all data.
+    auto conn = tntdb::connectCached(m_dbConn);
+    const auto credentialsSNMPv1 = nutcommon::getCredentialsSNMPv1();
+    const auto credentialsSNMPv3 = nutcommon::getCredentialsSNMPv3();
+    const std::string assetName = fty_proto_name(asset);
 
-    // Update known driver configurations in database.
+    const DeviceConfigurationInfos knownDatabaseConfigurations = get_all_config_list(conn, assetName);
+    const nutcommon::DeviceConfigurations knownConfigurations = instanciateDatabaseConfigurations(knownDatabaseConfigurations, asset, credentialsSNMPv1, credentialsSNMPv3);
+
+    /// Step 1: Scan the asset.
+    const auto detectedConfigurations = assetScanDrivers(m_poolScanners, asset, credentialsSNMPv1, credentialsSNMPv3);
+
+    /// Step 2: Compute DB updates from detected and from known driver configurations.
+    const auto results = computeAssetConfigurationUpdate(knownConfigurations, detectedConfigurations);
+    log_debug("Summary of device configurations after scan for asset %s:\n%s", assetName.c_str(), serialize(results).c_str());
+
+    /// Step 3: Mark existing configurations as working or non-working.
     for (const auto& updateOrder : std::vector<std::pair<const nutcommon::DeviceConfigurations&, bool>>({
         { results.workingConfigurations, true },
         { results.unknownStateConfigurations, true },
         { results.nonWorkingConfigurations, false },
     })) {
+        // Match scan results to known driver configuration in database.
         for (const auto& configuration : updateOrder.first) {
-            bool matched = false;
+            auto itConfigurationDatabase = knownConfigurations.begin();
+            auto itKnownDatabaseConfiguration = knownDatabaseConfigurations.begin();
 
-            size_t cpt = 0;
-            for (const auto& configurationDatabase : knownConfigurations) {
-                if (isDeviceConfigurationSubsetOf(configuration, configurationDatabase)) {
-                    log_info("Marking device configuration ID %u for asset %s as %s.", knownDatabaseConfigurations[cpt].id, assetName.c_str(), updateOrder.second ? "working" : "non-working");
-                    set_config_working(conn, knownDatabaseConfigurations[cpt].id, updateOrder.second);
-                    matched = true;
+            for (; itConfigurationDatabase != knownConfigurations.end(); itConfigurationDatabase++, itKnownDatabaseConfiguration++) {
+                if (isDeviceConfigurationSubsetOf(configuration, *itConfigurationDatabase)) {
+                    // Found match, update database.
+                    set_config_working(conn, itKnownDatabaseConfiguration->id, updateOrder.second);
+                    log_info("Marked device configuration ID %u for asset %s as %s.",
+                        itKnownDatabaseConfiguration->id,
+                        assetName.c_str(),
+                        updateOrder.second ? "working" : "non-working"
+                    );
                     break;
                 }
-                cpt++;
             }
 
-            if (matched == false) {
-                std::stringstream ss;
-                ss << configuration;
-                log_warning("Failed to match known detected device configuration to what's in database, configuration ignored:\n%s", ss.str().c_str());
+            if (itConfigurationDatabase == knownConfigurations.end()) {
+                log_warning("Failed to match known detected device configuration to what's in database, configuration ignored:\n%s", serialize(configuration).c_str());
             }
         }
     }
 
-    // Register new configurations in database.
-    if (!results.newConfigurations.empty()) {
-        auto deviceConfigurationTypes = get_all_configuration_types(conn);
+    /// Step 4: Persist newly-discovered driver configurations in database.
+    const auto deviceConfigurationTypes = get_all_configuration_types(conn);
+    for (const auto& newConfiguration : results.newConfigurations) {
+        // Match new configuration to configuration type.
+        const auto bestDeviceConfigurationType = matchDeviceConfigurationToBestDeviceConfigurationType(asset, newConfiguration, deviceConfigurationTypes);
 
-        for (const auto& newConfiguration : results.newConfigurations) {
-            auto bestDeviceConfigurationType = matchDeviceConfigurationToBestDeviceConfigurationType(asset, newConfiguration, deviceConfigurationTypes);
-            if (bestDeviceConfigurationType == deviceConfigurationTypes.end()) {
-                std::stringstream ss;
-                ss << newConfiguration;
-                log_warning("Failed to match new device configuration to device configuration type, configuration discarded:\n%s", ss.str().c_str());
-                continue;
-            }
+        if (bestDeviceConfigurationType != deviceConfigurationTypes.end()) {
+            // Save new configuration into database.
+            const auto attributes = getAttributesFromDeviceConfiguration(newConfiguration, *bestDeviceConfigurationType);
+            const auto secwIDs = matchSecurityDocumentIDsFromDeviceConfiguration(newConfiguration, credentialsSNMPv1, credentialsSNMPv3);
+            const auto configID = insert_config(conn, assetName, bestDeviceConfigurationType->id, true, true, secwIDs, attributes);
 
-            // TODO ???
-            auto attributes = getAttributesFromDeviceConfiguration(newConfiguration, *bestDeviceConfigurationType);
-            //auto attributes = newConfiguration;
-            /// TODO: Match security document in database from newConfiguration.
-            secw::Id secwID = "";
-            // If found community entry, consider that it is Snmpv1
-            if (newConfiguration.count("community")) {
-               std::string password = newConfiguration.at("community");
-               // Search password in security wallet
-               for (auto it = credentialsSNMPv1.begin(); it != credentialsSNMPv1.end(); it++) {
-                   if (it->community == password) {
-                       secwID = it->documentId;
-                       break;
-                   }
-               }
-            }
-            // If found secName entry, consider that it is Snmpv3
-            else if (newConfiguration.count("secName")) {
-                std::string secName = newConfiguration.at("secName");
-                if (newConfiguration.count("secLevel")) {
-                    std::string secLevel = newConfiguration.at("secLevel");
-                    std::string authProtocol, authPassword;
-                    std::string privProtocol, privPassword;
-                    if (secLevel != "noAuthNoPriv") {
-                        if (newConfiguration.count("authProtocol")) authProtocol = newConfiguration.at("authProtocol");
-                        if (newConfiguration.count("authPassword")) authPassword = newConfiguration.at("authPassword");
-                        if (secLevel != "authNoPriv") {
-                            if (newConfiguration.count("privProtocol")) privProtocol = newConfiguration.at("privProtocol");
-                            if (newConfiguration.count("privPassword")) privPassword = newConfiguration.at("privPassword");
-                        }
-                    }
-                    // Search security name and other attributes in security wallet
-                    for (auto it = credentialsSNMPv3.begin(); it != credentialsSNMPv3.end(); it++) {
-                        if (it->secName == secName && it->authProtocol == authProtocol && it->authPassword == authPassword &&
-                            it->privProtocol == privProtocol && it->privPassword == privPassword) {
-                            secwID = it->documentId;
-                            break;
-                        }
-                    }
-                }
-            }
-            std::cout << "secwID=" << secwID << std::endl;
-            std::set<secw::Id> secw_document_id_list;
-            if (!secwID.empty()) {
-                // TODO: add several documents ???
-                secw_document_id_list.insert(secwID);
-            }
-            else {
-                log_warning("No document security found for configuration of asset %s", assetName.c_str());
-            }
-
-            auto configId = insert_config(conn, assetName, bestDeviceConfigurationType->id, true, true, secw_document_id_list, attributes);
-            log_info("Created new device configuration ID %u for asset %s (driver=%s, port=%s).", configId, assetName.c_str(), newConfiguration.at("driver").c_str(), newConfiguration.at("port").c_str());
+            log_info("Instanciated device configuration type \"%s\" for asset %s (id=%u, driver=%s, port=%s, secwIDs={%s}).",
+                bestDeviceConfigurationType->prettyName.c_str(),
+                assetName.c_str(),
+                configID,
+                newConfiguration.at("driver").c_str(),
+                newConfiguration.at("port").c_str(),
+                serialize(secwIDs).c_str()
+            );
+        }
+        else {
+            log_warning("Failed to match new device configuration to device configuration type, configuration discarded:\n%s", serialize(newConfiguration).c_str());
         }
     }
+}
+
+/**
+ * \brief Apply asset configuration in database.
+ * \param asset Asset to process.
+ */
+void ConfigurationManager::applyAssetConfiguration(fty_proto_t* asset)
+{
 }
 
 // ConfigurationConnector
@@ -918,7 +977,7 @@ void ConfigurationConnector::sendReply(const messagebus::MetaData& metadataReque
     } ;
     reply.userData() = dataReply;
 
-    m_msgBus->sendReply("ETN.R.IPMCORE.POWERACTION", reply);
+    m_msgBus->sendReply("ETN.R.IPMCORE.NUTCONFIGURATION", reply);
 }
 
 }
@@ -1050,7 +1109,7 @@ R"xxx(SNMP:driver="dummy-ups",port="10.130.33.140"
             }),
         };
 
-        for (int i = 0; i < testCases.size(); i++) {
+        for (size_t i = 0; i < testCases.size(); i++) {
             std::cerr << "  - computeAssetConfigurationUpdate case #" << (i+1) << ": ";
             const TestCase& testCase = testCases[i];
 

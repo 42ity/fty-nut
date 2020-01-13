@@ -37,6 +37,7 @@ class ConfigurationManager
 
         void automaticAssetConfigurationPrioritySort(fty_proto_t* asset);
         void scanAssetConfigurations(fty_proto_t* asset);
+        void applyAssetConfiguration(fty_proto_t* asset);
 
     private:
         messagebus::PoolWorker m_poolScanners;
