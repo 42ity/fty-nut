@@ -22,7 +22,8 @@
         <option name = "require_gitignore" value = "1" />
     </target>
     <target name = "jenkins" >
-        <option name = "agent_label" value = "devel-image &amp;&amp; x86_64" />
+        <!-- FIXEME: CAUTION Change "devel-image" to "devel-image-featureimage_new-nut-configurator" for test (TO BE RESTORED) -->
+        <option name = "agent_label" value = "devel-image-featureimage_new-nut-configurator &amp;&amp; x86_64" />
         <option name = "triggers_pollSCM" value = "H/2 * * * *" />
         <option name = "test_cppcheck" value = "1" />
         <!-- Some issue with mapping.conf redistribution -->
