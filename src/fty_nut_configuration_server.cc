@@ -142,6 +142,57 @@ nutcommon::DeviceConfiguration extractConfigurationFingerprint(const nutcommon::
 }
 
 /**
+ * \brief Pretty-print ComputeAssetConfigurationUpdateResult.
+ * \param os Output stream.
+ * \param results ComputeAssetConfigurationUpdateResult.
+ * \return Output stream.
+ */
+std::string serialize( const ComputeAssetConfigurationUpdateResult& results)
+{
+    std::stringstream ss;
+
+    for (const auto& result : std::vector<std::pair<const char*, const nutcommon::DeviceConfigurations&>>({
+        { "Working configurations:", results.workingConfigurations },
+        { "Non-working configurations:", results.nonWorkingConfigurations },
+        { "New configurations:", results.newConfigurations },
+        { "Unknown state configurations:", results.unknownStateConfigurations },
+    })) {
+        ss << result.first << std::endl;
+        for (const auto& configuration : result.second) {
+            ss << configuration << std::endl;
+        }
+    }
+
+    return ss.str();
+}
+
+/**
+ * \brief Pretty-print set of security document IDs.
+ * \param secwIDs Set of security document IDs to serialize.
+ * \return String of security document IDs.
+ */
+std::string serialize(const std::set<secw::Id>& secwIDs) {
+    std::stringstream ss;
+
+    for (auto itSecwID = secwIDs.begin(); itSecwID != secwIDs.end(); itSecwID++) {
+        if (itSecwID != secwIDs.begin()) {
+            ss << "; ";
+        }
+        ss << *itSecwID;
+    }
+
+    return ss.str();
+}
+
+std::string serialize(const nutcommon::DeviceConfiguration& conf) {
+    std::stringstream ss;
+
+    ss << conf;
+
+    return ss.str();
+}
+
+/**
  * \brief Sort NUT driver configurations into categories from known and detected configurations.
  * \param knownConfigurations Known NUT device configurations in database.
  * \param detectedConfigurations Detected NUT device configurations at runtime.
