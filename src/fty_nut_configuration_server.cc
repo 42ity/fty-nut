@@ -883,14 +883,14 @@ ConfigurationConnector::ConfigurationConnector(ConfigurationConnector::Parameter
 
 void ConfigurationConnector::handleRequest(messagebus::Message msg) {
     if ((msg.metaData().count(messagebus::Message::SUBJECT) == 0) ||
-        (msg.metaData().count(messagebus::Message::COORELATION_ID) == 0) ||
+        (msg.metaData().count(messagebus::Message::CORRELATION_ID) == 0) ||
         (msg.metaData().count(messagebus::Message::REPLY_TO) == 0)) {
         log_error("Missing subject/correlationID/replyTo in request.");
     }
     else {
         m_worker.offload([this](messagebus::Message msg) {
             auto subject = msg.metaData()[messagebus::Message::SUBJECT];
-            auto corrId = msg.metaData()[messagebus::Message::COORELATION_ID];
+            auto corrId = msg.metaData()[messagebus::Message::CORRELATION_ID];
             log_info("Received %s (%s) request.", subject.c_str(), corrId.c_str());
 
             try {
@@ -911,7 +911,7 @@ void ConfigurationConnector::sendReply(const messagebus::MetaData& metadataReque
     messagebus::Message reply;
 
     reply.metaData() = {
-        { messagebus::Message::COORELATION_ID, metadataRequest.at(messagebus::Message::COORELATION_ID) },
+        { messagebus::Message::CORRELATION_ID, metadataRequest.at(messagebus::Message::CORRELATION_ID) },
         { messagebus::Message::SUBJECT, metadataRequest.at(messagebus::Message::SUBJECT) },
         { messagebus::Message::STATUS, status ? "ok" : "ko" },
         { messagebus::Message::TO, metadataRequest.at(messagebus::Message::REPLY_TO) }
