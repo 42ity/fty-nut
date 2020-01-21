@@ -144,6 +144,9 @@
     <class name = "fty-nut-server" state = "stable">fty nut actor</class>
     <class name = "fty-nut-command-server" state = "stable">fty nut command actor</class>
     <class name = "fty-nut-configurator-server" state = "stable">fty nut configurator actor</class>
+    <class name = "fty-nut-configuration-helper" state = "stable">fty nut configuration helper</class>
+    <class name = "fty-nut-configuration-manager" state = "stable">fty nut configuration manager</class>
+    <class name = "fty-nut-configuration-connector" state = "stable">fty nut configuration connector</class>
     <class name = "fty-nut-configuration-server" state = "stable">fty nut configuration actor</class>
     <class name = "alert actor" state = "stable">actor handling device alerts and thresholds</class>
     <class name = "sensor actor" state = "stable">actor handling sensors attached to UPS/ePDU</class>

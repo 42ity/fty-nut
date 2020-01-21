@@ -17,6 +17,12 @@ fty_nut_command_server.txt
 fty_nut_command_server.doc
 fty_nut_configurator_server.txt
 fty_nut_configurator_server.doc
+fty_nut_configuration_helper.txt
+fty_nut_configuration_helper.doc
+fty_nut_configuration_manager.txt
+fty_nut_configuration_manager.doc
+fty_nut_configuration_connector.txt
+fty_nut_configuration_connector.doc
 fty_nut_configuration_server.txt
 fty_nut_configuration_server.doc
 alert_actor.txt
