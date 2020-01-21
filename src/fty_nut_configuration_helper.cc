@@ -49,7 +49,7 @@ bool isBefore(It start, It end , const Val& a, const Val& b) {
 }
 
 // FIXME: needed for compilation
-template bool isBefore/*<std::string const*, std::string>*/(std::string const*, std::string const*, std::string const&, std::string const&);
+template bool isBefore(std::string const*, std::string const*, std::string const&, std::string const&);
 
 /**
  * \brief Check if we can assess a NUT driver configuration's working state.

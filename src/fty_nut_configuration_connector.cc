@@ -51,12 +51,12 @@ ConfigurationConnector::ConfigurationConnector(ConfigurationConnector::Parameter
     m_manager(params.dbUrl),
     m_dispatcher({
     }),
-    m_worker(0),
+    m_worker(1),
     m_msgBus(messagebus::MlmMessageBus(params.endpoint, params.agentName))
 {
     m_msgBus->connect();
     m_msgBus->receive("ETN.Q.IPMCORE.NUTCONFIGURATION", std::bind(&ConfigurationConnector::handleRequest, this, std::placeholders::_1));
-    m_msgBus->subscribe(FTY_PROTO_STREAM_ASSETS, std::bind(&ConfigurationConnector::handleNotificationAssets, this, std::placeholders::_1));    
+    m_msgBus->subscribe(FTY_PROTO_STREAM_ASSETS, std::bind(&ConfigurationConnector::handleNotificationAssets, this, std::placeholders::_1));
 }
 
 void ConfigurationConnector::handleRequest(messagebus::Message msg) {
@@ -87,59 +87,48 @@ void ConfigurationConnector::handleRequest(messagebus::Message msg) {
 
 using FtyProto = std::unique_ptr<fty_proto_t, std::function<void (fty_proto_t*)>>;
 
-//std::mutex m_mtx;
-
 void ConfigurationConnector::handleNotificationAssets(messagebus::Message msg) {
-    
-    m_worker.offload([this](messagebus::Message msg) {
-                  
-        //std::unique_lock<std::mutex> lock(m_mtx);
 
-        zmsg_t *zmsg = zmsg_new();    
+    m_worker.offload([this](messagebus::Message msg) {
+
+        zmsg_t *zmsg = zmsg_new();
         for (const auto& pair : msg.metaData()) {
             std::cout << pair.first << "=" << pair.second << std::endl;
         }
-        /*for(const auto& item : msg.userData()) {
-            std::cout << "add size=" << item.size() << " data=" << item.c_str() << std::endl;
-            zmsg_addmem(zmsg, item.c_str(), item.size());        
-        }*/
 
-        for(const auto& data : msg.userData()) {           
+        for(const auto& data : msg.userData()) {
             FtyProto proto(messagebus::decodeFtyProto(data), [](fty_proto_t *p) -> void { fty_proto_destroy(&p); });
 
             if (!proto) {
                 log_error("Failed to decode fty_proto_t on stream " FTY_PROTO_STREAM_ASSETS);
                 return;
-            }                    
-            std::string name = fty_proto_name(proto.get());                
+            }
+            std::string name = fty_proto_name(proto.get());
             std::string operation = fty_proto_operation(proto.get());
 
             std::string type = fty_proto_aux_string(proto.get(), "type", "");
             std::string status = fty_proto_aux_string(proto.get(), "status", "");
             std::string subtype = fty_proto_aux_string(proto.get(), "subtype", "");
-                                    
-            fty_proto_print(proto.get()); 
+
+            fty_proto_print(proto.get());
             //std::stringstream buffer;
             //messagebus::dumpFtyProto(proto, buffer);
 
-            std::cout << "operation=" << operation << " status=" << status << std::endl;
-            std::cout << "type=" << type << " subtype=" << subtype << std::endl;
+            //std::cout << "operation=" << operation << " status=" << status << std::endl;
+            //std::cout << "type=" << type << " subtype=" << subtype << std::endl;
 
-            if ((type == "device") && ((subtype == "ups") || (subtype == "pdu") || (subtype == "sts"))) {                            
-                if (operation == FTY_PROTO_ASSET_OP_CREATE) {                                        
+            if (type == "device" && (subtype == "ups" || subtype == "pdu" || subtype == "epdu" || subtype == "sts")) {
+                if (operation == FTY_PROTO_ASSET_OP_CREATE || operation == FTY_PROTO_ASSET_OP_UPDATE) {
+                    // FIXME: To be optimized for update
                     m_manager.scanAssetConfigurations(proto.get());
                     m_manager.automaticAssetConfigurationPrioritySort(proto.get());
                 }
-                else if (operation == FTY_PROTO_ASSET_OP_UPDATE) {
-                    // FIXME: Test if properties has changed (e.g. ip address)    
-                    //const auto addresses = getNetworkAddressesFromAsset(asset);
-                }    
                 else if (operation == FTY_PROTO_ASSET_OP_DELETE) {
-                    // FIXME: Remove the  configuration
-                }               
+                    // FIXME: Remove the configuration
+                }
             }
-        }    
-    }, std::move(msg));    
+        }
+    }, std::move(msg));
 }
 
 void ConfigurationConnector::sendReply(const messagebus::MetaData& metadataRequest, bool status, const messagebus::UserData& dataReply) {

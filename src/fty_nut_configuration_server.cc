@@ -38,7 +38,7 @@ namespace fty
 {
 namespace nut
 {
-    
+
 constexpr int SCAN_TIMEOUT = 5;
 
 /**
@@ -295,9 +295,7 @@ std::vector<size_t> sortDeviceConfigurationPreferred(fty_proto_t* asset, const n
          * - Total sort means if we return true for a condition, we must return false in the "mirror" condition.
          */
 
-        // TODO: Don't work ???
-        //const std::string type = fty_proto_type(asset);
-        const std::string type = "ups";
+        const std::string type = fty_proto_aux_string(asset, "subtype", "");
         const auto& confA = configurations[a];
         const auto& confB = configurations[b];
 
@@ -736,9 +734,11 @@ R"xxx(SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)2
         const static std::vector<size_t> expectedEpduResult = { 1, 3, 4, 0, 2 } ;
 
         fty_proto_t* upsAsset = fty_proto_new(FTY_PROTO_ASSET);
-        fty_proto_set_type(upsAsset, "ups");
+        fty_proto_aux_insert(upsAsset, "type", "device");
+        fty_proto_aux_insert(upsAsset, "subtype", "ups");
         fty_proto_t* epduAsset = fty_proto_new(FTY_PROTO_ASSET);
-        fty_proto_set_type(epduAsset, "epdu");
+        fty_proto_aux_insert(epduAsset, "type", "device");
+        fty_proto_aux_insert(epduAsset, "subtype", "epdu");
 
         const auto upsResult = fty::nut::sortDeviceConfigurationPreferred(upsAsset, configurations);
         const auto epduResult = fty::nut::sortDeviceConfigurationPreferred(epduAsset, configurations);
@@ -772,6 +772,7 @@ R"xxx(SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)2
                     { "port", "http://${asset.ext.ipv4.1}" },
                 },
                 {},
+                {},
             }),
             fty::nut::DeviceConfigurationInfoDetail({
                 1,
@@ -780,6 +781,7 @@ R"xxx(SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)2
                     { "driver", "snmp-ups" },
                     { "port", "${asset.ext.ipv4.1}" },
                 },
+                {},
                 {
                     "Snmpv1"
                 },
@@ -792,6 +794,7 @@ R"xxx(SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)2
                     { "port", "${asset.ext.ipv4.1}" },
                     { "snmp_version", "v3" },
                 },
+                {},
                 {
                     "Snmpv3"
                 },
