@@ -90,8 +90,7 @@ using FtyProto = std::unique_ptr<fty_proto_t, std::function<void (fty_proto_t*)>
 void ConfigurationConnector::handleNotificationAssets(messagebus::Message msg) {
 
     m_worker.offload([this](messagebus::Message msg) {
-
-        zmsg_t *zmsg = zmsg_new();
+        
         for (const auto& pair : msg.metaData()) {
             std::cout << pair.first << "=" << pair.second << std::endl;
         }

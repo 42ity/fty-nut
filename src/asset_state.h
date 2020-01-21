@@ -59,11 +59,11 @@ public:
         {
             return upsconf_block_;
         }
-        const bool have_upsconf_block() const
+        bool have_upsconf_block() const
         {
             return have_upsconf_block_;
         }
-        const bool upsconf_enable_dmf() const
+        bool upsconf_enable_dmf() const
         {
             return upsconf_enable_dmf_;
         }
