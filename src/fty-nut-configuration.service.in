@@ -13,7 +13,7 @@ Type=simple
 # User=@uid@
 Environment="prefix=@prefix@"
 Environment='SYSTEMD_UNIT_FULLNAME=%n'
-ExecStart=@prefix@/bin/fty-nut-configuration @sysconfdir@/@PACKAGE@/fty-nut-configuration.cfg
+ExecStart=@prefix@/bin/fty-nut-configuration -c @sysconfdir@/@PACKAGE@/fty-nut-configuration.cfg
 Restart=always
 
 [Install]
