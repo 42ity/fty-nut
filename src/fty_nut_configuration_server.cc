@@ -499,11 +499,12 @@ fty_proto_t* fetchProtoFromAssetName(const std::string& assetName)
     return res;
 }
 
+// FIXME: To put in fty-commun-nut ??
 nutcommon::DeviceConfiguration ftyToNutDeviceConfiguration(const DeviceConfigurationInfo& conf, const std::vector<nutcommon::CredentialsSNMPv1>& credentialsSNMPv1, const std::vector<nutcommon::CredentialsSNMPv3>& credentialsSNMPv3)
 {
     nutcommon::DeviceConfiguration results = conf.attributes;
 
-    /// XXX: improve security document instanciation.
+    // FIXME: improve security document instanciation.
     for (const auto& secwDocumentId : conf.secwDocumentIdList) {
         auto itCredSnmpV1 = std::find_if(credentialsSNMPv1.begin(), credentialsSNMPv1.end(),
             [&secwDocumentId](const nutcommon::CredentialsSNMPv1& cred) {
@@ -517,11 +518,15 @@ nutcommon::DeviceConfiguration ftyToNutDeviceConfiguration(const DeviceConfigura
         );
 
         if (itCredSnmpV1 != credentialsSNMPv1.end()) {
-            auto cred = instanciateSecurityWalletDocument(*itCredSnmpV1);
+            // FIXME
+            auto cred = nutcommon::instanciateSecurityWalletDocument(*itCredSnmpV1);
+            //auto cred = instanciateSecurityWalletDocument(*itCredSnmpV1);
             results.insert(cred.begin(), cred.end());
         }
         else if (itCredSnmpV3 != credentialsSNMPv3.end()) {
-            auto cred = instanciateSecurityWalletDocument(*itCredSnmpV3);
+            // FIXME
+            auto cred = nutcommon::instanciateSecurityWalletDocument(*itCredSnmpV3);
+            //auto cred = instanciateSecurityWalletDocument(*itCredSnmpV3);
             results.insert(cred.begin(), cred.end());
         }
     }

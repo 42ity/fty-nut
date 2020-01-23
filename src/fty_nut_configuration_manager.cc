@@ -29,11 +29,13 @@
 #include "fty_nut_configuration_server.h"
 #include "fty_nut_library.h"
 #include "fty_nut_classes.h"
+#include <fty_common_nut_credentials.h>
 
 #include <forward_list>
 #include <regex>
 #include <future>
-#include <fty_common_nut_credentials.h>
+
+#define NUT_PART_STORE "/var/lib/fty/fty-nut/devices"
 
 namespace fty
 {
@@ -110,7 +112,7 @@ void ConfigurationManager::scanAssetConfigurations(fty_proto_t* asset)
 
     /// Step 2: Compute DB updates from detected and from known driver configurations.
     const auto results = computeAssetConfigurationUpdate(knownConfigurations, detectedConfigurations);
-        
+
     log_debug("Summary of device configurations after scan for asset %s:\n%s", assetName.c_str(), serialize(results).c_str());
 
     /// Step 3: Mark existing configurations as working or non-working.
@@ -171,11 +173,60 @@ void ConfigurationManager::scanAssetConfigurations(fty_proto_t* asset)
 }
 
 /**
+ * \brief Update asset configuration in config file.
+ * \param asset Asset to process.
+ * \param config Config to process.
+ */
+void ConfigurationManager::updateDeviceConfigurationFile(const std::string &name, nutcommon::DeviceConfiguration config)
+{
+    const std::string configFilePath = std::string(NUT_PART_STORE) + shared::path_separator() + name;
+
+    shared::mkdir_if_needed(NUT_PART_STORE);
+
+    // Get old and create new configuration strings.
+    std::string oldConfiguration, newConfiguration;
+    {
+        std::ifstream file(configFilePath);
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        oldConfiguration = buffer.str();
+    }
+    {
+        std::stringstream buffer;
+        buffer << config;
+        newConfiguration = buffer.str();
+    }
+
+    if (oldConfiguration != newConfiguration) {
+        log_info("Configuration file '%s' is outdated, creating new one.", configFilePath.c_str());
+
+        std::ofstream cfgFile(configFilePath);
+        cfgFile << newConfiguration;
+        cfgFile.flush();
+        cfgFile.close();
+    }
+    else {
+        log_info("Configuration file '%s' unchanged, no actions to perform.", configFilePath.c_str());
+    }
+}
+
+
+/**
  * \brief Apply asset configuration in database.
  * \param asset Asset to process.
  */
 void ConfigurationManager::applyAssetConfiguration(fty_proto_t* asset)
 {
+    auto conn = tntdb::connectCached(m_dbConn);
+    const std::string assetName = fty_proto_name(asset);
+
+    // Get candidate configurations and take the first one
+    const DeviceConfigurationInfos candidateDatabaseConfigurations = get_candidate_config_list(conn, assetName);
+    if (candidateDatabaseConfigurations.size() > 0) {
+        DeviceConfigurationInfo config = candidateDatabaseConfigurations.at(0);
+        // Save configuration into config file
+        updateDeviceConfigurationFile(assetName, config.attributes);
+    }
 }
 
 }

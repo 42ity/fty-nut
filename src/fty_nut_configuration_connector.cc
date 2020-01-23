@@ -90,14 +90,17 @@ using FtyProto = std::unique_ptr<fty_proto_t, std::function<void (fty_proto_t*)>
 void ConfigurationConnector::handleNotificationAssets(messagebus::Message msg) {
 
     m_worker.offload([this](messagebus::Message msg) {
-        
+
         for (const auto& pair : msg.metaData()) {
             std::cout << pair.first << "=" << pair.second << std::endl;
         }
 
         for(const auto& data : msg.userData()) {
-            FtyProto proto(messagebus::decodeFtyProto(data), [](fty_proto_t *p) -> void { fty_proto_destroy(&p); });
-
+            zmsg_t* msg = zmsg_new();
+            zmsg_addmem(msg, data.c_str(), data.length());
+            FtyProto proto(fty_proto_decode(&msg), [](fty_proto_t *p) -> void { fty_proto_destroy(&p); });
+            // FIXME: To restore when lib messagebus updated
+            //FtyProto proto(messagebus::decodeFtyProto(data), [](fty_proto_t *p) -> void { fty_proto_destroy(&p); });
             if (!proto) {
                 log_error("Failed to decode fty_proto_t on stream " FTY_PROTO_STREAM_ASSETS);
                 return;
@@ -121,6 +124,7 @@ void ConfigurationConnector::handleNotificationAssets(messagebus::Message msg) {
                     // FIXME: To be optimized for update
                     m_manager.scanAssetConfigurations(proto.get());
                     m_manager.automaticAssetConfigurationPrioritySort(proto.get());
+                    m_manager.applyAssetConfiguration(proto.get());
                 }
                 else if (operation == FTY_PROTO_ASSET_OP_DELETE) {
                     // FIXME: Remove the configuration
