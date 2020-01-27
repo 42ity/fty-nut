@@ -85,8 +85,6 @@ void ConfigurationConnector::handleRequest(messagebus::Message msg) {
     }
 }
 
-using FtyProto = std::unique_ptr<fty_proto_t, std::function<void (fty_proto_t*)>>;
-
 void ConfigurationConnector::handleNotificationAssets(messagebus::Message msg) {
 
     m_worker.offload([this](messagebus::Message msg) {
@@ -112,7 +110,6 @@ void ConfigurationConnector::handleNotificationAssets(messagebus::Message msg) {
             std::string status = fty_proto_aux_string(proto.get(), "status", "");
             std::string subtype = fty_proto_aux_string(proto.get(), "subtype", "");
 
-            fty_proto_print(proto.get());
             //std::stringstream buffer;
             //messagebus::dumpFtyProto(proto, buffer);
 
@@ -120,14 +117,23 @@ void ConfigurationConnector::handleNotificationAssets(messagebus::Message msg) {
             //std::cout << "type=" << type << " subtype=" << subtype << std::endl;
 
             if (type == "device" && (subtype == "ups" || subtype == "pdu" || subtype == "epdu" || subtype == "sts")) {
-                if (operation == FTY_PROTO_ASSET_OP_CREATE || operation == FTY_PROTO_ASSET_OP_UPDATE) {
-                    // FIXME: To be optimized for update
+                if (operation == FTY_PROTO_ASSET_OP_CREATE) {
+fty_proto_print(proto.get());
+                    std::unique_lock<std::mutex> lock(m_mutex);
                     m_manager.scanAssetConfigurations(proto.get());
                     m_manager.automaticAssetConfigurationPrioritySort(proto.get());
                     m_manager.applyAssetConfiguration(proto.get());
                 }
+                else if (operation == FTY_PROTO_ASSET_OP_UPDATE) {
+fty_proto_print(proto.get());
+                    std::unique_lock<std::mutex> lock(m_mutex);
+                    m_manager.updateAssetConfiguration(proto.get());
+                }
                 else if (operation == FTY_PROTO_ASSET_OP_DELETE) {
-                    // FIXME: Remove the configuration
+
+fty_proto_print(proto.get());
+                    std::unique_lock<std::mutex> lock(m_mutex);
+                    m_manager.removeAssetConfiguration(proto.get());
                 }
             }
         }

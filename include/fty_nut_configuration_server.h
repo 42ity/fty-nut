@@ -28,9 +28,9 @@ namespace fty
 {
 namespace nut
 {
-    
+
 using namespace DBAssetsDiscovery;
-    
+
 typedef struct ComputeAssetConfigurationUpdateResult {
     /// \brief Known, working configuration.
     nutcommon::DeviceConfigurations workingConfigurations;
@@ -69,6 +69,13 @@ nutcommon::DeviceConfigurations assetScanDrivers(messagebus::PoolWorker& pool, f
 ComputeAssetConfigurationUpdateResult computeAssetConfigurationUpdate(const nutcommon::DeviceConfigurations& knownConfigurations, const nutcommon::DeviceConfigurations& detectedConfigurations);
 
 nutcommon::DeviceConfigurations instanciateDatabaseConfigurations(const DeviceConfigurationInfos& dbConfs, fty_proto_t* asset, const std::vector<nutcommon::CredentialsSNMPv1>& credentialsSNMPv1, const std::vector<nutcommon::CredentialsSNMPv3>& credentialsSNMPv3);
+
+/**
+ * \brief Request fty_proto_t from asset name.
+ * \param assetName Asset name to request.
+ * \return fty_proto_t (to be freed by caller) or nullptr.
+ */
+fty_proto_t* fetchProtoFromAssetName(const std::string& assetName);
 
 /**
  * \brief Find which device configuration type a given device configuration best matches.

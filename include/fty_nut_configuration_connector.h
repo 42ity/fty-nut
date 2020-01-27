@@ -55,6 +55,7 @@ class ConfigurationConnector
         messagebus::Dispatcher<std::string, std::function<messagebus::UserData(messagebus::UserData)>, std::function<messagebus::UserData(const std::string&, messagebus::UserData)>> m_dispatcher;
         messagebus::PoolWorker m_worker;
         std::unique_ptr<messagebus::MessageBus> m_msgBus;
+        std::mutex m_mutex;
 };
 
 }

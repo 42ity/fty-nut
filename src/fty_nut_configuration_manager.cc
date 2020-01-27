@@ -34,6 +34,7 @@
 #include <forward_list>
 #include <regex>
 #include <future>
+#include <bits/unique_ptr.h>
 
 #define NUT_PART_STORE "/var/lib/fty/fty-nut/devices"
 
@@ -55,6 +56,16 @@ ConfigurationManager::ConfigurationManager(const std::string& dbConn) : m_poolSc
     automaticAssetConfigurationPrioritySort(asset);
 
     fty_proto_destroy(&asset);*/
+}
+
+std::string ConfigurationManager::serialize_config(std::string name, nutcommon::DeviceConfiguration& config) {
+    std::stringstream ss;
+    //ss << config << std::endl;
+    if (!name.empty()) ss << "[" << name << "]" << "\n";
+    for (auto& p : config) {
+        ss << p.first << " = \"" << p.second << "\"\n";
+    }
+    return ss.str();
 }
 
 /**
@@ -177,11 +188,13 @@ void ConfigurationManager::scanAssetConfigurations(fty_proto_t* asset)
  * \param asset Asset to process.
  * \param config Config to process.
  */
-void ConfigurationManager::updateDeviceConfigurationFile(const std::string &name, nutcommon::DeviceConfiguration config)
+void ConfigurationManager::updateDeviceConfigurationFile(const std::string& name, nutcommon::DeviceConfiguration& config)
 {
     const std::string configFilePath = std::string(NUT_PART_STORE) + shared::path_separator() + name;
-
     shared::mkdir_if_needed(NUT_PART_STORE);
+
+    // Complete configuration.
+    config["name"] = name;   // FIXME: Put in defaut attributes ???
 
     // Get old and create new configuration strings.
     std::string oldConfiguration, newConfiguration;
@@ -210,22 +223,163 @@ void ConfigurationManager::updateDeviceConfigurationFile(const std::string &name
     }
 }
 
+/**
+ * \brief Remove asset configuration in config file.
+ * \param asset Asset to process.
+ * \param config Config to process.
+ */
+void ConfigurationManager::removeDeviceConfigurationFile(const std::string &name)
+{
+    const std::string filePath = std::string(NUT_PART_STORE) + shared::path_separator() + name;
+    log_info("Removing configuration file '%s'.", filePath.c_str());
+
+    remove(filePath.c_str());
+}
 
 /**
- * \brief Apply asset configuration in database.
+ * \brief Apply asset configuration.
  * \param asset Asset to process.
  */
 void ConfigurationManager::applyAssetConfiguration(fty_proto_t* asset)
 {
-    auto conn = tntdb::connectCached(m_dbConn);
-    const std::string assetName = fty_proto_name(asset);
+    std::string assetName;
+    try {
+        auto conn = tntdb::connectCached(m_dbConn);
+        assetName = fty_proto_name(asset);
 
-    // Get candidate configurations and take the first one
-    const DeviceConfigurationInfos candidateDatabaseConfigurations = get_candidate_config_list(conn, assetName);
-    if (candidateDatabaseConfigurations.size() > 0) {
-        DeviceConfigurationInfo config = candidateDatabaseConfigurations.at(0);
-        // Save configuration into config file
-        updateDeviceConfigurationFile(assetName, config.attributes);
+        // Get candidate configurations and take the first one
+        const DeviceConfigurationInfos candidateDatabaseConfigurations = get_candidate_config_list(conn, assetName);
+        log_info("applyAssetConfiguration: [%s] config candidate size=%d", assetName.c_str(), candidateDatabaseConfigurations.size());
+        if (candidateDatabaseConfigurations.size() > 0) {
+
+            const auto credentialsSNMPv1 = nutcommon::getCredentialsSNMPv1();
+            const auto credentialsSNMPv3 = nutcommon::getCredentialsSNMPv3();
+
+            // FIXME:
+            //DeviceConfigurationInfo config = candidateDatabaseConfigurations.at(0);
+            nutcommon::DeviceConfigurations configs = instanciateDatabaseConfigurations(
+                candidateDatabaseConfigurations, asset, credentialsSNMPv1, credentialsSNMPv3);
+
+            // Make sure that no config exist for this asset before adding new
+            auto itr = m_deviceConfigurationMap.find(assetName);
+            if (itr != m_deviceConfigurationMap.end()) {
+                m_deviceConfigurationMap.erase(itr);
+            }
+            if (configs.size() > 0) {
+                m_deviceConfigurationMap.insert(std::make_pair(assetName, configs));
+
+                // Save the first configuration into config file
+                this->updateDeviceConfigurationFile(assetName, configs.at(0));
+            }
+        }
+    }
+    catch (std::runtime_error &e) {
+        log_error("applyAssetConfiguration: failed to apply config for '%s': %s", assetName.c_str(), e.what());
+    }
+}
+
+/**
+ * \brief Update asset configuration
+ * \param asset Asset to process.
+ */
+void ConfigurationManager::updateAssetConfiguration(fty_proto_t* asset)
+{
+    std::string assetName;
+    try {
+        auto conn = tntdb::connectCached(m_dbConn);
+        assetName = fty_proto_name(asset);
+
+        // Get candidate configurations and take the first one
+        const DeviceConfigurationInfos candidateDatabaseConfigurations = get_candidate_config_list(conn, assetName);
+        log_info("applyAssetConfiguration: [%s] config candidate size=%d", assetName.c_str(), candidateDatabaseConfigurations.size());
+        if (candidateDatabaseConfigurations.size() > 0) {
+            const auto credentialsSNMPv1 = nutcommon::getCredentialsSNMPv1();
+            const auto credentialsSNMPv3 = nutcommon::getCredentialsSNMPv3();
+
+            //DeviceConfigurationInfo config = candidateDatabaseConfigurations.at(0);
+            nutcommon::DeviceConfigurations configs_asset_new = instanciateDatabaseConfigurations(
+                candidateDatabaseConfigurations, asset, credentialsSNMPv1, credentialsSNMPv3);
+
+            // FIXME: New message bus lib
+            //FtyProto asset_current(fetchProtoFromAssetName(assetName), [](fty_proto_t *p) -> void { fty_proto_destroy(&p); });
+            //nutcommon::DeviceConfigurations configs_asset_current = instanciateDatabaseConfigurations(
+            //    candidateDatabaseConfigurations, asset_current.get(), credentialsSNMPv1, credentialsSNMPv3);
+
+            bool need_update = false;
+            auto itr = m_deviceConfigurationMap.find(assetName);
+            // Update if no configurations
+            if (itr == m_deviceConfigurationMap.end()) {
+                need_update = true;
+            }
+            // Test if existing configurations have changed
+            else {
+                nutcommon::DeviceConfigurations configs_asset_current = itr->second;
+
+                auto it_configs_asset_new = configs_asset_new.begin();
+                auto it_configs_asset_current = configs_asset_current.begin();
+                // for each config FIXME: First one only  ?
+                if (configs_asset_new.size() != configs_asset_current.size()) {
+                    need_update = true;
+                }
+                else {
+                    // For each candidate configuration
+                    while (it_configs_asset_new != configs_asset_new.end() && it_configs_asset_current != configs_asset_current.end()) {
+                        log_trace("\nNew config:\n%s", serialize_config("", *it_configs_asset_new).c_str());
+                        log_trace("\nCurrent config:\n%s", serialize_config("", *it_configs_asset_current).c_str());
+                        if (*it_configs_asset_new != *it_configs_asset_current) {
+                            need_update = true;
+                            break;
+                        }
+                        it_configs_asset_new ++;
+                        it_configs_asset_current ++;
+                    }
+                }
+            }
+            // Apply asset modification only if necessary (rescan is made in this case)
+            if (need_update) {
+                log_info("applyAssetConfiguration: [%s] need update", assetName.c_str());
+                auto itr = m_deviceConfigurationMap.find(assetName);
+                if (itr != m_deviceConfigurationMap.end()) {
+                    m_deviceConfigurationMap.erase(itr);
+                }
+                m_deviceConfigurationMap.insert(std::make_pair(assetName, configs_asset_new));
+
+                this->scanAssetConfigurations(asset);
+                this->automaticAssetConfigurationPrioritySort(asset);
+                this->applyAssetConfiguration(asset);
+            }
+        }
+    }
+    catch (std::runtime_error &e) {
+        log_error("updateAssetConfiguration: failed to update config for '%s': %s", assetName.c_str(), e.what());
+    }
+}
+
+/**
+ * \brief Remove asset configuration
+ * \param asset Asset to process.
+ */
+void ConfigurationManager::removeAssetConfiguration(fty_proto_t* asset)
+{
+    std::string assetName;
+    try {
+        auto conn = tntdb::connectCached(m_dbConn);
+        assetName = fty_proto_name(asset);
+        log_info("removeAssetConfiguration: remove [%s]", assetName.c_str());
+        auto itr = m_deviceConfigurationMap.find(assetName);
+        if (itr != m_deviceConfigurationMap.end()) {
+            m_deviceConfigurationMap.erase(itr);
+        }
+
+        // FIXME: Not needed, it was already done by the asset agent
+        // Remove config in database
+        //remove_all_config(conn, assetName);
+
+        // Remove config file
+        this->removeDeviceConfigurationFile(assetName);
+    }
+    catch (std::runtime_error &e) {
+        log_error("removeAssetConfiguration: failed to remove config for '%s': %s", assetName.c_str(), e.what());
     }
 }
 

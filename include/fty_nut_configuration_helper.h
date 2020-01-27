@@ -31,6 +31,8 @@ namespace nut
 
 using namespace DBAssetsDiscovery;
 
+using FtyProto = std::unique_ptr<fty_proto_t, std::function<void (fty_proto_t*)>>;
+
 struct ComputeAssetConfigurationUpdateResult;
 
 auto isConfSnmp =   [](const nutcommon::DeviceConfiguration& conf) -> bool { return conf.at("driver").find_first_of("snmp-ups") == 0; };

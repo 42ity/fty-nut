@@ -518,15 +518,11 @@ nutcommon::DeviceConfiguration ftyToNutDeviceConfiguration(const DeviceConfigura
         );
 
         if (itCredSnmpV1 != credentialsSNMPv1.end()) {
-            // FIXME
             auto cred = nutcommon::instanciateSecurityWalletDocument(*itCredSnmpV1);
-            //auto cred = instanciateSecurityWalletDocument(*itCredSnmpV1);
             results.insert(cred.begin(), cred.end());
         }
         else if (itCredSnmpV3 != credentialsSNMPv3.end()) {
-            // FIXME
             auto cred = nutcommon::instanciateSecurityWalletDocument(*itCredSnmpV3);
-            //auto cred = instanciateSecurityWalletDocument(*itCredSnmpV3);
             results.insert(cred.begin(), cred.end());
         }
     }

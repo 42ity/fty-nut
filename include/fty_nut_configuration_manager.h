@@ -35,14 +35,19 @@ class ConfigurationManager
         ConfigurationManager(const std::string& dbConn);
         ~ConfigurationManager() = default;
 
+        std::string serialize_config(std::string name, nutcommon::DeviceConfiguration& config);
         void automaticAssetConfigurationPrioritySort(fty_proto_t* asset);
         void scanAssetConfigurations(fty_proto_t* asset);
-        void updateDeviceConfigurationFile(const std::string &name, nutcommon::DeviceConfiguration config);
         void applyAssetConfiguration(fty_proto_t* asset);
+        void updateAssetConfiguration(fty_proto_t* asset);
+        void removeAssetConfiguration(fty_proto_t* asset);
+        void updateDeviceConfigurationFile(const std::string& name, nutcommon::DeviceConfiguration& config);
+        void removeDeviceConfigurationFile(const std::string &name);
 
     private:
         messagebus::PoolWorker m_poolScanners;
         std::string m_dbConn;
+        std::map<std::string, nutcommon::DeviceConfigurations> m_deviceConfigurationMap;
 };
 
 }
