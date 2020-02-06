@@ -43,19 +43,9 @@ namespace fty
 namespace nut
 {
 
-ConfigurationManager::ConfigurationManager(const std::string& dbConn) : m_poolScanners(8), m_dbConn(dbConn)
+ConfigurationManager::ConfigurationManager(const std::string& dbConn) : m_poolScanners(20), m_dbConn(dbConn)
 {
-    //std::string assetName = "epdu-7";
-    //std::string assetName = "ups-9";
-    //std::string assetName = "ups-56";
-    /*fty_proto_t* asset = fetchProtoFromAssetName(assetName);
-    if (!asset) {
-        throw std::runtime_error("Unknown asset " + assetName);
-    }
-    scanAssetConfigurations(asset);
-    automaticAssetConfigurationPrioritySort(asset);
-
-    fty_proto_destroy(&asset);*/
+    m_manage_drivers_thread = std::thread(&ConfigurationManager::manageDrivers, this);
 }
 
 std::string ConfigurationManager::serialize_config(std::string name, nutcommon::DeviceConfiguration& config) {
@@ -260,15 +250,22 @@ void ConfigurationManager::applyAssetConfiguration(fty_proto_t* asset)
             nutcommon::DeviceConfigurations configs = instanciateDatabaseConfigurations(
                 candidateDatabaseConfigurations, asset, credentialsSNMPv1, credentialsSNMPv3);
 
-            // Make sure that no config exist for this asset before adding new
-            auto itr = m_deviceConfigurationMap.find(assetName);
-            if (itr != m_deviceConfigurationMap.end()) {
-                m_deviceConfigurationMap.erase(itr);
-            }
             if (configs.size() > 0) {
+                m_manage_drivers_mutex.lock();
+                // Make sure that no config exist for this asset before adding new
+                auto itr = m_deviceConfigurationMap.find(assetName);
+                if (itr != m_deviceConfigurationMap.end()) {
+                    m_deviceConfigurationMap.erase(itr);
+                }
                 m_deviceConfigurationMap.insert(std::make_pair(assetName, configs));
+                m_manage_drivers_mutex.unlock();
+
+                m_start_drivers_mutex.lock();
+                m_start_drivers.insert(assetName);
+                m_start_drivers_mutex.unlock();
 
                 // Save the first configuration into config file
+                log_trace("\nSave config:\n%s", serialize_config("", configs.at(0)).c_str());
                 this->updateDeviceConfigurationFile(assetName, configs.at(0));
             }
         }
@@ -324,10 +321,10 @@ void ConfigurationManager::updateAssetConfiguration(fty_proto_t* asset)
                 else {
                     // For each candidate configuration
                     while (it_configs_asset_new != configs_asset_new.end() && it_configs_asset_current != configs_asset_current.end()) {
-                        log_trace("\nNew config:\n%s", serialize_config("", *it_configs_asset_new).c_str());
-                        log_trace("\nCurrent config:\n%s", serialize_config("", *it_configs_asset_current).c_str());
                         if (*it_configs_asset_new != *it_configs_asset_current) {
                             need_update = true;
+                            log_trace("\nNew config:\n%s", serialize_config("", *it_configs_asset_new).c_str());
+                            log_trace("\nCurrent config:\n%s", serialize_config("", *it_configs_asset_current).c_str());
                             break;
                         }
                         it_configs_asset_new ++;
@@ -338,11 +335,13 @@ void ConfigurationManager::updateAssetConfiguration(fty_proto_t* asset)
             // Apply asset modification only if necessary (rescan is made in this case)
             if (need_update) {
                 log_info("applyAssetConfiguration: [%s] need update", assetName.c_str());
+                m_manage_drivers_mutex.lock();
                 auto itr = m_deviceConfigurationMap.find(assetName);
                 if (itr != m_deviceConfigurationMap.end()) {
                     m_deviceConfigurationMap.erase(itr);
                 }
                 m_deviceConfigurationMap.insert(std::make_pair(assetName, configs_asset_new));
+                m_manage_drivers_mutex.unlock();
 
                 this->scanAssetConfigurations(asset);
                 this->automaticAssetConfigurationPrioritySort(asset);
@@ -366,10 +365,16 @@ void ConfigurationManager::removeAssetConfiguration(fty_proto_t* asset)
         auto conn = tntdb::connectCached(m_dbConn);
         assetName = fty_proto_name(asset);
         log_info("removeAssetConfiguration: remove [%s]", assetName.c_str());
+        m_manage_drivers_mutex.lock();
         auto itr = m_deviceConfigurationMap.find(assetName);
         if (itr != m_deviceConfigurationMap.end()) {
             m_deviceConfigurationMap.erase(itr);
         }
+        m_manage_drivers_mutex.unlock();
+
+        m_stop_drivers_mutex.lock();
+        m_stop_drivers.insert(assetName);
+        m_stop_drivers_mutex.unlock();
 
         // FIXME: Not needed, it was already done by the asset agent
         // Remove config in database
@@ -380,6 +385,81 @@ void ConfigurationManager::removeAssetConfiguration(fty_proto_t* asset)
     }
     catch (std::runtime_error &e) {
         log_error("removeAssetConfiguration: failed to remove config for '%s': %s", assetName.c_str(), e.what());
+    }
+}
+
+void ConfigurationManager::manageDrivers()
+{
+    while(1) {
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+        //std::unique_lock<std::mutex> lock(m_manage_drivers_mutex);
+        if (!m_stop_drivers.empty() || !m_start_drivers.empty()) {
+            if (!m_stop_drivers.empty()) {
+                m_stop_drivers_mutex.lock();
+                systemctl("disable", m_stop_drivers.begin(), m_stop_drivers.end());
+                systemctl("stop", m_stop_drivers.begin(), m_stop_drivers.end());
+                m_stop_drivers.clear();
+                m_stop_drivers_mutex.unlock();
+            }
+
+            updateNUTConfig();
+
+            if (!m_start_drivers.empty()) {
+                m_start_drivers_mutex.lock();
+                systemctl("restart", m_start_drivers.begin(), m_start_drivers.end());
+                systemctl("enable",  m_start_drivers.begin(), m_start_drivers.end());
+                m_start_drivers.clear();
+                m_start_drivers_mutex.unlock();
+            }
+            systemctl("reload-or-restart", "nut-server");
+        }
+    }
+}
+
+void ConfigurationManager::systemctl(const std::string &operation, const std::string &service)
+{
+    systemctl(operation, &service, &service + 1);
+}
+
+template<typename It>
+void ConfigurationManager::systemctl(const std::string &operation, It first, It last)
+{
+    if (first == last)
+        return;
+    std::vector<std::string> _argv = {"sudo", "systemctl", operation };
+    _argv.insert(_argv.end(), first, last);
+    MlmSubprocess::SubProcess systemd(_argv);
+    if( systemd.run() ) {
+        int result = systemd.wait();
+        log_info("sudo systemctl %s result %i (%s) for following units",
+                 operation.c_str(),
+                 result,
+                 (result == 0 ? "ok" : "failed"));
+        for (It it = first; it != last; ++it)
+            log_info(" - %s", it->c_str());
+    } else {
+        log_error("can't run sudo systemctl %s for following units",
+                  operation.c_str());
+        for (It it = first; it != last; ++it)
+            log_error(" - %s", it->c_str());
+    }
+}
+
+void ConfigurationManager::updateNUTConfig()
+{
+    // Run the helper script
+    std::vector<std::string> _argv = { "sudo", "fty-nutconfig" };
+    MlmSubprocess::SubProcess systemd( _argv );
+    if( systemd.run() ) {
+        int result = systemd.wait();
+        if (result == 0) {
+            log_info("Command 'sudo fty-nutconfig' succeeded.");
+        }
+        else {
+            log_error("Command 'sudo fty-nutconfig' failed with status=%i.", result);
+        }
+    } else {
+        log_error("Can't run command 'sudo fty-nutconfig'.");
     }
 }
 

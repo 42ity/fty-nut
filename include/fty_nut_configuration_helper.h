@@ -35,6 +35,14 @@ using FtyProto = std::unique_ptr<fty_proto_t, std::function<void (fty_proto_t*)>
 
 struct ComputeAssetConfigurationUpdateResult;
 
+
+using t_asset_mutex_map = std::map<std::string, std::shared_ptr<std::mutex>>;
+
+void protect_asset_lock(t_asset_mutex_map& asset_mutex_map, std::string asset_name);
+bool protect_asset_unlock(t_asset_mutex_map& asset_mutex_map, std::string asset_name);
+bool protect_asset_try_lock(t_asset_mutex_map& asset_mutex_map, std::string asset_name);
+bool protect_asset_remove(t_asset_mutex_map& asset_mutex_map, std::string asset_name);
+
 auto isConfSnmp =   [](const nutcommon::DeviceConfiguration& conf) -> bool { return conf.at("driver").find_first_of("snmp-ups") == 0; };
 auto confSnmpVersion = [](const nutcommon::DeviceConfiguration& conf) -> int {
     if (!isConfSnmp(conf)) { return -1; }

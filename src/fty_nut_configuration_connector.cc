@@ -28,11 +28,13 @@
 
 #include "fty_nut_library.h"
 #include "fty_nut_classes.h"
+#include <fty_common_nut_credentials.h>
+#include <fty_security_wallet.h>
 
 #include <forward_list>
 #include <regex>
 #include <future>
-#include <fty_common_nut_credentials.h>
+
 
 namespace fty
 {
@@ -51,12 +53,13 @@ ConfigurationConnector::ConfigurationConnector(ConfigurationConnector::Parameter
     m_manager(params.dbUrl),
     m_dispatcher({
     }),
-    m_worker(1),
+    m_worker(10),
     m_msgBus(messagebus::MlmMessageBus(params.endpoint, params.agentName))
 {
     m_msgBus->connect();
     m_msgBus->receive("ETN.Q.IPMCORE.NUTCONFIGURATION", std::bind(&ConfigurationConnector::handleRequest, this, std::placeholders::_1));
     m_msgBus->subscribe(FTY_PROTO_STREAM_ASSETS, std::bind(&ConfigurationConnector::handleNotificationAssets, this, std::placeholders::_1));
+    m_msgBus->subscribe("_SECW_NOTIFICATIONS", std::bind(&ConfigurationConnector::handleNotificationSecurityWallet, this, std::placeholders::_1));
 }
 
 void ConfigurationConnector::handleRequest(messagebus::Message msg) {
@@ -113,29 +116,43 @@ void ConfigurationConnector::handleNotificationAssets(messagebus::Message msg) {
             //std::stringstream buffer;
             //messagebus::dumpFtyProto(proto, buffer);
 
-            //std::cout << "operation=" << operation << " status=" << status << std::endl;
+            std::cout << "operation=" << operation << " status=" << status << std::endl;
             //std::cout << "type=" << type << " subtype=" << subtype << std::endl;
 
             if (type == "device" && (subtype == "ups" || subtype == "pdu" || subtype == "epdu" || subtype == "sts")) {
                 if (operation == FTY_PROTO_ASSET_OP_CREATE) {
 fty_proto_print(proto.get());
-                    std::unique_lock<std::mutex> lock(m_mutex);
+                    protect_asset_lock(m_asset_mutex_map, name);
                     m_manager.scanAssetConfigurations(proto.get());
                     m_manager.automaticAssetConfigurationPrioritySort(proto.get());
                     m_manager.applyAssetConfiguration(proto.get());
+                    protect_asset_unlock(m_asset_mutex_map, name);
                 }
                 else if (operation == FTY_PROTO_ASSET_OP_UPDATE) {
 fty_proto_print(proto.get());
-                    std::unique_lock<std::mutex> lock(m_mutex);
+                    protect_asset_lock(m_asset_mutex_map, name);
                     m_manager.updateAssetConfiguration(proto.get());
+                    protect_asset_unlock(m_asset_mutex_map, name);
                 }
                 else if (operation == FTY_PROTO_ASSET_OP_DELETE) {
 
 fty_proto_print(proto.get());
-                    std::unique_lock<std::mutex> lock(m_mutex);
+                    protect_asset_lock(m_asset_mutex_map, name);
                     m_manager.removeAssetConfiguration(proto.get());
+                    protect_asset_unlock(m_asset_mutex_map, name);
+                    protect_asset_remove(m_asset_mutex_map, name);
                 }
             }
+        }
+    }, std::move(msg));
+}
+
+void ConfigurationConnector::handleNotificationSecurityWallet(messagebus::Message msg) {
+    std::cout << "handleNotificationSecurityWallet DEBUT" << std::endl;
+    m_worker.offload([this](messagebus::Message msg) {
+
+        for (const auto& pair : msg.metaData()) {
+            std::cout << pair.first << "=" << pair.second << std::endl;
         }
     }, std::move(msg));
 }

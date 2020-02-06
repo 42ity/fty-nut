@@ -32,10 +32,11 @@ namespace nut
 class ConfigurationManager
 {
     public:
+
         ConfigurationManager(const std::string& dbConn);
         ~ConfigurationManager() = default;
 
-        std::string serialize_config(std::string name, nutcommon::DeviceConfiguration& config);
+        static std::string serialize_config(std::string name, nutcommon::DeviceConfiguration& config);
         void automaticAssetConfigurationPrioritySort(fty_proto_t* asset);
         void scanAssetConfigurations(fty_proto_t* asset);
         void applyAssetConfiguration(fty_proto_t* asset);
@@ -44,10 +45,21 @@ class ConfigurationManager
         void updateDeviceConfigurationFile(const std::string& name, nutcommon::DeviceConfiguration& config);
         void removeDeviceConfigurationFile(const std::string &name);
 
+        void manageDrivers();
+        template<typename It> void systemctl(const std::string &operation, It first, It last);
+        void systemctl(const std::string &operation, const std::string &service);
+        void updateNUTConfig();
+
     private:
         messagebus::PoolWorker m_poolScanners;
         std::string m_dbConn;
         std::map<std::string, nutcommon::DeviceConfigurations> m_deviceConfigurationMap;
+        std::set<std::string> m_start_drivers;
+        std::set<std::string> m_stop_drivers;
+        std::mutex m_start_drivers_mutex;
+        std::mutex m_stop_drivers_mutex;
+        std::mutex m_manage_drivers_mutex;
+        std::thread m_manage_drivers_thread;
 };
 
 }

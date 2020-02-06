@@ -48,6 +48,7 @@ class ConfigurationConnector
     private:
         void handleRequest(messagebus::Message msg);
         void handleNotificationAssets(messagebus::Message msg);
+        void handleNotificationSecurityWallet(messagebus::Message msg);
         void sendReply(const messagebus::MetaData& metadataRequest, bool status, const messagebus::UserData& dataReply);
 
         Parameters m_parameters;
@@ -55,7 +56,8 @@ class ConfigurationConnector
         messagebus::Dispatcher<std::string, std::function<messagebus::UserData(messagebus::UserData)>, std::function<messagebus::UserData(const std::string&, messagebus::UserData)>> m_dispatcher;
         messagebus::PoolWorker m_worker;
         std::unique_ptr<messagebus::MessageBus> m_msgBus;
-        std::mutex m_mutex;
+        t_asset_mutex_map m_asset_mutex_map;
+
 };
 
 }

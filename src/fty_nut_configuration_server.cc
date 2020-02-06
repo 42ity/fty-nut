@@ -41,6 +41,24 @@ namespace nut
 
 constexpr int SCAN_TIMEOUT = 5;
 
+
+nutcommon::DeviceConfigurations testDummyDriverDevice(const std::string &param) {
+    nutcommon::DeviceConfigurations devices;
+    unsigned loop_nb = 1;
+    unsigned loop_iter_time_sec = 10;
+
+    nutcommon::KeyValues values = nutcommon::dumpDeviceDummy(param, loop_nb, loop_iter_time_sec);
+    if (!values.empty()) {
+        nutcommon::DeviceConfiguration device;
+        device.emplace("driver", values["driver.name"] /*"dummy-ups"*/);
+        device.emplace("port", values["driver.parameter.port"] /*param*/);
+        device.emplace("desc", "dummy-ups in repeater mode");
+        devices.emplace_back(device);
+        log_info("testDummyDriverDevice: %s", ConfigurationManager::serialize_config("", device).c_str());
+    }
+    return devices;
+}
+
 /**
  * \brief Scan asset for NUT driver configurations.
  *
@@ -76,6 +94,14 @@ nutcommon::DeviceConfigurations assetScanDrivers(messagebus::PoolWorker& pool, f
             futureResults.emplace_front(pool.schedule(static_cast<nutcommon::DeviceConfigurations(*)(const nutcommon::ScanRangeOptions&, const nutcommon::CredentialsSNMPv1&, bool)>(&nutcommon::scanDeviceRangeSNMPv1), scanRangeOptions, credential, false));
         }
         futureResults.emplace_front(pool.schedule(static_cast<nutcommon::DeviceConfigurations(*)(const nutcommon::ScanRangeOptions&)>(&nutcommon::scanDeviceRangeNetXML), scanRangeOptions));
+
+        std::string ip_1 = fty_proto_ext_string(asset, "ip.1", "");
+        std::string name = fty_proto_ext_string(asset, "name", "");
+        // FIXME: For multi node: asset.ext.contact_name@asset.ext.contact_email
+        //std::string contact_name = fty_proto_ext_string(asset, "contact_name", "");
+        //std::string contact_email = fty_proto_ext_string(asset, "contact_email", "");
+        const std::string param = name + "@" + ip_1;   /* "asset.ext.name@asset.ext.ip.1" (e.g MBT.G3MI.3PH.dummy-snmp@bios-nut-proxy.mbt.lab.etn.com */
+        futureResults.emplace_front(pool.schedule(testDummyDriverDevice, param));
     }
 
     /**
@@ -120,6 +146,9 @@ nutcommon::DeviceConfiguration extractConfigurationFingerprint(const nutcommon::
             "driver", "port", "mibs", "snmp_version", "community", "secLevel", "secName", "authPassword", "authProtocol", "privPassword", "privProtocol"
         }},
         { "netxml-ups", {
+            "driver", "port"
+        }},
+        { "dummy-snmp", {
             "driver", "port"
         }}
     };
