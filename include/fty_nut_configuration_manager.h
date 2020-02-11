@@ -45,10 +45,13 @@ class ConfigurationManager
         void updateDeviceConfigurationFile(const std::string& name, nutcommon::DeviceConfiguration& config);
         void removeDeviceConfigurationFile(const std::string &name);
 
+        void manageCredentialsConfiguration(std::string secw_document_id);
+
     private:
         messagebus::PoolWorker m_poolScanners;
         std::string m_dbConn;
         std::map<std::string, nutcommon::DeviceConfigurations> m_deviceConfigurationMap;
+        std::map<std::string, std::set<secw::Id>> m_deviceCredentialsMap;
         std::mutex m_manage_drivers_mutex;
 };
 

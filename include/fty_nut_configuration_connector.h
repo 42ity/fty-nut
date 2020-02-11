@@ -24,6 +24,7 @@
 
 #include "fty_nut_library.h"
 #include "fty_nut_configuration_manager.h"
+#include <fty_security_wallet.h>
 
 namespace fty
 {
@@ -38,7 +39,7 @@ class ConfigurationConnector
 
             std::string endpoint;
             std::string agentName;
-
+            std::string publisherName;
             std::string dbUrl;
         };
 
@@ -48,18 +49,24 @@ class ConfigurationConnector
     private:
         void handleRequest(messagebus::Message msg);
         void handleNotificationAssets(messagebus::Message msg);
-        void handleNotificationSecurityWallet(messagebus::Message msg);
+        void handleNotificationSecurityWalletUpdate(const std::string& portfolio, secw::DocumentPtr oldDoc, secw::DocumentPtr newDoc);
+        void handleNotificationSecurityWalletDelete(const std::string& portfolio, secw::DocumentPtr doc);
+        void handleNotificationSecurityWalletCreate(const std::string& portfolio, secw::DocumentPtr doc);
         void sendReply(const messagebus::MetaData& metadataRequest, bool status, const messagebus::UserData& dataReply);
         void publish(std::string asset_name, std::string subject);
 
         Parameters m_parameters;
         ConfigurationManager m_manager;
-        messagebus::Dispatcher<std::string, std::function<messagebus::UserData(messagebus::UserData)>, std::function<messagebus::UserData(const std::string&, messagebus::UserData)>> m_dispatcher;
+        messagebus::Dispatcher<std::string, std::function<messagebus::UserData(messagebus::UserData)>,
+            std::function<messagebus::UserData(const std::string&, messagebus::UserData)>> m_dispatcher;
         messagebus::PoolWorker m_worker;
         std::unique_ptr<messagebus::MessageBus> m_msgBus;
         std::unique_ptr<messagebus::MessageBus> m_msgBusPublisher;
-        t_asset_mutex_map m_asset_mutex_map;
 
+        fty::SocketSyncClient m_sync_client;
+        std::unique_ptr<mlm::MlmStreamClient> m_stream_client;
+        std::unique_ptr<secw::ConsumerAccessor> m_consumer_accessor;
+        t_asset_mutex_map m_asset_mutex_map;
 };
 
 }

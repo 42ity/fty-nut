@@ -44,10 +44,15 @@ namespace nut
 ConfigurationConnector::Parameters::Parameters() :
     endpoint(MLM_ENDPOINT),
     agentName("fty-nut-configuration"),
+    publisherName("fty-nut-configuration-publisher"),
     dbUrl(DBConn::url)
 {
 }
 
+/**
+ * \brief Default constructor of the class.
+ * \param params Parameters of the class.
+ */
 ConfigurationConnector::ConfigurationConnector(ConfigurationConnector::Parameters params) :
     m_parameters(params),
     m_manager(params.dbUrl),
@@ -55,16 +60,29 @@ ConfigurationConnector::ConfigurationConnector(ConfigurationConnector::Parameter
     }),
     m_worker(10),
     m_msgBus(messagebus::MlmMessageBus(params.endpoint, params.agentName)),
-    m_msgBusPublisher(messagebus::MlmMessageBus(params.endpoint, "fty-nut-configuration-publisher"))
+    m_msgBusPublisher(messagebus::MlmMessageBus(params.endpoint, params.publisherName)),
+    m_sync_client("fty-nut-configuration.socket")
 {
     m_msgBus->connect();
     m_msgBus->receive("ETN.Q.IPMCORE.NUTCONFIGURATION", std::bind(&ConfigurationConnector::handleRequest, this, std::placeholders::_1));
     m_msgBus->subscribe(FTY_PROTO_STREAM_ASSETS, std::bind(&ConfigurationConnector::handleNotificationAssets, this, std::placeholders::_1));
-    m_msgBus->subscribe("_SECW_NOTIFICATIONS", std::bind(&ConfigurationConnector::handleNotificationSecurityWallet, this, std::placeholders::_1));
 
     m_msgBusPublisher->connect();
+
+    m_stream_client = std::unique_ptr<mlm::MlmStreamClient>(new mlm::MlmStreamClient(params.agentName, SECW_NOTIFICATIONS, 1000, params.endpoint));
+    m_consumer_accessor = std::unique_ptr<secw::ConsumerAccessor>(new secw::ConsumerAccessor(m_sync_client, *m_stream_client.get()));
+    m_consumer_accessor->setCallbackOnUpdate(std::bind(&ConfigurationConnector::handleNotificationSecurityWalletUpdate, this,
+            std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    m_consumer_accessor->setCallbackOnDelete(std::bind(&ConfigurationConnector::handleNotificationSecurityWalletDelete, this,
+            std::placeholders::_1, std::placeholders::_2));
+    m_consumer_accessor->setCallbackOnCreate(std::bind(&ConfigurationConnector::handleNotificationSecurityWalletCreate, this,
+            std::placeholders::_1, std::placeholders::_2));
 }
 
+/**
+ * \brief Handle request message.
+ * \param msg Message receive.
+ */
 void ConfigurationConnector::handleRequest(messagebus::Message msg) {
     if ((msg.metaData().count(messagebus::Message::SUBJECT) == 0) ||
         (msg.metaData().count(messagebus::Message::CORRELATION_ID) == 0) ||
@@ -91,6 +109,10 @@ void ConfigurationConnector::handleRequest(messagebus::Message msg) {
     }
 }
 
+/**
+ * \brief Handle request message of type asset notification.
+ * \param msg Message receive.
+ */
 void ConfigurationConnector::handleNotificationAssets(messagebus::Message msg) {
 
     m_worker.offload([this](messagebus::Message msg) {
@@ -111,16 +133,11 @@ void ConfigurationConnector::handleNotificationAssets(messagebus::Message msg) {
             }
             std::string name = fty_proto_name(proto.get());
             std::string operation = fty_proto_operation(proto.get());
-
             std::string type = fty_proto_aux_string(proto.get(), "type", "");
-            std::string status = fty_proto_aux_string(proto.get(), "status", "");
             std::string subtype = fty_proto_aux_string(proto.get(), "subtype", "");
-
-            //std::stringstream buffer;
-            //messagebus::dumpFtyProto(proto, buffer);
-
-            std::cout << "operation=" << operation << " status=" << status << std::endl;
-            //std::cout << "type=" << type << " subtype=" << subtype << std::endl;
+            std::string status = fty_proto_aux_string(proto.get(), "status", "");
+            log_info("handleNotificationAssets: receive message (operation=%s type=%s subtype=%s status=%s)",
+                operation.c_str(), type.c_str(), subtype.c_str(), status.c_str());
 
             if (type == "device" && (subtype == "ups" || subtype == "pdu" || subtype == "epdu" || subtype == "sts")) {
                 if (operation == FTY_PROTO_ASSET_OP_CREATE && status == "active") {
@@ -147,7 +164,6 @@ fty_proto_print(proto.get());
                     protect_asset_unlock(m_asset_mutex_map, name);
                 }
                 else if (operation == FTY_PROTO_ASSET_OP_DELETE) {
-
 fty_proto_print(proto.get());
                     protect_asset_lock(m_asset_mutex_map, name);
                     if (m_manager.removeAssetConfiguration(proto.get())) {
@@ -161,16 +177,45 @@ fty_proto_print(proto.get());
     }, std::move(msg));
 }
 
-void ConfigurationConnector::handleNotificationSecurityWallet(messagebus::Message msg) {
-    std::cout << "handleNotificationSecurityWallet DEBUT" << std::endl;
-    m_worker.offload([this](messagebus::Message msg) {
-
-        for (const auto& pair : msg.metaData()) {
-            std::cout << pair.first << "=" << pair.second << std::endl;
-        }
-    }, std::move(msg));
+/**
+ * \brief Handle request message of type security document updated.
+ * \param portfolio Portfolio name.
+ * \param oldDoc Previous security document.
+ * \param newDoc New security document.
+ */
+void ConfigurationConnector::handleNotificationSecurityWalletUpdate(const std::string& portfolio, secw::DocumentPtr oldDoc, secw::DocumentPtr newDoc) {
+    log_info("handleNotificationSecurityWalletUpdate: receive message (portfolio=%s name=%s id=%s)",
+                portfolio.c_str(), newDoc->getName().c_str(), newDoc->getId().c_str());
+    m_manager.manageCredentialsConfiguration(newDoc->getId());
 }
 
+/**
+ * \brief Handle request message of type security document deleted.
+ * \param portfolio Portfolio name.
+ * \param doc Security document removed.
+ */
+void ConfigurationConnector::handleNotificationSecurityWalletDelete(const std::string& portfolio, secw::DocumentPtr doc) {
+    log_info("handleNotificationSecurityWalletDelete: receive message (portfolio=%s name=%s id=%s)",
+                portfolio.c_str(), doc->getName().c_str(), doc->getId().c_str());
+    m_manager.manageCredentialsConfiguration(doc->getId());
+}
+
+/**
+ * \brief Handle request message of type security document added.
+ * \param portfolio Portfolio name.
+ * \param doc Security document added.
+ */
+void ConfigurationConnector::handleNotificationSecurityWalletCreate(const std::string& portfolio, secw::DocumentPtr doc) {
+    log_info("handleNotificationSecurityWalletCreate: receive message (portfolio=%s name=%s id=%s)",
+                portfolio.c_str(), doc->getName().c_str(), doc->getId().c_str());
+    m_manager.manageCredentialsConfiguration(doc->getId());
+}
+
+/**
+ * \brief Send reply to message bus.
+ * \param metadataRequest Meta data request.
+ * \param dataReply Data reply.
+ */
 void ConfigurationConnector::sendReply(const messagebus::MetaData& metadataRequest, bool status, const messagebus::UserData& dataReply) {
     messagebus::Message reply;
 
@@ -185,11 +230,16 @@ void ConfigurationConnector::sendReply(const messagebus::MetaData& metadataReque
     m_msgBus->sendReply("ETN.R.IPMCORE.NUTCONFIGURATION", reply);
 }
 
+/**
+ * \brief Publish message.
+ * \param asset_name asset name.
+ * \param subject Subject of message.
+ */
 void ConfigurationConnector::publish(std::string asset_name, std::string subject) {
     messagebus::Message message;
     message.userData().push_back(asset_name);
     message.metaData().clear();
-    message.metaData().emplace(messagebus::Message::FROM, "fty-nut-configuration-publisher");
+    message.metaData().emplace(messagebus::Message::FROM, m_parameters.publisherName);
     message.metaData().emplace(messagebus::Message::SUBJECT, subject);
     m_msgBusPublisher->publish("ETN.Q.IPMCORE.NUTDRIVERSCONFIGURATION", message);
 }

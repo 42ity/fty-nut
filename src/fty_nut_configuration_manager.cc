@@ -45,11 +45,15 @@ namespace nut
 
 ConfigurationManager::ConfigurationManager(const std::string& dbConn) : m_poolScanners(20), m_dbConn(dbConn)
 {
-    // FIXME
-    //m_manage_drivers_thread = std::thread(&ConfigurationManager::manageDrivers, this);
 }
 
-std::string ConfigurationManager::serialize_config(std::string name, nutcommon::DeviceConfiguration& config) {
+/**
+ * \brief Serialize configuration into string.
+ * \param name Asset name to process (optional).
+ * \param config Config to process.
+ */
+std::string ConfigurationManager::serialize_config(std::string name, nutcommon::DeviceConfiguration& config)
+{
     std::stringstream ss;
     //ss << config << std::endl;
     if (!name.empty()) ss << "[" << name << "]" << "\n";
@@ -259,11 +263,19 @@ bool ConfigurationManager::applyAssetConfiguration(fty_proto_t* asset)
                     m_deviceConfigurationMap.erase(itr);
                 }
                 m_deviceConfigurationMap.insert(std::make_pair(assetName, configs));
-                m_manage_drivers_mutex.unlock();
 
-                /*m_start_drivers_mutex.lock();
-                m_start_drivers.insert(assetName);
-                m_start_drivers_mutex.unlock();*/
+                std::set<secw::Id> secwDocumentIdList;
+                for (auto configuration : candidateDatabaseConfigurations) {
+                    for (auto secwDocumentId : configuration.secwDocumentIdList) {
+                        secwDocumentIdList.insert(secwDocumentId);
+                    }
+                }
+                auto itr_cred_map = m_deviceCredentialsMap.find(assetName);
+                if (itr_cred_map != m_deviceCredentialsMap.end()) {
+                    m_deviceCredentialsMap.erase(itr_cred_map);
+                }
+                m_deviceCredentialsMap.insert(std::make_pair(assetName, secwDocumentIdList));
+                m_manage_drivers_mutex.unlock();
 
                 // Save the first configuration into config file
                 log_trace("\nSave config:\n%s", serialize_config("", configs.at(0)).c_str());
@@ -349,15 +361,6 @@ bool ConfigurationManager::updateAssetConfiguration(fty_proto_t* asset)
             log_info("applyAssetConfiguration: [%s] need update", assetName.c_str());
 
             if (status == "active") {
-                // FIXME: Be done in applyAssetConfiguration
-                /*m_manage_drivers_mutex.lock();
-                auto itr = m_deviceConfigurationMap.find(assetName);
-                if (itr != m_deviceConfigurationMap.end()) {
-                    m_deviceConfigurationMap.erase(itr);
-                }
-                m_deviceConfigurationMap.insert(std::make_pair(assetName, configs_asset_new));
-                m_manage_drivers_mutex.unlock();*/
-
                 this->scanAssetConfigurations(asset);
                 this->automaticAssetConfigurationPrioritySort(asset);
                 return this->applyAssetConfiguration(asset);
@@ -389,15 +392,11 @@ bool ConfigurationManager::removeAssetConfiguration(fty_proto_t* asset)
         if (itr != m_deviceConfigurationMap.end()) {
             m_deviceConfigurationMap.erase(itr);
         }
+        auto itr_cred_map = m_deviceCredentialsMap.find(assetName);
+        if (itr_cred_map != m_deviceCredentialsMap.end()) {
+            m_deviceCredentialsMap.erase(itr_cred_map);
+        }
         m_manage_drivers_mutex.unlock();
-
-        /*m_stop_drivers_mutex.lock();
-        m_stop_drivers.insert(assetName);
-        m_stop_drivers_mutex.unlock();*/
-
-        // FIXME: Not needed, it was already done by the asset agent
-        // Remove config in database
-        //remove_all_config(conn, assetName);
 
         // Remove config file
         this->removeDeviceConfigurationFile(assetName);
@@ -405,6 +404,32 @@ bool ConfigurationManager::removeAssetConfiguration(fty_proto_t* asset)
     }
     catch (std::runtime_error &e) {
         log_error("removeAssetConfiguration: failed to remove config for '%s': %s", assetName.c_str(), e.what());
+    }
+}
+
+/**
+ * \brief Manage credentials change into configuration.
+ * \param secw_document_id Secured document id.
+ */
+void ConfigurationManager::manageCredentialsConfiguration(std::string secw_document_id) {
+    // Found all assets which depend of the input secured document id
+    m_manage_drivers_mutex.lock();
+    std::set<std::string> asset_list;
+    for (auto it = m_deviceCredentialsMap.begin(); it != m_deviceCredentialsMap.end(); ++it) {
+        if (it->second.find(secw::Id(secw_document_id)) != it->second.end()) {
+            asset_list.insert(it->first);
+            log_info("manageCredentialsConfiguration: find '%s' document in the asset '%s'", secw_document_id.c_str(), it->first.c_str());
+        }
+    }
+    m_manage_drivers_mutex.unlock();
+
+    // Rescan all assets which depends of the input secured document id
+    for (auto asset_name : asset_list) {
+        log_info("manageCredentialsConfiguration: rescan '%s'", asset_name.c_str());
+        fty_proto_t *asset = fetchProtoFromAssetName(asset_name);
+        this->scanAssetConfigurations(asset);
+        this->automaticAssetConfigurationPrioritySort(asset);
+        this->applyAssetConfiguration(asset);
     }
 }
 
