@@ -45,7 +45,7 @@ namespace nut
 
 ConfigurationManager::ConfigurationManager(const std::string& dbConn) : m_poolScanners(20), m_dbConn(dbConn)
 {
-    // FIXME 
+    // FIXME
     //m_manage_drivers_thread = std::thread(&ConfigurationManager::manageDrivers, this);
 }
 
@@ -405,81 +405,6 @@ bool ConfigurationManager::removeAssetConfiguration(fty_proto_t* asset)
     }
     catch (std::runtime_error &e) {
         log_error("removeAssetConfiguration: failed to remove config for '%s': %s", assetName.c_str(), e.what());
-    }
-}
-
-void ConfigurationManager::manageDrivers()
-{
-    while(1) {
-        std::this_thread::sleep_for(std::chrono::seconds(5));
-        //std::unique_lock<std::mutex> lock(m_manage_drivers_mutex);
-        if (!m_stop_drivers.empty() || !m_start_drivers.empty()) {
-            if (!m_stop_drivers.empty()) {
-                m_stop_drivers_mutex.lock();
-                systemctl("disable", m_stop_drivers.begin(), m_stop_drivers.end());
-                systemctl("stop", m_stop_drivers.begin(), m_stop_drivers.end());
-                m_stop_drivers.clear();
-                m_stop_drivers_mutex.unlock();
-            }
-
-            updateNUTConfig();
-
-            if (!m_start_drivers.empty()) {
-                m_start_drivers_mutex.lock();
-                systemctl("restart", m_start_drivers.begin(), m_start_drivers.end());
-                systemctl("enable",  m_start_drivers.begin(), m_start_drivers.end());
-                m_start_drivers.clear();
-                m_start_drivers_mutex.unlock();
-            }
-            systemctl("reload-or-restart", "nut-server");
-        }
-    }
-}
-
-void ConfigurationManager::systemctl(const std::string &operation, const std::string &service)
-{
-    systemctl(operation, &service, &service + 1);
-}
-
-template<typename It>
-void ConfigurationManager::systemctl(const std::string &operation, It first, It last)
-{
-    if (first == last)
-        return;
-    std::vector<std::string> _argv = {"sudo", "systemctl", operation };
-    _argv.insert(_argv.end(), first, last);
-    MlmSubprocess::SubProcess systemd(_argv);
-    if( systemd.run() ) {
-        int result = systemd.wait();
-        log_info("sudo systemctl %s result %i (%s) for following units",
-                 operation.c_str(),
-                 result,
-                 (result == 0 ? "ok" : "failed"));
-        for (It it = first; it != last; ++it)
-            log_info(" - %s", it->c_str());
-    } else {
-        log_error("can't run sudo systemctl %s for following units",
-                  operation.c_str());
-        for (It it = first; it != last; ++it)
-            log_error(" - %s", it->c_str());
-    }
-}
-
-void ConfigurationManager::updateNUTConfig()
-{
-    // Run the helper script
-    std::vector<std::string> _argv = { "sudo", "fty-nutconfig" };
-    MlmSubprocess::SubProcess systemd( _argv );
-    if( systemd.run() ) {
-        int result = systemd.wait();
-        if (result == 0) {
-            log_info("Command 'sudo fty-nutconfig' succeeded.");
-        }
-        else {
-            log_error("Command 'sudo fty-nutconfig' failed with status=%i.", result);
-        }
-    } else {
-        log_error("Can't run command 'sudo fty-nutconfig'.");
     }
 }
 

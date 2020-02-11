@@ -45,22 +45,11 @@ class ConfigurationManager
         void updateDeviceConfigurationFile(const std::string& name, nutcommon::DeviceConfiguration& config);
         void removeDeviceConfigurationFile(const std::string &name);
 
-        void manageDrivers();
-        template<typename It> void systemctl(const std::string &operation, It first, It last);
-        void systemctl(const std::string &operation, const std::string &service);
-        void updateNUTConfig();
-
     private:
         messagebus::PoolWorker m_poolScanners;
         std::string m_dbConn;
         std::map<std::string, nutcommon::DeviceConfigurations> m_deviceConfigurationMap;
-        std::set<std::string> m_start_drivers;
-        std::set<std::string> m_stop_drivers;
-        std::mutex m_start_drivers_mutex;
-        std::mutex m_stop_drivers_mutex;
         std::mutex m_manage_drivers_mutex;
-        // FIXME
-        //std::thread m_manage_drivers_thread;
 };
 
 }

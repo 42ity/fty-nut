@@ -48,7 +48,6 @@ class ConfigurationDriversManager
         std::set<std::string> m_stop_drivers;
         std::mutex m_start_drivers_mutex;
         std::mutex m_stop_drivers_mutex;
-        std::mutex m_manage_drivers_mutex;
         std::thread m_manage_drivers_thread;
 };
 
