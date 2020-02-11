@@ -97,9 +97,9 @@ void ConfigurationConnector::handleNotificationAssets(messagebus::Message msg) {
         }
 
         for(const auto& data : msg.userData()) {
-            zmsg_t* msg = zmsg_new();
-            zmsg_addmem(msg, data.c_str(), data.length());
-            FtyProto proto(fty_proto_decode(&msg), [](fty_proto_t *p) -> void { fty_proto_destroy(&p); });
+            zmsg_t* zmsg = zmsg_new();
+            zmsg_addmem(zmsg, data.c_str(), data.length());
+            FtyProto proto(fty_proto_decode(&zmsg), [](fty_proto_t *p) -> void { fty_proto_destroy(&p); });
             // FIXME: To restore when lib messagebus updated
             //FtyProto proto(messagebus::decodeFtyProto(data), [](fty_proto_t *p) -> void { fty_proto_destroy(&p); });
             if (!proto) {
@@ -120,7 +120,7 @@ void ConfigurationConnector::handleNotificationAssets(messagebus::Message msg) {
             //std::cout << "type=" << type << " subtype=" << subtype << std::endl;
 
             if (type == "device" && (subtype == "ups" || subtype == "pdu" || subtype == "epdu" || subtype == "sts")) {
-                if (operation == FTY_PROTO_ASSET_OP_CREATE) {
+                if (operation == FTY_PROTO_ASSET_OP_CREATE && status == "active") {
 fty_proto_print(proto.get());
                     protect_asset_lock(m_asset_mutex_map, name);
                     m_manager.scanAssetConfigurations(proto.get());

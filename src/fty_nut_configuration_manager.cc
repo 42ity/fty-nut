@@ -285,67 +285,82 @@ void ConfigurationManager::updateAssetConfiguration(fty_proto_t* asset)
     try {
         auto conn = tntdb::connectCached(m_dbConn);
         assetName = fty_proto_name(asset);
+        std::string status = fty_proto_aux_string(asset, "status", "");
 
-        // Get candidate configurations and take the first one
-        const DeviceConfigurationInfos candidateDatabaseConfigurations = get_candidate_config_list(conn, assetName);
-        log_info("applyAssetConfiguration: [%s] config candidate size=%d", assetName.c_str(), candidateDatabaseConfigurations.size());
-        if (candidateDatabaseConfigurations.size() > 0) {
-            const auto credentialsSNMPv1 = nutcommon::getCredentialsSNMPv1();
-            const auto credentialsSNMPv3 = nutcommon::getCredentialsSNMPv3();
-
-            //DeviceConfigurationInfo config = candidateDatabaseConfigurations.at(0);
-            nutcommon::DeviceConfigurations configs_asset_new = instanciateDatabaseConfigurations(
-                candidateDatabaseConfigurations, asset, credentialsSNMPv1, credentialsSNMPv3);
-
-            // FIXME: New message bus lib
-            //FtyProto asset_current(fetchProtoFromAssetName(assetName), [](fty_proto_t *p) -> void { fty_proto_destroy(&p); });
-            //nutcommon::DeviceConfigurations configs_asset_current = instanciateDatabaseConfigurations(
-            //    candidateDatabaseConfigurations, asset_current.get(), credentialsSNMPv1, credentialsSNMPv3);
-
-            bool need_update = false;
-            auto itr = m_deviceConfigurationMap.find(assetName);
-            // Update if no configurations
-            if (itr == m_deviceConfigurationMap.end()) {
-                need_update = true;
+        bool need_update = false;
+        auto itr = m_deviceConfigurationMap.find(assetName);
+        // Update if no configurations
+        if (itr == m_deviceConfigurationMap.end()) {
+            if (status == "active") {
+               need_update = true;
             }
-            // Test if existing configurations have changed
-            else {
+        }
+        else {
+            if (status == "active") {
+                // Test if existing configurations have changed
                 nutcommon::DeviceConfigurations configs_asset_current = itr->second;
 
-                auto it_configs_asset_new = configs_asset_new.begin();
-                auto it_configs_asset_current = configs_asset_current.begin();
-                // for each config FIXME: First one only  ?
-                if (configs_asset_new.size() != configs_asset_current.size()) {
-                    need_update = true;
-                }
-                else {
-                    // For each candidate configuration
-                    while (it_configs_asset_new != configs_asset_new.end() && it_configs_asset_current != configs_asset_current.end()) {
-                        if (*it_configs_asset_new != *it_configs_asset_current) {
-                            need_update = true;
-                            log_trace("\nNew config:\n%s", serialize_config("", *it_configs_asset_new).c_str());
-                            log_trace("\nCurrent config:\n%s", serialize_config("", *it_configs_asset_current).c_str());
-                            break;
+                // Get candidate configurations and take the first one
+                const DeviceConfigurationInfos candidateDatabaseConfigurations = get_candidate_config_list(conn, assetName);
+                log_info("applyAssetConfiguration: [%s] config candidate size=%d", assetName.c_str(), candidateDatabaseConfigurations.size());
+                if (candidateDatabaseConfigurations.size() > 0) {
+                    const auto credentialsSNMPv1 = nutcommon::getCredentialsSNMPv1();
+                    const auto credentialsSNMPv3 = nutcommon::getCredentialsSNMPv3();
+
+                    //DeviceConfigurationInfo config = candidateDatabaseConfigurations.at(0);
+                    nutcommon::DeviceConfigurations configs_asset_new = instanciateDatabaseConfigurations(
+                        candidateDatabaseConfigurations, asset, credentialsSNMPv1, credentialsSNMPv3);
+
+                    // FIXME: New message bus lib
+                    //FtyProto asset_current(fetchProtoFromAssetName(assetName), [](fty_proto_t *p) -> void { fty_proto_destroy(&p); });
+                    //nutcommon::DeviceConfigurations configs_asset_current = instanciateDatabaseConfigurations(
+                    //    candidateDatabaseConfigurations, asset_current.get(), credentialsSNMPv1, credentialsSNMPv3);
+
+                    auto it_configs_asset_new = configs_asset_new.begin();
+                    auto it_configs_asset_current = configs_asset_current.begin();
+                    // for each config FIXME: First one only  ?
+                    if (configs_asset_new.size() != configs_asset_current.size()) {
+                        need_update = true;
+                    }
+                    else {
+                        // For each candidate configuration
+                        while (it_configs_asset_new != configs_asset_new.end() && it_configs_asset_current != configs_asset_current.end()) {
+                            if (*it_configs_asset_new != *it_configs_asset_current) {
+                                need_update = true;
+                                log_trace("\nNew config:\n%s", serialize_config("", *it_configs_asset_new).c_str());
+                                log_trace("\nCurrent config:\n%s", serialize_config("", *it_configs_asset_current).c_str());
+                                break;
+                            }
+                            it_configs_asset_new ++;
+                            it_configs_asset_current ++;
                         }
-                        it_configs_asset_new ++;
-                        it_configs_asset_current ++;
                     }
                 }
             }
-            // Apply asset modification only if necessary (rescan is made in this case)
-            if (need_update) {
-                log_info("applyAssetConfiguration: [%s] need update", assetName.c_str());
-                m_manage_drivers_mutex.lock();
+            else if (status == "nonactive") {
+                need_update = true;
+            }
+        }
+        // Apply asset modification only if necessary (rescan is made in this case)
+        if (need_update) {
+            log_info("applyAssetConfiguration: [%s] need update", assetName.c_str());
+
+            if (status == "active") {
+                // FIXME: Be done in applyAssetConfiguration
+                /*m_manage_drivers_mutex.lock();
                 auto itr = m_deviceConfigurationMap.find(assetName);
                 if (itr != m_deviceConfigurationMap.end()) {
                     m_deviceConfigurationMap.erase(itr);
                 }
                 m_deviceConfigurationMap.insert(std::make_pair(assetName, configs_asset_new));
-                m_manage_drivers_mutex.unlock();
+                m_manage_drivers_mutex.unlock();*/
 
                 this->scanAssetConfigurations(asset);
                 this->automaticAssetConfigurationPrioritySort(asset);
                 this->applyAssetConfiguration(asset);
+            }
+            else if (status == "nonactive") {
+                this->removeAssetConfiguration(asset);
             }
         }
     }
