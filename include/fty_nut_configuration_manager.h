@@ -39,13 +39,15 @@ class ConfigurationManager
         static std::string serialize_config(std::string name, nutcommon::DeviceConfiguration& config);
         void automaticAssetConfigurationPrioritySort(fty_proto_t* asset);
         void scanAssetConfigurations(fty_proto_t* asset);
+
         bool applyAssetConfiguration(fty_proto_t* asset);
+        bool isConfigurationChange(fty_proto_t* asset, nutcommon::DeviceConfigurations& configs_asset_current);
         bool updateAssetConfiguration(fty_proto_t* asset);
         bool removeAssetConfiguration(fty_proto_t* asset);
+        void manageCredentialsConfiguration(std::string secw_document_id);
+
         void updateDeviceConfigurationFile(const std::string& name, nutcommon::DeviceConfiguration& config);
         void removeDeviceConfigurationFile(const std::string &name);
-
-        void manageCredentialsConfiguration(std::string secw_document_id);
 
     private:
         messagebus::PoolWorker m_poolScanners;
