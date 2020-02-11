@@ -62,6 +62,8 @@ all_tests [] = {
     { "fty_nut_configuration_helper", fty_nut_configuration_helper_test, true, true, NULL },
     { "fty_nut_configuration_manager", fty_nut_configuration_manager_test, true, true, NULL },
     { "fty_nut_configuration_connector", fty_nut_configuration_connector_test, true, true, NULL },
+    { "fty_nut_drivers_manager", fty_nut_drivers_manager_test, true, true, NULL },
+    { "fty_nut_drivers_connector", fty_nut_drivers_connector_test, true, true, NULL },
     { "fty_nut_configuration_server", fty_nut_configuration_server_test, true, true, NULL },
     { "alert_actor", alert_actor_test, true, true, NULL },
     { "sensor_actor", sensor_actor_test, true, true, NULL },

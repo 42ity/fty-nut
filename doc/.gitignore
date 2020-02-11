@@ -23,6 +23,10 @@ fty_nut_configuration_manager.txt
 fty_nut_configuration_manager.doc
 fty_nut_configuration_connector.txt
 fty_nut_configuration_connector.doc
+fty_nut_drivers_manager.txt
+fty_nut_drivers_manager.doc
+fty_nut_drivers_connector.txt
+fty_nut_drivers_connector.doc
 fty_nut_configuration_server.txt
 fty_nut_configuration_server.doc
 alert_actor.txt

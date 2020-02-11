@@ -45,7 +45,8 @@ namespace nut
 
 ConfigurationManager::ConfigurationManager(const std::string& dbConn) : m_poolScanners(20), m_dbConn(dbConn)
 {
-    m_manage_drivers_thread = std::thread(&ConfigurationManager::manageDrivers, this);
+    // FIXME 
+    //m_manage_drivers_thread = std::thread(&ConfigurationManager::manageDrivers, this);
 }
 
 std::string ConfigurationManager::serialize_config(std::string name, nutcommon::DeviceConfiguration& config) {
@@ -230,7 +231,7 @@ void ConfigurationManager::removeDeviceConfigurationFile(const std::string &name
  * \brief Apply asset configuration.
  * \param asset Asset to process.
  */
-void ConfigurationManager::applyAssetConfiguration(fty_proto_t* asset)
+bool ConfigurationManager::applyAssetConfiguration(fty_proto_t* asset)
 {
     std::string assetName;
     try {
@@ -260,26 +261,28 @@ void ConfigurationManager::applyAssetConfiguration(fty_proto_t* asset)
                 m_deviceConfigurationMap.insert(std::make_pair(assetName, configs));
                 m_manage_drivers_mutex.unlock();
 
-                m_start_drivers_mutex.lock();
+                /*m_start_drivers_mutex.lock();
                 m_start_drivers.insert(assetName);
-                m_start_drivers_mutex.unlock();
+                m_start_drivers_mutex.unlock();*/
 
                 // Save the first configuration into config file
                 log_trace("\nSave config:\n%s", serialize_config("", configs.at(0)).c_str());
                 this->updateDeviceConfigurationFile(assetName, configs.at(0));
+                return true;
             }
         }
     }
     catch (std::runtime_error &e) {
         log_error("applyAssetConfiguration: failed to apply config for '%s': %s", assetName.c_str(), e.what());
     }
+    return false;
 }
 
 /**
  * \brief Update asset configuration
  * \param asset Asset to process.
  */
-void ConfigurationManager::updateAssetConfiguration(fty_proto_t* asset)
+bool ConfigurationManager::updateAssetConfiguration(fty_proto_t* asset)
 {
     std::string assetName;
     try {
@@ -357,23 +360,24 @@ void ConfigurationManager::updateAssetConfiguration(fty_proto_t* asset)
 
                 this->scanAssetConfigurations(asset);
                 this->automaticAssetConfigurationPrioritySort(asset);
-                this->applyAssetConfiguration(asset);
+                return this->applyAssetConfiguration(asset);
             }
             else if (status == "nonactive") {
-                this->removeAssetConfiguration(asset);
+                return this->removeAssetConfiguration(asset);
             }
         }
     }
     catch (std::runtime_error &e) {
         log_error("updateAssetConfiguration: failed to update config for '%s': %s", assetName.c_str(), e.what());
     }
+    return false;
 }
 
 /**
  * \brief Remove asset configuration
  * \param asset Asset to process.
  */
-void ConfigurationManager::removeAssetConfiguration(fty_proto_t* asset)
+bool ConfigurationManager::removeAssetConfiguration(fty_proto_t* asset)
 {
     std::string assetName;
     try {
@@ -387,9 +391,9 @@ void ConfigurationManager::removeAssetConfiguration(fty_proto_t* asset)
         }
         m_manage_drivers_mutex.unlock();
 
-        m_stop_drivers_mutex.lock();
+        /*m_stop_drivers_mutex.lock();
         m_stop_drivers.insert(assetName);
-        m_stop_drivers_mutex.unlock();
+        m_stop_drivers_mutex.unlock();*/
 
         // FIXME: Not needed, it was already done by the asset agent
         // Remove config in database
@@ -397,6 +401,7 @@ void ConfigurationManager::removeAssetConfiguration(fty_proto_t* asset)
 
         // Remove config file
         this->removeDeviceConfigurationFile(assetName);
+        return true;
     }
     catch (std::runtime_error &e) {
         log_error("removeAssetConfiguration: failed to remove config for '%s': %s", assetName.c_str(), e.what());

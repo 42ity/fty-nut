@@ -54,12 +54,15 @@ ConfigurationConnector::ConfigurationConnector(ConfigurationConnector::Parameter
     m_dispatcher({
     }),
     m_worker(10),
-    m_msgBus(messagebus::MlmMessageBus(params.endpoint, params.agentName))
+    m_msgBus(messagebus::MlmMessageBus(params.endpoint, params.agentName)),
+    m_msgBusPublisher(messagebus::MlmMessageBus(params.endpoint, "fty-nut-configuration-publisher"))
 {
     m_msgBus->connect();
     m_msgBus->receive("ETN.Q.IPMCORE.NUTCONFIGURATION", std::bind(&ConfigurationConnector::handleRequest, this, std::placeholders::_1));
     m_msgBus->subscribe(FTY_PROTO_STREAM_ASSETS, std::bind(&ConfigurationConnector::handleNotificationAssets, this, std::placeholders::_1));
     m_msgBus->subscribe("_SECW_NOTIFICATIONS", std::bind(&ConfigurationConnector::handleNotificationSecurityWallet, this, std::placeholders::_1));
+
+    m_msgBusPublisher->connect();
 }
 
 void ConfigurationConnector::handleRequest(messagebus::Message msg) {
@@ -125,20 +128,31 @@ fty_proto_print(proto.get());
                     protect_asset_lock(m_asset_mutex_map, name);
                     m_manager.scanAssetConfigurations(proto.get());
                     m_manager.automaticAssetConfigurationPrioritySort(proto.get());
-                    m_manager.applyAssetConfiguration(proto.get());
+                    if (m_manager.applyAssetConfiguration(proto.get())) {
+                        publish(name, "addConfig");
+                    }
                     protect_asset_unlock(m_asset_mutex_map, name);
                 }
                 else if (operation == FTY_PROTO_ASSET_OP_UPDATE) {
 fty_proto_print(proto.get());
                     protect_asset_lock(m_asset_mutex_map, name);
-                    m_manager.updateAssetConfiguration(proto.get());
+                    if (m_manager.updateAssetConfiguration(proto.get())) {
+                        if (status == "active") {
+                            publish(name, "addConfig");
+                        }
+                        else if (status == "nonactive") {
+                            publish(name, "removeConfig");
+                        }
+                    }
                     protect_asset_unlock(m_asset_mutex_map, name);
                 }
                 else if (operation == FTY_PROTO_ASSET_OP_DELETE) {
 
 fty_proto_print(proto.get());
                     protect_asset_lock(m_asset_mutex_map, name);
-                    m_manager.removeAssetConfiguration(proto.get());
+                    if (m_manager.removeAssetConfiguration(proto.get())) {
+                        publish(name, "removeConfig");
+                    }
                     protect_asset_unlock(m_asset_mutex_map, name);
                     protect_asset_remove(m_asset_mutex_map, name);
                 }
@@ -169,6 +183,15 @@ void ConfigurationConnector::sendReply(const messagebus::MetaData& metadataReque
     reply.userData() = dataReply;
 
     m_msgBus->sendReply("ETN.R.IPMCORE.NUTCONFIGURATION", reply);
+}
+
+void ConfigurationConnector::publish(std::string asset_name, std::string subject) {
+    messagebus::Message message;
+    message.userData().push_back(asset_name);
+    message.metaData().clear();
+    message.metaData().emplace(messagebus::Message::FROM, "fty-nut-configuration-publisher");
+    message.metaData().emplace(messagebus::Message::SUBJECT, subject);
+    m_msgBusPublisher->publish("ETN.Q.IPMCORE.NUTDRIVERSCONFIGURATION", message);
 }
 
 }

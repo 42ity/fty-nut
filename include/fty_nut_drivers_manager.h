@@ -1,5 +1,5 @@
 /*  =========================================================================
-    fty_nut_configuration_manager - fty nut configuration manager
+    fty_nut_drivers_manager - fty nut drivers manager
 
     Copyright (C) 2014 - 2018 Eaton
 
@@ -19,8 +19,8 @@
     =========================================================================
 */
 
-#ifndef FTY_NUT_CONFIGURATION_MANAGER_H_INCLUDED
-#define FTY_NUT_CONFIGURATION_MANAGER_H_INCLUDED
+#ifndef FTY_NUT_DRIVERS_MANAGER_H_INCLUDED
+#define FTY_NUT_DRIVERS_MANAGER_H_INCLUDED
 
 #include "fty_nut_library.h"
 
@@ -29,38 +29,27 @@ namespace fty
 namespace nut
 {
 
-class ConfigurationManager
+class ConfigurationDriversManager
 {
     public:
 
-        ConfigurationManager(const std::string& dbConn);
-        ~ConfigurationManager() = default;
-
-        static std::string serialize_config(std::string name, nutcommon::DeviceConfiguration& config);
-        void automaticAssetConfigurationPrioritySort(fty_proto_t* asset);
-        void scanAssetConfigurations(fty_proto_t* asset);
-        bool applyAssetConfiguration(fty_proto_t* asset);
-        bool updateAssetConfiguration(fty_proto_t* asset);
-        bool removeAssetConfiguration(fty_proto_t* asset);
-        void updateDeviceConfigurationFile(const std::string& name, nutcommon::DeviceConfiguration& config);
-        void removeDeviceConfigurationFile(const std::string &name);
+        ConfigurationDriversManager();
+        ~ConfigurationDriversManager() = default;
 
         void manageDrivers();
         template<typename It> void systemctl(const std::string &operation, It first, It last);
         void systemctl(const std::string &operation, const std::string &service);
         void updateNUTConfig();
+        void addConfigDriver(std::string asset_name);
+        void removeConfigDriver(std::string asset_name);
 
     private:
-        messagebus::PoolWorker m_poolScanners;
-        std::string m_dbConn;
-        std::map<std::string, nutcommon::DeviceConfigurations> m_deviceConfigurationMap;
         std::set<std::string> m_start_drivers;
         std::set<std::string> m_stop_drivers;
         std::mutex m_start_drivers_mutex;
         std::mutex m_stop_drivers_mutex;
         std::mutex m_manage_drivers_mutex;
-        // FIXME
-        //std::thread m_manage_drivers_thread;
+        std::thread m_manage_drivers_thread;
 };
 
 }
@@ -71,7 +60,7 @@ extern "C" {
 #endif
 
 //  Self test of this class
-FTY_NUT_EXPORT void fty_nut_configuration_manager_test (bool verbose);
+FTY_NUT_EXPORT void fty_nut_drivers_manager_test (bool verbose);
 
 #ifdef __cplusplus
 }

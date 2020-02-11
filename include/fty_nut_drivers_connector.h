@@ -1,7 +1,7 @@
 /*  =========================================================================
-    fty_nut_configuration_connector - fty nut configuration connector
+    fty_nut_drivers_connector - fty nut drivers connector
 
-    Copyright (C) 2014 - 2018 Eaton
+    Copyright (C) 2014 - 2020 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,18 +19,18 @@
     =========================================================================
 */
 
-#ifndef FTY_NUT_CONFIGURATION_CONNECTOR_H_INCLUDED
-#define FTY_NUT_CONFIGURATION_CONNECTOR_H_INCLUDED
+#ifndef FTY_NUT_DRIVERS_CONNECTOR_H_INCLUDED
+#define FTY_NUT_DRIVERS_CONNECTOR_H_INCLUDED
 
 #include "fty_nut_library.h"
-#include "fty_nut_configuration_manager.h"
+#include "fty_nut_drivers_manager.h"
 
 namespace fty
 {
 namespace nut
 {
 
-class ConfigurationConnector
+class ConfigurationDriversConnector
 {
     public:
         struct Parameters {
@@ -38,28 +38,21 @@ class ConfigurationConnector
 
             std::string endpoint;
             std::string agentName;
-
-            std::string dbUrl;
         };
 
-        ConfigurationConnector(Parameters params);
-        ~ConfigurationConnector() = default;
+        ConfigurationDriversConnector(Parameters params);
+        ~ConfigurationDriversConnector() = default;
 
     private:
-        void handleRequest(messagebus::Message msg);
-        void handleNotificationAssets(messagebus::Message msg);
-        void handleNotificationSecurityWallet(messagebus::Message msg);
-        void sendReply(const messagebus::MetaData& metadataRequest, bool status, const messagebus::UserData& dataReply);
-        void publish(std::string asset_name, std::string subject);
+        void handleMessage(messagebus::Message msg);
+        void addConfig(messagebus::UserData data);
+        void removeConfig(messagebus::UserData data);
 
         Parameters m_parameters;
-        ConfigurationManager m_manager;
-        messagebus::Dispatcher<std::string, std::function<messagebus::UserData(messagebus::UserData)>, std::function<messagebus::UserData(const std::string&, messagebus::UserData)>> m_dispatcher;
+        ConfigurationDriversManager m_drivers_manager;
+        messagebus::Dispatcher<std::string, std::function<void(messagebus::UserData)>, std::function<void(const std::string&, messagebus::UserData)>> m_dispatcher;
         messagebus::PoolWorker m_worker;
         std::unique_ptr<messagebus::MessageBus> m_msgBus;
-        std::unique_ptr<messagebus::MessageBus> m_msgBusPublisher;
-        t_asset_mutex_map m_asset_mutex_map;
-
 };
 
 }
@@ -70,7 +63,7 @@ extern "C" {
 #endif
 
 //  Self test of this class
-FTY_NUT_EXPORT void fty_nut_configuration_connector_test (bool verbose);
+FTY_NUT_EXPORT void fty_nut_drivers_connector_test (bool verbose);
 
 #ifdef __cplusplus
 }

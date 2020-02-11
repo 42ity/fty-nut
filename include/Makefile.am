@@ -10,6 +10,8 @@ include_HEADERS = \
     fty_nut_configuration_helper.h \
     fty_nut_configuration_manager.h \
     fty_nut_configuration_connector.h \
+    fty_nut_drivers_manager.h \
+    fty_nut_drivers_connector.h \
     fty_nut_configuration_server.h \
     alert_actor.h \
     sensor_actor.h \

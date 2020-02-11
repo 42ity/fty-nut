@@ -59,6 +59,7 @@ int main (int argc, char *argv [])
 
     // Create default configuration
     fty::nut::ConfigurationConnector::Parameters configurationParameters;
+    fty::nut::ConfigurationDriversConnector::Parameters driversParameters;
     std::string logConfig = "/etc/fty/ftylog.cfg";
     std::string logVerbose = "false";
     std::string configFile;
@@ -123,6 +124,7 @@ int main (int argc, char *argv [])
 
     // Launch workers.
     fty::nut::ConfigurationConnector nutConfigurationConnector(configurationParameters);
+    fty::nut::ConfigurationDriversConnector nutDriversConnector(driversParameters);
 
     // Wait until interrupt.
     setSignalHandler();
