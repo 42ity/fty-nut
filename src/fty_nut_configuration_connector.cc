@@ -140,7 +140,7 @@ void ConfigurationConnector::handleRequestAssets(messagebus::Message msg) {
             m_msg_bus_publisher->sendRequest("asset-agent", message);
         }
         catch (std::exception& e) {
-            log_error("Exception while processing message (%s): %s", e.what());
+            log_error("Exception while processing message: %s", e.what());
         }
     }, std::move(msg));
 }
@@ -184,7 +184,7 @@ void ConfigurationConnector::handleRequestAssetDetail(messagebus::Message msg) {
             }
         }
         catch (std::exception& e) {
-            log_error("Exception while processing message (%s): %s", e.what());
+            log_error("Exception while processing message: %s", e.what());
         }
     }, std::move(msg));
 }
