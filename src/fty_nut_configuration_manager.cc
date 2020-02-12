@@ -367,6 +367,7 @@ bool ConfigurationManager::removeAssetConfiguration(fty_proto_t* asset)
     catch (std::runtime_error &e) {
         log_error("removeAssetConfiguration: failed to remove config for '%s': %s", assetName.c_str(), e.what());
     }
+    return false;
 }
 
 /**

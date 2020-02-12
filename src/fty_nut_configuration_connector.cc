@@ -56,18 +56,17 @@ ConfigurationConnector::Parameters::Parameters() :
 ConfigurationConnector::ConfigurationConnector(ConfigurationConnector::Parameters params) :
     m_parameters(params),
     m_manager(params.dbUrl),
-    m_dispatcher({
-    }),
     m_worker(10),
-    m_msgBus(messagebus::MlmMessageBus(params.endpoint, params.agentName)),
-    m_msgBusPublisher(messagebus::MlmMessageBus(params.endpoint, params.publisherName)),
+    m_msg_bus(messagebus::MlmMessageBus(params.endpoint, params.agentName)),
+    m_msg_bus_publisher(messagebus::MlmMessageBus(params.endpoint, params.publisherName)),
     m_sync_client("fty-nut-configuration.socket")
 {
-    m_msgBus->connect();
-    m_msgBus->receive("ETN.Q.IPMCORE.NUTCONFIGURATION", std::bind(&ConfigurationConnector::handleRequest, this, std::placeholders::_1));
-    m_msgBus->subscribe(FTY_PROTO_STREAM_ASSETS, std::bind(&ConfigurationConnector::handleNotificationAssets, this, std::placeholders::_1));
+    m_msg_bus->connect();
+    m_msg_bus->subscribe(FTY_PROTO_STREAM_ASSETS, std::bind(&ConfigurationConnector::handleNotificationAssets, this, std::placeholders::_1));
 
-    m_msgBusPublisher->connect();
+    m_msg_bus_publisher->connect();
+    m_msg_bus_publisher->receive("ASSETS", std::bind(&ConfigurationConnector::handleRequestAssets, this, std::placeholders::_1));
+    m_msg_bus_publisher->receive(params.publisherName.c_str(), std::bind(&ConfigurationConnector::handleRequestAssetDetail, this, std::placeholders::_1));
 
     m_stream_client = std::unique_ptr<mlm::MlmStreamClient>(new mlm::MlmStreamClient(params.agentName, SECW_NOTIFICATIONS, 1000, params.endpoint));
     m_consumer_accessor = std::unique_ptr<secw::ConsumerAccessor>(new secw::ConsumerAccessor(m_sync_client, *m_stream_client.get()));
@@ -80,33 +79,114 @@ ConfigurationConnector::ConfigurationConnector(ConfigurationConnector::Parameter
 }
 
 /**
- * \brief Handle request message.
+ * \brief Get initial assets.
+ *
+ */
+void ConfigurationConnector::get_initial_assets()
+{
+    // Get list of assets
+    messagebus::Message message;
+    std::string uuid = messagebus::generateUuid();
+    message.userData().push_back("GET");
+    message.userData().push_back(uuid.c_str());
+    message.userData().push_back("ups");
+    message.userData().push_back("epdu");
+    message.userData().push_back("sts");
+    // FIXME: To add ???
+    //message.userData().push_back("sensor");
+    //message.userData().push_back("sensorgpio");
+
+    message.metaData().clear();
+    message.metaData().emplace(messagebus::Message::RAW, "");
+    message.metaData().emplace(messagebus::Message::CORRELATION_ID, uuid);
+    message.metaData().emplace(messagebus::Message::SUBJECT, FTY_PROTO_STREAM_ASSETS);
+    message.metaData().emplace(messagebus::Message::FROM, m_parameters.publisherName);
+    message.metaData().emplace(messagebus::Message::TO, "asset-agent");
+    message.metaData().emplace(messagebus::Message::REPLY_TO, m_parameters.publisherName);
+    m_msg_bus_publisher->sendRequest("asset-agent", message);
+}
+
+/**
+ * \brief Handle request assets message.
  * \param msg Message receive.
  */
-void ConfigurationConnector::handleRequest(messagebus::Message msg) {
-    if ((msg.metaData().count(messagebus::Message::SUBJECT) == 0) ||
-        (msg.metaData().count(messagebus::Message::CORRELATION_ID) == 0) ||
-        (msg.metaData().count(messagebus::Message::REPLY_TO) == 0)) {
-        log_error("Missing subject/correlationID/replyTo in request.");
-    }
-    else {
-        m_worker.offload([this](messagebus::Message msg) {
-            auto subject = msg.metaData()[messagebus::Message::SUBJECT];
-            auto corrId = msg.metaData()[messagebus::Message::CORRELATION_ID];
-            log_info("Received %s (%s) request.", subject.c_str(), corrId.c_str());
+void ConfigurationConnector::handleRequestAssets(messagebus::Message msg) {
+    m_worker.offload([this](messagebus::Message msg) {
+        try {
+            // Extract uuid in message
+            // FIXME: uuid not checked
+            std::string uuid_read = msg.userData().front();
+            msg.userData().pop_front();
+            // Extract result in message
+            std::string result = msg.userData().front();
+            msg.userData().pop_front();
+            // Extract asset name in message
+            std::string asset_name = msg.userData().front();
 
-            try {
-                auto result = m_dispatcher(subject, msg.userData());
+            // Get detail of asset received
+            messagebus::Message message;
+            std::string uuid = messagebus::generateUuid();
+            message.userData().push_back("GET");
+            message.userData().push_back(uuid.c_str());
+            message.userData().push_back(asset_name.c_str());
 
-                log_info("Request %s (%s) performed successfully.", subject.c_str(), corrId.c_str());
-                sendReply(msg.metaData(), true, result);
+            message.metaData().clear();
+            message.metaData().emplace(messagebus::Message::RAW, "");
+            message.metaData().emplace(messagebus::Message::CORRELATION_ID, uuid);
+            message.metaData().emplace(messagebus::Message::SUBJECT, "ASSET_DETAIL");
+            message.metaData().emplace(messagebus::Message::FROM, m_parameters.publisherName);
+            message.metaData().emplace(messagebus::Message::TO, "asset-agent");
+            message.metaData().emplace(messagebus::Message::REPLY_TO, m_parameters.publisherName);
+            m_msg_bus_publisher->sendRequest("asset-agent", message);
+        }
+        catch (std::exception& e) {
+            log_error("Exception while processing message (%s): %s", e.what());
+        }
+    }, std::move(msg));
+}
+
+/**
+ * \brief Handle request asset detail message.
+ * \param msg Message receive.
+ */
+void ConfigurationConnector::handleRequestAssetDetail(messagebus::Message msg) {
+    m_worker.offload([this](messagebus::Message msg) {
+        try {
+            // Extract uuid in message
+            // FIXME: uuid not checked
+            std::string uuid_read = msg.userData().front();
+            msg.userData().pop_front();
+            // Extract data in message
+            std::string data = msg.userData().front();
+            zmsg_t* zmsg = zmsg_new();
+            zmsg_addmem(zmsg, data.c_str(), data.length());
+            if (!is_fty_proto(zmsg)) {
+                log_warning("Response to an ASSET_DETAIL message is not fty_proto");
+                return;
             }
-            catch (std::exception& e) {
-                log_error("Exception while processing %s (%s): %s", subject.c_str(), corrId.c_str(), e.what());
-                sendReply(msg.metaData(), false, { e.what() });
+            FtyProto proto(fty_proto_decode(&zmsg), [](fty_proto_t *p) -> void { fty_proto_destroy(&p); });
+            // FIXME: To restore when lib messagebus updated
+            //FtyProto proto(messagebus::decodeFtyProto(data), [](fty_proto_t *p) -> void { fty_proto_destroy(&p); });
+            if (!proto) {
+                log_error("Failed to decode fty_proto_t on stream " FTY_PROTO_STREAM_ASSETS);
+                return;
             }
-        }, std::move(msg));
-    }
+            std::string name = fty_proto_name(proto.get());
+            std::string operation = fty_proto_operation(proto.get());
+            std::string type = fty_proto_aux_string(proto.get(), "type", "");
+            std::string subtype = fty_proto_aux_string(proto.get(), "subtype", "");
+            std::string status = fty_proto_aux_string(proto.get(), "status", "");
+            log_info("handleNotificationAssets: receive message (operation=%s type=%s subtype=%s status=%s)",
+                operation.c_str(), type.c_str(), subtype.c_str(), status.c_str());
+
+            if (m_manager.applyAssetConfiguration(proto.get())) {
+                publishToDriversConnector(name, "addConfig");
+            }
+        }
+        catch (std::exception& e) {
+            log_error("Exception while processing message (%s): %s", e.what());
+        }
+    }, std::move(msg));
 }
 
 /**
@@ -114,7 +194,6 @@ void ConfigurationConnector::handleRequest(messagebus::Message msg) {
  * \param msg Message receive.
  */
 void ConfigurationConnector::handleNotificationAssets(messagebus::Message msg) {
-
     m_worker.offload([this](messagebus::Message msg) {
 
         for (const auto& pair : msg.metaData()) {
@@ -124,6 +203,10 @@ void ConfigurationConnector::handleNotificationAssets(messagebus::Message msg) {
         for(const auto& data : msg.userData()) {
             zmsg_t* zmsg = zmsg_new();
             zmsg_addmem(zmsg, data.c_str(), data.length());
+            if (!is_fty_proto(zmsg)) {
+                log_warning("Notification asset message is not fty_proto");
+                return;
+            }
             FtyProto proto(fty_proto_decode(&zmsg), [](fty_proto_t *p) -> void { fty_proto_destroy(&p); });
             // FIXME: To restore when lib messagebus updated
             //FtyProto proto(messagebus::decodeFtyProto(data), [](fty_proto_t *p) -> void { fty_proto_destroy(&p); });
@@ -146,7 +229,7 @@ fty_proto_print(proto.get());
                     m_manager.scanAssetConfigurations(proto.get());
                     m_manager.automaticAssetConfigurationPrioritySort(proto.get());
                     if (m_manager.applyAssetConfiguration(proto.get())) {
-                        publish(name, "addConfig");
+                        publishToDriversConnector(name, "addConfig");
                     }
                     protect_asset_unlock(m_asset_mutex_map, name);
                 }
@@ -155,10 +238,10 @@ fty_proto_print(proto.get());
                     protect_asset_lock(m_asset_mutex_map, name);
                     if (m_manager.updateAssetConfiguration(proto.get())) {
                         if (status == "active") {
-                            publish(name, "addConfig");
+                            publishToDriversConnector(name, "addConfig");
                         }
                         else if (status == "nonactive") {
-                            publish(name, "removeConfig");
+                            publishToDriversConnector(name, "removeConfig");
                         }
                     }
                     protect_asset_unlock(m_asset_mutex_map, name);
@@ -167,7 +250,7 @@ fty_proto_print(proto.get());
 fty_proto_print(proto.get());
                     protect_asset_lock(m_asset_mutex_map, name);
                     if (m_manager.removeAssetConfiguration(proto.get())) {
-                        publish(name, "removeConfig");
+                        publishToDriversConnector(name, "removeConfig");
                     }
                     protect_asset_unlock(m_asset_mutex_map, name);
                     protect_asset_remove(m_asset_mutex_map, name);
@@ -212,36 +295,17 @@ void ConfigurationConnector::handleNotificationSecurityWalletCreate(const std::s
 }
 
 /**
- * \brief Send reply to message bus.
- * \param metadataRequest Meta data request.
- * \param dataReply Data reply.
- */
-void ConfigurationConnector::sendReply(const messagebus::MetaData& metadataRequest, bool status, const messagebus::UserData& dataReply) {
-    messagebus::Message reply;
-
-    reply.metaData() = {
-        { messagebus::Message::CORRELATION_ID, metadataRequest.at(messagebus::Message::CORRELATION_ID) },
-        { messagebus::Message::SUBJECT, metadataRequest.at(messagebus::Message::SUBJECT) },
-        { messagebus::Message::STATUS, status ? "ok" : "ko" },
-        { messagebus::Message::TO, metadataRequest.at(messagebus::Message::REPLY_TO) }
-    } ;
-    reply.userData() = dataReply;
-
-    m_msgBus->sendReply("ETN.R.IPMCORE.NUTCONFIGURATION", reply);
-}
-
-/**
- * \brief Publish message.
+ * \brief Publish message to drivers connector.
  * \param asset_name asset name.
  * \param subject Subject of message.
  */
-void ConfigurationConnector::publish(std::string asset_name, std::string subject) {
+void ConfigurationConnector::publishToDriversConnector(std::string asset_name, std::string subject) {
     messagebus::Message message;
     message.userData().push_back(asset_name);
     message.metaData().clear();
     message.metaData().emplace(messagebus::Message::FROM, m_parameters.publisherName);
     message.metaData().emplace(messagebus::Message::SUBJECT, subject);
-    m_msgBusPublisher->publish("ETN.Q.IPMCORE.NUTDRIVERSCONFIGURATION", message);
+    m_msg_bus_publisher->publish("ETN.Q.IPMCORE.NUTDRIVERSCONFIGURATION", message);
 }
 
 }

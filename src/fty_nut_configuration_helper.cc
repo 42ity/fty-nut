@@ -336,7 +336,7 @@ fty::nut::t_asset_mutex_map g_asset_mutex_map_test;
 
 struct t_elemt_test {
     std::string name;
-    int value;
+    uint value;
 };
 
 using MapTest = std::vector<t_elemt_test>;
@@ -353,7 +353,7 @@ void lock_element_test(uint id, uint pause_ms, t_elemt_test &elent_test)
 
 void lock_boucle_element_test(uint id, t_elemt_test &elent_test)
 {
-    int i = 0;
+    uint i = 0;
     std::cout << "#" << id << " :lock_boucle_element_test " << elent_test.name << std::endl;
     while (i++ < g_nb_count_test) {
         fty::nut::protect_asset_lock(g_asset_mutex_map_test, elent_test.name);
@@ -365,7 +365,7 @@ void lock_boucle_element_test(uint id, t_elemt_test &elent_test)
 
 void add_element_test(int id, t_elemt_test &elent_test)
 {
-    int i = 0;
+    uint i = 0;
     while (i++ < 100) {
         //std::cout << "#" << id << " :add_element_test " << elent_test.name << " " << elent_test.value << std::endl;
         fty::nut::protect_asset_lock(g_asset_mutex_map_test, elent_test.name);
@@ -378,10 +378,9 @@ void add_element_test(int id, t_elemt_test &elent_test)
 
 void remove_element_test(int id, t_elemt_test &elent_test)
 {
-    int i = 0;
-    bool res;
+    uint i = 0;
     while (i++ < 100) {
-        res = fty::nut::protect_asset_remove(g_asset_mutex_map_test, elent_test.name);
+        fty::nut::protect_asset_remove(g_asset_mutex_map_test, elent_test.name);
         //std::cout << "#" << id << " :remove_element_test " << elent_test.name << " " << elent_test.value << " res=" << res << std::endl;
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
@@ -417,11 +416,11 @@ fty_nut_configuration_helper_test (bool verbose)
         t_elemt_test element = { "element_1", 0 };
         std::vector<std::thread> thread_add_test;
         std::vector<std::thread> thread_remove_test;
-        for(int nb = 0; nb < nb_thread; nb++) {
+        for(uint nb = 0; nb < nb_thread; nb++) {
             thread_add_test.push_back(std::thread(add_element_test, nb, std::ref(element)));
             std::cout << "Init add " << nb << std::endl;
         }
-        for(int nb = 0; nb < nb_thread; nb++) {
+        for(uint nb = 0; nb < nb_thread; nb++) {
             thread_remove_test.push_back(std::thread(remove_element_test, nb, std::ref(element)));
             std::cout << "Init remove " << nb << std::endl;
         }
@@ -443,7 +442,7 @@ fty_nut_configuration_helper_test (bool verbose)
         map_test.push_back(element_1);
         map_test.push_back(element_2);
         std::vector<std::thread> thread_test;
-        for(int nb = 0; nb < nb_thread; nb++) {
+        for(uint nb = 0; nb < nb_thread; nb++) {
             thread_test.push_back(std::thread(lock_boucle_element_test, nb, std::ref(map_test.at(nb % 2))));
             std::cout << "Init " << nb << std::endl;
         }

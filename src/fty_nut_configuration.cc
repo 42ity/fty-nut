@@ -126,6 +126,8 @@ int main (int argc, char *argv [])
     fty::nut::ConfigurationConnector nutConfigurationConnector(configurationParameters);
     fty::nut::ConfigurationDriversConnector nutDriversConnector(driversParameters);
 
+    nutConfigurationConnector.get_initial_assets();
+
     // Wait until interrupt.
     setSignalHandler();
     std::unique_lock<std::mutex> lock(g_mutex);
