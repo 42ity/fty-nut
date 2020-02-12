@@ -48,7 +48,7 @@ ConfigurationDriversConnector::ConfigurationDriversConnector(ConfigurationDriver
         { "addConfig", std::bind(&ConfigurationDriversConnector::addConfig, this, std::placeholders::_1) },
         { "removeConfig", std::bind(&ConfigurationDriversConnector::removeConfig, this, std::placeholders::_1) }
     }),
-    m_worker(1),
+    m_worker(10),
     m_msgBus(messagebus::MlmMessageBus(params.endpoint, params.agentName))
 {
     m_msgBus->connect();
