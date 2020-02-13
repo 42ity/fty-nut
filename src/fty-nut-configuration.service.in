@@ -13,6 +13,7 @@ Type=simple
 # User=@uid@
 Environment="prefix=@prefix@"
 Environment='SYSTEMD_UNIT_FULLNAME=%n'
+EnvironmentFile=/etc/default/bios-db-rw
 ExecStart=@prefix@/bin/fty-nut-configuration -c @sysconfdir@/@PACKAGE@/fty-nut-configuration.cfg
 Restart=always
 
