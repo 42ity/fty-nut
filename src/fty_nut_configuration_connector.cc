@@ -113,6 +113,8 @@ void ConfigurationConnector::handleRequestAssets(messagebus::Message msg) {
     m_worker.offload([this](messagebus::Message msg) {
         try {
             log_info("handleRequestAssets: Receive message from ASSETS");
+            // First unreceive ASSETS message
+            m_msg_bus_publisher->unreceive("ASSETS", std::bind(&ConfigurationConnector::handleRequestAssets, this, std::placeholders::_1));
             // Extract uuid in message
             // FIXME: uuid not checked
             if (!msg.userData().empty()) {
