@@ -43,40 +43,44 @@ ConfigurationDriversManager::ConfigurationDriversManager()
 
 void ConfigurationDriversManager::addConfigDriver(std::string asset_name)
 {
-    m_start_drivers_mutex.lock();
-    m_start_drivers.insert(asset_name);
-    m_start_drivers_mutex.unlock();
+    std::lock_guard<std::mutex> lk_start_drivers(m_start_drivers_mutex);
+    m_start_drivers.insert("nut-driver@" + asset_name);
 }
 
 void ConfigurationDriversManager::removeConfigDriver(std::string asset_name)
 {
-    m_stop_drivers_mutex.lock();
-    m_stop_drivers.insert(asset_name);
-    m_stop_drivers_mutex.unlock();
+    std::lock_guard<std::mutex> lk_stop_drivers(m_stop_drivers_mutex);
+    m_stop_drivers.insert("nut-driver@" + asset_name);
 }
 
 void ConfigurationDriversManager::manageDrivers()
 {
-    while(1) {
+    //while (!g_exit) {
+    while (1) {
         std::this_thread::sleep_for(std::chrono::seconds(5));
+
+        std::set<std::string> stop_drivers, start_drivers;
+        {
+            std::lock_guard<std::mutex> lk_start_drivers(m_start_drivers_mutex);
+            std::lock_guard<std::mutex> lk_stop_drivers(m_stop_drivers_mutex);
+            stop_drivers = m_stop_drivers;
+            start_drivers = m_start_drivers;
+            m_stop_drivers.clear();
+            m_start_drivers.clear();
+        }
+
         //std::unique_lock<std::mutex> lock(m_manage_drivers_mutex);
-        if (!m_stop_drivers.empty() || !m_start_drivers.empty()) {
-            if (!m_stop_drivers.empty()) {
-                m_stop_drivers_mutex.lock();
-                systemctl("disable", m_stop_drivers.begin(), m_stop_drivers.end());
-                systemctl("stop", m_stop_drivers.begin(), m_stop_drivers.end());
-                m_stop_drivers.clear();
-                m_stop_drivers_mutex.unlock();
+        if (!stop_drivers.empty() || !start_drivers.empty()) {
+            if (!stop_drivers.empty()) {
+                systemctl("disable", stop_drivers.begin(), stop_drivers.end());
+                systemctl("stop", stop_drivers.begin(), stop_drivers.end());
             }
 
             updateNUTConfig();
 
-            if (!m_start_drivers.empty()) {
-                m_start_drivers_mutex.lock();
-                systemctl("restart", m_start_drivers.begin(), m_start_drivers.end());
-                systemctl("enable",  m_start_drivers.begin(), m_start_drivers.end());
-                m_start_drivers.clear();
-                m_start_drivers_mutex.unlock();
+            if (!start_drivers.empty()) {
+                systemctl("restart", start_drivers.begin(), start_drivers.end());
+                systemctl("enable",  start_drivers.begin(), start_drivers.end());
             }
             systemctl("reload-or-restart", "nut-server");
         }
@@ -93,7 +97,7 @@ void ConfigurationDriversManager::systemctl(const std::string &operation, It fir
 {
     if (first == last)
         return;
-    std::vector<std::string> _argv = {"sudo", "systemctl", operation };
+    std::vector<std::string> _argv = { "sudo", "systemctl", operation };
     _argv.insert(_argv.end(), first, last);
     MlmSubprocess::SubProcess systemd(_argv);
     if( systemd.run() ) {
