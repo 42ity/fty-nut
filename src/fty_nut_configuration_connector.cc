@@ -92,9 +92,8 @@ void ConfigurationConnector::get_initial_assets()
     message.userData().push_back("ups");
     message.userData().push_back("epdu");
     message.userData().push_back("sts");
-    // FIXME: To add ???
-    //message.userData().push_back("sensor");
-    //message.userData().push_back("sensorgpio");
+    message.userData().push_back("sensor");
+    message.userData().push_back("sensorgpio");
 
     message.metaData().clear();
     message.metaData().emplace(messagebus::Message::RAW, "");
