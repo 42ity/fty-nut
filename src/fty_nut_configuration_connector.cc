@@ -112,31 +112,56 @@ void ConfigurationConnector::get_initial_assets()
 void ConfigurationConnector::handleRequestAssets(messagebus::Message msg) {
     m_worker.offload([this](messagebus::Message msg) {
         try {
+            log_info("handleRequestAssets: Receive message from ASSETS");
             // Extract uuid in message
             // FIXME: uuid not checked
-            std::string uuid_read = msg.userData().front();
-            msg.userData().pop_front();
+            if (!msg.userData().empty()) {
+                std::string uuid_read = msg.userData().front();
+                if (uuid_read.empty()) {
+                    log_error("handleRequestAssets: uuid empty");
+                    return;
+                }
+                msg.userData().pop_front();
+            }
+            else {
+                log_error("handleRequestAssets: no uuid defined");
+                return;
+            }
             // Extract result in message
-            std::string result = msg.userData().front();
-            msg.userData().pop_front();
-            // Extract asset name in message
-            std::string asset_name = msg.userData().front();
+            if (!msg.userData().empty()) {
+                std::string result = msg.userData().front();
+                if (result.empty() || result != "OK") {
+                    log_error("handleRequestAssets: bad result: '%s'", result.c_str());
+                    return;
+                }
+                msg.userData().pop_front();
+            }
+            else {
+                log_error("handleRequestAssets: no result defined");
+                return;
+            }
+            // For each asset name in message
+            while (!msg.userData().empty()) {
+                // Extract asset name in message
+                std::string asset_name = msg.userData().front();
+                msg.userData().pop_front();
+                // Get detail of asset received
+                messagebus::Message message;
+                std::string uuid = messagebus::generateUuid();
+                message.userData().push_back("GET");
+                message.userData().push_back(uuid.c_str());
+                message.userData().push_back(asset_name.c_str());
 
-            // Get detail of asset received
-            messagebus::Message message;
-            std::string uuid = messagebus::generateUuid();
-            message.userData().push_back("GET");
-            message.userData().push_back(uuid.c_str());
-            message.userData().push_back(asset_name.c_str());
-
-            message.metaData().clear();
-            message.metaData().emplace(messagebus::Message::RAW, "");
-            message.metaData().emplace(messagebus::Message::CORRELATION_ID, uuid);
-            message.metaData().emplace(messagebus::Message::SUBJECT, "ASSET_DETAIL");
-            message.metaData().emplace(messagebus::Message::FROM, m_parameters.publisherName);
-            message.metaData().emplace(messagebus::Message::TO, "asset-agent");
-            message.metaData().emplace(messagebus::Message::REPLY_TO, m_parameters.publisherName);
-            m_msg_bus_publisher->sendRequest("asset-agent", message);
+                message.metaData().clear();
+                message.metaData().emplace(messagebus::Message::RAW, "");
+                message.metaData().emplace(messagebus::Message::CORRELATION_ID, uuid);
+                message.metaData().emplace(messagebus::Message::SUBJECT, "ASSET_DETAIL");
+                message.metaData().emplace(messagebus::Message::FROM, m_parameters.publisherName);
+                message.metaData().emplace(messagebus::Message::TO, "asset-agent");
+                message.metaData().emplace(messagebus::Message::REPLY_TO, m_parameters.publisherName);
+                log_info("handleRequestAssets: Get asset details for %s", asset_name.c_str());
+                m_msg_bus_publisher->sendRequest("asset-agent", message);
+            }
         }
         catch (std::exception& e) {
             log_error("Exception while processing message: %s", e.what());
@@ -151,12 +176,30 @@ void ConfigurationConnector::handleRequestAssets(messagebus::Message msg) {
 void ConfigurationConnector::handleRequestAssetDetail(messagebus::Message msg) {
     m_worker.offload([this](messagebus::Message msg) {
         try {
+            log_info("handleRequestAssetDetail: Receive message from ASSET_DETAIL");
             // Extract uuid in message
             // FIXME: uuid not checked
-            std::string uuid_read = msg.userData().front();
-            msg.userData().pop_front();
+            if (!msg.userData().empty()) {
+                std::string uuid_read = msg.userData().front();
+                if (uuid_read.empty()) {
+                    log_error("handleRequestAssetDetail: uuid empty");
+                    return;
+                }
+                msg.userData().pop_front();
+            }
+            else {
+                log_error("handleRequestAssetDetail: no uuid defined");
+                return;
+            }
             // Extract data in message
-            std::string data = msg.userData().front();
+            std::string data;
+            if (!msg.userData().empty()) {
+                data = msg.userData().front();
+            }
+            else {
+                log_error("handleRequestAssetDetail: no data defined");
+                return;
+            }
             zmsg_t* zmsg = zmsg_new();
             zmsg_addmem(zmsg, data.c_str(), data.length());
             if (!is_fty_proto(zmsg)) {
