@@ -69,7 +69,6 @@ void ConfigurationDriversManager::manageDrivers()
             m_start_drivers.clear();
         }
 
-        //std::unique_lock<std::mutex> lock(m_manage_drivers_mutex);
         if (!stop_drivers.empty() || !start_drivers.empty()) {
             if (!stop_drivers.empty()) {
                 systemctl("disable", stop_drivers.begin(), stop_drivers.end());

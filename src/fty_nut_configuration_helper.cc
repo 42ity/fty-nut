@@ -41,14 +41,14 @@ std::mutex g_asset_mutex;
  * \param asset_name Asset name to lock
  */
 void protect_asset_lock(t_asset_mutex_map& asset_mutex_map, std::string asset_name) {
-    g_asset_mutex.lock();
+    std::unique_lock<std::mutex> lock_asset(g_asset_mutex);
     auto it = asset_mutex_map.find(asset_name);
     if (it == asset_mutex_map.end()) {
         auto ret = asset_mutex_map.insert(
             std::pair<std::string, std::shared_ptr<std::mutex>>(asset_name, std::shared_ptr<std::mutex>(new std::mutex())));
         it = ret.first;
     }
-    g_asset_mutex.unlock();
+    lock_asset.unlock();
     it->second.get()->lock();
 }
 
@@ -60,14 +60,12 @@ void protect_asset_lock(t_asset_mutex_map& asset_mutex_map, std::string asset_na
  *         False if protection not found
  */
 bool protect_asset_unlock(t_asset_mutex_map& asset_mutex_map, std::string asset_name) {
-    g_asset_mutex.lock();
+    std::unique_lock<std::mutex> lock_asset(g_asset_mutex);
     auto it = asset_mutex_map.find(asset_name);
     if (it != asset_mutex_map.end()) {
         it->second.get()->unlock();
-        g_asset_mutex.unlock();
         return true;
     }
-    g_asset_mutex.unlock();
     return false;
 }
 
@@ -79,16 +77,14 @@ bool protect_asset_unlock(t_asset_mutex_map& asset_mutex_map, std::string asset_
  *         False if protection still locked or protection not found
  */
 bool protect_asset_try_lock(t_asset_mutex_map& asset_mutex_map, std::string asset_name) {
-    g_asset_mutex.lock();
+    std::unique_lock<std::mutex> lock_asset(g_asset_mutex);
     auto it = asset_mutex_map.find(asset_name);
     if (it != asset_mutex_map.end()) {
         if (it->second.get()->try_lock()) {
             it->second.get()->unlock();
-            g_asset_mutex.unlock();
             return true;
         }
     }
-    g_asset_mutex.unlock();
     return false;
 }
 
@@ -100,7 +96,7 @@ bool protect_asset_try_lock(t_asset_mutex_map& asset_mutex_map, std::string asse
  *         False if protection not removed (still locked) or protection not found
  */
 bool protect_asset_remove(t_asset_mutex_map& asset_mutex_map, std::string asset_name) {
-    g_asset_mutex.lock();
+    std::unique_lock<std::mutex> lock_asset(g_asset_mutex);
     auto it = asset_mutex_map.find(asset_name);
     if (it != asset_mutex_map.end()) {
         int retry = 10;
@@ -108,12 +104,10 @@ bool protect_asset_remove(t_asset_mutex_map& asset_mutex_map, std::string asset_
             if (it->second.get()->try_lock()) {
                 it->second.get()->unlock();
                 asset_mutex_map.erase(it);
-                g_asset_mutex.unlock();
                 return true;
             }
         }
     }
-    g_asset_mutex.unlock();
     return false;
 }
 
