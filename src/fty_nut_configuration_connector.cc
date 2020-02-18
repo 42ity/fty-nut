@@ -109,7 +109,8 @@ void ConfigurationConnector::get_initial_assets()
  * \brief Handle request assets message.
  * \param msg Message receive.
  */
-void ConfigurationConnector::handleRequestAssets(messagebus::Message msg) {
+void ConfigurationConnector::handleRequestAssets(messagebus::Message msg)
+{
     m_worker.offload([this](messagebus::Message msg) {
         try {
             log_info("handleRequestAssets: Receive message from ASSETS");
@@ -142,6 +143,7 @@ void ConfigurationConnector::handleRequestAssets(messagebus::Message msg) {
                 log_error("handleRequestAssets: no result defined");
                 return;
             }
+            std::vector<std::string> devices_list;
             // For each asset name in message
             while (!msg.userData().empty()) {
                 // Extract asset name in message
@@ -162,7 +164,21 @@ void ConfigurationConnector::handleRequestAssets(messagebus::Message msg) {
                 message.metaData().emplace(messagebus::Message::TO, "asset-agent");
                 message.metaData().emplace(messagebus::Message::REPLY_TO, m_parameters.publisherName);
                 log_info("handleRequestAssets: Get asset details for %s", asset_name.c_str());
+                devices_list.push_back(asset_name);
                 m_msg_bus_publisher->sendRequest("asset-agent", message);
+            }
+
+            // Get the list of driver present on local disk
+            std::vector<std::string> devices_list_in_directory = shared::files_in_directory(NUT_PART_STORE);
+            // For each driver, remove it if not present in current device list
+            for (auto asset_name : devices_list_in_directory) {
+                auto it = std::find(devices_list.begin(), devices_list.end(), asset_name);
+                if (it == devices_list.end()) {
+                    // Remove driver
+                    log_info("handleRequestAssets: Remove asset %s", asset_name.c_str());
+                    m_manager.removeDeviceConfigurationFile(asset_name);
+                    publishToDriversConnector(asset_name, "removeConfig");
+                }
             }
         }
         catch (std::exception& e) {
@@ -175,7 +191,8 @@ void ConfigurationConnector::handleRequestAssets(messagebus::Message msg) {
  * \brief Handle request asset detail message.
  * \param msg Message receive.
  */
-void ConfigurationConnector::handleRequestAssetDetail(messagebus::Message msg) {
+void ConfigurationConnector::handleRequestAssetDetail(messagebus::Message msg)
+{
     m_worker.offload([this](messagebus::Message msg) {
         try {
             log_info("handleRequestAssetDetail: Receive message from ASSET_DETAIL");
@@ -222,9 +239,45 @@ void ConfigurationConnector::handleRequestAssetDetail(messagebus::Message msg) {
             std::string status = fty_proto_aux_string(proto.get(), "status", "");
             log_info("handleNotificationAssets: receive message (operation=%s type=%s subtype=%s status=%s)",
                 operation.c_str(), type.c_str(), subtype.c_str(), status.c_str());
-
-            if (m_manager.applyAssetConfiguration(proto.get())) {
-                publishToDriversConnector(name, "addConfig");
+            // Get config in config file
+            bool need_update = false;
+            nutcommon::DeviceConfiguration config;
+            m_manager.readDeviceConfigurationFile(name, config);
+            if (!config.empty()) {
+                log_trace("handleRequestAssetDetail: Config read from file=\n%s", ConfigurationManager::serialize_config("", config).c_str());
+                std::set<secw::Id> secw_document_id_list;
+                nutcommon::DeviceConfigurations configs_to_test;
+                nutcommon::DeviceConfigurations configs_to_save;
+                configs_to_test.push_back(config);
+                m_manager.getAssetConfigurationsWithSecwDocuments(proto.get(), configs_to_save, secw_document_id_list);
+                if(m_manager.isConfigurationsChange(configs_to_test, configs_to_save, true)) {
+                    log_trace("handleRequestAssetDetail: config change for %s", name.c_str());
+                    need_update = true;
+                }
+                else {
+                    log_trace("handleRequestAssetDetail: init config for %s", name.c_str());
+                    m_manager.saveAssetConfigurations(name, configs_to_save, secw_document_id_list);
+                }
+            } else {
+                need_update = true;
+                log_trace("handleRequestAssetDetail: no config file read for %s", name.c_str());
+            }
+            if (need_update) {
+                log_trace("handleRequestAssetDetail: %s need rescan", name.c_str());
+                protect_asset_lock(m_asset_mutex_map, name);
+                m_manager.scanAssetConfigurations(proto.get());
+                m_manager.automaticAssetConfigurationPrioritySort(proto.get());
+                nutcommon::DeviceConfigurations new_configs;
+                std::set<secw::Id> new_secw_document_id_list;
+                m_manager.getAssetConfigurationsWithSecwDocuments(proto.get(), new_configs, new_secw_document_id_list);
+                m_manager.saveAssetConfigurations(name, new_configs, new_secw_document_id_list);
+                if (new_configs.size() > 0) {
+                    // Save the first configuration into config file
+                    log_trace("\nSave config:\n%s", ConfigurationManager::serialize_config("", new_configs.at(0)).c_str());
+                    m_manager.updateDeviceConfigurationFile(name, new_configs.at(0));
+                    publishToDriversConnector(name, "addConfig");
+                }
+                protect_asset_unlock(m_asset_mutex_map, name);
             }
         }
         catch (std::exception& e) {
@@ -237,7 +290,8 @@ void ConfigurationConnector::handleRequestAssetDetail(messagebus::Message msg) {
  * \brief Handle request message of type asset notification.
  * \param msg Message receive.
  */
-void ConfigurationConnector::handleNotificationAssets(messagebus::Message msg) {
+void ConfigurationConnector::handleNotificationAssets(messagebus::Message msg)
+{
     m_worker.offload([this](messagebus::Message msg) {
 
         for (const auto& pair : msg.metaData()) {
@@ -272,7 +326,14 @@ fty_proto_print(proto.get());
                     protect_asset_lock(m_asset_mutex_map, name);
                     m_manager.scanAssetConfigurations(proto.get());
                     m_manager.automaticAssetConfigurationPrioritySort(proto.get());
-                    if (m_manager.applyAssetConfiguration(proto.get())) {
+                    nutcommon::DeviceConfigurations configs;
+                    std::set<secw::Id> secw_document_id_list;
+                    m_manager.getAssetConfigurationsWithSecwDocuments(proto.get(), configs, secw_document_id_list);
+                    m_manager.saveAssetConfigurations(name, configs, secw_document_id_list);
+                    if (configs.size() > 0) {
+                        // Save the first configuration into config file
+                        log_trace("\nSave config:\n%s", ConfigurationManager::serialize_config("", configs.at(0)).c_str());
+                        m_manager.updateDeviceConfigurationFile(name, configs.at(0));
                         publishToDriversConnector(name, "addConfig");
                     }
                     protect_asset_unlock(m_asset_mutex_map, name);
@@ -310,10 +371,16 @@ fty_proto_print(proto.get());
  * \param oldDoc Previous security document.
  * \param newDoc New security document.
  */
-void ConfigurationConnector::handleNotificationSecurityWalletUpdate(const std::string& portfolio, secw::DocumentPtr oldDoc, secw::DocumentPtr newDoc) {
+void ConfigurationConnector::handleNotificationSecurityWalletUpdate(const std::string& portfolio, secw::DocumentPtr oldDoc, secw::DocumentPtr newDoc)
+{
     log_info("handleNotificationSecurityWalletUpdate: receive message (portfolio=%s name=%s id=%s)",
                 portfolio.c_str(), newDoc->getName().c_str(), newDoc->getId().c_str());
-    m_manager.manageCredentialsConfiguration(newDoc->getId());
+    std::set<std::string> asset_list_change;
+    m_manager.manageCredentialsConfiguration(newDoc->getId(), asset_list_change);
+    // for each asset impacted with the security document changed
+    for (std::string asset_name : asset_list_change) {
+        publishToDriversConnector(asset_name, "addConfig");
+    }
 }
 
 /**
@@ -321,10 +388,16 @@ void ConfigurationConnector::handleNotificationSecurityWalletUpdate(const std::s
  * \param portfolio Portfolio name.
  * \param doc Security document removed.
  */
-void ConfigurationConnector::handleNotificationSecurityWalletDelete(const std::string& portfolio, secw::DocumentPtr doc) {
+void ConfigurationConnector::handleNotificationSecurityWalletDelete(const std::string& portfolio, secw::DocumentPtr doc)
+{
     log_info("handleNotificationSecurityWalletDelete: receive message (portfolio=%s name=%s id=%s)",
                 portfolio.c_str(), doc->getName().c_str(), doc->getId().c_str());
-    m_manager.manageCredentialsConfiguration(doc->getId());
+    std::set<std::string> asset_list_change;
+    m_manager.manageCredentialsConfiguration(doc->getId(), asset_list_change);
+    // for each asset impacted with the security document changed
+    for (std::string asset_name : asset_list_change) {
+        publishToDriversConnector(asset_name, "addConfig");
+    }
 }
 
 /**
@@ -332,10 +405,16 @@ void ConfigurationConnector::handleNotificationSecurityWalletDelete(const std::s
  * \param portfolio Portfolio name.
  * \param doc Security document added.
  */
-void ConfigurationConnector::handleNotificationSecurityWalletCreate(const std::string& portfolio, secw::DocumentPtr doc) {
+void ConfigurationConnector::handleNotificationSecurityWalletCreate(const std::string& portfolio, secw::DocumentPtr doc)
+{
     log_info("handleNotificationSecurityWalletCreate: receive message (portfolio=%s name=%s id=%s)",
                 portfolio.c_str(), doc->getName().c_str(), doc->getId().c_str());
-    m_manager.manageCredentialsConfiguration(doc->getId());
+    std::set<std::string> asset_list_change;
+    m_manager.manageCredentialsConfiguration(doc->getId(), asset_list_change);
+    // for each asset impacted with the security document changed
+    for (std::string asset_name : asset_list_change) {
+        publishToDriversConnector(asset_name, "addConfig");
+    }
 }
 
 /**
@@ -343,7 +422,8 @@ void ConfigurationConnector::handleNotificationSecurityWalletCreate(const std::s
  * \param asset_name asset name.
  * \param subject Subject of message.
  */
-void ConfigurationConnector::publishToDriversConnector(std::string asset_name, std::string subject) {
+void ConfigurationConnector::publishToDriversConnector(std::string asset_name, std::string subject)
+{
     messagebus::Message message;
     message.userData().push_back(asset_name);
     message.metaData().clear();

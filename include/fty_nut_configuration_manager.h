@@ -24,6 +24,8 @@
 
 #include "fty_nut_library.h"
 
+#define NUT_PART_STORE "/var/lib/fty/fty-nut/devices"
+
 namespace fty
 {
 namespace nut
@@ -40,13 +42,16 @@ class ConfigurationManager
         void automaticAssetConfigurationPrioritySort(fty_proto_t* asset);
         void scanAssetConfigurations(fty_proto_t* asset);
 
-        bool applyAssetConfiguration(fty_proto_t* asset);
-        bool isConfigurationChange(fty_proto_t* asset, nutcommon::DeviceConfigurations& configs_asset_current);
+        void getAssetConfigurations(fty_proto_t* asset, nutcommon::DeviceConfigurations& configs);
+        void getAssetConfigurationsWithSecwDocuments(fty_proto_t* asset, nutcommon::DeviceConfigurations& configs, std::set<secw::Id>& secw_document_id_list);
+        void saveAssetConfigurations(std::string asset_name, nutcommon::DeviceConfigurations& configs, std::set<secw::Id>& secw_document_id_list);
+        bool isConfigurationsChange(nutcommon::DeviceConfigurations& configs_asset_to_test, nutcommon::DeviceConfigurations& configs_asset_current, bool init_in_progress = false);
         bool updateAssetConfiguration(fty_proto_t* asset);
         bool removeAssetConfiguration(fty_proto_t* asset);
-        void manageCredentialsConfiguration(std::string secw_document_id);
+        void manageCredentialsConfiguration(std::string secw_document_id, std::set<std::string>& asset_list_change);
 
         void updateDeviceConfigurationFile(const std::string& name, nutcommon::DeviceConfiguration& config);
+        void readDeviceConfigurationFile(const std::string& name, nutcommon::DeviceConfiguration& config);
         void removeDeviceConfigurationFile(const std::string &name);
 
     private:

@@ -29,8 +29,6 @@
 #include "fty_nut_library.h"
 #include "fty_nut_classes.h"
 
-#define NUT_PART_STORE "/var/lib/fty/fty-nut/devices"
-
 namespace fty
 {
 namespace nut
@@ -43,12 +41,14 @@ ConfigurationDriversManager::ConfigurationDriversManager()
 
 void ConfigurationDriversManager::addConfigDriver(std::string asset_name)
 {
+    log_info("addConfigDriver: %s", asset_name.c_str());
     std::lock_guard<std::mutex> lk_start_drivers(m_start_drivers_mutex);
     m_start_drivers.insert("nut-driver@" + asset_name);
 }
 
 void ConfigurationDriversManager::removeConfigDriver(std::string asset_name)
 {
+    log_info("removeConfigDriver: %s", asset_name.c_str());
     std::lock_guard<std::mutex> lk_stop_drivers(m_stop_drivers_mutex);
     m_stop_drivers.insert("nut-driver@" + asset_name);
 }

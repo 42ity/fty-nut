@@ -534,15 +534,15 @@ nutcommon::DeviceConfiguration ftyToNutDeviceConfiguration(const DeviceConfigura
     nutcommon::DeviceConfiguration results = conf.attributes;
 
     // FIXME: improve security document instanciation.
-    for (const auto& secwDocumentId : conf.secwDocumentIdList) {
+    for (const auto& secw_document_id : conf.secwDocumentIdList) {
         auto itCredSnmpV1 = std::find_if(credentialsSNMPv1.begin(), credentialsSNMPv1.end(),
-            [&secwDocumentId](const nutcommon::CredentialsSNMPv1& cred) {
-                return cred.documentId == secwDocumentId;
+            [&secw_document_id](const nutcommon::CredentialsSNMPv1& cred) {
+                return cred.documentId == secw_document_id;
             }
         );
         auto itCredSnmpV3 = std::find_if(credentialsSNMPv3.begin(), credentialsSNMPv3.end(),
-            [&secwDocumentId](const nutcommon::CredentialsSNMPv3& cred) {
-                return cred.documentId == secwDocumentId;
+            [&secw_document_id](const nutcommon::CredentialsSNMPv3& cred) {
+                return cred.documentId == secw_document_id;
             }
         );
 
