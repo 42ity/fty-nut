@@ -160,7 +160,7 @@
     <main name = "fty-nut" service = "1" />
     <main name = "fty-nut-command" service = "1" />
     <main name = "fty-nut-configuration" service = "1" />
-    <main name = "fty-nut-configurator" service = "1" />
+    <main name = "fty-nut-configurator" service = "0" />
     <bin name = "fty-nutconfig" />
     <bin name = "fty-dmf" />
 

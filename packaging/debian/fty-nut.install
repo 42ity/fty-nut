@@ -10,6 +10,4 @@ etc/fty-nut/fty-nut-command.cfg
 lib/systemd/system/fty-nut-command.service
 etc/fty-nut/fty-nut-configuration.cfg
 lib/systemd/system/fty-nut-configuration.service
-etc/fty-nut/fty-nut-configurator.cfg
-lib/systemd/system/fty-nut-configurator.service
 

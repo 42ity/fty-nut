@@ -1998,7 +1998,6 @@ AC_CONFIG_FILES([Makefile
                  src/fty-nut.cfg
                  src/fty-nut-command.cfg
                  src/fty-nut-configuration.cfg
-                 src/fty-nut-configurator.cfg
                 ])
 
 AM_COND_IF([WITH_SYSTEMD_UNITS],
@@ -2006,7 +2005,6 @@ AM_COND_IF([WITH_SYSTEMD_UNITS],
                  src/fty-nut.service
                  src/fty-nut-command.service
                  src/fty-nut-configuration.service
-                 src/fty-nut-configurator.service
     ])],
     [])
 
