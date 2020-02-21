@@ -12,17 +12,18 @@ cd "$REPO_DIR/.."
 git clone --quiet --depth 1 https://github.com/42ity/cxxtools.git cxxtools
 git clone --quiet --depth 1 https://github.com/42ity/libcidr.git cidr
 git clone --quiet --depth 1 https://github.com/42ity/nut.git libnutclient
+git clone --quiet --depth 1 https://github.com/42ity/tntdb.git tntdb
 git clone --quiet --depth 1 https://github.com/42ity/fty-common-logging.git fty-common-logging
 git clone --quiet --depth 1 https://github.com/42ity/fty-common.git fty-common
-git clone --quiet --depth 1 https://github.com/42ity/fty-common-mlm.git fty-common-mlm
-git clone --quiet --depth 1 https://github.com/42ity/tntdb.git tntdb
 git clone --quiet --depth 1 https://github.com/zeromq/libzmq.git libzmq
 git clone --quiet --depth 1 https://github.com/zeromq/czmq.git czmq
 git clone --quiet --depth 1 https://github.com/zeromq/malamute.git malamute
 git clone --quiet --depth 1 https://github.com/42ity/fty-proto.git fty-proto
 git clone --quiet --depth 1 https://github.com/42ity/fty-common-db.git fty-common-db
-git clone --quiet --depth 1 https://github.com/42ity/fty-common-nut.git fty-common-nut
+git clone --quiet --depth 1 https://github.com/42ity/fty-common-mlm.git fty-common-mlm
 git clone --quiet --depth 1 https://github.com/42ity/fty-common-socket.git fty-common-socket
+git clone --quiet --depth 1 https://github.com/42ity/fty-security-wallet.git fty-security-wallet
+git clone --quiet --depth 1 https://github.com/42ity/fty-common-nut.git fty-common-nut
 git clone --quiet --depth 1 https://github.com/42ity/fty-shm.git fty_shm
 cd -
 

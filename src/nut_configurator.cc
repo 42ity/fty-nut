@@ -46,6 +46,8 @@ using namespace shared;
 
 #define NUT_PART_STORE "/var/lib/fty/fty-nut/devices"
 
+static const std::string SECW_SOCKET_PATH = "/run/fty-security-wallet/secw.socket";
+
 static std::string s_getPollingInterval()
 {
     std::string polling = "30";
@@ -58,7 +60,7 @@ static std::string s_getPollingInterval()
     return polling;
 }
 
-static bool isEpdu(const nutcommon::DeviceConfiguration &config)
+static bool isEpdu(const fty::nut::DeviceConfiguration &config)
 {
     static const std::set<std::string> epdusMibs = {
         { "eaton_epdu" }, { "aphel_genesisII" }, { "aphel_revelation" }, { "pulizzi_switched1" }, { "pulizzi_switched2" }, { "emerson_avocent_pdu" }
@@ -83,7 +85,7 @@ static bool isEpdu(const nutcommon::DeviceConfiguration &config)
     return false;
 }
 
-static bool isAts(const nutcommon::DeviceConfiguration &config)
+static bool isAts(const fty::nut::DeviceConfiguration &config)
 {
     // Match MIBs.
     auto mibsIt = config.find("mibs");
@@ -98,12 +100,12 @@ static bool isAts(const nutcommon::DeviceConfiguration &config)
     return false;
 }
 
-static bool isUps(const nutcommon::DeviceConfiguration &config)
+static bool isUps(const fty::nut::DeviceConfiguration &config)
 {
     return !(isEpdu(config) || isAts(config));
 }
 
-static bool canSnmp(const nutcommon::DeviceConfiguration &config)
+static bool canSnmp(const fty::nut::DeviceConfiguration &config)
 {
     // Match MIBs.
     auto driverIt = config.find("driver");
@@ -116,7 +118,7 @@ static bool canSnmp(const nutcommon::DeviceConfiguration &config)
     return false;
 }
 
-static bool canNetXml(const nutcommon::DeviceConfiguration &config)
+static bool canNetXml(const fty::nut::DeviceConfiguration &config)
 {
     // Match driver.
     auto driverIt = config.find("driver");
@@ -129,7 +131,7 @@ static bool canNetXml(const nutcommon::DeviceConfiguration &config)
     return false;
 }
 
-nutcommon::DeviceConfigurations::const_iterator NUTConfigurator::getBestSnmpMibConfiguration(const nutcommon::DeviceConfigurations &configs)
+fty::nut::DeviceConfigurations::const_iterator NUTConfigurator::getBestSnmpMibConfiguration(const fty::nut::DeviceConfigurations &configs)
 {
     // MIBs in order of priority.
     static const std::vector<std::regex> snmpMibPriority = {
@@ -137,7 +139,7 @@ nutcommon::DeviceConfigurations::const_iterator NUTConfigurator::getBestSnmpMibC
     };
 
     for (const auto &regex : snmpMibPriority) {
-        auto it = std::find_if(configs.cbegin(), configs.cend(), [&regex](const nutcommon::DeviceConfiguration &config) {
+        auto it = std::find_if(configs.cbegin(), configs.cend(), [&regex](const fty::nut::DeviceConfiguration &config) {
             // Match MIBs.
             auto mibsIt = config.find("mibs");
             if (mibsIt != config.end()) {
@@ -156,9 +158,9 @@ nutcommon::DeviceConfigurations::const_iterator NUTConfigurator::getBestSnmpMibC
     return configs.cend();
 }
 
-nutcommon::DeviceConfigurations::const_iterator NUTConfigurator::getNetXMLConfiguration(const nutcommon::DeviceConfigurations &configs)
+fty::nut::DeviceConfigurations::const_iterator NUTConfigurator::getNetXMLConfiguration(const fty::nut::DeviceConfigurations &configs)
 {
-    return std::find_if(configs.cbegin(), configs.cend(), [](const nutcommon::DeviceConfiguration &config) {
+    return std::find_if(configs.cbegin(), configs.cend(), [](const fty::nut::DeviceConfiguration &config) {
         auto mibsIt = config.find("driver");
         if (mibsIt != config.end()) {
             if (mibsIt->second == "netxml-ups") {
@@ -169,7 +171,7 @@ nutcommon::DeviceConfigurations::const_iterator NUTConfigurator::getNetXMLConfig
     });
 }
 
-nutcommon::DeviceConfigurations::const_iterator NUTConfigurator::selectBestConfiguration(const nutcommon::DeviceConfigurations &configs)
+fty::nut::DeviceConfigurations::const_iterator NUTConfigurator::selectBestConfiguration(const fty::nut::DeviceConfigurations &configs)
 {
     bool bIsEpdu    = std::any_of(configs.begin(), configs.end(), isEpdu);
     bool bIsUps     = std::any_of(configs.begin(), configs.end(), isUps);
@@ -178,7 +180,7 @@ nutcommon::DeviceConfigurations::const_iterator NUTConfigurator::selectBestConfi
     bool bCanNetXml = std::any_of(configs.begin(), configs.end(), canNetXml);
     log_debug("Configurations: %d; isEpdu: %i; isUps: %i; isAts: %i; canSnmp: %i; canNetXml: %i.", configs.size(), bIsEpdu, bIsUps, bIsAts, bCanSnmp, bCanNetXml);
 
-    nutcommon::DeviceConfigurations::const_iterator bestConfig = configs.begin();
+    fty::nut::DeviceConfigurations::const_iterator bestConfig = configs.begin();
 
     if (bCanSnmp && (bIsEpdu || bIsAts)) {
         log_debug("SNMP capable ePDU/ATS => Use SNMP.");
@@ -251,9 +253,9 @@ void NUTConfigurator::updateNUTConfig()
     }
 }
 
-nutcommon::DeviceConfigurations NUTConfigurator::getConfigurationFromUpsConfBlock(const std::string &name, const AutoConfigurationInfo &info)
+fty::nut::DeviceConfigurations NUTConfigurator::getConfigurationFromUpsConfBlock(const std::string &name, const AutoConfigurationInfo &info)
 {
-    nutcommon::DeviceConfigurations configs;
+    fty::nut::DeviceConfigurations configs;
 
     std::string UBA = info.asset->upsconf_block(); // UpsconfBlockAsset - as stored in contents of the asset.
     char SEP = UBA.at(0);
@@ -267,36 +269,64 @@ nutcommon::DeviceConfigurations NUTConfigurator::getConfigurationFromUpsConfBloc
         std::replace(UBN.begin(), UBN.end(), SEP, '\n');
         if ( UBN.at(0) == '[' ) {
             log_info("Device '%s' is configured with a complete explicit upsconf_block from its asset, including a custom NUT device-tag:\n%s", name.c_str(), UBN.c_str());
-            configs = nutcommon::parseConfigurationFile(UBN);
+            configs = fty::nut::parseConfigurationFile(UBN);
         } else {
             log_info("Device '%s' is configured with a content-only explicit upsconf_block from its asset (prepending asset name as NUT device-tag):\n%s", name.c_str(), UBN.c_str());
-            configs = nutcommon::parseConfigurationFile(std::string("[") + name + "]\n" + UBN + "\n");
+            configs = fty::nut::parseConfigurationFile(std::string("[") + name + "]\n" + UBN + "\n");
         }
     }
 
     return configs;
 }
 
-nutcommon::DeviceConfigurations NUTConfigurator::getConfigurationFromScanningDevice(const std::string &name, const AutoConfigurationInfo &info)
+fty::nut::DeviceConfigurations NUTConfigurator::getConfigurationFromScanningDevice(const std::string &name, const AutoConfigurationInfo &info)
 {
     const int scanTimeout = 10;
     const std::string& IP = info.asset->IP();
-    nutcommon::DeviceConfigurations configs;
+    fty::nut::DeviceConfigurations configs;
 
     if (IP.empty()) {
         log_error("Device '%s' has no IP address, cannot scan it.", name.c_str());
     }
     else {
         const bool use_dmf = info.asset->upsconf_enable_dmf();
+        fty::nut::ScanProtocol snmpProtocol = use_dmf ? fty::nut::SCAN_PROTOCOL_SNMP_DMF : fty::nut::SCAN_PROTOCOL_SNMP;
+
+        std::vector<secw::DocumentPtr> credentialsV3;
+        std::vector<secw::DocumentPtr> credentialsV1;
+
+        // Grab security documents.
+        try {
+            fty::SocketSyncClient secwSyncClient(SECW_SOCKET_PATH);
+
+            auto client = secw::ConsumerAccessor(secwSyncClient);
+            auto secCreds = client.getListDocumentsWithPrivateData("default", "discovery_monitoring");
+
+            for (const auto &i : secCreds) {
+                auto credV3 = secw::Snmpv3::tryToCast(i);
+                auto credV1 = secw::Snmpv1::tryToCast(i);
+                if (credV3) {
+                    credentialsV3.emplace_back(i);
+                }
+                else if (credV1) {
+                    credentialsV1.emplace_back(i);
+                }
+            }
+            log_debug("Fetched %d SNMPv3 and %d SNMPv1 credentials from security wallet.", credentialsV3.size(), credentialsV1.size());
+        }
+        catch (std::exception &e) {
+            log_warning("Failed to fetch credentials from security wallet: %s", e.what());
+        }
 
         // SNMPv3 scan
         {
-            const auto credentials = nutcommon::getCredentialsSNMPv3();
+            for (const auto& credential : credentialsV3) {
+                auto credV3 = secw::Snmpv3::tryToCast(credential);
+                log_info("Scanning SNMPv3 protocol (security name '%s') at '%s'...", credV3->getSecurityName().c_str(), IP.c_str());
 
-            for (const auto& credential : credentials) {
-                log_info("Scanning SNMPv3 protocol (security name '%s') at '%s'...", credential.secName.c_str(), IP.c_str());
-                if (nutcommon::scanDeviceRangeSNMPv3(nutcommon::ScanRangeOptions(IP, scanTimeout), credential, use_dmf, configs) == 0 && !configs.empty()) {
-                    log_info("SNMPv3 credential with security name '%s' at '%s' is suitable, bail out of SNMP scanning.", credential.secName.c_str(), IP.c_str());
+                configs = fty::nut::scanDevice(snmpProtocol, IP, scanTimeout, { credential });
+                if (!configs.empty()) {
+                    log_info("SNMPv3 credential with security name '%s' at '%s' is suitable, bail out of SNMP scanning.", credV3->getSecurityName().c_str(), IP.c_str());
                     break;
                 }
             }
@@ -304,12 +334,13 @@ nutcommon::DeviceConfigurations NUTConfigurator::getConfigurationFromScanningDev
         // SNMPv1 scan - (only if SNMPv3 yielded nothing)
         if (configs.empty())
         {
-            const auto credentials = nutcommon::getCredentialsSNMPv1();
+            for (const auto& credential : credentialsV1) {
+                auto credV1 = secw::Snmpv1::tryToCast(credential);
+                log_info("Scanning SNMPv1 protocol (community '%s') at '%s'...", credV1->getCommunityName().c_str(), IP.c_str());
 
-            for (const auto& credential : credentials) {
-                log_info("Scanning SNMPv1 protocol (community '%s') at '%s'...", credential.community.c_str(), IP.c_str());
-                if (nutcommon::scanDeviceRangeSNMPv1(nutcommon::ScanRangeOptions(IP, scanTimeout), credential, use_dmf, configs) == 0 && !configs.empty()) {
-                    log_info("SNMPv1 community '%s' at '%s' is suitable, bail out of SNMP scanning.", credential.community.c_str(), IP.c_str());
+                configs = fty::nut::scanDevice(snmpProtocol, IP, scanTimeout, { credential });
+                if (!configs.empty()) {
+                    log_info("SNMPv1 community '%s' at '%s' is suitable, bail out of SNMP scanning.", credV1->getCommunityName().c_str(), IP.c_str());
                     break;
                 }
             }
@@ -317,14 +348,15 @@ nutcommon::DeviceConfigurations NUTConfigurator::getConfigurationFromScanningDev
         // NetXML scan
         {
             log_info("Scanning NetXML protocol at '%s'...", IP.c_str());
-            nutcommon::scanDeviceRangeNetXML(nutcommon::ScanRangeOptions(IP, scanTimeout), configs);
+            auto configsNetXML = fty::nut::scanDevice(fty::nut::SCAN_PROTOCOL_NETXML, IP, scanTimeout);
+            configs.insert(configs.end(), configsNetXML.begin(), configsNetXML.end());
         }
     }
 
     return configs;
 }
 
-void NUTConfigurator::updateDeviceConfiguration(const std::string &name, const AutoConfigurationInfo &info, nutcommon::DeviceConfiguration config)
+void NUTConfigurator::updateDeviceConfiguration(const std::string &name, const AutoConfigurationInfo &info, fty::nut::DeviceConfiguration config)
 {
     const std::string polling = s_getPollingInterval();
     const std::string configFilePath = std::string(NUT_PART_STORE) + path_separator() + name;
@@ -379,7 +411,7 @@ bool NUTConfigurator::configure(const std::string &name, const AutoConfiguration
 {
     log_debug("Auto-configuring device '%s'...", name.c_str());
 
-    nutcommon::DeviceConfigurations configs;
+    fty::nut::DeviceConfigurations configs;
 
     if (info.asset->have_upsconf_block()) {
         // Device has a predefined configuration block.

@@ -58,17 +58,18 @@ BuildRequires:  gcc-c++ >= 4.9.0
 BuildRequires:  cxxtools-devel
 BuildRequires:  libcidr-devel
 BuildRequires:  nut-devel
+BuildRequires:  tntdb-devel
 BuildRequires:  fty-common-logging-devel
 BuildRequires:  fty-common-devel
-BuildRequires:  fty-common-mlm-devel
-BuildRequires:  tntdb-devel
 BuildRequires:  zeromq-devel
 BuildRequires:  czmq-devel
 BuildRequires:  malamute-devel
 BuildRequires:  fty-proto-devel >= 1.0.0
 BuildRequires:  fty-common-db-devel
-BuildRequires:  fty-common-nut-devel
+BuildRequires:  fty-common-mlm-devel
 BuildRequires:  fty-common-socket-devel
+BuildRequires:  fty-security-wallet-devel
+BuildRequires:  fty-common-nut-devel
 BuildRequires:  fty_shm-devel >= 1.0.0
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
@@ -96,17 +97,18 @@ Requires:       libfty_nut1 = %{version}
 Requires:       cxxtools-devel
 Requires:       libcidr-devel
 Requires:       nut-devel
+Requires:       tntdb-devel
 Requires:       fty-common-logging-devel
 Requires:       fty-common-devel
-Requires:       fty-common-mlm-devel
-Requires:       tntdb-devel
 Requires:       zeromq-devel
 Requires:       czmq-devel
 Requires:       malamute-devel
 Requires:       fty-proto-devel >= 1.0.0
 Requires:       fty-common-db-devel
-Requires:       fty-common-nut-devel
+Requires:       fty-common-mlm-devel
 Requires:       fty-common-socket-devel
+Requires:       fty-security-wallet-devel
+Requires:       fty-common-nut-devel
 Requires:       fty_shm-devel >= 1.0.0
 
 %description devel
