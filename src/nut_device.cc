@@ -199,20 +199,20 @@ void NUTDevice::update (std::map <std::string, std::vector <std::string>> vars,
     // Use transformation table first.
     NUTValuesTransformation(prefix, vars);
 
-    nutcommon::KeyValues scalarVars;
+    fty::nut::KeyValues scalarVars;
     for (auto var : vars) {
         scalarVars.emplace(var.first, collapse_commas(var.second));
     }
 
     // Translate NUT keys into 42ity keys.
     {
-        auto mappedPhysics = nutcommon::performMapping(mapping("physicsMapping"), scalarVars, prefixId);
+        auto mappedPhysics = fty::nut::performMapping(mapping("physicsMapping"), scalarVars, prefixId);
         for (auto value : mappedPhysics) {
             updatePhysics(value.first, value.second);
         }
     }
     {
-        auto mappedInventory = nutcommon::performMapping(mapping("inventoryMapping"), scalarVars, prefixId);
+        auto mappedInventory = fty::nut::performMapping(mapping("inventoryMapping"), scalarVars, prefixId);
         for (auto value : mappedInventory) {
             updateInventory(value.first, value.second);
         }
@@ -683,11 +683,11 @@ void NUTDeviceList::load_mapping (const char *path_to_file)
 
     try {
         log_debug("Loading physics mapping...");
-        _physicsMapping = nutcommon::loadMapping(path_to_file, "physicsMapping");
+        _physicsMapping = fty::nut::loadMapping(path_to_file, "physicsMapping");
         log_debug("Number of entries loaded for physics mapping: %zu", _physicsMapping.size());
 
         log_debug("Loading inventory mapping...");
-        _inventoryMapping = nutcommon::loadMapping(path_to_file, "inventoryMapping");
+        _inventoryMapping = fty::nut::loadMapping(path_to_file, "inventoryMapping");
         log_debug("Number of entries loaded for inventory mapping: %zu", _inventoryMapping.size());
 
         _mappingLoaded = true;

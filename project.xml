@@ -71,6 +71,12 @@
             <add_config_opts>--with-dmfsnmp-regenerate=no</add_config_opts>
     </use>
 
+    <!-- TODO: Move into fty-common-db? Or is this dependency used directly? -->
+    <use project = "tntdb"
+        test = "tntdb::connectCached"
+        repository = "https://github.com/42ity/tntdb.git"
+        builddir = "tntdb" />
+
     <!-- Note: pure C projects should use fty-log/fty_logger.h, C++ use fty_log.h -->
     <use project = "fty-common-logging" libname = "libfty_common_logging"
         header = "fty_log.h"
@@ -81,16 +87,6 @@
         repository = "https://github.com/42ity/fty-common.git"
         test = "fty_common_selftest" />
 
-    <use project = "fty-common-mlm" libname = "libfty_common_mlm" header = "fty_common_mlm.h"
-        repository = "https://github.com/42ity/fty-common-mlm.git"
-        test = "fty_common_mlm_selftest"/>
-
-    <!-- TODO: Move into fty-common-db? Or is this dependency used directly? -->
-    <use project = "tntdb"
-        test = "tntdb::connectCached"
-        repository = "https://github.com/42ity/tntdb.git"
-        builddir = "tntdb" />
-
     <use project = "fty-proto" libname = "libfty_proto" header = "ftyproto.h" prefix = "fty_proto"
         min_major = "1" min_minor = "0" min_patch = "0"
         repository = "https://github.com/42ity/fty-proto.git"
@@ -100,13 +96,21 @@
         repository = "https://github.com/42ity/fty-common-db.git"
         test = "fty_common_db_selftest" />
 
-    <use project = "fty-common-nut" libname = "libfty_common_nut" header = "fty_common_nut.h"
-            repository = "https://github.com/42ity/fty-common-nut.git"
-            test = "fty_common_nut_selftest" />
-    
+    <use project = "fty-common-mlm" libname = "libfty_common_mlm" header = "fty_common_mlm.h"
+        repository = "https://github.com/42ity/fty-common-mlm.git"
+        test = "fty_common_mlm_selftest"/>
+
     <use project = "fty-common-socket" libname = "libfty_common_socket" header = "fty_common_socket.h"
-            repository = "https://github.com/42ity/fty-common-socket.git"
-            test = "fty_common_socket_selftest" />
+        repository = "https://github.com/42ity/fty-common-socket.git"
+        test = "fty_common_socket_selftest" />
+
+    <use project = "fty-security-wallet" libname = "libfty_security_wallet" header = "fty_security_wallet.h"
+        repository = "https://github.com/42ity/fty-security-wallet.git"
+        test = "fty_security_wallet_selftest" />
+
+    <use project = "fty-common-nut" libname = "libfty_common_nut" header = "fty_common_nut.h"
+        repository = "https://github.com/42ity/fty-common-nut.git"
+        test = "fty_common_nut_selftest" />
 
     <use project = "fty_shm" libname = "libfty_shm" header="fty_shm.h"
         min_major = "1"

@@ -43,7 +43,7 @@ void Sensor::update (nut::TcpClient &conn)
            However, limitations exists in the current performMapping, where indexed-to-unitary
            conversion fail (like ambient.1.mfr -> manufacturer)
         {
-            auto mappedInventory = nutcommon::performMapping(mapping("sensorInventoryMapping"), scalarVars, prefixId);
+            auto mappedInventory = fty::nut::performMapping(mapping("sensorInventoryMapping"), scalarVars, prefixId);
             for (auto value : mappedInventory) {
                 updateInventory(value.first, value.second);
             }

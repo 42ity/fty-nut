@@ -33,14 +33,15 @@
 #include <cxxtools/allocator.h>
 #include <libcidr.h>
 #include <nutclient.h>
+#include <tntdb.h>
 #include <fty_log.h>
 #include <fty_common.h>
-#include <fty_common_mlm.h>
-#include <tntdb.h>
 #include <ftyproto.h>
 #include <fty_common_db.h>
-#include <fty_common_nut.h>
+#include <fty_common_mlm.h>
 #include <fty_common_socket.h>
+#include <fty_security_wallet.h>
+#include <fty_common_nut.h>
 #include <fty_shm.h>
 
 //  FTY_NUT version macros for compile-time API detection
