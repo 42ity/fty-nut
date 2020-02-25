@@ -496,6 +496,35 @@ void ConfigurationManager::updateDeviceConfigurationFile(const std::string& name
 }
 
 /**
+ * \brief Read asset configuration in config file.
+ * \param asset Asset to process.
+ * \return Asset configuration read.
+ */
+fty::nut::DeviceConfiguration ConfigurationManager::readDeviceConfigurationFile(const std::string& name)
+{
+    fty::nut::DeviceConfiguration config;
+    const std::string configFilePath = std::string(NUT_PART_STORE) + shared::path_separator() + name;
+    std::ifstream file(configFilePath);
+    if ((file.rdstate() & std::ifstream::failbit) == 0) {
+        std::stringstream inStream;
+        inStream << file.rdbuf();
+        static const std::regex regexSection(R"xxx([[:blank:]]*\[([[:alnum:]_-]+)\][[:blank:]]*)xxx", std::regex::optimize);
+        static const std::regex regexOptionQuoted(R"xxx([[:blank:]]*([[:alpha:]_-]+)[[:blank:]]*=[[:blank:]]*"([^"]+)"[[:blank:]]*)xxx", std::regex::optimize);
+        static const std::regex regexOptionUnquoted(R"xxx([[:blank:]]*([[:alpha:]_-]+)[[:blank:]]*=[[:blank:]]*([^"].*))xxx", std::regex::optimize);
+        std::smatch matches;
+        std::string line;
+        while (std::getline(inStream, line)) {
+            if (!std::regex_match(line, matches, regexSection) &&
+                    (std::regex_match(line, matches, regexOptionQuoted) || std::regex_match(line, matches, regexOptionUnquoted))) {
+                // Key-value pair matched, add it to the list.
+                config.emplace(matches[1].str(), matches[2].str());
+            }
+        }
+    }
+    return config;
+}
+
+/**
  * \brief Remove asset configuration in config file.
  * \param asset Asset to process.
  * \param config Config to process.

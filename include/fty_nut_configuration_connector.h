@@ -39,7 +39,7 @@ class ConfigurationConnector
 
             std::string endpoint;
             std::string agentName;
-            std::string publisherName;
+            std::string requesterName;
             std::string dbUrl;
         };
 

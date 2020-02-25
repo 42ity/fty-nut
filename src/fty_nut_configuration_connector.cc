@@ -43,7 +43,7 @@ namespace nut
 ConfigurationConnector::Parameters::Parameters() :
     endpoint(MLM_ENDPOINT),
     agentName("fty-nut-configuration"),
-    publisherName("fty-nut-configuration-publisher"),
+    requesterName("fty-nut-configuration-requester"),
     dbUrl(DBConn::url)
 {
 }
@@ -57,7 +57,7 @@ ConfigurationConnector::ConfigurationConnector(ConfigurationConnector::Parameter
     m_manager(params.dbUrl),
     m_worker(10),
     m_msgBusReceiver(messagebus::MlmMessageBus(params.endpoint, params.agentName)),
-    m_msgBusRequester(messagebus::MlmMessageBus(params.endpoint, params.publisherName)),
+    m_msgBusRequester(messagebus::MlmMessageBus(params.endpoint, params.requesterName)),
     m_syncClient("fty-nut-configuration.socket")
 {
     m_msgBusReceiver->connect();
@@ -65,7 +65,7 @@ ConfigurationConnector::ConfigurationConnector(ConfigurationConnector::Parameter
 
     m_msgBusRequester->connect();
     m_msgBusRequester->receive("ASSETS", std::bind(&ConfigurationConnector::handleRequestAssets, this, std::placeholders::_1));
-    m_msgBusRequester->receive(params.publisherName.c_str(), std::bind(&ConfigurationConnector::handleRequestAssetDetail, this, std::placeholders::_1));
+    m_msgBusRequester->receive(params.requesterName.c_str(), std::bind(&ConfigurationConnector::handleRequestAssetDetail, this, std::placeholders::_1));
 
     m_streamClient = std::unique_ptr<mlm::MlmStreamClient>(new mlm::MlmStreamClient(params.agentName, SECW_NOTIFICATIONS, 1000, params.endpoint));
     m_consumerAccessor = std::unique_ptr<secw::ConsumerAccessor>(new secw::ConsumerAccessor(m_syncClient, *m_streamClient.get()));
@@ -98,9 +98,9 @@ void ConfigurationConnector::getInitialAssets()
     message.metaData().emplace(messagebus::Message::RAW, "");
     message.metaData().emplace(messagebus::Message::CORRELATION_ID, uuid);
     message.metaData().emplace(messagebus::Message::SUBJECT, FTY_PROTO_STREAM_ASSETS);
-    message.metaData().emplace(messagebus::Message::FROM, m_parameters.publisherName);
+    message.metaData().emplace(messagebus::Message::FROM, m_parameters.requesterName);
     message.metaData().emplace(messagebus::Message::TO, "asset-agent");
-    message.metaData().emplace(messagebus::Message::REPLY_TO, m_parameters.publisherName);
+    message.metaData().emplace(messagebus::Message::REPLY_TO, m_parameters.requesterName);
     m_msgBusRequester->sendRequest("asset-agent", message);
 }
 
@@ -155,9 +155,9 @@ void ConfigurationConnector::handleRequestAssets(messagebus::Message msg)
                 message.metaData().emplace(messagebus::Message::RAW, "");
                 message.metaData().emplace(messagebus::Message::CORRELATION_ID, uuid);
                 message.metaData().emplace(messagebus::Message::SUBJECT, "ASSET_DETAIL");
-                message.metaData().emplace(messagebus::Message::FROM, m_parameters.publisherName);
+                message.metaData().emplace(messagebus::Message::FROM, m_parameters.requesterName);
                 message.metaData().emplace(messagebus::Message::TO, "asset-agent");
-                message.metaData().emplace(messagebus::Message::REPLY_TO, m_parameters.publisherName);
+                message.metaData().emplace(messagebus::Message::REPLY_TO, m_parameters.requesterName);
                 log_info("handleRequestAssets: Get asset details for %s", assetName.c_str());
                 devicesList.push_back(assetName);
                 m_msgBusRequester->sendRequest("asset-agent", message);
@@ -232,11 +232,8 @@ void ConfigurationConnector::handleRequestAssetDetail(messagebus::Message msg)
                 operation.c_str(), type.c_str(), subtype.c_str(), status.c_str());
             // Get config in config file
             bool needUpdate = false;
-            const std::string configFilePath = std::string(NUT_PART_STORE) + shared::path_separator() + name;
-            fty::nut::DeviceConfigurations configs = fty::nut::parseConfigurationFile(configFilePath);
-            if (!configs.empty()) {
-                fty::nut::DeviceConfiguration config = configs.at(0); // Take first configuration (normally just one configuration available)
-                config.erase("name");  // Remove name for comparaison
+            fty::nut::DeviceConfiguration config = m_manager.readDeviceConfigurationFile(name);
+            if (!config.empty()) {
                 log_trace("handleRequestAssetDetail: Config read from file=\n%s", ConfigurationManager::serializeConfig("", config).c_str());
                 std::tuple<fty::nut::DeviceConfigurations, std::set<secw::Id>> configsAsset = m_manager.getAssetConfigurationsWithSecwDocuments(proto.get());
                 fty::nut::DeviceConfigurations configsToSave = std::get<0>(configsAsset);
@@ -421,7 +418,7 @@ void ConfigurationConnector::publishToDriversConnector(const std::string& assetN
     messagebus::Message message;
     message.userData().push_back(assetName);
     message.metaData().clear();
-    message.metaData().emplace(messagebus::Message::FROM, m_parameters.publisherName);
+    message.metaData().emplace(messagebus::Message::FROM, m_parameters.requesterName);
     message.metaData().emplace(messagebus::Message::SUBJECT, subject);
     m_msgBusRequester->publish("ETN.Q.IPMCORE.NUTDRIVERSCONFIGURATION", message);
 }

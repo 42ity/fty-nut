@@ -51,6 +51,7 @@ class ConfigurationManager
         void manageCredentialsConfiguration(const std::string& secwDocumentId, std::set<std::string>& assetListChange);
 
         void updateDeviceConfigurationFile(const std::string& name, fty::nut::DeviceConfiguration& config);
+        fty::nut::DeviceConfiguration readDeviceConfigurationFile(const std::string& name);
         void removeDeviceConfigurationFile(const std::string &name);
 
     private:
