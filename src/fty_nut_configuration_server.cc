@@ -28,6 +28,7 @@
 
 #include "fty_nut_library.h"
 #include "fty_nut_classes.h"
+#include <fty_common_nut_credentials.h>
 
 #include <forward_list>
 #include <regex>
@@ -54,7 +55,7 @@ nutcommon::DeviceConfigurations testDummyDriverDevice(const std::string &param) 
         device.emplace("port", values["driver.parameter.port"] /*param*/);
         device.emplace("desc", "dummy-ups in repeater mode");
         devices.emplace_back(device);
-        log_info("testDummyDriverDevice: %s", ConfigurationManager::serialize_config("", device).c_str());
+        //log_info("testDummyDriverDevice: %s", ConfigurationManager::serializeConfig("", device).c_str());
     }
     return devices;
 }
@@ -95,12 +96,11 @@ nutcommon::DeviceConfigurations assetScanDrivers(messagebus::PoolWorker& pool, f
         }
         futureResults.emplace_front(pool.schedule(static_cast<nutcommon::DeviceConfigurations(*)(const nutcommon::ScanRangeOptions&)>(&nutcommon::scanDeviceRangeNetXML), scanRangeOptions));
 
-        std::string ip_1 = fty_proto_ext_string(asset, "ip.1", "");
         std::string name = fty_proto_ext_string(asset, "name", "");
         // FIXME: For multi node: asset.ext.contact_name@asset.ext.contact_email
         //std::string contact_name = fty_proto_ext_string(asset, "contact_name", "");
         //std::string contact_email = fty_proto_ext_string(asset, "contact_email", "");
-        const std::string param = name + "@" + ip_1;   /* "asset.ext.name@asset.ext.ip.1" (e.g MBT.G3MI.3PH.dummy-snmp@bios-nut-proxy.mbt.lab.etn.com */
+        const std::string param = name + "@" + address;   /* "asset.ext.name@asset.ext.ip.1" (e.g MBT.G3MI.3PH.dummy-snmp@bios-nut-proxy.mbt.lab.etn.com */
         futureResults.emplace_front(pool.schedule(testDummyDriverDevice, param));
     }
 
@@ -472,7 +472,6 @@ DeviceConfigurationInfoDetails::const_iterator matchDeviceConfigurationToBestDev
     return bestMatch;
 }
 
-// FIXME: Needed?
 /**
  * \brief Request fty_proto_t from asset name.
  * \param assetName Asset name to request.
@@ -480,52 +479,66 @@ DeviceConfigurationInfoDetails::const_iterator matchDeviceConfigurationToBestDev
  */
 fty_proto_t* fetchProtoFromAssetName(const std::string& assetName)
 {
-    /// TODO: fetch fty_proto_t from asset name by querying fty-asset.
-    /*fty_proto_t* asset = fty_proto_new(FTY_PROTO_ASSET);
-    fty_proto_set_type(asset, "epdu");
-    fty_proto_ext_insert(asset, "ip.1", "10.130.35.91");
-    return asset;*/
+    fty_proto_t *ftyProto = nullptr;
+    try {
+        std::string publisherName("fty-nut-configuration-server-publisher");
+        std::unique_ptr<messagebus::MessageBus> publisher(messagebus::MlmMessageBus(MLM_ENDPOINT, publisherName.c_str()));
+        publisher->connect();
+        // Get asset details
+        messagebus::Message message;
+        std::string uuid = messagebus::generateUuid();
+        message.userData().push_back("GET");
+        message.userData().push_back(uuid.c_str());
+        message.userData().push_back(assetName.c_str());
 
-    fty_proto_t *res = nullptr;
-
-    const auto clientId = messagebus::getClientId("fty-nut-configuration-requester");
-    MlmClientGuard mClient(mlm_client_new());
-    mlm_client_connect(mClient.get(), MLM_ENDPOINT, 1000, clientId.c_str());
-
-    // Request details of asset.
-    zmsg_t *request = zmsg_new();
-    ZuuidGuard uuid(zuuid_new());
-    const char *uuid_canonical = zuuid_str_canonical(uuid.get());
-    zmsg_addstr(request, "GET");
-    zmsg_addstr(request, uuid_canonical);
-    zmsg_addstr(request, assetName.c_str());
-    int r = mlm_client_sendto(mClient.get(), AGENT_FTY_ASSET, "ASSET_DETAIL", nullptr, 1000, &request);
-    if (r != 0) {
-        log_error ("Request ASSET_DETAIL failed for %s (r: %d)", assetName.c_str(), r);
-        zmsg_destroy(&request);
-        return res;
-    }
-    zmsg_destroy(&request);
-    ZpollerGuard poller(zpoller_new(mlm_client_msgpipe(mClient.get()), nullptr));
-    if (zpoller_wait(poller.get(), 1000)) {
-        //ZmsgGuard reply(mlm_client_recv(mClient.get()));
-        zmsg_t *reply = mlm_client_recv(mClient.get());
-        ZstrGuard uuid_recv(zmsg_popstr(reply));
-        // Check uuid matching
-        if (!streq(uuid_recv.get(), uuid_canonical)) {
-            log_error ("UUID doesn't match (%s, %s, %s)", assetName.c_str(), uuid_canonical, uuid_recv.get());
-        }
-        // Test if it a fty_proto msg
-        else if (fty_proto_is(reply)) {
-            res = fty_proto_decode(&reply);
+        message.metaData().clear();
+        message.metaData().emplace(messagebus::Message::RAW, "");
+        message.metaData().emplace(messagebus::Message::CORRELATION_ID, uuid);
+        message.metaData().emplace(messagebus::Message::SUBJECT, "ASSET_DETAIL");
+        message.metaData().emplace(messagebus::Message::FROM, publisherName);
+        message.metaData().emplace(messagebus::Message::TO, "asset-agent");
+        message.metaData().emplace(messagebus::Message::REPLY_TO, publisherName);
+        log_info("fetchProtoFromAssetName: Get asset details for %s", assetName.c_str());
+        messagebus::Message response = publisher->request("asset-agent", message, 10); /* timeout 10 sec */
+        if (!response.userData().empty()) {
+            std::string uuid_read = response.userData().front();
+            if (uuid_read.empty()) {
+                log_error("fetchProtoFromAssetName: uuid empty");
+                return nullptr;
+            }
+            // Check uuid matching
+            if (uuid_read.compare(uuid) != 0) {
+                log_error("UUID doesn't match (%s, %s, %s)", assetName.c_str(), uuid.c_str(), uuid_read.c_str());
+                return nullptr;
+            }
+            response.userData().pop_front();
         }
         else {
-            log_error("Reply not a fty_proto msg (%s)", assetName.c_str());
+            log_error("fetchProtoFromAssetName: no uuid defined");
+            return nullptr;
         }
-        //fty_proto_print(res);
-        zmsg_destroy(&reply);
+        // Extract data in message
+        std::string data;
+        if (!response.userData().empty()) {
+            data = response.userData().front();
+        }
+        else {
+            log_error("fetchProtoFromAssetName: no data defined");
+            return nullptr;
+        }
+        zmsg_t* zmsg = zmsg_new();
+        zmsg_addmem(zmsg, data.c_str(), data.length());
+        if (!is_fty_proto(zmsg)) {
+            zmsg_destroy(&zmsg);
+            log_warning("Response to an ASSET_DETAIL message is not fty_proto");
+            return nullptr;
+        }
+        ftyProto = fty_proto_decode(&zmsg);
     }
-    return res;
+    catch (std::exception& e) {
+        log_error("Exception while processing message: %s", e.what());
+    }
+    return ftyProto;
 }
 
 // FIXME: To put in fty-commun-nut ??

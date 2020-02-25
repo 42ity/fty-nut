@@ -38,20 +38,19 @@ class ConfigurationManager
         ConfigurationManager(const std::string& dbConn);
         ~ConfigurationManager() = default;
 
-        static std::string serialize_config(std::string name, nutcommon::DeviceConfiguration& config);
+        static std::string serializeConfig(const std::string& name, fty::nut::DeviceConfiguration& config);
         void automaticAssetConfigurationPrioritySort(fty_proto_t* asset);
         void scanAssetConfigurations(fty_proto_t* asset);
 
-        void getAssetConfigurations(fty_proto_t* asset, nutcommon::DeviceConfigurations& configs);
-        void getAssetConfigurationsWithSecwDocuments(fty_proto_t* asset, nutcommon::DeviceConfigurations& configs, std::set<secw::Id>& secw_document_id_list);
-        void saveAssetConfigurations(std::string asset_name, nutcommon::DeviceConfigurations& configs, std::set<secw::Id>& secw_document_id_list);
-        bool isConfigurationsChange(nutcommon::DeviceConfigurations& configs_asset_to_test, nutcommon::DeviceConfigurations& configs_asset_current, bool init_in_progress = false);
+        fty::nut::DeviceConfigurations getAssetConfigurations(fty_proto_t* asset);
+        std::tuple<fty::nut::DeviceConfigurations, std::set<secw::Id>> getAssetConfigurationsWithSecwDocuments(fty_proto_t* asset);
+        void saveAssetConfigurations(const std::string& assetName, std::tuple<fty::nut::DeviceConfigurations, std::set<secw::Id>>& configsAsset);
+        bool isConfigurationsChange(fty::nut::DeviceConfigurations& configsAssetToTest, fty::nut::DeviceConfigurations& configsAssetCurrent, bool initInProgress = false);
         bool updateAssetConfiguration(fty_proto_t* asset);
         bool removeAssetConfiguration(fty_proto_t* asset);
-        void manageCredentialsConfiguration(std::string secw_document_id, std::set<std::string>& asset_list_change);
+        void manageCredentialsConfiguration(const std::string& secwDocumentId, std::set<std::string>& assetListChange);
 
-        void updateDeviceConfigurationFile(const std::string& name, nutcommon::DeviceConfiguration& config);
-        void readDeviceConfigurationFile(const std::string& name, nutcommon::DeviceConfiguration& config);
+        void updateDeviceConfigurationFile(const std::string& name, fty::nut::DeviceConfiguration& config);
         void removeDeviceConfigurationFile(const std::string &name);
 
     private:
@@ -59,7 +58,7 @@ class ConfigurationManager
         std::string m_dbConn;
         std::map<std::string, nutcommon::DeviceConfigurations> m_deviceConfigurationMap;
         std::map<std::string, std::set<secw::Id>> m_deviceCredentialsMap;
-        std::mutex m_manage_drivers_mutex;
+        std::mutex m_manageDriversMutex;
 };
 
 }

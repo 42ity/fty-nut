@@ -26,6 +26,7 @@ src_libfty_nut_la_SOURCES = \
     src/fty_nut_server.cc \
     src/fty_nut_command_server.cc \
     src/fty_nut_configurator_server.cc \
+    src/fty_nut_configuration_protect_asset.cc \
     src/fty_nut_configuration_helper.cc \
     src/fty_nut_configuration_manager.cc \
     src/fty_nut_configuration_connector.cc \

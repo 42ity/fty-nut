@@ -49,7 +49,7 @@ class ConfigurationDriversConnector
         void removeConfig(messagebus::UserData data);
 
         Parameters m_parameters;
-        ConfigurationDriversManager m_drivers_manager;
+        ConfigurationDriversManager m_driversManager;
         messagebus::Dispatcher<std::string, std::function<void(messagebus::UserData)>, std::function<void(const std::string&, messagebus::UserData)>> m_dispatcher;
         messagebus::PoolWorker m_worker;
         std::unique_ptr<messagebus::MessageBus> m_msgBus;

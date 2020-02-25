@@ -43,7 +43,7 @@ ConfigurationDriversConnector::Parameters::Parameters() :
 
 ConfigurationDriversConnector::ConfigurationDriversConnector(ConfigurationDriversConnector::Parameters params) :
     m_parameters(params),
-    m_drivers_manager(),
+    m_driversManager(),
     m_dispatcher({
         { "addConfig", std::bind(&ConfigurationDriversConnector::addConfig, this, std::placeholders::_1) },
         { "removeConfig", std::bind(&ConfigurationDriversConnector::removeConfig, this, std::placeholders::_1) }
@@ -56,11 +56,11 @@ ConfigurationDriversConnector::ConfigurationDriversConnector(ConfigurationDriver
 }
 
 void ConfigurationDriversConnector::addConfig(messagebus::UserData data) {
-    m_drivers_manager.addConfigDriver(data.front());
+    m_driversManager.addConfigDriver(data.front());
 }
 
 void ConfigurationDriversConnector::removeConfig(messagebus::UserData data) {
-    m_drivers_manager.removeConfigDriver(data.front());
+    m_driversManager.removeConfigDriver(data.front());
 }
 
 

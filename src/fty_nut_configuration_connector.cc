@@ -35,7 +35,6 @@
 #include <regex>
 #include <future>
 
-
 namespace fty
 {
 namespace nut
@@ -57,24 +56,24 @@ ConfigurationConnector::ConfigurationConnector(ConfigurationConnector::Parameter
     m_parameters(params),
     m_manager(params.dbUrl),
     m_worker(10),
-    m_msg_bus(messagebus::MlmMessageBus(params.endpoint, params.agentName)),
-    m_msg_bus_publisher(messagebus::MlmMessageBus(params.endpoint, params.publisherName)),
-    m_sync_client("fty-nut-configuration.socket")
+    m_msgBusReceiver(messagebus::MlmMessageBus(params.endpoint, params.agentName)),
+    m_msgBusRequester(messagebus::MlmMessageBus(params.endpoint, params.publisherName)),
+    m_syncClient("fty-nut-configuration.socket")
 {
-    m_msg_bus->connect();
-    m_msg_bus->subscribe(FTY_PROTO_STREAM_ASSETS, std::bind(&ConfigurationConnector::handleNotificationAssets, this, std::placeholders::_1));
+    m_msgBusReceiver->connect();
+    m_msgBusReceiver->subscribe(FTY_PROTO_STREAM_ASSETS, std::bind(&ConfigurationConnector::handleNotificationAssets, this, std::placeholders::_1));
 
-    m_msg_bus_publisher->connect();
-    m_msg_bus_publisher->receive("ASSETS", std::bind(&ConfigurationConnector::handleRequestAssets, this, std::placeholders::_1));
-    m_msg_bus_publisher->receive(params.publisherName.c_str(), std::bind(&ConfigurationConnector::handleRequestAssetDetail, this, std::placeholders::_1));
+    m_msgBusRequester->connect();
+    m_msgBusRequester->receive("ASSETS", std::bind(&ConfigurationConnector::handleRequestAssets, this, std::placeholders::_1));
+    m_msgBusRequester->receive(params.publisherName.c_str(), std::bind(&ConfigurationConnector::handleRequestAssetDetail, this, std::placeholders::_1));
 
-    m_stream_client = std::unique_ptr<mlm::MlmStreamClient>(new mlm::MlmStreamClient(params.agentName, SECW_NOTIFICATIONS, 1000, params.endpoint));
-    m_consumer_accessor = std::unique_ptr<secw::ConsumerAccessor>(new secw::ConsumerAccessor(m_sync_client, *m_stream_client.get()));
-    m_consumer_accessor->setCallbackOnUpdate(std::bind(&ConfigurationConnector::handleNotificationSecurityWalletUpdate, this,
+    m_streamClient = std::unique_ptr<mlm::MlmStreamClient>(new mlm::MlmStreamClient(params.agentName, SECW_NOTIFICATIONS, 1000, params.endpoint));
+    m_consumerAccessor = std::unique_ptr<secw::ConsumerAccessor>(new secw::ConsumerAccessor(m_syncClient, *m_streamClient.get()));
+    m_consumerAccessor->setCallbackOnUpdate(std::bind(&ConfigurationConnector::handleNotificationSecurityWalletUpdate, this,
             std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-    m_consumer_accessor->setCallbackOnDelete(std::bind(&ConfigurationConnector::handleNotificationSecurityWalletDelete, this,
+    m_consumerAccessor->setCallbackOnDelete(std::bind(&ConfigurationConnector::handleNotificationSecurityWalletDelete, this,
             std::placeholders::_1, std::placeholders::_2));
-    m_consumer_accessor->setCallbackOnCreate(std::bind(&ConfigurationConnector::handleNotificationSecurityWalletCreate, this,
+    m_consumerAccessor->setCallbackOnCreate(std::bind(&ConfigurationConnector::handleNotificationSecurityWalletCreate, this,
             std::placeholders::_1, std::placeholders::_2));
 }
 
@@ -82,7 +81,7 @@ ConfigurationConnector::ConfigurationConnector(ConfigurationConnector::Parameter
  * \brief Get initial assets.
  *
  */
-void ConfigurationConnector::get_initial_assets()
+void ConfigurationConnector::getInitialAssets()
 {
     // Get list of assets
     messagebus::Message message;
@@ -102,7 +101,7 @@ void ConfigurationConnector::get_initial_assets()
     message.metaData().emplace(messagebus::Message::FROM, m_parameters.publisherName);
     message.metaData().emplace(messagebus::Message::TO, "asset-agent");
     message.metaData().emplace(messagebus::Message::REPLY_TO, m_parameters.publisherName);
-    m_msg_bus_publisher->sendRequest("asset-agent", message);
+    m_msgBusRequester->sendRequest("asset-agent", message);
 }
 
 /**
@@ -115,46 +114,42 @@ void ConfigurationConnector::handleRequestAssets(messagebus::Message msg)
         try {
             log_info("handleRequestAssets: Receive message from ASSETS");
             // First unreceive ASSETS message
-            m_msg_bus_publisher->unreceive("ASSETS", std::bind(&ConfigurationConnector::handleRequestAssets, this, std::placeholders::_1));
+            m_msgBusRequester->unreceive("ASSETS", std::bind(&ConfigurationConnector::handleRequestAssets, this, std::placeholders::_1));
             // Extract uuid in message
             // FIXME: uuid not checked
             if (!msg.userData().empty()) {
-                std::string uuid_read = msg.userData().front();
-                if (uuid_read.empty()) {
-                    log_error("handleRequestAssets: uuid empty");
-                    return;
+                std::string uuidRead = msg.userData().front();
+                if (uuidRead.empty()) {
+                    throw std::runtime_error("handleRequestAssets: uuid empty");
                 }
                 msg.userData().pop_front();
             }
             else {
-                log_error("handleRequestAssets: no uuid defined");
-                return;
+                throw std::runtime_error("handleRequestAssets: no uuid defined");
             }
             // Extract result in message
             if (!msg.userData().empty()) {
                 std::string result = msg.userData().front();
                 if (result.empty() || result != "OK") {
-                    log_error("handleRequestAssets: bad result: '%s'", result.c_str());
-                    return;
+                    throw std::runtime_error("handleRequestAssets: bad result: " + result);
                 }
                 msg.userData().pop_front();
             }
             else {
-                log_error("handleRequestAssets: no result defined");
-                return;
+                throw std::runtime_error("handleRequestAssets: no result defined");
             }
-            std::vector<std::string> devices_list;
+            std::vector<std::string> devicesList;
             // For each asset name in message
             while (!msg.userData().empty()) {
                 // Extract asset name in message
-                std::string asset_name = msg.userData().front();
+                std::string assetName = msg.userData().front();
                 msg.userData().pop_front();
                 // Get detail of asset received
                 messagebus::Message message;
                 std::string uuid = messagebus::generateUuid();
                 message.userData().push_back("GET");
                 message.userData().push_back(uuid.c_str());
-                message.userData().push_back(asset_name.c_str());
+                message.userData().push_back(assetName.c_str());
 
                 message.metaData().clear();
                 message.metaData().emplace(messagebus::Message::RAW, "");
@@ -163,21 +158,21 @@ void ConfigurationConnector::handleRequestAssets(messagebus::Message msg)
                 message.metaData().emplace(messagebus::Message::FROM, m_parameters.publisherName);
                 message.metaData().emplace(messagebus::Message::TO, "asset-agent");
                 message.metaData().emplace(messagebus::Message::REPLY_TO, m_parameters.publisherName);
-                log_info("handleRequestAssets: Get asset details for %s", asset_name.c_str());
-                devices_list.push_back(asset_name);
-                m_msg_bus_publisher->sendRequest("asset-agent", message);
+                log_info("handleRequestAssets: Get asset details for %s", assetName.c_str());
+                devicesList.push_back(assetName);
+                m_msgBusRequester->sendRequest("asset-agent", message);
             }
 
             // Get the list of driver present on local disk
-            std::vector<std::string> devices_list_in_directory = shared::files_in_directory(NUT_PART_STORE);
+            std::vector<std::string> devicesListInDirectory = shared::files_in_directory(NUT_PART_STORE);
             // For each driver, remove it if not present in current device list
-            for (auto asset_name : devices_list_in_directory) {
-                auto it = std::find(devices_list.begin(), devices_list.end(), asset_name);
-                if (it == devices_list.end()) {
+            for (auto assetName : devicesListInDirectory) {
+                auto it = std::find(devicesList.begin(), devicesList.end(), assetName);
+                if (it == devicesList.end()) {
                     // Remove driver
-                    log_info("handleRequestAssets: Remove asset %s", asset_name.c_str());
-                    m_manager.removeDeviceConfigurationFile(asset_name);
-                    publishToDriversConnector(asset_name, "removeConfig");
+                    log_info("handleRequestAssets: Remove asset %s", assetName.c_str());
+                    m_manager.removeDeviceConfigurationFile(assetName);
+                    publishToDriversConnector(assetName, "removeConfig");
                 }
             }
         }
@@ -201,14 +196,12 @@ void ConfigurationConnector::handleRequestAssetDetail(messagebus::Message msg)
             if (!msg.userData().empty()) {
                 std::string uuid_read = msg.userData().front();
                 if (uuid_read.empty()) {
-                    log_error("handleRequestAssetDetail: uuid empty");
-                    return;
+                    throw std::runtime_error("handleRequestAssetDetail: uuid empty");
                 }
                 msg.userData().pop_front();
             }
             else {
-                log_error("handleRequestAssetDetail: no uuid defined");
-                return;
+                throw std::runtime_error("handleRequestAssetDetail: no uuid definedy");
             }
             // Extract data in message
             std::string data;
@@ -216,21 +209,19 @@ void ConfigurationConnector::handleRequestAssetDetail(messagebus::Message msg)
                 data = msg.userData().front();
             }
             else {
-                log_error("handleRequestAssetDetail: no data defined");
-                return;
+                throw std::runtime_error("handleRequestAssetDetail: no data defined");
             }
             zmsg_t* zmsg = zmsg_new();
             zmsg_addmem(zmsg, data.c_str(), data.length());
             if (!is_fty_proto(zmsg)) {
-                log_warning("Response to an ASSET_DETAIL message is not fty_proto");
-                return;
+                zmsg_destroy(&zmsg);
+                throw std::runtime_error("Response to an ASSET_DETAIL message is not fty_proto");
             }
             FtyProto proto(fty_proto_decode(&zmsg), [](fty_proto_t *p) -> void { fty_proto_destroy(&p); });
             // FIXME: To restore when lib messagebus updated
             //FtyProto proto(messagebus::decodeFtyProto(data), [](fty_proto_t *p) -> void { fty_proto_destroy(&p); });
             if (!proto) {
-                log_error("Failed to decode fty_proto_t on stream " FTY_PROTO_STREAM_ASSETS);
-                return;
+                throw std::runtime_error("Failed to decode fty_proto_t on stream " FTY_PROTO_STREAM_ASSETS);
             }
             std::string name = fty_proto_name(proto.get());
             std::string operation = fty_proto_operation(proto.get());
@@ -240,44 +231,44 @@ void ConfigurationConnector::handleRequestAssetDetail(messagebus::Message msg)
             log_info("handleNotificationAssets: receive message (operation=%s type=%s subtype=%s status=%s)",
                 operation.c_str(), type.c_str(), subtype.c_str(), status.c_str());
             // Get config in config file
-            bool need_update = false;
-            nutcommon::DeviceConfiguration config;
-            m_manager.readDeviceConfigurationFile(name, config);
-            if (!config.empty()) {
-                log_trace("handleRequestAssetDetail: Config read from file=\n%s", ConfigurationManager::serialize_config("", config).c_str());
-                std::set<secw::Id> secw_document_id_list;
-                nutcommon::DeviceConfigurations configs_to_test;
-                nutcommon::DeviceConfigurations configs_to_save;
-                configs_to_test.push_back(config);
-                m_manager.getAssetConfigurationsWithSecwDocuments(proto.get(), configs_to_save, secw_document_id_list);
-                if(m_manager.isConfigurationsChange(configs_to_test, configs_to_save, true)) {
+            bool needUpdate = false;
+            const std::string configFilePath = std::string(NUT_PART_STORE) + shared::path_separator() + name;
+            fty::nut::DeviceConfigurations configs = fty::nut::parseConfigurationFile(configFilePath);
+            if (!configs.empty()) {
+                fty::nut::DeviceConfiguration config = configs.at(0); // Take first configuration (normally just one configuration available)
+                config.erase("name");  // Remove name for comparaison
+                log_trace("handleRequestAssetDetail: Config read from file=\n%s", ConfigurationManager::serializeConfig("", config).c_str());
+                std::tuple<fty::nut::DeviceConfigurations, std::set<secw::Id>> configsAsset = m_manager.getAssetConfigurationsWithSecwDocuments(proto.get());
+                fty::nut::DeviceConfigurations configsToSave = std::get<0>(configsAsset);
+                fty::nut::DeviceConfigurations configsToTest;
+                configsToTest.push_back(config);
+                if(m_manager.isConfigurationsChange(configsToTest, configsToSave, true)) {
                     log_trace("handleRequestAssetDetail: config change for %s", name.c_str());
-                    need_update = true;
+                    needUpdate = true;
                 }
                 else {
                     log_trace("handleRequestAssetDetail: init config for %s", name.c_str());
-                    m_manager.saveAssetConfigurations(name, configs_to_save, secw_document_id_list);
+                    m_manager.saveAssetConfigurations(name, configsAsset);
                 }
             } else {
-                need_update = true;
+                needUpdate = true;
                 log_trace("handleRequestAssetDetail: no config file read for %s", name.c_str());
             }
-            if (need_update) {
+            if (needUpdate) {
                 log_trace("handleRequestAssetDetail: %s need rescan", name.c_str());
-                protect_asset_lock(m_asset_mutex_map, name);
+                m_protectAsset.lock(name);
                 m_manager.scanAssetConfigurations(proto.get());
                 m_manager.automaticAssetConfigurationPrioritySort(proto.get());
-                nutcommon::DeviceConfigurations new_configs;
-                std::set<secw::Id> new_secw_document_id_list;
-                m_manager.getAssetConfigurationsWithSecwDocuments(proto.get(), new_configs, new_secw_document_id_list);
-                m_manager.saveAssetConfigurations(name, new_configs, new_secw_document_id_list);
-                if (new_configs.size() > 0) {
+                std::tuple<fty::nut::DeviceConfigurations, std::set<secw::Id>> newConfigAsset = m_manager.getAssetConfigurationsWithSecwDocuments(proto.get());
+                m_manager.saveAssetConfigurations(name, newConfigAsset);
+                fty::nut::DeviceConfigurations newConfigs = std::get<0>(newConfigAsset);
+                if (!newConfigs.empty()) {
                     // Save the first configuration into config file
-                    log_trace("\nSave config:\n%s", ConfigurationManager::serialize_config("", new_configs.at(0)).c_str());
-                    m_manager.updateDeviceConfigurationFile(name, new_configs.at(0));
+                    log_trace("Save config: %s", ConfigurationManager::serializeConfig("", newConfigs.at(0)).c_str());
+                    m_manager.updateDeviceConfigurationFile(name, newConfigs.at(0));
                     publishToDriversConnector(name, "addConfig");
                 }
-                protect_asset_unlock(m_asset_mutex_map, name);
+                m_protectAsset.unlock(name);
             }
         }
         catch (std::exception& e) {
@@ -293,74 +284,77 @@ void ConfigurationConnector::handleRequestAssetDetail(messagebus::Message msg)
 void ConfigurationConnector::handleNotificationAssets(messagebus::Message msg)
 {
     m_worker.offload([this](messagebus::Message msg) {
-
-        for (const auto& pair : msg.metaData()) {
-            std::cout << pair.first << "=" << pair.second << std::endl;
-        }
-
-        for(const auto& data : msg.userData()) {
-            zmsg_t* zmsg = zmsg_new();
-            zmsg_addmem(zmsg, data.c_str(), data.length());
-            if (!is_fty_proto(zmsg)) {
-                log_warning("Notification asset message is not fty_proto");
-                return;
+        try {
+            for (const auto& pair : msg.metaData()) {
+                log_info("handleNotificationAssets: %s=%s", pair.first.c_str(), pair.second.c_str());
             }
-            FtyProto proto(fty_proto_decode(&zmsg), [](fty_proto_t *p) -> void { fty_proto_destroy(&p); });
-            // FIXME: To restore when lib messagebus updated
-            //FtyProto proto(messagebus::decodeFtyProto(data), [](fty_proto_t *p) -> void { fty_proto_destroy(&p); });
-            if (!proto) {
-                log_error("Failed to decode fty_proto_t on stream " FTY_PROTO_STREAM_ASSETS);
-                return;
-            }
-            std::string name = fty_proto_name(proto.get());
-            std::string operation = fty_proto_operation(proto.get());
-            std::string type = fty_proto_aux_string(proto.get(), "type", "");
-            std::string subtype = fty_proto_aux_string(proto.get(), "subtype", "");
-            std::string status = fty_proto_aux_string(proto.get(), "status", "");
-            log_info("handleNotificationAssets: receive message (operation=%s type=%s subtype=%s status=%s)",
-                operation.c_str(), type.c_str(), subtype.c_str(), status.c_str());
 
-            if (type == "device" && (subtype == "ups" || subtype == "pdu" || subtype == "epdu" || subtype == "sts")) {
-                if (operation == FTY_PROTO_ASSET_OP_CREATE && status == "active") {
-fty_proto_print(proto.get());
-                    protect_asset_lock(m_asset_mutex_map, name);
-                    m_manager.scanAssetConfigurations(proto.get());
-                    m_manager.automaticAssetConfigurationPrioritySort(proto.get());
-                    nutcommon::DeviceConfigurations configs;
-                    std::set<secw::Id> secw_document_id_list;
-                    m_manager.getAssetConfigurationsWithSecwDocuments(proto.get(), configs, secw_document_id_list);
-                    m_manager.saveAssetConfigurations(name, configs, secw_document_id_list);
-                    if (configs.size() > 0) {
-                        // Save the first configuration into config file
-                        log_trace("\nSave config:\n%s", ConfigurationManager::serialize_config("", configs.at(0)).c_str());
-                        m_manager.updateDeviceConfigurationFile(name, configs.at(0));
-                        publishToDriversConnector(name, "addConfig");
-                    }
-                    protect_asset_unlock(m_asset_mutex_map, name);
+            for(const auto& data : msg.userData()) {
+                zmsg_t* zmsg = zmsg_new();
+                zmsg_addmem(zmsg, data.c_str(), data.length());
+                if (!is_fty_proto(zmsg)) {
+                    zmsg_destroy(&zmsg);
+                    throw std::runtime_error("Notification asset message is not fty_proto");
                 }
-                else if (operation == FTY_PROTO_ASSET_OP_UPDATE) {
-fty_proto_print(proto.get());
-                    protect_asset_lock(m_asset_mutex_map, name);
-                    if (m_manager.updateAssetConfiguration(proto.get())) {
-                        if (status == "active") {
+                FtyProto proto(fty_proto_decode(&zmsg), [](fty_proto_t *p) -> void { fty_proto_destroy(&p); });
+                // FIXME: To restore when lib messagebus updated
+                //FtyProto proto(messagebus::decodeFtyProto(data), [](fty_proto_t *p) -> void { fty_proto_destroy(&p); });
+                if (!proto) {
+                    throw std::runtime_error("Failed to decode fty_proto_t on stream " FTY_PROTO_STREAM_ASSETS);
+                }
+                std::string name = fty_proto_name(proto.get());
+                std::string operation = fty_proto_operation(proto.get());
+                std::string type = fty_proto_aux_string(proto.get(), "type", "");
+                std::string subtype = fty_proto_aux_string(proto.get(), "subtype", "");
+                std::string status = fty_proto_aux_string(proto.get(), "status", "");
+                log_info("handleNotificationAssets: receive message (operation=%s type=%s subtype=%s status=%s)",
+                    operation.c_str(), type.c_str(), subtype.c_str(), status.c_str());
+
+                if (type == "device" && (subtype == "ups" || subtype == "pdu" || subtype == "epdu" || subtype == "sts")) {
+                    if (operation == FTY_PROTO_ASSET_OP_CREATE && status == "active") {
+    fty_proto_print(proto.get());
+                        m_protectAsset.lock(name);
+                        m_manager.scanAssetConfigurations(proto.get());
+                        m_manager.automaticAssetConfigurationPrioritySort(proto.get());
+                        std::tuple<fty::nut::DeviceConfigurations, std::set<secw::Id>> configs_asset =
+                                m_manager.getAssetConfigurationsWithSecwDocuments(proto.get());
+                        fty::nut::DeviceConfigurations configs = std::get<0>(configs_asset);
+                        m_manager.saveAssetConfigurations(name, configs_asset);
+                        if (!configs.empty()) {
+                            // Save the first configuration into config file
+                            log_trace("Save config: %s", ConfigurationManager::serializeConfig("", configs.at(0)).c_str());
+                            m_manager.updateDeviceConfigurationFile(name, configs.at(0));
                             publishToDriversConnector(name, "addConfig");
                         }
-                        else if (status == "nonactive") {
+                        m_protectAsset.unlock(name);
+                    }
+                    else if (operation == FTY_PROTO_ASSET_OP_UPDATE) {
+    fty_proto_print(proto.get());
+                        m_protectAsset.lock(name);
+                        if (m_manager.updateAssetConfiguration(proto.get())) {
+                            if (status == "active") {
+                                publishToDriversConnector(name, "addConfig");
+                            }
+                            else if (status == "nonactive") {
+                                publishToDriversConnector(name, "removeConfig");
+                            }
+                        }
+                        m_protectAsset.unlock(name);
+                    }
+                    else if (operation == FTY_PROTO_ASSET_OP_DELETE) {
+    fty_proto_print(proto.get());
+                        m_protectAsset.lock(name);
+                        if (m_manager.removeAssetConfiguration(proto.get())) {
                             publishToDriversConnector(name, "removeConfig");
                         }
+                        m_protectAsset.unlock(name);
+                        m_protectAsset.remove(name);
                     }
-                    protect_asset_unlock(m_asset_mutex_map, name);
-                }
-                else if (operation == FTY_PROTO_ASSET_OP_DELETE) {
-fty_proto_print(proto.get());
-                    protect_asset_lock(m_asset_mutex_map, name);
-                    if (m_manager.removeAssetConfiguration(proto.get())) {
-                        publishToDriversConnector(name, "removeConfig");
-                    }
-                    protect_asset_unlock(m_asset_mutex_map, name);
-                    protect_asset_remove(m_asset_mutex_map, name);
                 }
             }
+        }
+        catch (std::exception& e) {
+            log_error("Exception while processing message: %s", e.what());
         }
     }, std::move(msg));
 }
@@ -375,11 +369,11 @@ void ConfigurationConnector::handleNotificationSecurityWalletUpdate(const std::s
 {
     log_info("handleNotificationSecurityWalletUpdate: receive message (portfolio=%s name=%s id=%s)",
                 portfolio.c_str(), newDoc->getName().c_str(), newDoc->getId().c_str());
-    std::set<std::string> asset_list_change;
-    m_manager.manageCredentialsConfiguration(newDoc->getId(), asset_list_change);
+    std::set<std::string> assetListChange;
+    m_manager.manageCredentialsConfiguration(newDoc->getId(), assetListChange);
     // for each asset impacted with the security document changed
-    for (std::string asset_name : asset_list_change) {
-        publishToDriversConnector(asset_name, "addConfig");
+    for (std::string assetName : assetListChange) {
+        publishToDriversConnector(assetName, "addConfig");
     }
 }
 
@@ -392,11 +386,11 @@ void ConfigurationConnector::handleNotificationSecurityWalletDelete(const std::s
 {
     log_info("handleNotificationSecurityWalletDelete: receive message (portfolio=%s name=%s id=%s)",
                 portfolio.c_str(), doc->getName().c_str(), doc->getId().c_str());
-    std::set<std::string> asset_list_change;
-    m_manager.manageCredentialsConfiguration(doc->getId(), asset_list_change);
+    std::set<std::string> assetListChange;
+    m_manager.manageCredentialsConfiguration(doc->getId(), assetListChange);
     // for each asset impacted with the security document changed
-    for (std::string asset_name : asset_list_change) {
-        publishToDriversConnector(asset_name, "addConfig");
+    for (std::string assetName : assetListChange) {
+        publishToDriversConnector(assetName, "addConfig");
     }
 }
 
@@ -409,27 +403,27 @@ void ConfigurationConnector::handleNotificationSecurityWalletCreate(const std::s
 {
     log_info("handleNotificationSecurityWalletCreate: receive message (portfolio=%s name=%s id=%s)",
                 portfolio.c_str(), doc->getName().c_str(), doc->getId().c_str());
-    std::set<std::string> asset_list_change;
-    m_manager.manageCredentialsConfiguration(doc->getId(), asset_list_change);
+    std::set<std::string> assetListChange;
+    m_manager.manageCredentialsConfiguration(doc->getId(), assetListChange);
     // for each asset impacted with the security document changed
-    for (std::string asset_name : asset_list_change) {
-        publishToDriversConnector(asset_name, "addConfig");
+    for (std::string assetName : assetListChange) {
+        publishToDriversConnector(assetName, "addConfig");
     }
 }
 
 /**
  * \brief Publish message to drivers connector.
- * \param asset_name asset name.
+ * \param assetName asset name.
  * \param subject Subject of message.
  */
-void ConfigurationConnector::publishToDriversConnector(std::string asset_name, std::string subject)
+void ConfigurationConnector::publishToDriversConnector(const std::string& assetName, const std::string& subject)
 {
     messagebus::Message message;
-    message.userData().push_back(asset_name);
+    message.userData().push_back(assetName);
     message.metaData().clear();
     message.metaData().emplace(messagebus::Message::FROM, m_parameters.publisherName);
     message.metaData().emplace(messagebus::Message::SUBJECT, subject);
-    m_msg_bus_publisher->publish("ETN.Q.IPMCORE.NUTDRIVERSCONFIGURATION", message);
+    m_msgBusRequester->publish("ETN.Q.IPMCORE.NUTDRIVERSCONFIGURATION", message);
 }
 
 }

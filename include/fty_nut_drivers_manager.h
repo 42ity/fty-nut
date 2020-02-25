@@ -29,6 +29,15 @@ namespace fty
 namespace nut
 {
 
+class ConfigurationDriversControl {
+    public:
+        void addControl(const std::string& controlName);
+        std::set<std::string> clearControl();
+    private:
+        std::set<std::string> m_controlDrivers;
+        std::mutex m_controlDriversMutex;
+};
+
 class ConfigurationDriversManager
 {
     public:
@@ -40,15 +49,13 @@ class ConfigurationDriversManager
         template<typename It> void systemctl(const std::string &operation, It first, It last);
         void systemctl(const std::string &operation, const std::string &service);
         void updateNUTConfig();
-        void addConfigDriver(std::string asset_name);
-        void removeConfigDriver(std::string asset_name);
+        void addConfigDriver(const std::string& assetName);
+        void removeConfigDriver(const std::string& assetName);
 
     private:
-        std::set<std::string> m_start_drivers;
-        std::set<std::string> m_stop_drivers;
-        std::mutex m_start_drivers_mutex;
-        std::mutex m_stop_drivers_mutex;
-        std::thread m_manage_drivers_thread;
+        ConfigurationDriversControl m_startDrivers;
+        ConfigurationDriversControl m_stopDrivers;
+        std::thread m_manageDriversThread;
 };
 
 }

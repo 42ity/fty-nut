@@ -7,6 +7,7 @@ include_HEADERS = \
     fty_nut_server.h \
     fty_nut_command_server.h \
     fty_nut_configurator_server.h \
+    fty_nut_configuration_protect_asset.h \
     fty_nut_configuration_helper.h \
     fty_nut_configuration_manager.h \
     fty_nut_configuration_connector.h \

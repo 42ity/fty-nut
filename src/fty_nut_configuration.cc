@@ -126,7 +126,7 @@ int main (int argc, char *argv [])
     fty::nut::ConfigurationConnector nutConfigurationConnector(configurationParameters);
     fty::nut::ConfigurationDriversConnector nutDriversConnector(driversParameters);
 
-    nutConfigurationConnector.get_initial_assets();
+    nutConfigurationConnector.getInitialAssets();
 
     // Wait until interrupt.
     setSignalHandler();

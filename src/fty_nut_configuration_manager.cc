@@ -48,7 +48,7 @@ ConfigurationManager::ConfigurationManager(const std::string& dbConn) : m_poolSc
  * \param name Asset name to process (optional).
  * \param config Config to process.
  */
-std::string ConfigurationManager::serialize_config(std::string name, nutcommon::DeviceConfiguration& config)
+std::string ConfigurationManager::serializeConfig(const std::string& name, fty::nut::DeviceConfiguration& config)
 {
     std::stringstream ss;
     //ss << config << std::endl;
@@ -180,14 +180,14 @@ void ConfigurationManager::scanAssetConfigurations(fty_proto_t* asset)
 /**
  * \brief Get asset configurations.
  * \param asset Asset to process.
- * \param[out] configs Configurations of asset.
+ * \return Configurations of asset.
  */
-void ConfigurationManager::getAssetConfigurations(fty_proto_t* asset, nutcommon::DeviceConfigurations& configs)
+fty::nut::DeviceConfigurations ConfigurationManager::getAssetConfigurations(fty_proto_t* asset)
 {
-    std::string assetName;
+    fty::nut::DeviceConfigurations configs;
+    std::string assetName = fty_proto_name(asset);
     try {
         auto conn = tntdb::connectCached(m_dbConn);
-        assetName = fty_proto_name(asset);
 
         // Get candidate configurations and take the first one
         const DeviceConfigurationInfos candidateDatabaseConfigurations = get_candidate_config_list(conn, assetName);
@@ -205,6 +205,7 @@ void ConfigurationManager::getAssetConfigurations(fty_proto_t* asset, nutcommon:
     } catch (std::runtime_error &e) {
         log_error("getAssetConfigurations: failed to get config for '%s': %s", assetName.c_str(), e.what());
     }
+    return configs;
 }
 
 /**
@@ -213,19 +214,17 @@ void ConfigurationManager::getAssetConfigurations(fty_proto_t* asset, nutcommon:
  * \param[out] configs Configurations of asset.
  * \param[out] secw_document_id_list Secure document ids.
  */
-void ConfigurationManager::getAssetConfigurationsWithSecwDocuments(
-        fty_proto_t* asset,
-        nutcommon::DeviceConfigurations& configs,
-        std::set<secw::Id>& secw_document_id_list)
+std::tuple<fty::nut::DeviceConfigurations, std::set<secw::Id>> ConfigurationManager::getAssetConfigurationsWithSecwDocuments(fty_proto_t* asset)
 {
-    std::string asset_name;
+    fty::nut::DeviceConfigurations configs;
+    std::set<secw::Id> secwDocumentIdList;
+    std::string assetName = fty_proto_name(asset);
     try {
         auto conn = tntdb::connectCached(m_dbConn);
-        asset_name = fty_proto_name(asset);
 
         // Get candidate configurations and take the first one
-        const DeviceConfigurationInfos candidateDatabaseConfigurations = get_candidate_config_list(conn, asset_name);
-        log_info("getAssetConfigurationsWithSecwDocuments: [%s] config candidate size=%d", asset_name.c_str(), candidateDatabaseConfigurations.size());
+        const DBAssetsDiscovery::DeviceConfigurationInfos candidateDatabaseConfigurations = DBAssetsDiscovery::get_candidate_config_list(conn, assetName);
+        log_info("getAssetConfigurationsWithSecwDocuments: [%s] config candidate size=%d", assetName.c_str(), candidateDatabaseConfigurations.size());
         if (candidateDatabaseConfigurations.size() > 0) {
 
             const auto credentialsSNMPv1 = nutcommon::getCredentialsSNMPv1();
@@ -237,45 +236,47 @@ void ConfigurationManager::getAssetConfigurationsWithSecwDocuments(
                     candidateDatabaseConfigurations, asset, credentialsSNMPv1, credentialsSNMPv3);
 
             for (auto configuration : candidateDatabaseConfigurations) {
-                for (auto secw_document_id : configuration.secwDocumentIdList) {
-                    secw_document_id_list.insert(secw_document_id);
+                for (auto secwDocumentId : configuration.secwDocumentIdList) {
+                    secwDocumentIdList.insert(secwDocumentId);
                 }
             }
         }
     } catch (std::runtime_error &e) {
-        log_error("getAssetConfigurationsWithSecwDocuments: failed to get config for '%s': %s", asset_name.c_str(), e.what());
+        log_error("getAssetConfigurationsWithSecwDocuments: failed to get config for '%s': %s", assetName.c_str(), e.what());
     }
+    std::tuple<fty::nut::DeviceConfigurations, std::set<secw::Id>> res = std::make_tuple(configs, secwDocumentIdList);
+    return res;
 }
 
 /**
  * \brief Save asset configuration.
  * \param asset Asset to process.
- * \param configs Configurations to save.
- * \param secw_document_id_list Secure document ids to save.
+ * \param configsAsset Configurations to save.
  */
 void ConfigurationManager::saveAssetConfigurations(
-        std::string asset_name,
-        nutcommon::DeviceConfigurations& configs,
-        std::set<secw::Id>& secw_document_id_list)
+        const std::string& assetName,
+        std::tuple<fty::nut::DeviceConfigurations, std::set<secw::Id>>& configsAsset)
 {
     try {
-        if (configs.size() > 0) {
-            std::unique_lock<std::mutex> lock_manage_drivers(m_manage_drivers_mutex);
+        fty::nut::DeviceConfigurations configs = std::get<0>(configsAsset);
+        if (!configs.empty()) {
+            std::unique_lock<std::mutex> lockManageDrivers(m_manageDriversMutex);
             // Make sure that no config exist for this asset before adding new
-            auto itr = m_deviceConfigurationMap.find(asset_name);
+            auto itr = m_deviceConfigurationMap.find(assetName);
             if (itr != m_deviceConfigurationMap.end()) {
                 m_deviceConfigurationMap.erase(itr);
             }
-            m_deviceConfigurationMap.insert(std::make_pair(asset_name, configs));
+            m_deviceConfigurationMap.insert(std::make_pair(assetName, configs));
 
-            auto itr_cred_map = m_deviceCredentialsMap.find(asset_name);
+            auto itr_cred_map = m_deviceCredentialsMap.find(assetName);
             if (itr_cred_map != m_deviceCredentialsMap.end()) {
                 m_deviceCredentialsMap.erase(itr_cred_map);
             }
-            m_deviceCredentialsMap.insert(std::make_pair(asset_name, secw_document_id_list));
+            std::set<secw::Id> secwDocumentIdList = std::get<1>(configsAsset);
+            m_deviceCredentialsMap.insert(std::make_pair(assetName, secwDocumentIdList));
         }
     } catch (std::runtime_error &e) {
-        log_error("saveAssetConfigurations: failed to apply config for '%s': %s", asset_name.c_str(), e.what());
+        log_error("saveAssetConfigurations: failed to apply config for '%s': %s", assetName.c_str(), e.what());
     }
 }
 
@@ -286,38 +287,38 @@ void ConfigurationManager::saveAssetConfigurations(
  * \param init_in_progress Flag to indicate if init is in progress
  */
 bool ConfigurationManager::isConfigurationsChange(
-        nutcommon::DeviceConfigurations& configs_asset_to_test,
-        nutcommon::DeviceConfigurations& configs_asset_current,
-        bool init_in_progress)
+        fty::nut::DeviceConfigurations& configsAssetToTest,
+        fty::nut::DeviceConfigurations& configsAssetCurrent,
+        bool initInProgress)
 {
-    bool is_changing = false;
+    bool isChanging = false;
 
-    auto it_configs_asset_to_test = configs_asset_to_test.begin();
-    auto it_configs_asset_current = configs_asset_current.begin();
+    auto it_configsAssetToTest = configsAssetToTest.begin();
+    auto it_configsAssetCurrent = configsAssetCurrent.begin();
     // Test if size of configurations are different
     // Note: During init, test only first configuration
-    if ((init_in_progress && (configs_asset_current.size() == 0 || configs_asset_to_test.size() == 0)) ||
-            (!init_in_progress && configs_asset_current.size() != configs_asset_to_test.size())) {
-        is_changing = true;
+    if ((initInProgress && (configsAssetCurrent.size() == 0 || configsAssetToTest.size() == 0)) ||
+            (!initInProgress && configsAssetCurrent.size() != configsAssetToTest.size())) {
+        isChanging = true;
     } else {
         // For each candidate configuration
-        while (it_configs_asset_to_test != configs_asset_to_test.end() && it_configs_asset_current != configs_asset_current.end()) {
-            if (*it_configs_asset_to_test != *it_configs_asset_current) {
-                is_changing = true;
-                log_trace("\nisConfigurationChange: Current config:\n%s", serialize_config("", *it_configs_asset_current).c_str());
-                log_trace("\nisConfigurationChange: Test config:\n%s", serialize_config("", *it_configs_asset_to_test).c_str());
+        while (it_configsAssetToTest != configsAssetToTest.end() && it_configsAssetCurrent != configsAssetCurrent.end()) {
+            if (*it_configsAssetToTest != *it_configsAssetCurrent) {
+                isChanging = true;
+                log_trace("isConfigurationChange: Current config: %s", serializeConfig("", *it_configsAssetCurrent).c_str());
+                log_trace("isConfigurationChange: Test config: %s", serializeConfig("", *it_configsAssetToTest).c_str());
                 break;
             }
             // Note: During init, only scan first configuration
-            if (!init_in_progress) {
-                it_configs_asset_to_test++;
-                it_configs_asset_current++;
+            if (!initInProgress) {
+                it_configsAssetToTest++;
+                it_configsAssetCurrent++;
             } else {
                 break;
             }
         }
     }
-    return is_changing;
+    return isChanging;
 }
 
 /**
@@ -326,55 +327,52 @@ bool ConfigurationManager::isConfigurationsChange(
  */
 bool ConfigurationManager::updateAssetConfiguration(fty_proto_t* asset)
 {
-    std::string asset_name;
+    std::string assetName = fty_proto_name(asset);;
     try {
-        asset_name = fty_proto_name(asset);
         std::string status = fty_proto_aux_string(asset, "status", "");
 
-        bool need_update = false;
-        std::unique_lock<std::mutex> lock_manage_drivers(m_manage_drivers_mutex);
-        auto itr = m_deviceConfigurationMap.find(asset_name);
+        bool needUpdate = false;
+        std::unique_lock<std::mutex> lockManageDrivers(m_manageDriversMutex);
+        auto itr = m_deviceConfigurationMap.find(assetName);
         // Update if no configurations
         if (itr == m_deviceConfigurationMap.end()) {
             if (status == "active") {
-                need_update = true;
+                needUpdate = true;
             }
         } else {
             if (status == "active") {
-                nutcommon::DeviceConfigurations configs_asset_current;
-                this->getAssetConfigurations(asset, configs_asset_current);
+                fty::nut::DeviceConfigurations configs_asset_current = getAssetConfigurations(asset);
                 // Test if existing configurations have changed
-                need_update = this->isConfigurationsChange(itr->second, configs_asset_current);
+                needUpdate = isConfigurationsChange(itr->second, configs_asset_current);
             } else if (status == "nonactive") {
-                need_update = true;
+                needUpdate = true;
             }
         }
-        lock_manage_drivers.unlock();
+        lockManageDrivers.unlock();
 
         // Apply asset modification only if necessary (rescan is made in this case)
-        if (need_update) {
-            log_info("applyAssetConfiguration: [%s] need update", asset_name.c_str());
+        if (needUpdate) {
+            log_info("applyAssetConfiguration: [%s] need update", assetName.c_str());
 
             if (status == "active") {
-                this->scanAssetConfigurations(asset);
-                this->automaticAssetConfigurationPrioritySort(asset);
-                nutcommon::DeviceConfigurations configs;
-                std::set<secw::Id> secw_document_id_list;
-                this->getAssetConfigurationsWithSecwDocuments(asset, configs, secw_document_id_list);
-                this->saveAssetConfigurations(asset_name, configs, secw_document_id_list);
-                if (configs.size() > 0) {
+                scanAssetConfigurations(asset);
+                automaticAssetConfigurationPrioritySort(asset);
+                std::tuple<fty::nut::DeviceConfigurations, std::set<secw::Id>> configs_asset = getAssetConfigurationsWithSecwDocuments(asset);
+                saveAssetConfigurations(assetName, configs_asset);
+                fty::nut::DeviceConfigurations configs = std::get<0>(configs_asset);
+                if (!configs.empty()) {
                     // Save the first configuration into config file
-                    log_trace("\nSave config:\n%s", serialize_config("", configs.at(0)).c_str());
-                    this->updateDeviceConfigurationFile(asset_name, configs.at(0));
+                    log_trace("Save config: %s", serializeConfig("", configs.at(0)).c_str());
+                    updateDeviceConfigurationFile(assetName, configs.at(0));
                     return true;
                 }
                 return false;
             } else if (status == "nonactive") {
-                return this->removeAssetConfiguration(asset);
+                return removeAssetConfiguration(asset);
             }
         }
     } catch (std::runtime_error &e) {
-        log_error("updateAssetConfiguration: failed to update config for '%s': %s", asset_name.c_str(), e.what());
+        log_error("updateAssetConfiguration: failed to update config for '%s': %s", assetName.c_str(), e.what());
     }
     return false;
 }
@@ -385,12 +383,11 @@ bool ConfigurationManager::updateAssetConfiguration(fty_proto_t* asset)
  */
 bool ConfigurationManager::removeAssetConfiguration(fty_proto_t* asset)
 {
-    std::string assetName;
+    std::string assetName = fty_proto_name(asset);;
     try {
         auto conn = tntdb::connectCached(m_dbConn);
-        assetName = fty_proto_name(asset);
         log_info("removeAssetConfiguration: remove [%s]", assetName.c_str());
-        std::unique_lock<std::mutex> lock_manage_drivers(m_manage_drivers_mutex);
+        std::unique_lock<std::mutex> lock_manage_drivers(m_manageDriversMutex);
         auto itr = m_deviceConfigurationMap.find(assetName);
         if (itr != m_deviceConfigurationMap.end()) {
             m_deviceConfigurationMap.erase(itr);
@@ -402,7 +399,7 @@ bool ConfigurationManager::removeAssetConfiguration(fty_proto_t* asset)
         lock_manage_drivers.unlock();
 
         // Remove config file
-        this->removeDeviceConfigurationFile(assetName);
+        removeDeviceConfigurationFile(assetName);
         return true;
     } catch (std::runtime_error &e) {
         log_error("removeAssetConfiguration: failed to remove config for '%s': %s", assetName.c_str(), e.what());
@@ -415,49 +412,47 @@ bool ConfigurationManager::removeAssetConfiguration(fty_proto_t* asset)
  * \param secw_document_id Secured document id.
  * \param[out] asset_list_change List of change asset
  */
-void ConfigurationManager::manageCredentialsConfiguration(std::string secw_document_id, std::set<std::string>& asset_list_change)
+void ConfigurationManager::manageCredentialsConfiguration(const std::string& secwDocumentId, std::set<std::string>& assetListChange)
 {
     // Found all assets which depend of the input secured document id
-    std::unique_lock<std::mutex> lock_manage_drivers(m_manage_drivers_mutex);
-    std::set<std::string> asset_list;
+    std::unique_lock<std::mutex> lockManageDrivers(m_manageDriversMutex);
+    std::set<std::string> assetList;
     for (auto it = m_deviceCredentialsMap.begin(); it != m_deviceCredentialsMap.end(); ++it) {
-        if (it->second.find(secw::Id(secw_document_id)) != it->second.end()) {
-            asset_list.insert(it->first);
-            log_info("manageCredentialsConfiguration: find '%s' document in the asset '%s'", secw_document_id.c_str(), it->first.c_str());
+        if (it->second.find(secw::Id(secwDocumentId)) != it->second.end()) {
+            assetList.insert(it->first);
+            log_info("manageCredentialsConfiguration: find '%s' document in the asset '%s'", secwDocumentId.c_str(), it->first.c_str());
         }
     }
-    lock_manage_drivers.unlock();
+    lockManageDrivers.unlock();
 
     // Rescan all assets which depends of the input secured document id
-    for (auto asset_name : asset_list) {
-        log_info("manageCredentialsConfiguration: rescan '%s'", asset_name.c_str());
+    for (auto assetName : assetList) {
+        log_info("manageCredentialsConfiguration: rescan '%s'", assetName.c_str());
 
-        lock_manage_drivers.lock();
-        auto itr = m_deviceConfigurationMap.find(asset_name);
+        lockManageDrivers.lock();
+        auto itr = m_deviceConfigurationMap.find(assetName);
         if (itr != m_deviceConfigurationMap.end()) {
-            fty_proto_t *asset = fetchProtoFromAssetName(asset_name);
+            fty_proto_t *asset = fetchProtoFromAssetName(assetName);
             // Test if configuration change
-            nutcommon::DeviceConfigurations configs;
-            this->getAssetConfigurations(asset, configs);
-            if (this->isConfigurationsChange(itr->second, configs)) {
-                lock_manage_drivers.unlock();
-                log_info("manageCredentialsConfiguration: [%s] need update", asset_name.c_str());
-                this->scanAssetConfigurations(asset);
-                this->automaticAssetConfigurationPrioritySort(asset);
-                nutcommon::DeviceConfigurations new_configs;
-                std::set<secw::Id> secw_document_id_list;
-                this->getAssetConfigurationsWithSecwDocuments(asset, new_configs, secw_document_id_list);
-                this->saveAssetConfigurations(asset_name, new_configs, secw_document_id_list);
-                if (new_configs.size() > 0) {
+            fty::nut::DeviceConfigurations configs = getAssetConfigurations(asset);
+            if (isConfigurationsChange(itr->second, configs)) {
+                lockManageDrivers.unlock();
+                log_info("manageCredentialsConfiguration: [%s] need update", assetName.c_str());
+                scanAssetConfigurations(asset);
+                automaticAssetConfigurationPrioritySort(asset);
+                std::tuple<fty::nut::DeviceConfigurations, std::set<secw::Id>> newConfigsAsset = getAssetConfigurationsWithSecwDocuments(asset);
+                saveAssetConfigurations(assetName, newConfigsAsset);
+                fty::nut::DeviceConfigurations newConfigs = std::get<0>(newConfigsAsset);
+                if (!newConfigs.empty()) {
                     // Save the first configuration into config file
-                    log_trace("\nSave config:\n%s", serialize_config("", new_configs.at(0)).c_str());
-                    this->updateDeviceConfigurationFile(asset_name, new_configs.at(0));
-                    asset_list_change.insert(asset_name);
+                    log_trace("Save config: %s", serializeConfig("", newConfigs.at(0)).c_str());
+                    updateDeviceConfigurationFile(assetName, newConfigs.at(0));
+                    assetListChange.insert(assetName);
                 }
                 continue;
             }
         }
-        lock_manage_drivers.unlock();
+        lockManageDrivers.unlock();
     }
 }
 
@@ -501,39 +496,11 @@ void ConfigurationManager::updateDeviceConfigurationFile(const std::string& name
 }
 
 /**
- * \brief Read asset configuration in config file.
- * \param asset Asset to process.
- * \param[out] config Config to process.
- */
-void ConfigurationManager::readDeviceConfigurationFile(const std::string& name, nutcommon::DeviceConfiguration& config)
-{
-    config.clear();
-    const std::string configFilePath = std::string(NUT_PART_STORE) + shared::path_separator() + name;
-    std::ifstream file(configFilePath);
-    if ((file.rdstate() & std::ifstream::failbit) == 0) {
-        std::stringstream inStream;
-        inStream << file.rdbuf();
-        static const std::regex regexSection(R"xxx([[:blank:]]*\[([[:alnum:]_-]+)\][[:blank:]]*)xxx", std::regex::optimize);
-        static const std::regex regexOptionQuoted(R"xxx([[:blank:]]*([[:alpha:]_-]+)[[:blank:]]*=[[:blank:]]*"([^"]+)"[[:blank:]]*)xxx", std::regex::optimize);
-        static const std::regex regexOptionUnquoted(R"xxx([[:blank:]]*([[:alpha:]_-]+)[[:blank:]]*=[[:blank:]]*([^"].*))xxx", std::regex::optimize);
-        std::smatch matches;
-        std::string line;
-        while (std::getline(inStream, line)) {
-            if (!std::regex_match(line, matches, regexSection) &&
-                    (std::regex_match(line, matches, regexOptionQuoted) || std::regex_match(line, matches, regexOptionUnquoted))) {
-                // Key-value pair matched, add it to the list.
-                config.emplace(matches[1].str(), matches[2].str());
-            }
-        }
-    }
-}
-
-/**
  * \brief Remove asset configuration in config file.
  * \param asset Asset to process.
  * \param config Config to process.
  */
-void ConfigurationManager::removeDeviceConfigurationFile(const std::string &name)
+void ConfigurationManager::removeDeviceConfigurationFile(const std::string& name)
 {
     const std::string filePath = std::string(NUT_PART_STORE) + shared::path_separator() + name;
     log_info("Removing configuration file '%s'.", filePath.c_str());

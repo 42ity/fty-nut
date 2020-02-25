@@ -59,6 +59,7 @@ all_tests [] = {
     { "fty_nut_server", fty_nut_server_test, true, true, NULL },
     { "fty_nut_command_server", fty_nut_command_server_test, true, true, NULL },
     { "fty_nut_configurator_server", fty_nut_configurator_server_test, true, true, NULL },
+    { "fty_nut_configuration_protect_asset", fty_nut_configuration_protect_asset_test, true, true, NULL },
     { "fty_nut_configuration_helper", fty_nut_configuration_helper_test, true, true, NULL },
     { "fty_nut_configuration_manager", fty_nut_configuration_manager_test, true, true, NULL },
     { "fty_nut_configuration_connector", fty_nut_configuration_connector_test, true, true, NULL },

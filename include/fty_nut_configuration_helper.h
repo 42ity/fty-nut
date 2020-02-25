@@ -38,13 +38,8 @@ struct ComputeAssetConfigurationUpdateResult;
 
 using t_asset_mutex_map = std::map<std::string, std::shared_ptr<std::mutex>>;
 
-void protect_asset_lock(t_asset_mutex_map& asset_mutex_map, std::string asset_name);
-bool protect_asset_unlock(t_asset_mutex_map& asset_mutex_map, std::string asset_name);
-bool protect_asset_try_lock(t_asset_mutex_map& asset_mutex_map, std::string asset_name);
-bool protect_asset_remove(t_asset_mutex_map& asset_mutex_map, std::string asset_name);
-
-auto isConfSnmp =   [](const nutcommon::DeviceConfiguration& conf) -> bool { return conf.at("driver").find_first_of("snmp-ups") == 0; };
-auto confSnmpVersion = [](const nutcommon::DeviceConfiguration& conf) -> int {
+auto isConfSnmp =   [](const fty::nut::DeviceConfiguration& conf) -> bool { return conf.at("driver").find_first_of("snmp-ups") == 0; };
+auto confSnmpVersion = [](const fty::nut::DeviceConfiguration& conf) -> int {
     if (!isConfSnmp(conf)) { return -1; }
     auto snmp_version = conf.find("snmp_version");
     if (snmp_version == conf.end() || snmp_version->second == "v1") { return 1; }

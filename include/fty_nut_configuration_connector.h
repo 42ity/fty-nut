@@ -45,7 +45,7 @@ class ConfigurationConnector
 
         ConfigurationConnector(Parameters params);
         ~ConfigurationConnector() = default;
-        void get_initial_assets();
+        void getInitialAssets();
 
     private:
         void handleRequestAssets(messagebus::Message msg);
@@ -54,18 +54,18 @@ class ConfigurationConnector
         void handleNotificationSecurityWalletUpdate(const std::string& portfolio, secw::DocumentPtr oldDoc, secw::DocumentPtr newDoc);
         void handleNotificationSecurityWalletDelete(const std::string& portfolio, secw::DocumentPtr doc);
         void handleNotificationSecurityWalletCreate(const std::string& portfolio, secw::DocumentPtr doc);
-        void publishToDriversConnector(std::string asset_name, std::string subject);
+        void publishToDriversConnector(const std::string& asseName, const std::string& subject);
 
         Parameters m_parameters;
         ConfigurationManager m_manager;
         messagebus::PoolWorker m_worker;
-        std::unique_ptr<messagebus::MessageBus> m_msg_bus;
-        std::unique_ptr<messagebus::MessageBus> m_msg_bus_publisher;
+        std::unique_ptr<messagebus::MessageBus> m_msgBusReceiver;
+        std::unique_ptr<messagebus::MessageBus> m_msgBusRequester;
 
-        fty::SocketSyncClient m_sync_client;
-        std::unique_ptr<mlm::MlmStreamClient> m_stream_client;
-        std::unique_ptr<secw::ConsumerAccessor> m_consumer_accessor;
-        t_asset_mutex_map m_asset_mutex_map;
+        fty::SocketSyncClient m_syncClient;
+        std::unique_ptr<mlm::MlmStreamClient> m_streamClient;
+        std::unique_ptr<secw::ConsumerAccessor> m_consumerAccessor;
+        ProtectAsset m_protectAsset;
 };
 
 }

@@ -34,23 +34,35 @@ namespace fty
 namespace nut
 {
 
+void ConfigurationDriversControl::addControl(const std::string& controlName)
+{
+    std::lock_guard<std::mutex> lkControlDrivers(m_controlDriversMutex);
+    m_controlDrivers.insert(controlName);
+}
+
+std::set<std::string> ConfigurationDriversControl::clearControl() {
+    std::set<std::string> controlDrivers;
+    std::lock_guard<std::mutex> lkControlDrivers(m_controlDriversMutex);
+    controlDrivers = m_controlDrivers;
+    m_controlDrivers.clear();
+    return controlDrivers;
+}
+
 ConfigurationDriversManager::ConfigurationDriversManager()
 {
-    m_manage_drivers_thread = std::thread(&ConfigurationDriversManager::manageDrivers, this);
+    m_manageDriversThread = std::thread(&ConfigurationDriversManager::manageDrivers, this);
 }
 
-void ConfigurationDriversManager::addConfigDriver(std::string asset_name)
+void ConfigurationDriversManager::addConfigDriver(const std::string& assetName)
 {
-    log_info("addConfigDriver: %s", asset_name.c_str());
-    std::lock_guard<std::mutex> lk_start_drivers(m_start_drivers_mutex);
-    m_start_drivers.insert("nut-driver@" + asset_name);
+    log_info("addConfigDriver: %s", assetName.c_str());
+    m_startDrivers.addControl("nut-driver@" + assetName);
 }
 
-void ConfigurationDriversManager::removeConfigDriver(std::string asset_name)
+void ConfigurationDriversManager::removeConfigDriver(const std::string& assetName)
 {
-    log_info("removeConfigDriver: %s", asset_name.c_str());
-    std::lock_guard<std::mutex> lk_stop_drivers(m_stop_drivers_mutex);
-    m_stop_drivers.insert("nut-driver@" + asset_name);
+    log_info("removeConfigDriver: %s", assetName.c_str());
+    m_stopDrivers.addControl("nut-driver@" + assetName);
 }
 
 void ConfigurationDriversManager::manageDrivers()
@@ -59,27 +71,20 @@ void ConfigurationDriversManager::manageDrivers()
     while (1) {
         std::this_thread::sleep_for(std::chrono::seconds(5));
 
-        std::set<std::string> stop_drivers, start_drivers;
-        {
-            std::lock_guard<std::mutex> lk_start_drivers(m_start_drivers_mutex);
-            std::lock_guard<std::mutex> lk_stop_drivers(m_stop_drivers_mutex);
-            stop_drivers = m_stop_drivers;
-            start_drivers = m_start_drivers;
-            m_stop_drivers.clear();
-            m_start_drivers.clear();
-        }
+        std::set<std::string> stopDrivers = m_stopDrivers.clearControl();
+        std::set<std::string> startDrivers = m_startDrivers.clearControl();
 
-        if (!stop_drivers.empty() || !start_drivers.empty()) {
-            if (!stop_drivers.empty()) {
-                systemctl("disable", stop_drivers.begin(), stop_drivers.end());
-                systemctl("stop", stop_drivers.begin(), stop_drivers.end());
+        if (!stopDrivers.empty() || !startDrivers.empty()) {
+            if (!stopDrivers.empty()) {
+                systemctl("disable", stopDrivers.begin(), stopDrivers.end());
+                systemctl("stop", stopDrivers.begin(), stopDrivers.end());
             }
 
             updateNUTConfig();
 
-            if (!start_drivers.empty()) {
-                systemctl("restart", start_drivers.begin(), start_drivers.end());
-                systemctl("enable",  start_drivers.begin(), start_drivers.end());
+            if (!startDrivers.empty()) {
+                systemctl("restart", startDrivers.begin(), startDrivers.end());
+                systemctl("enable",  startDrivers.begin(), startDrivers.end());
             }
             systemctl("reload-or-restart", "nut-server");
         }
