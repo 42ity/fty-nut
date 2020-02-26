@@ -26,6 +26,7 @@ save.xml
 src/fty-nut_selftest
 src/fty-nut
 src/fty-nut-command
+src/fty-nut-configuration
 src/fty-nut-configurator
 src/fty_nut_selftest
 *.exe
