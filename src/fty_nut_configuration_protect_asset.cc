@@ -129,7 +129,7 @@ fty::nut::ProtectAsset g_protectAssetTest;
 
 struct t_elemt_test {
     std::string name;
-    int value;
+    uint value;
 };
 
 using MapTest = std::vector<t_elemt_test>;
@@ -146,7 +146,7 @@ void lock_element_test(uint id, uint pauseMs, t_elemt_test &elentTest)
 
 void lock_boucle_element_test(uint id, t_elemt_test &elentTest)
 {
-    int i = 0;
+    uint i = 0;
     std::cout << "#" << id << " :lock_boucle_element_test " << elentTest.name << std::endl;
     while (i++ < g_count_test) {
         g_protectAssetTest.lock(elentTest.name);
@@ -158,7 +158,7 @@ void lock_boucle_element_test(uint id, t_elemt_test &elentTest)
 
 void add_element_test(int id, t_elemt_test &elentTest)
 {
-    int i = 0;
+    uint i = 0;
     while (i++ < 100) {
         //std::cout << "#" << id << " :add_element_test " << elentTest.name << " " << elentTest.value << std::endl;
         g_protectAssetTest.lock(elentTest.name);
@@ -171,10 +171,9 @@ void add_element_test(int id, t_elemt_test &elentTest)
 
 void remove_element_test(int id, t_elemt_test &elentTest)
 {
-    int i = 0;
-    bool res;
+    uint i = 0;
     while (i++ < 100) {
-        res = g_protectAssetTest.remove(elentTest.name);
+        g_protectAssetTest.remove(elentTest.name);
         //std::cout << "#" << id << " :remove_element_test " << elentTest.name << " " << elentTest.value << " res=" << res << std::endl;
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
@@ -210,11 +209,11 @@ fty_nut_configuration_protect_asset_test (bool verbose)
         t_elemt_test element = { "element_1", 0 };
         std::vector<std::thread> threadAddTest;
         std::vector<std::thread> threadRemoveTest;
-        for(int nb = 0; nb < nb_thread; nb++) {
+        for(uint nb = 0; nb < nb_thread; nb++) {
             threadAddTest.push_back(std::thread(add_element_test, nb, std::ref(element)));
             std::cout << "Init add " << nb << std::endl;
         }
-        for(int nb = 0; nb < nb_thread; nb++) {
+        for(uint nb = 0; nb < nb_thread; nb++) {
             threadRemoveTest.push_back(std::thread(remove_element_test, nb, std::ref(element)));
             std::cout << "Init remove " << nb << std::endl;
         }
@@ -236,7 +235,7 @@ fty_nut_configuration_protect_asset_test (bool verbose)
         mapTest.push_back(element1);
         mapTest.push_back(element2);
         std::vector<std::thread> threadTest;
-        for(int nb = 0; nb < nbThread; nb++) {
+        for(uint nb = 0; nb < nbThread; nb++) {
             threadTest.push_back(std::thread(lock_boucle_element_test, nb, std::ref(mapTest.at(nb % 2))));
             std::cout << "Init " << nb << std::endl;
         }
