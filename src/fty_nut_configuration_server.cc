@@ -420,7 +420,8 @@ std::vector<size_t> sortDeviceConfigurationPreferred(fty_proto_t* asset, const n
             }
             // Perfer some MIBs over others.
             if (confA_SNMP_mib != confB_SNMP_mib) {
-                return isBefore(snmpMibPriority.begin(), snmpMibPriority.end(), confA_SNMP_mib, confB_SNMP_mib);
+                return isBefore(snmpMibPriority.begin(), snmpMibPriority.end(), confA_SNMP_mib, confB_SNMP_mib) ||
+                    (confA_SNMP_mib != "ietf" && confB_SNMP_mib == "ietf");
             }
             // Prefer other communities than public.
             if (confA_SNMPv1_community != "public" && confB_SNMPv1_community == "public") { return true; }
