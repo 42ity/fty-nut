@@ -41,9 +41,9 @@ ConfigurationDriversConnector::Parameters::Parameters() :
 {
 }
 
-ConfigurationDriversConnector::ConfigurationDriversConnector(ConfigurationDriversConnector::Parameters params) :
+ConfigurationDriversConnector::ConfigurationDriversConnector(ConfigurationDriversConnector::Parameters params, volatile bool &exit) :
     m_parameters(params),
-    m_driversManager(),
+    m_driversManager(exit),
     m_dispatcher({
         { "addConfig", std::bind(&ConfigurationDriversConnector::addConfig, this, std::placeholders::_1) },
         { "removeConfig", std::bind(&ConfigurationDriversConnector::removeConfig, this, std::placeholders::_1) }

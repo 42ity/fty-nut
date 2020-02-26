@@ -124,7 +124,7 @@ int main (int argc, char *argv [])
 
     // Launch workers.
     fty::nut::ConfigurationConnector nutConfigurationConnector(configurationParameters);
-    fty::nut::ConfigurationDriversConnector nutDriversConnector(driversParameters);
+    fty::nut::ConfigurationDriversConnector nutDriversConnector(driversParameters, g_exit);
 
     nutConfigurationConnector.getInitialAssets();
 

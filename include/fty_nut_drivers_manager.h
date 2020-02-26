@@ -42,7 +42,7 @@ class ConfigurationDriversManager
 {
     public:
 
-        ConfigurationDriversManager();
+        ConfigurationDriversManager(volatile bool &exit);
         ~ConfigurationDriversManager() = default;
 
         void manageDrivers();
@@ -56,6 +56,7 @@ class ConfigurationDriversManager
         ConfigurationDriversControl m_startDrivers;
         ConfigurationDriversControl m_stopDrivers;
         std::thread m_manageDriversThread;
+        volatile bool &m_exit;
 };
 
 }

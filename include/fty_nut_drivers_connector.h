@@ -40,7 +40,7 @@ class ConfigurationDriversConnector
             std::string agentName;
         };
 
-        ConfigurationDriversConnector(Parameters params);
+        ConfigurationDriversConnector(Parameters params, volatile bool &exit);
         ~ConfigurationDriversConnector() = default;
 
     private:

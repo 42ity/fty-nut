@@ -48,7 +48,7 @@ std::set<std::string> ConfigurationDriversControl::clearControl() {
     return controlDrivers;
 }
 
-ConfigurationDriversManager::ConfigurationDriversManager()
+ConfigurationDriversManager::ConfigurationDriversManager(volatile bool &exit) : m_exit(exit)
 {
     m_manageDriversThread = std::thread(&ConfigurationDriversManager::manageDrivers, this);
 }
@@ -67,8 +67,7 @@ void ConfigurationDriversManager::removeConfigDriver(const std::string& assetNam
 
 void ConfigurationDriversManager::manageDrivers()
 {
-    //while (!g_exit) {
-    while (1) {
+    while (!m_exit) {
         std::this_thread::sleep_for(std::chrono::seconds(5));
 
         std::set<std::string> stopDrivers = m_stopDrivers.clearControl();
