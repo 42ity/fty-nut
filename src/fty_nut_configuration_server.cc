@@ -54,6 +54,7 @@ nutcommon::DeviceConfigurations testDummyDriverDevice(const std::string &param) 
         device.emplace("driver", values["driver.name"] /*"dummy-ups"*/);
         device.emplace("port", values["driver.parameter.port"] /*param*/);
         device.emplace("desc", "dummy-ups in repeater mode");
+        device.emplace("synchronous", "yes");
         devices.emplace_back(device);
         //log_info("testDummyDriverDevice: %s", ConfigurationManager::serializeConfig("", device).c_str());
     }
@@ -100,6 +101,7 @@ nutcommon::DeviceConfigurations assetScanDrivers(messagebus::PoolWorker& pool, f
         // FIXME: For multi node: asset.ext.contact_name@asset.ext.contact_email
         //std::string contact_name = fty_proto_ext_string(asset, "contact_name", "");
         //std::string contact_email = fty_proto_ext_string(asset, "contact_email", "");
+        //const std::string param = contact_name + "@" + contact_email;
         const std::string param = name + "@" + address;   /* "asset.ext.name@asset.ext.ip.1" (e.g MBT.G3MI.3PH.dummy-snmp@bios-nut-proxy.mbt.lab.etn.com */
         futureResults.emplace_front(pool.schedule(testDummyDriverDevice, param));
     }
