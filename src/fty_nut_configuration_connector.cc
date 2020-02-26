@@ -58,7 +58,9 @@ ConfigurationConnector::ConfigurationConnector(ConfigurationConnector::Parameter
     m_worker(10),
     m_msgBusReceiver(messagebus::MlmMessageBus(params.endpoint, params.agentName)),
     m_msgBusRequester(messagebus::MlmMessageBus(params.endpoint, params.requesterName)),
-    m_syncClient("fty-nut-configuration.socket")
+    m_syncClient("fty-nut-configuration.socket"),
+    m_streamClient(params.agentName, SECW_NOTIFICATIONS, 1000, params.endpoint),
+    m_consumerAccessor(secw::ConsumerAccessor(m_syncClient, m_streamClient))
 {
     m_msgBusReceiver->connect();
     m_msgBusReceiver->subscribe(FTY_PROTO_STREAM_ASSETS, std::bind(&ConfigurationConnector::handleNotificationAssets, this, std::placeholders::_1));
@@ -67,13 +69,11 @@ ConfigurationConnector::ConfigurationConnector(ConfigurationConnector::Parameter
     m_msgBusRequester->receive("ASSETS", std::bind(&ConfigurationConnector::handleRequestAssets, this, std::placeholders::_1));
     m_msgBusRequester->receive(params.requesterName.c_str(), std::bind(&ConfigurationConnector::handleRequestAssetDetail, this, std::placeholders::_1));
 
-    m_streamClient = std::unique_ptr<mlm::MlmStreamClient>(new mlm::MlmStreamClient(params.agentName, SECW_NOTIFICATIONS, 1000, params.endpoint));
-    m_consumerAccessor = std::unique_ptr<secw::ConsumerAccessor>(new secw::ConsumerAccessor(m_syncClient, *m_streamClient.get()));
-    m_consumerAccessor->setCallbackOnUpdate(std::bind(&ConfigurationConnector::handleNotificationSecurityWalletUpdate, this,
+    m_consumerAccessor.setCallbackOnUpdate(std::bind(&ConfigurationConnector::handleNotificationSecurityWalletUpdate, this,
             std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-    m_consumerAccessor->setCallbackOnDelete(std::bind(&ConfigurationConnector::handleNotificationSecurityWalletDelete, this,
+    m_consumerAccessor.setCallbackOnDelete(std::bind(&ConfigurationConnector::handleNotificationSecurityWalletDelete, this,
             std::placeholders::_1, std::placeholders::_2));
-    m_consumerAccessor->setCallbackOnCreate(std::bind(&ConfigurationConnector::handleNotificationSecurityWalletCreate, this,
+    m_consumerAccessor.setCallbackOnCreate(std::bind(&ConfigurationConnector::handleNotificationSecurityWalletCreate, this,
             std::placeholders::_1, std::placeholders::_2));
 }
 

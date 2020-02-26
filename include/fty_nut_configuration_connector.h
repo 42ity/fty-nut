@@ -63,8 +63,8 @@ class ConfigurationConnector
         std::unique_ptr<messagebus::MessageBus> m_msgBusRequester;
 
         fty::SocketSyncClient m_syncClient;
-        std::unique_ptr<mlm::MlmStreamClient> m_streamClient;
-        std::unique_ptr<secw::ConsumerAccessor> m_consumerAccessor;
+        mlm::MlmStreamClient m_streamClient;
+        secw::ConsumerAccessor m_consumerAccessor;
         ProtectAsset m_protectAsset;
 };
 
