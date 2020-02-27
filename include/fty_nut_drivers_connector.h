@@ -25,6 +25,9 @@
 #include "fty_nut_library.h"
 #include "fty_nut_drivers_manager.h"
 
+#define DRIVERS_ADD_CONFIG    "addConfig"
+#define DRIVERS_REMOVE_CONFIG "removeConfig"
+
 namespace fty
 {
 namespace nut

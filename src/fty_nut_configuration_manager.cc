@@ -327,7 +327,7 @@ bool ConfigurationManager::isConfigurationsChange(
  */
 bool ConfigurationManager::updateAssetConfiguration(fty_proto_t* asset)
 {
-    std::string assetName = fty_proto_name(asset);;
+    std::string assetName = fty_proto_name(asset);
     try {
         std::string status = fty_proto_aux_string(asset, "status", "");
 

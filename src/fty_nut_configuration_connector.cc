@@ -172,7 +172,7 @@ void ConfigurationConnector::handleRequestAssets(messagebus::Message msg)
                     // Remove driver
                     log_info("handleRequestAssets: Remove asset %s", assetName.c_str());
                     m_manager.removeDeviceConfigurationFile(assetName);
-                    publishToDriversConnector(assetName, "removeConfig");
+                    publishToDriversConnector(assetName, DRIVERS_REMOVE_CONFIG);
                 }
             }
         }
@@ -235,19 +235,27 @@ void ConfigurationConnector::handleRequestAssetDetail(messagebus::Message msg)
             fty::nut::DeviceConfiguration config = m_manager.readDeviceConfigurationFile(name);
             if (!config.empty()) {
                 log_trace("handleRequestAssetDetail: Config read from file=\n%s", ConfigurationManager::serializeConfig("", config).c_str());
-                std::tuple<fty::nut::DeviceConfigurations, std::set<secw::Id>> configsAsset = m_manager.getAssetConfigurationsWithSecwDocuments(proto.get());
-                fty::nut::DeviceConfigurations configsToSave = std::get<0>(configsAsset);
-                fty::nut::DeviceConfigurations configsToTest;
-                configsToTest.push_back(config);
-                if(m_manager.isConfigurationsChange(configsToTest, configsToSave, true)) {
-                    log_trace("handleRequestAssetDetail: config change for %s", name.c_str());
-                    needUpdate = true;
+                if (status == "active") {
+                    std::tuple<fty::nut::DeviceConfigurations, std::set<secw::Id>> configsAsset = m_manager.getAssetConfigurationsWithSecwDocuments(proto.get());
+                    fty::nut::DeviceConfigurations configsToSave = std::get<0>(configsAsset);
+                    fty::nut::DeviceConfigurations configsToTest;
+                    configsToTest.push_back(config);
+                    if(m_manager.isConfigurationsChange(configsToTest, configsToSave, true)) {
+                        log_trace("handleRequestAssetDetail: config change for %s", name.c_str());
+                        needUpdate = true;
+                    }
+                    else {
+                        log_trace("handleRequestAssetDetail: init config for %s", name.c_str());
+                        m_manager.saveAssetConfigurations(name, configsAsset);
+                    }
                 }
                 else {
-                    log_trace("handleRequestAssetDetail: init config for %s", name.c_str());
-                    m_manager.saveAssetConfigurations(name, configsAsset);
+                    log_trace("handleRequestAssetDetail: remove config file for inactive asset %s", name.c_str());
+                    // Remove config file
+                    m_manager.removeDeviceConfigurationFile(name);
+                    publishToDriversConnector(name, DRIVERS_REMOVE_CONFIG);
                 }
-            } else {
+            } else if (status == "active") {
                 needUpdate = true;
                 log_trace("handleRequestAssetDetail: no config file read for %s", name.c_str());
             }
@@ -263,7 +271,7 @@ void ConfigurationConnector::handleRequestAssetDetail(messagebus::Message msg)
                     // Save the first configuration into config file
                     log_trace("Save config: %s", ConfigurationManager::serializeConfig("", newConfigs.at(0)).c_str());
                     m_manager.updateDeviceConfigurationFile(name, newConfigs.at(0));
-                    publishToDriversConnector(name, "addConfig");
+                    publishToDriversConnector(name, DRIVERS_ADD_CONFIG);
                 }
                 m_protectAsset.unlock(name);
             }
@@ -321,7 +329,7 @@ void ConfigurationConnector::handleNotificationAssets(messagebus::Message msg)
                             // Save the first configuration into config file
                             log_trace("Save config: %s", ConfigurationManager::serializeConfig("", configs.at(0)).c_str());
                             m_manager.updateDeviceConfigurationFile(name, configs.at(0));
-                            publishToDriversConnector(name, "addConfig");
+                            publishToDriversConnector(name, DRIVERS_ADD_CONFIG);
                         }
                         m_protectAsset.unlock(name);
                     }
@@ -330,10 +338,10 @@ void ConfigurationConnector::handleNotificationAssets(messagebus::Message msg)
                         m_protectAsset.lock(name);
                         if (m_manager.updateAssetConfiguration(proto.get())) {
                             if (status == "active") {
-                                publishToDriversConnector(name, "addConfig");
+                                publishToDriversConnector(name, DRIVERS_ADD_CONFIG);
                             }
                             else if (status == "nonactive") {
-                                publishToDriversConnector(name, "removeConfig");
+                                publishToDriversConnector(name, DRIVERS_REMOVE_CONFIG);
                             }
                         }
                         m_protectAsset.unlock(name);
@@ -342,7 +350,7 @@ void ConfigurationConnector::handleNotificationAssets(messagebus::Message msg)
     fty_proto_print(proto.get());
                         m_protectAsset.lock(name);
                         if (m_manager.removeAssetConfiguration(proto.get())) {
-                            publishToDriversConnector(name, "removeConfig");
+                            publishToDriversConnector(name, DRIVERS_REMOVE_CONFIG);
                         }
                         m_protectAsset.unlock(name);
                         m_protectAsset.remove(name);
@@ -370,7 +378,7 @@ void ConfigurationConnector::handleNotificationSecurityWalletUpdate(const std::s
     m_manager.manageCredentialsConfiguration(newDoc->getId(), assetListChange);
     // for each asset impacted with the security document changed
     for (std::string assetName : assetListChange) {
-        publishToDriversConnector(assetName, "addConfig");
+        publishToDriversConnector(assetName, DRIVERS_ADD_CONFIG);
     }
 }
 
@@ -387,7 +395,7 @@ void ConfigurationConnector::handleNotificationSecurityWalletDelete(const std::s
     m_manager.manageCredentialsConfiguration(doc->getId(), assetListChange);
     // for each asset impacted with the security document changed
     for (std::string assetName : assetListChange) {
-        publishToDriversConnector(assetName, "addConfig");
+        publishToDriversConnector(assetName, DRIVERS_ADD_CONFIG);
     }
 }
 
@@ -404,7 +412,7 @@ void ConfigurationConnector::handleNotificationSecurityWalletCreate(const std::s
     m_manager.manageCredentialsConfiguration(doc->getId(), assetListChange);
     // for each asset impacted with the security document changed
     for (std::string assetName : assetListChange) {
-        publishToDriversConnector(assetName, "addConfig");
+        publishToDriversConnector(assetName, DRIVERS_ADD_CONFIG);
     }
 }
 
