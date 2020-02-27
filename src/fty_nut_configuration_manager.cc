@@ -39,7 +39,45 @@
 namespace fty {
 namespace nut {
 
-ConfigurationManager::ConfigurationManager(const std::string& dbConn) : m_poolScanners(20), m_dbConn(dbConn)
+static const std::string SECW_SOCKET_PATH = "/run/fty-security-wallet/secw.socket";
+
+SecwMap getCredentials()
+{
+    SecwMap result;
+
+    // Grab security documents.
+    try {
+        fty::SocketSyncClient secwSyncClient(SECW_SOCKET_PATH);
+
+        auto client = secw::ConsumerAccessor(secwSyncClient);
+        auto secCreds = client.getListDocumentsWithPrivateData("default", "discovery_monitoring");
+
+        for (const auto &i : secCreds) {
+            result.emplace(i->getId(), i);
+        }
+        log_debug("Fetched %d credentials from security wallet.", result.size());
+    }
+    catch (std::exception &e) {
+        log_warning("Failed to fetch credentials from security wallet: %s", e.what());
+    }
+
+    return result;
+}
+
+std::set<secw::Id> matchSecurityDocumentIDsFromDeviceConfiguration(const fty::nut::DeviceConfiguration& conf, const SecwMap& credentials)
+{
+    std::set<secw::Id> ids;
+    for (const auto& credential : credentials) {
+        auto instanciatedCredential = fty::nut::convertSecwDocumentToKeyValues(credential.second, conf.at("driver"));
+        if (!instanciatedCredential.empty() && std::includes(conf.begin(), conf.end(), instanciatedCredential.begin(), instanciatedCredential.end())) {
+            ids.emplace(credential.first);
+        }
+    }
+    return ids;
+}
+
+ConfigurationManager::ConfigurationManager(const std::string& dbConn, const uint nbThreadPool, const bool scanDummyUps, const bool automaticPrioritySort, const bool prioritizeDmfDriver) :
+    m_poolScanners(nbThreadPool), m_dbConn(dbConn), m_scanDummyUps(scanDummyUps), m_automaticPrioritySort(automaticPrioritySort), m_prioritizeDmfDriver(prioritizeDmfDriver)
 {
 }
 
@@ -77,7 +115,7 @@ void ConfigurationManager::automaticAssetConfigurationPrioritySort(fty_proto_t* 
         knownDatabaseConfigurations, asset, credentialsSNMPv1, credentialsSNMPv3);
 
     // Compute new order of driver configuration.
-    const std::vector<size_t> sortedIndexes = sortDeviceConfigurationPreferred(asset, knownConfigurations);
+    const std::vector<size_t> sortedIndexes = sortDeviceConfigurationPreferred(asset, knownConfigurations, m_prioritizeDmfDriver);
     std::vector<size_t> newConfigurationOrder;
     std::transform(sortedIndexes.begin(), sortedIndexes.end(), std::back_inserter(newConfigurationOrder),
             [&knownDatabaseConfigurations](size_t sortedIndex) -> size_t {
@@ -112,7 +150,7 @@ void ConfigurationManager::scanAssetConfigurations(fty_proto_t* asset)
         knownDatabaseConfigurations, asset, credentialsSNMPv1, credentialsSNMPv3);
 
     /// Step 1: Scan the asset.
-    const auto detectedConfigurations = assetScanDrivers(m_poolScanners, asset, credentialsSNMPv1, credentialsSNMPv3);
+    const auto detectedConfigurations = assetScanDrivers(m_poolScanners, asset, credentials, m_scanDummyUps);
 
     /// Step 2: Compute DB updates from detected and from known driver configurations.
     const auto results = computeAssetConfigurationUpdate(knownConfigurations, detectedConfigurations);

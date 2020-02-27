@@ -40,11 +40,17 @@ namespace fty
 namespace nut
 {
 
-ConfigurationConnector::Parameters::Parameters() :
+ConfigurationConnector::Parameters::Parameters(const uint nbThreadPoolConnector, const uint nbThreadPoolManager,
+    const bool scanDummyUps, const bool automaticPrioritySort, const bool prioritizeDmfDriver) :
     endpoint(MLM_ENDPOINT),
     agentName("fty-nut-configuration"),
     requesterName("fty-nut-configuration-requester"),
-    dbUrl(DBConn::url)
+    dbUrl(DBConn::url),
+    nbThreadPoolConnector(nbThreadPoolConnector),
+    nbThreadPoolManager(nbThreadPoolManager),
+    scanDummyUps(scanDummyUps),
+    automaticPrioritySort(automaticPrioritySort),
+    prioritizeDmfDriver(prioritizeDmfDriver)
 {
 }
 
@@ -54,8 +60,8 @@ ConfigurationConnector::Parameters::Parameters() :
  */
 ConfigurationConnector::ConfigurationConnector(ConfigurationConnector::Parameters params) :
     m_parameters(params),
-    m_manager(params.dbUrl),
-    m_worker(10),
+    m_manager(params.dbUrl, params.nbThreadPoolManager, params.scanDummyUps, params.automaticPrioritySort, params.prioritizeDmfDriver),
+    m_worker(params.nbThreadPoolConnector),
     m_msgBusReceiver(messagebus::MlmMessageBus(params.endpoint, params.agentName)),
     m_msgBusRequester(messagebus::MlmMessageBus(params.endpoint, params.requesterName)),
     m_syncClient("fty-nut-configuration.socket"),
@@ -91,8 +97,8 @@ void ConfigurationConnector::getInitialAssets()
     message.userData().push_back("ups");
     message.userData().push_back("epdu");
     message.userData().push_back("sts");
-    message.userData().push_back("sensor");
-    message.userData().push_back("sensorgpio");
+    //message.userData().push_back("sensor");
+    //message.userData().push_back("sensorgpio");
 
     message.metaData().clear();
     message.metaData().emplace(messagebus::Message::RAW, "");

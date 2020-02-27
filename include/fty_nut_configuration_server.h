@@ -58,7 +58,7 @@ typedef struct ComputeAssetConfigurationUpdateResult {
  * \param credentialsSnmpV3 SNMPv3 credentials to test.
  * \return All detected and working NUT device configurations.
  */
-nutcommon::DeviceConfigurations assetScanDrivers(messagebus::PoolWorker& pool, fty_proto_t *asset, const std::vector<nutcommon::CredentialsSNMPv1>& credentialsSnmpV1, const std::vector<nutcommon::CredentialsSNMPv3>& credentialsSnmpV3);
+fty::nut::DeviceConfigurations assetScanDrivers(messagebus::PoolWorker& pool, fty_proto_t *asset, const SecwMap& credentials, const bool scanDummyUps);
 
 /**
  * \brief Sort NUT driver configurations into categories from known and detected configurations.
@@ -90,9 +90,10 @@ DeviceConfigurationInfoDetails::const_iterator matchDeviceConfigurationToBestDev
  * \brief Return the order of preference for an asset's driver configurations.
  * \param asset Asset to sort device configurations with.
  * \param configurations Device configurations to sort.
+ * \param prioritizeDmfDriver Prioritize DMF driver when applicable.
  * \return List of indexes of driver configurations, ordered from most to least preferred.
  */
-std::vector<size_t> sortDeviceConfigurationPreferred(fty_proto_t* asset, const nutcommon::DeviceConfigurations& configurations);
+std::vector<size_t> sortDeviceConfigurationPreferred(fty_proto_t* asset, const fty::nut::DeviceConfigurations& configurations, const bool prioritizeDmfDriver = false);
 
 }
 }

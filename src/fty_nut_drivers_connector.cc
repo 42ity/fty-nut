@@ -35,9 +35,10 @@ namespace fty
 namespace nut
 {
 
-ConfigurationDriversConnector::Parameters::Parameters() :
+ConfigurationDriversConnector::Parameters::Parameters(uint nbThreadPool) :
     endpoint(MLM_ENDPOINT),
-    agentName("fty-nut-configuration-drivers")
+    agentName("fty-nut-configuration-drivers"),
+    nbThreadPool(nbThreadPool)
 {
 }
 
@@ -48,7 +49,7 @@ ConfigurationDriversConnector::ConfigurationDriversConnector(ConfigurationDriver
         { DRIVERS_ADD_CONFIG, std::bind(&ConfigurationDriversConnector::addConfig, this, std::placeholders::_1) },
         { DRIVERS_REMOVE_CONFIG, std::bind(&ConfigurationDriversConnector::removeConfig, this, std::placeholders::_1) }
     }),
-    m_worker(10),
+    m_worker(params.nbThreadPool),
     m_msgBus(messagebus::MlmMessageBus(params.endpoint, params.agentName))
 {
     m_msgBus->connect();

@@ -1,9 +1,18 @@
 #   fty-nut-configuration configuration
-# This is a skeleton created by zproject.
-# You can add hand-written code here.
 
 server
     timeout = 10000     #   Client connection timeout, msec
     background = 0      #   Run as background process
     workdir = .         #   Working directory for daemon
-    verbose = 0         #   Do verbose logging of activity?
+
+log
+    config = /etc/fty/ftylog.cfg  # Log config file
+    verbose = false               # Do verbose logging of activity
+
+scanner
+    nbThreadPoolConnector = 10    # Number of thread pool for connector
+    nbThreadPoolManager = 20      # Number of thread pool for manager
+    nbThreadPoolDrivers = 10      # Number of thread pool for drivers
+    scanDummyUps = false          # Flag to enable scan of dummy ups drivers
+    automaticPrioritySort = true  # Flag to automatically sort configurations by priority
+    prioritizeDmfDriver = false   # Flag to prioritize dmf drivers during scan

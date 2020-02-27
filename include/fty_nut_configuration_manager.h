@@ -35,7 +35,7 @@ class ConfigurationManager
 {
     public:
 
-        ConfigurationManager(const std::string& dbConn);
+        ConfigurationManager(const std::string& dbConn, const uint nbThreadPool, const bool scanDummyUps, const bool automaticPrioritySort, const bool prioritizeDmfDriver);
         ~ConfigurationManager() = default;
 
         static std::string serializeConfig(const std::string& name, fty::nut::DeviceConfiguration& config);
@@ -57,7 +57,10 @@ class ConfigurationManager
     private:
         messagebus::PoolWorker m_poolScanners;
         std::string m_dbConn;
-        std::map<std::string, nutcommon::DeviceConfigurations> m_deviceConfigurationMap;
+        bool m_scanDummyUps;
+        bool m_automaticPrioritySort;
+        bool m_prioritizeDmfDriver;
+        std::map<std::string, fty::nut::DeviceConfigurations> m_deviceConfigurationMap;
         std::map<std::string, std::set<secw::Id>> m_deviceCredentialsMap;
         std::mutex m_manageDriversMutex;
 };

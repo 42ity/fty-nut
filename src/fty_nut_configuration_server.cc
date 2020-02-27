@@ -77,7 +77,7 @@ nutcommon::DeviceConfigurations testDummyDriverDevice(const std::string &param) 
  * \param credentialsSnmpV3 SNMPv3 credentials to test.
  * \return All detected and working NUT device configurations.
  */
-nutcommon::DeviceConfigurations assetScanDrivers(messagebus::PoolWorker& pool, fty_proto_t *asset, const std::vector<nutcommon::CredentialsSNMPv1>& credentialsSnmpV1, const std::vector<nutcommon::CredentialsSNMPv3>& credentialsSnmpV3)
+fty::nut::DeviceConfigurations assetScanDrivers(messagebus::PoolWorker& pool, fty_proto_t *asset, const SecwMap& credentials, const bool scanDummyUps)
 {
     nutcommon::DeviceConfigurations results;
 
@@ -87,23 +87,28 @@ nutcommon::DeviceConfigurations assetScanDrivers(messagebus::PoolWorker& pool, f
 
     // Launch a bunch of scans in parallel.
     for (const auto& address : addresses) {
-        nutcommon::ScanRangeOptions scanRangeOptions(address, SCAN_TIMEOUT);
-        /// XXX: static_cast required because of deprecated functions creating overloaded functions.
-        for (const auto& credential : credentialsSnmpV3) {
-            futureResults.emplace_front(pool.schedule(static_cast<nutcommon::DeviceConfigurations(*)(const nutcommon::ScanRangeOptions&, const nutcommon::CredentialsSNMPv3&, bool)>(&nutcommon::scanDeviceRangeSNMPv3), scanRangeOptions, credential, false));
-        }
-        for (const auto& credential : credentialsSnmpV1) {
-            futureResults.emplace_front(pool.schedule(static_cast<nutcommon::DeviceConfigurations(*)(const nutcommon::ScanRangeOptions&, const nutcommon::CredentialsSNMPv1&, bool)>(&nutcommon::scanDeviceRangeSNMPv1), scanRangeOptions, credential, false));
+        for (const auto& credential : credentials) {
+            secw::Snmpv1Ptr snmpv1 = secw::Snmpv1::tryToCast(credential.second);
+            secw::Snmpv3Ptr snmpv3 = secw::Snmpv3::tryToCast(credential.second);
+
+            if (snmpv1 || snmpv3) {
+                std::vector<secw::DocumentPtr> doc { credential.second };
+                futureResults.emplace_front(pool.schedule(fty::nut::scanDevice, fty::nut::SCAN_PROTOCOL_SNMP, address, SCAN_TIMEOUT, doc));
+                futureResults.emplace_front(pool.schedule(fty::nut::scanDevice, fty::nut::SCAN_PROTOCOL_SNMP_DMF, address, SCAN_TIMEOUT, doc));
+            }
         }
         futureResults.emplace_front(pool.schedule(static_cast<nutcommon::DeviceConfigurations(*)(const nutcommon::ScanRangeOptions&)>(&nutcommon::scanDeviceRangeNetXML), scanRangeOptions));
 
-        std::string name = fty_proto_ext_string(asset, "name", "");
-        // FIXME: For multi node: asset.ext.contact_name@asset.ext.contact_email
-        //std::string contact_name = fty_proto_ext_string(asset, "contact_name", "");
-        //std::string contact_email = fty_proto_ext_string(asset, "contact_email", "");
-        //const std::string param = contact_name + "@" + contact_email;
-        const std::string param = name + "@" + address;   /* "asset.ext.name@asset.ext.ip.1" (e.g MBT.G3MI.3PH.dummy-snmp@bios-nut-proxy.mbt.lab.etn.com */
-        futureResults.emplace_front(pool.schedule(testDummyDriverDevice, param));
+        // Scan dummy ups only if option is enabled in config
+        if (scanDummyUps) {
+            std::string name = fty_proto_ext_string(asset, "name", "");
+            // FIXME: For multi node: asset.ext.contact_name@asset.ext.contact_email
+            //std::string contact_name = fty_proto_ext_string(asset, "contact_name", "");
+            //std::string contact_email = fty_proto_ext_string(asset, "contact_email", "");
+            //const std::string param = contact_name + "@" + contact_email;
+            const std::string param = name + "@" + address;   /* "asset.ext.name@asset.ext.ip.1" (e.g MBT.G3MI.3PH.dummy-snmp@bios-nut-proxy.mbt.lab.etn.com */
+            futureResults.emplace_front(pool.schedule(testDummyDriverDevice, param));
+        }
     }
 
     /**
@@ -360,14 +365,15 @@ nutcommon::DeviceConfiguration instanciateDeviceConfigurationFromTemplate(fty_pr
  * \brief Return the order of preference for an asset's driver configurations.
  * \param asset Asset to sort device configurations with.
  * \param configurations Device configurations to sort.
+ * \param prioritizeDmfDriver Prioritize DMF driver when applicable.
  * \return List of indexes of driver configurations, ordered from most to least preferred.
  */
-std::vector<size_t> sortDeviceConfigurationPreferred(fty_proto_t* asset, const nutcommon::DeviceConfigurations& configurations) {
+std::vector<size_t> sortDeviceConfigurationPreferred(fty_proto_t* asset, const fty::nut::DeviceConfigurations& configurations, const bool prioritizeDmfDriver) {
     // Initialize vector of indexes.
     std::vector<size_t> indexes(configurations.size());
     std::iota(indexes.begin(), indexes.end(), 0);
 
-    std::sort(indexes.begin(), indexes.end(), [&configurations, &asset](size_t a, size_t b) {
+    std::sort(indexes.begin(), indexes.end(), [&configurations, &asset, prioritizeDmfDriver](size_t a, size_t b) {
         /**
          * This is a fairly complicated sort function. Here, we try to return
          * true if confA is better than confB.
@@ -381,8 +387,10 @@ std::vector<size_t> sortDeviceConfigurationPreferred(fty_proto_t* asset, const n
         const auto& confA = configurations[a];
         const auto& confB = configurations[b];
 
-        const static std::array<std::string, 4> upsDriverPriority  = { "dummy-ups", "netxml-ups", "snmp-ups", "snmp-ups-dmf" };
-        const static std::array<std::string, 4> epduDriverPriority = { "dummy-ups", "snmp-ups", "snmp-ups-dmf", "netxml-ups" };
+        const static std::array<std::string, 4> upsDriverPriority = { "dummy-ups", "netxml-ups",
+            prioritizeDmfDriver ? "snmp-ups-dmf" : "snmp-ups" , prioritizeDmfDriver ? "snmp-ups" : "snmp-ups-dmf" };
+        const static std::array<std::string, 4> epduDriverPriority = { "dummy-ups",
+            prioritizeDmfDriver ? "snmp-ups-dmf" : "snmp-ups", prioritizeDmfDriver ? "snmp-ups" : "snmp-ups-dmf", "netxml-ups" };
         const static std::array<std::string, 2> snmpMibPriority = { "pw", "mge" };
         const static std::array<std::string, 3> snmpSecPriority = { "authPriv", "authNoPriv", "noAuthNoPriv" };
 

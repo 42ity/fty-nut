@@ -35,12 +35,20 @@ class ConfigurationConnector
 {
     public:
         struct Parameters {
-            Parameters();
+            Parameters(const uint nbThreadPoolConnector, const uint nbThreadPoolManager,
+                const bool scanDummyUps, const bool automaticPrioritySort, const bool prioritizeDmfDriver);
 
             std::string endpoint;
             std::string agentName;
             std::string requesterName;
             std::string dbUrl;
+            uint nbThreadPoolConnector;
+
+            // FIXME: To remove when ConfigurationManager instantiated in main
+            uint nbThreadPoolManager;
+            bool scanDummyUps;
+            bool automaticPrioritySort;
+            bool prioritizeDmfDriver;
         };
 
         ConfigurationConnector(Parameters params);

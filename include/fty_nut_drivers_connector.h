@@ -37,10 +37,11 @@ class ConfigurationDriversConnector
 {
     public:
         struct Parameters {
-            Parameters();
+            Parameters(uint nbThreadPool);
 
             std::string endpoint;
             std::string agentName;
+            uint nbThreadPool;
         };
 
         ConfigurationDriversConnector(Parameters params, volatile bool &exit);

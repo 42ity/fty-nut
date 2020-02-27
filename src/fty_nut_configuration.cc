@@ -58,10 +58,14 @@ int main (int argc, char *argv [])
     DBConn::dbpath();
 
     // Create default configuration
-    fty::nut::ConfigurationConnector::Parameters configurationParameters;
-    fty::nut::ConfigurationDriversConnector::Parameters driversParameters;
     std::string logConfig = "/etc/fty/ftylog.cfg";
     std::string logVerbose = "false";
+    std::string strNbThreadPoolConnector = "10";
+    std::string strNbThreadPoolManager = "20";
+    std::string strNbThreadPoolDrivers = "10";
+    std::string scanDummyUps = "false";
+    std::string automaticPrioritySort = "true";
+    std::string prioritizeDmfDriver = "false";
     std::string configFile;
 
     // Parse command-line arguments
@@ -96,10 +100,17 @@ int main (int argc, char *argv [])
         if (cfg) {
             std::map<std::string, std::string&> properties {
                 { "log/config", logConfig },
-                { "log/verbose", logVerbose }
+                { "log/verbose", logVerbose },
+                { "scanner/nbThreadPoolConnector", strNbThreadPoolConnector},
+                { "scanner/nbThreadPoolManager", strNbThreadPoolManager},
+                { "scanner/nbThreadPoolDrivers", strNbThreadPoolDrivers},
+                { "scanner/scanDummyUps", scanDummyUps},
+                { "scanner/automaticPrioritySort", automaticPrioritySort},
+                { "scanner/prioritizeDmfDriver", prioritizeDmfDriver}
             } ;
             for (auto& property : properties) {
                 property.second = zconfig_get(cfg.get(), property.first.c_str(), std::string(property.second).c_str());
+                //std::cout << property.first << "=" << property.second << std::endl;
             }
         }
         else {
@@ -107,6 +118,15 @@ int main (int argc, char *argv [])
             return EXIT_FAILURE;
         }
     }
+
+    fty::nut::ConfigurationConnector::Parameters configurationParameters(
+        static_cast<uint>(std::stoul(strNbThreadPoolConnector)),
+        static_cast<uint>(std::stoul(strNbThreadPoolManager)),
+        scanDummyUps.compare("true") ? true : false,
+        automaticPrioritySort.compare("true") ? true : false,
+        prioritizeDmfDriver.compare("true") ? true : false);
+    fty::nut::ConfigurationDriversConnector::Parameters driversParameters(
+        static_cast<uint>(std::stoul(strNbThreadPoolDrivers)));
 
     // Set up logging.
     ManageFtyLog::setInstanceFtylog(configurationParameters.agentName, logConfig);
