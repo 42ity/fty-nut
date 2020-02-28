@@ -62,6 +62,7 @@ all_tests [] = {
     { "fty_nut_configuration_protect_asset", fty_nut_configuration_protect_asset_test, true, true, NULL },
     { "fty_nut_configuration_helper", fty_nut_configuration_helper_test, true, true, NULL },
     { "fty_nut_configuration_manager", fty_nut_configuration_manager_test, true, true, NULL },
+    { "fty_nut_configuration_repository", fty_nut_configuration_repository_test, true, true, NULL },
     { "fty_nut_configuration_connector", fty_nut_configuration_connector_test, true, true, NULL },
     { "fty_nut_drivers_manager", fty_nut_drivers_manager_test, true, true, NULL },
     { "fty_nut_drivers_connector", fty_nut_drivers_connector_test, true, true, NULL },

@@ -117,6 +117,8 @@ typedef struct _fty_nut_configuration_helper_t fty_nut_configuration_helper_t;
 #define FTY_NUT_CONFIGURATION_HELPER_T_DEFINED
 typedef struct _fty_nut_configuration_manager_t fty_nut_configuration_manager_t;
 #define FTY_NUT_CONFIGURATION_MANAGER_T_DEFINED
+typedef struct _fty_nut_configuration_repository_t fty_nut_configuration_repository_t;
+#define FTY_NUT_CONFIGURATION_REPOSITORY_T_DEFINED
 typedef struct _fty_nut_configuration_connector_t fty_nut_configuration_connector_t;
 #define FTY_NUT_CONFIGURATION_CONNECTOR_T_DEFINED
 typedef struct _fty_nut_drivers_manager_t fty_nut_drivers_manager_t;
@@ -138,6 +140,7 @@ typedef struct _sensor_actor_t sensor_actor_t;
 #include "fty_nut_configuration_protect_asset.h"
 #include "fty_nut_configuration_helper.h"
 #include "fty_nut_configuration_manager.h"
+#include "fty_nut_configuration_repository.h"
 #include "fty_nut_configuration_connector.h"
 #include "fty_nut_drivers_manager.h"
 #include "fty_nut_drivers_connector.h"

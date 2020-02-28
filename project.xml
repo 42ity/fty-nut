@@ -147,6 +147,7 @@
     <class name = "fty-nut-configuration-protect-asset" state = "stable">fty nut configuration protect asset</class>
     <class name = "fty-nut-configuration-helper" state = "stable">fty nut configuration helper</class>
     <class name = "fty-nut-configuration-manager" state = "stable">fty nut configuration manager</class>
+    <class name = "fty-nut-configuration-repository" state = "stable">fty nut configuration repository</class>
     <class name = "fty-nut-configuration-connector" state = "stable">fty nut configuration connector</class>
     <class name = "fty-nut-drivers-manager" state = "stable">fty nut drivers manager</class>
     <class name = "fty-nut-drivers-connector" state = "stable">fty nut drivers connector</class>

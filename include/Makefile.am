@@ -10,6 +10,7 @@ include_HEADERS = \
     fty_nut_configuration_protect_asset.h \
     fty_nut_configuration_helper.h \
     fty_nut_configuration_manager.h \
+    fty_nut_configuration_repository.h \
     fty_nut_configuration_connector.h \
     fty_nut_drivers_manager.h \
     fty_nut_drivers_connector.h \

@@ -22,9 +22,8 @@
 #ifndef FTY_NUT_CONFIGURATION_MANAGER_H_INCLUDED
 #define FTY_NUT_CONFIGURATION_MANAGER_H_INCLUDED
 
+#include "fty_nut_configuration_repository.h"
 #include "fty_nut_library.h"
-
-#define NUT_PART_STORE "/var/lib/fty/fty-nut/devices"
 
 namespace fty
 {
@@ -34,25 +33,22 @@ namespace nut
 class ConfigurationManager
 {
     public:
-
         ConfigurationManager(const std::string& dbConn, const uint nbThreadPool, const bool scanDummyUps, const bool automaticPrioritySort, const bool prioritizeDmfDriver);
         ~ConfigurationManager() = default;
 
         static std::string serializeConfig(const std::string& name, fty::nut::DeviceConfiguration& config);
-        void automaticAssetConfigurationPrioritySort(fty_proto_t* asset);
-        void scanAssetConfigurations(fty_proto_t* asset);
+        void automaticAssetConfigurationPrioritySort(fty_proto_t* asset, const fty::nut::SecwMap& credentials);
+        void scanAssetConfigurations(fty_proto_t* asset, const fty::nut::SecwMap& credentials);
 
-        fty::nut::DeviceConfigurations getAssetConfigurations(fty_proto_t* asset);
-        std::tuple<fty::nut::DeviceConfigurations, std::set<secw::Id>> getAssetConfigurationsWithSecwDocuments(fty_proto_t* asset);
+        fty::nut::DeviceConfigurations getAssetConfigurations(fty_proto_t* asset, const fty::nut::SecwMap& credentials);
+        std::tuple<fty::nut::DeviceConfigurations, std::set<secw::Id>> getAssetConfigurationsWithSecwDocuments(fty_proto_t* asset, const fty::nut::SecwMap& credentials);
         void saveAssetConfigurations(const std::string& assetName, std::tuple<fty::nut::DeviceConfigurations, std::set<secw::Id>>& configsAsset);
-        bool isConfigurationsChange(fty::nut::DeviceConfigurations& configsAssetToTest, fty::nut::DeviceConfigurations& configsAssetCurrent, bool initInProgress = false);
-        bool updateAssetConfiguration(fty_proto_t* asset);
+        bool haveConfigurationsChanged(fty::nut::DeviceConfigurations& configsAssetToTest, fty::nut::DeviceConfigurations& configsAssetCurrent, bool initInProgress = false);
+        bool updateAssetConfiguration(fty_proto_t* asset, const fty::nut::SecwMap& credentials);
         bool removeAssetConfiguration(fty_proto_t* asset);
-        void manageCredentialsConfiguration(const std::string& secwDocumentId, std::set<std::string>& assetListChange);
+        void manageCredentialsConfiguration(const std::string& secwDocumentId, std::set<std::string>& assetListChange, const fty::nut::SecwMap& credentials);
 
-        void updateDeviceConfigurationFile(const std::string& name, fty::nut::DeviceConfiguration& config);
-        fty::nut::DeviceConfiguration readDeviceConfigurationFile(const std::string& name);
-        void removeDeviceConfigurationFile(const std::string &name);
+        ConfigurationRepositoryDirectory m_configurationRepositoryNut;
 
     private:
         messagebus::PoolWorker m_poolScanners;
@@ -63,6 +59,7 @@ class ConfigurationManager
         std::map<std::string, fty::nut::DeviceConfigurations> m_deviceConfigurationMap;
         std::map<std::string, std::set<secw::Id>> m_deviceCredentialsMap;
         std::mutex m_manageDriversMutex;
+
 };
 
 }
