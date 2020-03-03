@@ -265,19 +265,8 @@ void ConfigurationManager::saveAssetConfigurations(
         if (!configs.empty()) {
             std::unique_lock<std::mutex> lockManageDrivers(m_manageDriversMutex);
 
-            // Make sure that no config exist for this asset before adding new
-            auto itr = m_deviceConfigurationMap.find(assetName);
-            if (itr != m_deviceConfigurationMap.end()) {
-                m_deviceConfigurationMap.erase(itr);
-            }
-            m_deviceConfigurationMap.insert(std::make_pair(assetName, configs));
-
-            auto itr_cred_map = m_deviceCredentialsMap.find(assetName);
-            if (itr_cred_map != m_deviceCredentialsMap.end()) {
-                m_deviceCredentialsMap.erase(itr_cred_map);
-            }
-
-            m_deviceCredentialsMap.insert(std::make_pair(assetName, std::get<1>(configsAsset)));
+            m_configurationRepositoryInMemory.setConfigurations(assetName, configs);
+            m_deviceCredentialsMap[assetName] = std::get<1>(configsAsset);
         }
     } catch (std::runtime_error &e) {
         log_error("saveAssetConfigurations: failed to apply config for '%s': %s", assetName.c_str(), e.what());
@@ -337,9 +326,9 @@ bool ConfigurationManager::updateAssetConfiguration(fty_proto_t* asset, const ft
     try {
         bool needUpdate = false;
         std::unique_lock<std::mutex> lockManageDrivers(m_manageDriversMutex);
-        auto itr = m_deviceConfigurationMap.find(assetName);
+        auto previousConfigs = m_configurationRepositoryInMemory.getConfigurations(assetName);
         // Update if no configurations
-        if (itr == m_deviceConfigurationMap.end()) {
+        if (previousConfigs.empty()) {
             if (status == "active") {
                 needUpdate = true;
             }
@@ -347,7 +336,7 @@ bool ConfigurationManager::updateAssetConfiguration(fty_proto_t* asset, const ft
             if (status == "active") {
                 fty::nut::DeviceConfigurations configs_asset_current = getAssetConfigurations(asset, credentials);
                 // Test if existing configurations have changed
-                needUpdate = haveConfigurationsChanged(itr->second, configs_asset_current);
+                needUpdate = haveConfigurationsChanged(previousConfigs, configs_asset_current);
             } else if (status == "nonactive") {
                 needUpdate = true;
             }
@@ -391,18 +380,12 @@ bool ConfigurationManager::removeAssetConfiguration(fty_proto_t* asset)
         auto conn = tntdb::connectCached(m_dbConn);
         log_info("removeAssetConfiguration: remove [%s]", assetName.c_str());
         std::unique_lock<std::mutex> lock_manage_drivers(m_manageDriversMutex);
-        auto itr = m_deviceConfigurationMap.find(assetName);
-        if (itr != m_deviceConfigurationMap.end()) {
-            m_deviceConfigurationMap.erase(itr);
-        }
-        auto itr_cred_map = m_deviceCredentialsMap.find(assetName);
-        if (itr_cred_map != m_deviceCredentialsMap.end()) {
-            m_deviceCredentialsMap.erase(itr_cred_map);
-        }
-        lock_manage_drivers.unlock();
 
-        // Remove config file
+        m_configurationRepositoryInMemory.setConfigurations(assetName, {});
         m_configurationRepositoryNut.setConfigurations(assetName, {});
+        m_deviceCredentialsMap.erase(assetName);
+
+        lock_manage_drivers.unlock();
         return true;
     } catch (std::runtime_error &e) {
         log_error("removeAssetConfiguration: failed to remove config for '%s': %s", assetName.c_str(), e.what());
@@ -433,12 +416,12 @@ void ConfigurationManager::manageCredentialsConfiguration(const std::string& sec
         log_info("manageCredentialsConfiguration: rescan '%s'", assetName.c_str());
 
         lockManageDrivers.lock();
-        auto itr = m_deviceConfigurationMap.find(assetName);
-        if (itr != m_deviceConfigurationMap.end()) {
+        auto previousConfigs = m_configurationRepositoryInMemory.getConfigurations(assetName);
+        if (!previousConfigs.empty()) {
             fty_proto_t *asset = fetchProtoFromAssetName(assetName);
             // Test if configuration change
             fty::nut::DeviceConfigurations configs = getAssetConfigurations(asset, credentials);
-            if (haveConfigurationsChanged(itr->second, configs)) {
+            if (haveConfigurationsChanged(previousConfigs, configs)) {
                 lockManageDrivers.unlock();
                 log_info("manageCredentialsConfiguration: [%s] need update", assetName.c_str());
                 scanAssetConfigurations(asset, credentials);

@@ -56,7 +56,7 @@ class ConfigurationManager
         bool m_scanDummyUps;
         bool m_automaticPrioritySort;
         bool m_prioritizeDmfDriver;
-        std::map<std::string, fty::nut::DeviceConfigurations> m_deviceConfigurationMap;
+        ConfigurationRepositoryMemory m_configurationRepositoryInMemory;
         std::map<std::string, std::set<secw::Id>> m_deviceCredentialsMap;
         std::mutex m_manageDriversMutex;
 
