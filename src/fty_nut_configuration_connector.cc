@@ -319,7 +319,6 @@ void ConfigurationConnector::handleNotificationAssets(messagebus::Message msg)
 
                 if (type == "device" && (subtype == "ups" || subtype == "pdu" || subtype == "epdu" || subtype == "sts")) {
                     if (operation == FTY_PROTO_ASSET_OP_CREATE && status == "active") {
-    fty_proto_print(proto.get());
                         m_protectAsset.lock(name);
                         m_manager.scanAssetConfigurations(proto.get(), credentials);
                         m_manager.automaticAssetConfigurationPrioritySort(proto.get(), credentials);
@@ -335,7 +334,6 @@ void ConfigurationConnector::handleNotificationAssets(messagebus::Message msg)
                         m_protectAsset.unlock(name);
                     }
                     else if (operation == FTY_PROTO_ASSET_OP_UPDATE) {
-    fty_proto_print(proto.get());
                         m_protectAsset.lock(name);
                         if (m_manager.updateAssetConfiguration(proto.get(), credentials)) {
                             if (status == "active") {
@@ -348,7 +346,6 @@ void ConfigurationConnector::handleNotificationAssets(messagebus::Message msg)
                         m_protectAsset.unlock(name);
                     }
                     else if (operation == FTY_PROTO_ASSET_OP_DELETE) {
-    fty_proto_print(proto.get());
                         m_protectAsset.lock(name);
                         if (m_manager.removeAssetConfiguration(proto.get())) {
                             publishToDriversConnector(name, DRIVERS_REMOVE_CONFIG);
