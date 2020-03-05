@@ -34,7 +34,7 @@ class ConfigurationRepository
     public:
         virtual ~ConfigurationRepository() = default;
 
-        virtual std::vector<std::string> listDevices() = 0;
+        virtual std::set<std::string> listDevices() = 0;
 
         virtual fty::nut::DeviceConfigurations getConfigurations(const std::string& name) = 0;
         virtual void setConfigurations(const std::string& name, const fty::nut::DeviceConfigurations& configurations) = 0;
@@ -52,13 +52,12 @@ class ConfigurationRepositoryMemory final : public ConfigurationRepository
         ConfigurationRepositoryMemory() = default;
         ~ConfigurationRepositoryMemory() = default;
     
-        std::vector<std::string> listDevices() override;
+        std::set<std::string> listDevices() override;
 
         fty::nut::DeviceConfigurations getConfigurations(const std::string& name) override;
         void setConfigurations(const std::string& name, const fty::nut::DeviceConfigurations& configurations) override;
 
     private:
-        std::mutex m_mutex;
         RepositoryStore m_configurations;
 };
 
@@ -70,7 +69,7 @@ class ConfigurationRepositoryDirectory final : public ConfigurationRepository
         ConfigurationRepositoryDirectory(const std::string& directory = DEFAULT_NUT_CONFIGURATION_REPOSITORY);
         ~ConfigurationRepositoryDirectory() = default;
     
-        std::vector<std::string> listDevices() override;
+        std::set<std::string> listDevices() override;
 
         fty::nut::DeviceConfigurations getConfigurations(const std::string& name) override;
         void setConfigurations(const std::string& name, const fty::nut::DeviceConfigurations& configurations) override;

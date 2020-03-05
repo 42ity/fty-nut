@@ -1,5 +1,5 @@
 /*  =========================================================================
-    fty_nut_drivers_manager - fty nut drivers manager
+    fty_nut_driver_manager - fty nut driver manager
 
     Copyright (C) 2014 - 2018 Eaton
 
@@ -29,48 +29,28 @@ namespace fty
 namespace nut
 {
 
-class ConfigurationDriversControl {
-    public:
-        void addControl(const std::string& controlName);
-        std::set<std::string> clearControl();
-    private:
-        std::set<std::string> m_controlDrivers;
-        std::mutex m_controlDriversMutex;
-};
-
-class ConfigurationDriversManager
+class DriverManager
 {
     public:
+        DriverManager(const std::string& nutDirectory);
+        ~DriverManager();
 
-        ConfigurationDriversManager(volatile bool &exit);
-        ~ConfigurationDriversManager() = default;
-
-        void manageDrivers();
+        void updateMainloop();
         template<typename It> void systemctl(const std::string &operation, It first, It last);
         void systemctl(const std::string &operation, const std::string &service);
         void updateNUTConfig();
-        void addConfigDriver(const std::string& assetName);
-        void removeConfigDriver(const std::string& assetName);
+        void refreshDrivers(const std::vector<std::string>& assetNames);
 
     private:
-        ConfigurationDriversControl m_startDrivers;
-        ConfigurationDriversControl m_stopDrivers;
-        std::thread m_manageDriversThread;
-        volatile bool &m_exit;
+        ConfigurationRepositoryDirectory m_nutRepository;
+        std::mutex m_mutex;
+        std::set<std::string> m_startDrivers;
+        std::set<std::string> m_stopDrivers;
+        std::atomic_bool m_exit;
+        std::thread m_updateThread;
 };
 
 }
 }
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-//  Self test of this class
-FTY_NUT_EXPORT void fty_nut_drivers_manager_test (bool verbose);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

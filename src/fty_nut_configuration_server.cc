@@ -26,6 +26,8 @@
 @end
 */
 
+#include "fty_nut_configuration_helper.h"
+
 #include "fty_nut_library.h"
 #include "fty_nut_classes.h"
 #include <fty_common_nut_credentials.h>
@@ -42,86 +44,54 @@ namespace nut
 
 constexpr int SCAN_TIMEOUT = 5;
 
+//
+// Private functions.
+//
 
-nutcommon::DeviceConfigurations testDummyDriverDevice(const std::string &param) {
-    nutcommon::DeviceConfigurations devices;
-    unsigned loop_nb = 1;
-    unsigned loop_iter_time_sec = 10;
-
-    nutcommon::KeyValues values = nutcommon::dumpDeviceDummy(param, loop_nb, loop_iter_time_sec);
-    if (!values.empty()) {
-        nutcommon::DeviceConfiguration device;
-        device.emplace("driver", values["driver.name"] /*"dummy-ups"*/);
-        device.emplace("port", values["driver.parameter.port"] /*param*/);
-        device.emplace("desc", "dummy-ups in repeater mode");
-        device.emplace("synchronous", "yes");
-        devices.emplace_back(device);
-        //log_info("testDummyDriverDevice: %s", ConfigurationManager::serializeConfig("", device).c_str());
-    }
-    return devices;
-}
+auto isConfSnmp =   [](const fty::nut::DeviceConfiguration& conf) -> bool { return conf.at("driver").find_first_of("snmp-ups") == 0; };
+auto confSnmpVersion = [](const fty::nut::DeviceConfiguration& conf) -> int {
+    if (!isConfSnmp(conf)) { return -1; }
+    auto snmp_version = conf.find("snmp_version");
+    if (snmp_version == conf.end() || snmp_version->second == "v1") { return 1; }
+    else if (snmp_version->second == "v2c") { return 2; }
+    else if (snmp_version->second == "v3") { return 3; }
+    else { return 0; }
+};
+auto confSnmpMib =  [](const fty::nut::DeviceConfiguration& conf) -> std::string {
+    return conf.count("mibs") > 0 ? conf.at("mibs") : "auto";
+};
+auto confSnmpSec =  [](const fty::nut::DeviceConfiguration& conf) -> std::string {
+    return conf.count("secLevel") > 0 ? conf.at("secLevel") : "noAuthNoPriv";
+};
+auto confSnmpCom =  [](const fty::nut::DeviceConfiguration& conf) -> std::string {
+    return conf.count("community") > 0 ? conf.at("community") : "public";
+};
 
 /**
- * \brief Scan asset for NUT driver configurations.
- *
- * The scan will detect the following drivers:
- * - netxml-ups
- * - snmp-ups (SNMPv1 and SNMPv3)
- * - snmp-ups-dmf (SNMPv1 and SNMPv3)
- *
- * \warning This won't return the list of all *working* NUT device configurations, as the list of handled NUT drivers is not exhaustive!
- *
- * \param pool PoolWorker to use.
- * \param asset fty_proto_t of asset to scan.
- * \param credentialsSnmpV1 SNMPv1 credentials to test.
- * \param credentialsSnmpV3 SNMPv3 credentials to test.
- * \return All detected and working NUT device configurations.
+ * \brief Helper to scan for a dummy-ups in repeater mode.
+ * \param port Port to scan.
+ * \return NUT driver configurations found.
  */
-fty::nut::DeviceConfigurations assetScanDrivers(messagebus::PoolWorker& pool, fty_proto_t *asset, const SecwMap& credentials, const bool scanDummyUps)
+static fty::nut::DeviceConfigurations testDummyDriverDevice(const std::string &port)
 {
-    nutcommon::DeviceConfigurations results;
+    constexpr unsigned loop_nb = 1;
+    constexpr unsigned loop_iter_time_sec = 10;
 
-    const auto addresses = getNetworkAddressesFromAsset(asset);
+    fty::nut::DeviceConfigurations result;
 
-    std::forward_list<std::future<nutcommon::DeviceConfigurations>> futureResults;
-
-    // Launch a bunch of scans in parallel.
-    for (const auto& address : addresses) {
-        for (const auto& credential : credentials) {
-            secw::Snmpv1Ptr snmpv1 = secw::Snmpv1::tryToCast(credential.second);
-            secw::Snmpv3Ptr snmpv3 = secw::Snmpv3::tryToCast(credential.second);
-
-            if (snmpv1 || snmpv3) {
-                std::vector<secw::DocumentPtr> doc { credential.second };
-                futureResults.emplace_front(pool.schedule(fty::nut::scanDevice, fty::nut::SCAN_PROTOCOL_SNMP, address, SCAN_TIMEOUT, doc));
-                futureResults.emplace_front(pool.schedule(fty::nut::scanDevice, fty::nut::SCAN_PROTOCOL_SNMP_DMF, address, SCAN_TIMEOUT, doc));
-            }
-        }
-        futureResults.emplace_front(pool.schedule(static_cast<nutcommon::DeviceConfigurations(*)(const nutcommon::ScanRangeOptions&)>(&nutcommon::scanDeviceRangeNetXML), scanRangeOptions));
-
-        // Scan dummy ups only if option is enabled in config
-        if (scanDummyUps) {
-            std::string name = fty_proto_ext_string(asset, "name", "");
-            // FIXME: For multi node: asset.ext.contact_name@asset.ext.contact_email
-            //std::string contact_name = fty_proto_ext_string(asset, "contact_name", "");
-            //std::string contact_email = fty_proto_ext_string(asset, "contact_email", "");
-            //const std::string param = contact_name + "@" + contact_email;
-            const std::string param = name + "@" + address;   /* "asset.ext.name@asset.ext.ip.1" (e.g MBT.G3MI.3PH.dummy-snmp@bios-nut-proxy.mbt.lab.etn.com */
-            futureResults.emplace_front(pool.schedule(testDummyDriverDevice, param));
-        }
+    fty::nut::KeyValues values = fty::nut::dumpDevice("dummy-ups", port, loop_nb, loop_iter_time_sec);
+    if (!values.empty()) {
+        result.emplace_back(fty::nut::DeviceConfiguration {
+            std::make_pair<>("driver", values["driver.name"]),
+            std::make_pair<>("port", values["driver.parameter.port"]),
+            std::make_pair<>("desc", "dummy-ups in repeater mode"),
+            std::make_pair<>("synchronous", "yes"),
+        });
     }
 
-    /**
-     * Grab all results.
-     * FIXME: Rewrite with std::when_all once C++2x comes around.
-     */
-    for (auto& futureResult : futureResults) {
-        auto result = futureResult.get();
-        std::move(result.begin(), result.end(), std::back_inserter(results));
-    }
-
-    return results;
+    return result;
 }
+
 
 /**
  * \brief Extracts the fingerprint of a NUT device configuration.
@@ -141,9 +111,9 @@ fty::nut::DeviceConfigurations assetScanDrivers(messagebus::PoolWorker& pool, ft
  * \warning If a driver fingerprint is not recognized, the NUT device
  * configuration itself will be returned (which will uniquely identify itself).
  */
-nutcommon::DeviceConfiguration extractConfigurationFingerprint(const nutcommon::DeviceConfiguration& configuration)
+static fty::nut::DeviceConfiguration extractConfigurationFingerprint(const fty::nut::DeviceConfiguration& configuration)
 {
-    nutcommon::DeviceConfiguration result;
+    fty::nut::DeviceConfiguration result;
 
     const static std::map<std::string, std::set<std::string>> fingerprintTemplates = {
         { "snmp-ups", {
@@ -178,68 +148,129 @@ nutcommon::DeviceConfiguration extractConfigurationFingerprint(const nutcommon::
 }
 
 /**
- * \brief Pretty-print ComputeAssetConfigurationUpdateResult.
- * \param os Output stream.
- * \param results ComputeAssetConfigurationUpdateResult.
- * \return Output stream.
+ * \brief Instanciate a device configuration template from a device.
+ *
+ * Device configuration templates can contain values derived from the asset with the following syntax:
+ * - ${asset.aux.<auxiliary property key>} : value comes from asset auxilliary attributes
+ * - ${asset.ext.<extended property key>} : value comes from asset extended attributes
+ *
+ * \param asset Asset to instanciate from.
+ * \param template Device configuration template.
+ * \return Instanciated device configuration template, or empty device configuration on error.
  */
-std::string serialize( const ComputeAssetConfigurationUpdateResult& results)
+static fty::nut::DeviceConfiguration instanciateDeviceConfigurationFromTemplate(fty_proto_t* asset, const fty::nut::DeviceConfiguration& confTemplate)
 {
-    std::stringstream ss;
+    fty::nut::DeviceConfiguration result;
 
-    for (const auto& result : std::vector<std::pair<const char*, const nutcommon::DeviceConfigurations&>>({
-        { "Working configurations:", results.workingConfigurations },
-        { "Non-working configurations:", results.nonWorkingConfigurations },
-        { "New configurations:", results.newConfigurations },
-        { "Unknown state configurations:", results.unknownStateConfigurations },
-    })) {
-        ss << result.first << std::endl;
-        for (const auto& configuration : result.second) {
-            ss << configuration << std::endl;
+    // Instanciate each property in the template.
+    for (const auto& property : confTemplate) {
+        const static std::regex token(R"xxx(\$\{([^}]+)\})xxx", std::regex::optimize);
+        std::string templatedValue = property.second;
+        std::smatch matches;
+
+        while (std::regex_search(templatedValue, matches, token)) {
+            // We need to template the property value.
+            auto str = matches[1].str();
+
+            // Try to instanciate value.
+            const char* value = nullptr;
+            if (str.find_first_of("asset.ext.") == 0) {
+                value = fty_proto_ext_string(asset, str.c_str()+10, nullptr);
+            }
+            else if (str.find_first_of("asset.aux.") == 0) {
+                value = fty_proto_aux_string(asset, str.c_str()+10, nullptr);
+            }
+
+            // Bail out if value wasn't found.
+            if (!value) {
+                return {};
+            }
+
+            templatedValue.replace(matches.position(1)-2, matches.length(1)+3, value);
+        }
+
+        result.emplace(property.first, templatedValue);
+    }
+
+    return result;
+}
+
+// FIXME: To put in fty-commun-nut ??
+static fty::nut::DeviceConfiguration ftyToNutDeviceConfiguration(const DBAssetsDiscovery::DeviceConfigurationInfo& conf, const fty::nut::SecwMap& credentials)
+{
+    fty::nut::DeviceConfiguration results = conf.attributes;
+
+    // FIXME: improve security document instanciation.
+    for (const auto& secw_document_id : conf.secwDocumentIdList) {
+        auto itCred = credentials.find(secw_document_id);
+
+        if (itCred != credentials.end()) {
+            auto cred = fty::nut::convertSecwDocumentToKeyValues(itCred->second, conf.attributes.at("driver"));
+            results.insert(cred.begin(), cred.end());
         }
     }
 
-    return ss.str();
+    return results;
 }
 
-/**
- * \brief Pretty-print set of security document IDs.
- * \param secwIDs Set of security document IDs to serialize.
- * \return String of security document IDs.
- */
-std::string serialize(const std::set<secw::Id>& secwIDs) {
-    std::stringstream ss;
 
-    for (auto itSecwID = secwIDs.begin(); itSecwID != secwIDs.end(); itSecwID++) {
-        if (itSecwID != secwIDs.begin()) {
-            ss << "; ";
+//
+// Public functions.
+//
+
+fty::nut::DeviceConfigurations assetScanDrivers(messagebus::PoolWorker& pool, fty_proto_t *asset, const fty::nut::SecwMap& credentials, const bool scanDummyUps)
+{
+    fty::nut::DeviceConfigurations results;
+
+    const auto addresses = getNetworkAddressesFromAsset(asset);
+
+    std::forward_list<std::future<fty::nut::DeviceConfigurations>> futureResults;
+
+    // Launch a bunch of scans in parallel.
+    for (const auto& address : addresses) {
+        for (const auto& credential : credentials) {
+            secw::Snmpv1Ptr snmpv1 = secw::Snmpv1::tryToCast(credential.second);
+            secw::Snmpv3Ptr snmpv3 = secw::Snmpv3::tryToCast(credential.second);
+
+            if (snmpv1 || snmpv3) {
+                std::vector<secw::DocumentPtr> doc { credential.second };
+                futureResults.emplace_front(pool.schedule(fty::nut::scanDevice, fty::nut::SCAN_PROTOCOL_SNMP, address, SCAN_TIMEOUT, doc));
+                futureResults.emplace_front(pool.schedule(fty::nut::scanDevice, fty::nut::SCAN_PROTOCOL_SNMP_DMF, address, SCAN_TIMEOUT, doc));
+            }
         }
-        ss << *itSecwID;
+        std::vector<secw::DocumentPtr> doc;
+        futureResults.emplace_front(pool.schedule(fty::nut::scanDevice, fty::nut::SCAN_PROTOCOL_NETXML, address, SCAN_TIMEOUT, doc));
+
+        // Scan dummy ups only if option is enabled in config
+        if (scanDummyUps) {
+            std::string name = fty_proto_ext_string(asset, "name", "");
+            // FIXME: For multi node: asset.ext.contact_name@asset.ext.contact_email
+            //std::string contact_name = fty_proto_ext_string(asset, "contact_name", "");
+            //std::string contact_email = fty_proto_ext_string(asset, "contact_email", "");
+            //const std::string param = contact_name + "@" + contact_email;
+            const std::string param = name + "@" + address;   /* "asset.ext.name@asset.ext.ip.1" (e.g MBT.G3MI.3PH.dummy-snmp@bios-nut-proxy.mbt.lab.etn.com */
+            futureResults.emplace_front(pool.schedule(testDummyDriverDevice, param));
+        }
     }
 
-    return ss.str();
+    /**
+     * Grab all results.
+     * FIXME: Rewrite with std::when_all once C++2x comes around.
+     */
+    for (auto& futureResult : futureResults) {
+        auto result = futureResult.get();
+        std::move(result.begin(), result.end(), std::back_inserter(results));
+    }
+
+    return results;
 }
 
-std::string serialize(const nutcommon::DeviceConfiguration& conf) {
-    std::stringstream ss;
-
-    ss << conf;
-
-    return ss.str();
-}
-
-/**
- * \brief Sort NUT driver configurations into categories from known and detected configurations.
- * \param knownConfigurations Known NUT device configurations in database.
- * \param detectedConfigurations Detected NUT device configurations at runtime.
- * \return All NUT driver configurations sorted into categories.
- */
-ComputeAssetConfigurationUpdateResult computeAssetConfigurationUpdate(const nutcommon::DeviceConfigurations& knownConfigurations, const nutcommon::DeviceConfigurations& detectedConfigurations)
+ComputeAssetConfigurationUpdateResult computeAssetConfigurationUpdate(const fty::nut::DeviceConfigurations& knownConfigurations, const fty::nut::DeviceConfigurations& detectedConfigurations)
 {
     ComputeAssetConfigurationUpdateResult result;
 
     // Fingerprints of everything we detected.
-    std::set<nutcommon::DeviceConfiguration> detectedFingerprints;
+    std::set<fty::nut::DeviceConfiguration> detectedFingerprints;
     std::transform(
         detectedConfigurations.begin(),
         detectedConfigurations.end(),
@@ -248,14 +279,14 @@ ComputeAssetConfigurationUpdateResult computeAssetConfigurationUpdate(const nutc
     );
 
     // Fingerprints we matched in the database.
-    std::set<nutcommon::DeviceConfiguration> matchedFingerprints;
+    std::set<fty::nut::DeviceConfiguration> matchedFingerprints;
 
     for (const auto& knownConfiguration : knownConfigurations) {
         if (canDeviceConfigurationWorkingStateBeAssessed(knownConfiguration)) {
             // This is a known NUT driver, classify it as working or non-working.
             // TODO: Don't work ???
             //const auto& detectedFingerprintIterator = detectedFingerprints.find(extractConfigurationFingerprint(knownConfiguration));
-            nutcommon::DeviceConfiguration conf = extractConfigurationFingerprint(knownConfiguration);
+            fty::nut::DeviceConfiguration conf = extractConfigurationFingerprint(knownConfiguration);
             auto detectedFingerprintIterator = detectedFingerprints.end();
             auto it_detectedFingerprints = detectedFingerprints.begin();
             while (it_detectedFingerprints != detectedFingerprints.end()) {
@@ -296,7 +327,7 @@ ComputeAssetConfigurationUpdateResult computeAssetConfigurationUpdate(const nutc
      * We classified known NUT device configurations, now we need to deal with
      * unknown and detected NUT device configurations.
      */
-    std::set<nutcommon::DeviceConfiguration> unmatchedFingerprints;
+    std::set<fty::nut::DeviceConfiguration> unmatchedFingerprints;
     std::set_difference(
         detectedFingerprints.begin(), detectedFingerprints.end(),
         matchedFingerprints.begin(), matchedFingerprints.end(),
@@ -313,62 +344,8 @@ ComputeAssetConfigurationUpdateResult computeAssetConfigurationUpdate(const nutc
     return result;
 }
 
-/**
- * \brief Instanciate a device configuration template from a device.
- *
- * Device configuration templates can contain values derived from the asset with the following syntax:
- * - ${asset.aux.<auxiliary property key>} : value comes from asset auxilliary attributes
- * - ${asset.ext.<extended property key>} : value comes from asset extended attributes
- *
- * \param asset Asset to instanciate from.
- * \param template Device configuration template.
- * \return Instanciated device configuration template, or empty device configuration on error.
- */
-nutcommon::DeviceConfiguration instanciateDeviceConfigurationFromTemplate(fty_proto_t* asset, const nutcommon::DeviceConfiguration& confTemplate)
+std::vector<size_t> sortDeviceConfigurationPreferred(fty_proto_t* asset, const fty::nut::DeviceConfigurations& configurations, const bool prioritizeDmfDriver)
 {
-    nutcommon::DeviceConfiguration result;
-
-    // Instanciate each property in the template.
-    for (const auto& property : confTemplate) {
-        const static std::regex token(R"xxx(\$\{([^}]+)\})xxx", std::regex::optimize);
-        std::string templatedValue = property.second;
-        std::smatch matches;
-
-        while (std::regex_search(templatedValue, matches, token)) {
-            // We need to template the property value.
-            auto str = matches[1].str();
-
-            // Try to instanciate value.
-            const char* value = nullptr;
-            if (str.find_first_of("asset.ext.") == 0) {
-                value = fty_proto_ext_string(asset, str.c_str()+10, nullptr);
-            }
-            else if (str.find_first_of("asset.aux.") == 0) {
-                value = fty_proto_aux_string(asset, str.c_str()+10, nullptr);
-            }
-
-            // Bail out if value wasn't found.
-            if (!value) {
-                return {};
-            }
-
-            templatedValue.replace(matches.position(1)-2, matches.length(1)+3, value);
-        }
-
-        result.emplace(property.first, templatedValue);
-    }
-
-    return result;
-}
-
-/**
- * \brief Return the order of preference for an asset's driver configurations.
- * \param asset Asset to sort device configurations with.
- * \param configurations Device configurations to sort.
- * \param prioritizeDmfDriver Prioritize DMF driver when applicable.
- * \return List of indexes of driver configurations, ordered from most to least preferred.
- */
-std::vector<size_t> sortDeviceConfigurationPreferred(fty_proto_t* asset, const fty::nut::DeviceConfigurations& configurations, const bool prioritizeDmfDriver) {
     // Initialize vector of indexes.
     std::vector<size_t> indexes(configurations.size());
     std::iota(indexes.begin(), indexes.end(), 0);
@@ -443,20 +420,13 @@ std::vector<size_t> sortDeviceConfigurationPreferred(fty_proto_t* asset, const f
     return indexes;
 }
 
-/**
- * \brief Find which device configuration type a given device configuration best matches.
- * \param asset Asset to check with.
- * \param configuration Device configuration to match.
- * \param types Device configuration types to match against.
- * \return Iterator to best device configuration type match, or end of collection if no suitable match found.
- */
-DeviceConfigurationInfoDetails::const_iterator matchDeviceConfigurationToBestDeviceConfigurationType(fty_proto_t* asset, const nutcommon::DeviceConfiguration& configuration, const DeviceConfigurationInfoDetails& types)
+DBAssetsDiscovery::DeviceConfigurationInfoDetails::const_iterator matchDeviceConfigurationToBestDeviceConfigurationType(fty_proto_t* asset, const fty::nut::DeviceConfiguration& configuration, const DBAssetsDiscovery::DeviceConfigurationInfoDetails& types)
 {
     auto bestMatch = types.end();
 
     for (auto itType = types.begin(); itType != types.end(); itType++) {
         // Instanciate device configuration type to have something to compare to.
-        nutcommon::DeviceConfiguration instanciatedType = instanciateDeviceConfigurationFromTemplate(asset, itType->defaultAttributes);
+        fty::nut::DeviceConfiguration instanciatedType = instanciateDeviceConfigurationFromTemplate(asset, itType->defaultAttributes);
         if (instanciatedType.empty()) {
             continue;
         }
@@ -483,11 +453,37 @@ DeviceConfigurationInfoDetails::const_iterator matchDeviceConfigurationToBestDev
     return bestMatch;
 }
 
-/**
- * \brief Request fty_proto_t from asset name.
- * \param assetName Asset name to request.
- * \return fty_proto_t (to be freed by caller) or nullptr.
- */
+fty::nut::DeviceConfigurations instanciateDatabaseConfigurations(const DBAssetsDiscovery::DeviceConfigurationInfos& dbConfs, fty_proto_t* asset, const fty::nut::SecwMap& credentials)
+{
+    fty::nut::DeviceConfigurations result;
+    std::transform(
+        dbConfs.begin(),
+        dbConfs.end(),
+        std::back_inserter(result),
+        [&asset, &credentials](const DBAssetsDiscovery::DeviceConfigurationInfos::value_type& val) -> fty::nut::DeviceConfiguration {
+            return instanciateDeviceConfigurationFromTemplate(asset,
+                ftyToNutDeviceConfiguration(val, credentials)
+            );
+        }
+    );
+    return result;
+}
+
+std::set<secw::Id> matchSecurityDocumentIDsFromDeviceConfiguration(const fty::nut::DeviceConfiguration& conf, const fty::nut::SecwMap& credentials)
+{
+    std::set<secw::Id> ids;
+
+    for (const auto& credential : credentials) {
+        auto instanciatedCredential = fty::nut::convertSecwDocumentToKeyValues(credential.second, conf.at("driver"));
+        if (!instanciatedCredential.empty() && std::includes(conf.begin(), conf.end(), instanciatedCredential.begin(), instanciatedCredential.end())) {
+            ids.emplace(credential.first);
+        }
+    }
+
+    return ids;
+}
+
+#if 0
 fty_proto_t* fetchProtoFromAssetName(const std::string& assetName)
 {
     fty_proto_t *ftyProto = nullptr;
@@ -551,53 +547,7 @@ fty_proto_t* fetchProtoFromAssetName(const std::string& assetName)
     }
     return ftyProto;
 }
-
-// FIXME: To put in fty-commun-nut ??
-nutcommon::DeviceConfiguration ftyToNutDeviceConfiguration(const DeviceConfigurationInfo& conf, const std::vector<nutcommon::CredentialsSNMPv1>& credentialsSNMPv1, const std::vector<nutcommon::CredentialsSNMPv3>& credentialsSNMPv3)
-{
-    nutcommon::DeviceConfiguration results = conf.attributes;
-
-    // FIXME: improve security document instanciation.
-    for (const auto& secw_document_id : conf.secwDocumentIdList) {
-        auto itCredSnmpV1 = std::find_if(credentialsSNMPv1.begin(), credentialsSNMPv1.end(),
-            [&secw_document_id](const nutcommon::CredentialsSNMPv1& cred) {
-                return cred.documentId == secw_document_id;
-            }
-        );
-        auto itCredSnmpV3 = std::find_if(credentialsSNMPv3.begin(), credentialsSNMPv3.end(),
-            [&secw_document_id](const nutcommon::CredentialsSNMPv3& cred) {
-                return cred.documentId == secw_document_id;
-            }
-        );
-
-        if (itCredSnmpV1 != credentialsSNMPv1.end()) {
-            auto cred = nutcommon::instanciateSecurityWalletDocument(*itCredSnmpV1);
-            results.insert(cred.begin(), cred.end());
-        }
-        else if (itCredSnmpV3 != credentialsSNMPv3.end()) {
-            auto cred = nutcommon::instanciateSecurityWalletDocument(*itCredSnmpV3);
-            results.insert(cred.begin(), cred.end());
-        }
-    }
-
-    return results;
-}
-
-nutcommon::DeviceConfigurations instanciateDatabaseConfigurations(const DeviceConfigurationInfos& dbConfs, fty_proto_t* asset, const std::vector<nutcommon::CredentialsSNMPv1>& credentialsSNMPv1, const std::vector<nutcommon::CredentialsSNMPv3>& credentialsSNMPv3)
-{
-    nutcommon::DeviceConfigurations result;
-    std::transform(
-        dbConfs.begin(),
-        dbConfs.end(),
-        std::back_inserter(result),
-        [&asset, &credentialsSNMPv1, &credentialsSNMPv3](const DeviceConfigurationInfos::value_type& val) -> nutcommon::DeviceConfiguration {
-            return instanciateDeviceConfigurationFromTemplate(asset,
-                ftyToNutDeviceConfiguration(val, credentialsSNMPv1, credentialsSNMPv3)
-            );
-        }
-    );
-    return result;
-}
+#endif
 
 }
 }
@@ -625,8 +575,8 @@ fty_nut_configuration_server_test (bool verbose)
 
     {
         struct TestCase {
-            nutcommon::DeviceConfigurations knownConfigurations;
-            nutcommon::DeviceConfigurations detectedConfigurations;
+            fty::nut::DeviceConfigurations knownConfigurations;
+            fty::nut::DeviceConfigurations detectedConfigurations;
 
             /**
              * - Working
@@ -641,7 +591,7 @@ fty_nut_configuration_server_test (bool verbose)
             // No known configuration, everything detected should be new configurations.
             TestCase({
                 {},
-                nutcommon::parseScannerOutput(
+                fty::nut::parseScannerOutput(
 R"xxx(SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="public"
 SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="private"
 SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",snmp_version="v3",secLevel="noAuthNoPriv",secName="public"
@@ -651,7 +601,7 @@ SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:
                 fty::nut::ComputeAssetConfigurationUpdateResult({
                     {},
                     {},
-                    nutcommon::parseScannerOutput(
+                    fty::nut::parseScannerOutput(
 R"xxx(SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="public"
 SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="private"
 SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",snmp_version="v3",secLevel="noAuthNoPriv",secName="public"
@@ -663,27 +613,27 @@ SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:
 
             // Test all cases with non-overlapping fingerprints.
             TestCase({
-                nutcommon::parseScannerOutput(
+                fty::nut::parseScannerOutput(
 R"xxx(SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="public"
 SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="private"
 SNMP:driver="dummy-ups",port="10.130.33.140"
 )xxx"),
-                nutcommon::parseScannerOutput(
+                fty::nut::parseScannerOutput(
 R"xxx(SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="public"
 R"xxx(SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="suprise"
 )xxx"),
 
                 fty::nut::ComputeAssetConfigurationUpdateResult({
-                    nutcommon::parseScannerOutput(
+                    fty::nut::parseScannerOutput(
 R"xxx(SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="public"
 )xxx"),
-                    nutcommon::parseScannerOutput(
+                    fty::nut::parseScannerOutput(
 R"xxx(SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="private"
 )xxx"),
-                    nutcommon::parseScannerOutput(
+                    fty::nut::parseScannerOutput(
 R"xxx(SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="suprise"
 )xxx"),
-                    nutcommon::parseScannerOutput(
+                    fty::nut::parseScannerOutput(
 R"xxx(SNMP:driver="dummy-ups",port="10.130.33.140"
 )xxx"),
                 }),
@@ -692,7 +642,7 @@ R"xxx(SNMP:driver="dummy-ups",port="10.130.33.140"
 
             // Test all cases with overlapping fingerprints.
             TestCase({
-                nutcommon::parseScannerOutput(
+                fty::nut::parseScannerOutput(
 R"xxx(SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="public"
 SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="public",extra="extra"
 SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="public",extra="extra",woohoo="woohoo"
@@ -701,27 +651,27 @@ SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:
 SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="privateer",extra="extra"
 SNMP:driver="dummy-ups",port="10.130.33.140"
 )xxx"),
-                nutcommon::parseScannerOutput(
+                fty::nut::parseScannerOutput(
 R"xxx(SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="public"
 SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="privateer"
 SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="suprise"
 )xxx"),
 
                 fty::nut::ComputeAssetConfigurationUpdateResult({
-                    nutcommon::parseScannerOutput(
+                    fty::nut::parseScannerOutput(
 R"xxx(SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="public"
 SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="public",extra="extra"
 SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="public",extra="extra",woohoo="woohoo"
 SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="privateer",extra="extra"
 )xxx"),
-                    nutcommon::parseScannerOutput(
+                    fty::nut::parseScannerOutput(
 R"xxx(SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="private",extra="extra"
 SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="private",extra="extra",woohoo="woohoo"
 )xxx"),
-                    nutcommon::parseScannerOutput(
+                    fty::nut::parseScannerOutput(
 R"xxx(SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="suprise"
 )xxx"),
-                    nutcommon::parseScannerOutput(
+                    fty::nut::parseScannerOutput(
 R"xxx(SNMP:driver="dummy-ups",port="10.130.33.140"
 )xxx"),
                 }),
@@ -733,14 +683,14 @@ R"xxx(SNMP:driver="dummy-ups",port="10.130.33.140"
             const TestCase& testCase = testCases[i];
 
             auto result = fty::nut::computeAssetConfigurationUpdate(testCase.knownConfigurations, testCase.detectedConfigurations);
-            for (const auto& it : std::vector<std::pair<const nutcommon::DeviceConfigurations&, const nutcommon::DeviceConfigurations&>>({
+            for (const auto& it : std::vector<std::pair<const fty::nut::DeviceConfigurations&, const fty::nut::DeviceConfigurations&>>({
                 { result.workingConfigurations,         testCase.expectedResult.workingConfigurations },
                 { result.nonWorkingConfigurations,      testCase.expectedResult.nonWorkingConfigurations },
                 { result.newConfigurations,             testCase.expectedResult.newConfigurations },
                 { result.unknownStateConfigurations,    testCase.expectedResult.unknownStateConfigurations },
             })) {
-                const std::set<nutcommon::DeviceConfiguration> resultSorted(it.first.begin(), it.first.end());
-                const std::set<nutcommon::DeviceConfiguration> expectedSorted(it.second.begin(), it.second.end());
+                const std::set<fty::nut::DeviceConfiguration> resultSorted(it.first.begin(), it.first.end());
+                const std::set<fty::nut::DeviceConfiguration> expectedSorted(it.second.begin(), it.second.end());
                 assert(resultSorted == expectedSorted);
                 std::cerr << resultSorted.size() << " ";
             }
@@ -752,7 +702,7 @@ R"xxx(SNMP:driver="dummy-ups",port="10.130.33.140"
     {
         std::cerr << "  - isDeviceConfigurationSubsetOf: ";
 
-        const auto supersetConfigurations = nutcommon::parseScannerOutput(
+        const auto supersetConfigurations = fty::nut::parseScannerOutput(
 R"xxx(SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="public"
 SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="public",extra="extra"
 SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="public",extra="extra",woohoo="woohoo"
@@ -761,12 +711,12 @@ SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:
 SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",snmp_version="v3",secLevel="authPriv",secName="private",authPassword="azertyui",privPassword="qsdfghjk",authProtocol="MD5",privProtocol="DES"
 SNMP:driver="snmp-ups",port="10.130.33.140",desc="-----------------------------------",mibs="eaton_epdu",snmp_version="v3",secLevel="authPriv",secName="private",authPassword="azertyui",privPassword="qsdfghjk",authProtocol="MD5",privProtocol="DES",extra="extra"
 )xxx");
-        const auto subsetConfigurations = nutcommon::parseScannerOutput(
+        const auto subsetConfigurations = fty::nut::parseScannerOutput(
 R"xxx(SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="public"
 SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",snmp_version="v3",secLevel="noAuthNoPriv",secName="public"
 SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",snmp_version="v3",secLevel="authPriv",secName="private",authPassword="azertyui",privPassword="qsdfghjk",authProtocol="MD5",privProtocol="DES"
 )xxx");
-        const auto expectedResults = std::vector<std::pair<const nutcommon::DeviceConfiguration&, std::array<bool, 7>>> {
+        const auto expectedResults = std::vector<std::pair<const fty::nut::DeviceConfiguration&, std::array<bool, 7>>> {
             { subsetConfigurations[0], {
                 true, true, true, false, false, false, false
             }},
@@ -793,12 +743,12 @@ SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:
         fty_proto_ext_insert(asset, "ipv4.1", "10.130.32.117");
         fty_proto_ext_insert(asset, "snmp_port", "161");
 
-        const static auto templateConf = nutcommon::DeviceConfiguration {
+        const static auto templateConf = fty::nut::DeviceConfiguration {
             { "driver", "snmp-ups" },
             { "port", "${asset.ext.ipv4.1}" },
             { "port-snmp", "snmp://${asset.ext.ipv4.1}:${asset.ext.snmp_port}/" },
         };
-        const static auto expectedResult = nutcommon::DeviceConfiguration {
+        const static auto expectedResult = fty::nut::DeviceConfiguration {
             { "driver", "snmp-ups" },
             { "port", "10.130.32.117" },
             { "port-snmp", "snmp://10.130.32.117:161/" },
@@ -806,7 +756,7 @@ SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:
         const auto result = fty::nut::instanciateDeviceConfigurationFromTemplate(asset, templateConf);
         assert(result == expectedResult);
 
-        const static auto expectedFailures = std::vector<nutcommon::DeviceConfiguration> {
+        const static auto expectedFailures = std::vector<fty::nut::DeviceConfiguration> {
             {
                 { "driver", "snmp-ups" },
                 { "port", "${asset.ext.ipv4.2}" },
@@ -828,7 +778,7 @@ SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:
     {
         std::cerr << "  - sortDeviceConfigurationPreferred: ";
 
-        const auto configurations = nutcommon::parseScannerOutput(
+        const auto configurations = fty::nut::parseScannerOutput(
 R"xxx(SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="public"
 SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",snmp_version="v3",secLevel="authPriv",secName="private",authPassword="azertyui",privPassword="qsdfghjk",authProtocol="MD5",privProtocol="DES"
 XML:driver="netxml-ups",port="http://10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19"
@@ -861,7 +811,7 @@ R"xxx(SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)2
         fty_proto_t* asset = fty_proto_new(FTY_PROTO_ASSET);
         fty_proto_ext_insert(asset, "ipv4.1", "10.130.33.140");
 
-        const auto configurations = nutcommon::parseScannerOutput(
+        const auto configurations = fty::nut::parseScannerOutput(
 R"xxx(SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",community="public"
 SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19",mibs="eaton_epdu",snmp_version="v3",secLevel="authPriv",secName="private",authPassword="azertyui",privPassword="qsdfghjk",authProtocol="MD5",privProtocol="DES"
 XML:driver="netxml-ups",port="http://10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)20XC13:4XC19"
@@ -906,7 +856,7 @@ R"xxx(SNMP:driver="snmp-ups",port="10.130.33.140",desc="EPDU MA 0U (C20 16A 1P)2
             }),
         } ;
 
-        for (const auto& testCases : std::vector<std::pair<const nutcommon::DeviceConfiguration&, size_t>>{
+        for (const auto& testCases : std::vector<std::pair<const fty::nut::DeviceConfiguration&, size_t>>{
             { configurations[0], 1 },
             { configurations[1], 2 },
             { configurations[2], 0 },

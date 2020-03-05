@@ -59,7 +59,7 @@ template bool isBefore(std::string const*, std::string const*, std::string const
  * Only drivers we know about can be assessed, as only they will be scanned by
  * assetScanDrivers().
  */
-bool canDeviceConfigurationWorkingStateBeAssessed(const nutcommon::DeviceConfiguration& configuration)
+bool canDeviceConfigurationWorkingStateBeAssessed(const fty::nut::DeviceConfiguration& configuration)
 {
     const static std::set<std::string> knownDrivers = {
         "netxml-ups",
@@ -76,7 +76,7 @@ bool canDeviceConfigurationWorkingStateBeAssessed(const nutcommon::DeviceConfigu
  * \param configuration Device configuration to analyse.
  * \return Set of security document types found in the device configuration.
  */
-std::set<std::string> getSecurityDocumentTypesFromDeviceConfiguration(const nutcommon::DeviceConfiguration& configuration) {
+std::set<std::string> getSecurityDocumentTypesFromDeviceConfiguration(const fty::nut::DeviceConfiguration& configuration) {
     std::set<std::string> result;
 
     if (configuration.count("community")) {
@@ -124,7 +124,7 @@ std::string serialize( const ComputeAssetConfigurationUpdateResult& results)
 {
     std::stringstream ss;
 
-    for (const auto& result : std::vector<std::pair<const char*, const nutcommon::DeviceConfigurations&>>({
+    for (const auto& result : std::vector<std::pair<const char*, const fty::nut::DeviceConfigurations&>>({
         { "Working configurations:", results.workingConfigurations },
         { "Non-working configurations:", results.nonWorkingConfigurations },
         { "New configurations:", results.newConfigurations },
@@ -157,7 +157,7 @@ std::string serialize(const std::set<secw::Id>& secwIDs) {
     return ss.str();
 }
 
-std::string serialize(const nutcommon::DeviceConfiguration& conf) {
+std::string serialize(const fty::nut::DeviceConfiguration& conf) {
     std::stringstream ss;
 
     ss << conf;
@@ -172,7 +172,7 @@ std::string serialize(const nutcommon::DeviceConfiguration& conf) {
  * \param superset Device configuration superset.
  * \return True iff subset of superset.
  */
-bool isDeviceConfigurationSubsetOf(const nutcommon::DeviceConfiguration& subset, const nutcommon::DeviceConfiguration& superset)
+bool isDeviceConfigurationSubsetOf(const fty::nut::DeviceConfiguration& subset, const fty::nut::DeviceConfiguration& superset)
 {
     for (const auto& itSubset : subset) {
         // Field "desc" is not important, skip it.
@@ -196,9 +196,9 @@ bool isDeviceConfigurationSubsetOf(const nutcommon::DeviceConfiguration& subset,
  * \param type Device configuration type work with.
  * \return Non-default attributes from device configuration.
  */
-nutcommon::DeviceConfiguration getAttributesFromDeviceConfiguration(const nutcommon::DeviceConfiguration& configuration, const DeviceConfigurationInfoDetail& type)
+fty::nut::DeviceConfiguration getAttributesFromDeviceConfiguration(const fty::nut::DeviceConfiguration& configuration, const DeviceConfigurationInfoDetail& type)
 {
-    nutcommon::DeviceConfiguration result = configuration;
+    fty::nut::DeviceConfiguration result = configuration;
 
     // Remove default attributes.
     for (const auto defaultAttribute : type.defaultAttributes) {

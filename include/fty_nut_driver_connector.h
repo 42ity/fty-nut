@@ -1,5 +1,5 @@
 /*  =========================================================================
-    fty_nut_drivers_connector - fty nut drivers connector
+    fty_nut_drivers_connector - fty nut driver connector
 
     Copyright (C) 2014 - 2020 Eaton
 
@@ -23,7 +23,7 @@
 #define FTY_NUT_DRIVERS_CONNECTOR_H_INCLUDED
 
 #include "fty_nut_library.h"
-#include "fty_nut_drivers_manager.h"
+#include "fty_nut_driver_manager.h"
 
 #define DRIVERS_ADD_CONFIG    "addConfig"
 #define DRIVERS_REMOVE_CONFIG "removeConfig"
@@ -33,44 +33,31 @@ namespace fty
 namespace nut
 {
 
-class ConfigurationDriversConnector
+class DriverConnector
 {
     public:
         struct Parameters {
-            Parameters(uint nbThreadPool);
+            Parameters();
 
             std::string endpoint;
             std::string agentName;
-            uint nbThreadPool;
         };
 
-        ConfigurationDriversConnector(Parameters params, volatile bool &exit);
-        ~ConfigurationDriversConnector() = default;
+        DriverConnector(Parameters params, DriverManager& manager);
+        ~DriverConnector() = default;
 
     private:
         void handleMessage(messagebus::Message msg);
-        void addConfig(messagebus::UserData data);
-        void removeConfig(messagebus::UserData data);
+        void refreshConfig(messagebus::UserData data);
 
         Parameters m_parameters;
-        ConfigurationDriversManager m_driversManager;
-        messagebus::Dispatcher<std::string, std::function<void(messagebus::UserData)>, std::function<void(const std::string&, messagebus::UserData)>> m_dispatcher;
+        DriverManager& m_manager;
         messagebus::PoolWorker m_worker;
+        messagebus::Dispatcher<std::string, std::function<void(messagebus::UserData)>, std::function<void(const std::string&, messagebus::UserData)>> m_dispatcher;
         std::unique_ptr<messagebus::MessageBus> m_msgBus;
 };
 
 }
 }
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-//  Self test of this class
-FTY_NUT_EXPORT void fty_nut_drivers_connector_test (bool verbose);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

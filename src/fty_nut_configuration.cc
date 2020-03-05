@@ -25,7 +25,7 @@
 @discuss
 @end
 */
-#include "fty_nut_configuration_server.h"
+#include "fty_nut_library.h"
 
 #include <condition_variable>
 #include <csignal>
@@ -52,6 +52,21 @@ void setSignalHandler()
     sigaction(SIGINT, &sigIntHandler, nullptr);
 }
 
+static void getConfig(zconfig_t* config, const std::string& keyName, std::string& keyValue)
+{
+    keyValue = zconfig_get(config, keyName.c_str(), keyValue.c_str());
+}
+
+static void getConfig(zconfig_t* config, const std::string& keyName, unsigned& keyValue)
+{
+    keyValue = std::stoul(zconfig_get(config, keyName.c_str(), std::to_string(keyValue).c_str()));
+}
+
+static void getConfig(zconfig_t* config, const std::string& keyName, bool& keyValue)
+{
+    keyValue = streq(zconfig_get(config, keyName.c_str(), keyValue ? "false" : "true"), "true");
+}
+
 int main (int argc, char *argv [])
 {
     // Build database URL
@@ -59,13 +74,12 @@ int main (int argc, char *argv [])
 
     // Create default configuration
     std::string logConfig = "/etc/fty/ftylog.cfg";
-    std::string logVerbose = "false";
-    std::string strNbThreadPoolConnector = "10";
-    std::string strNbThreadPoolManager = "20";
-    std::string strNbThreadPoolDrivers = "10";
-    std::string scanDummyUps = "false";
-    std::string automaticPrioritySort = "true";
-    std::string prioritizeDmfDriver = "false";
+    bool logVerbose = false;
+    bool rescanOnStart = false;
+    fty::nut::ConfigurationManager::Parameters configurationManagerParameters;
+    fty::nut::ConfigurationConnector::Parameters configurationConnectorParameters;
+    fty::nut::DriverConnector::Parameters driverConnectorParameters;
+
     std::string configFile;
 
     // Parse command-line arguments
@@ -75,19 +89,25 @@ int main (int argc, char *argv [])
             puts ("fty-nut-configuration [options] ...");
             puts ("  --config / -c          configuration file");
             puts ("  --help / -h            this information");
+            puts ("  --rescan / -r          rescan all assets on start");
             puts ("  --verbose / -v         verbose test output");
             return 0;
         }
-        else
-        if (streq (argv [argn], "--verbose")
-        ||  streq (argv [argn], "-v"))
-            logVerbose = "true";
         else
         if (streq (argv [argn], "--config")
             ||  streq (argv [argn], "-c")) {
             argn += 1;
             configFile = argv [argn];
         }
+        else
+        if (streq (argv [argn], "--rescan")
+            ||  streq (argv [argn], "-r")) {
+            rescanOnStart = true;
+        }
+        else
+        if (streq (argv [argn], "--verbose")
+        ||  streq (argv [argn], "-v"))
+            logVerbose = true;
         else {
             std::cerr << "Unknown option: " << argv[argn] << std::endl;
             return 1;
@@ -98,20 +118,21 @@ int main (int argc, char *argv [])
     if (!configFile.empty()) {
         ZconfigGuard cfg(zconfig_load(configFile.c_str()));
         if (cfg) {
-            std::map<std::string, std::string&> properties {
-                { "log/config", logConfig },
-                { "log/verbose", logVerbose },
-                { "scanner/nbThreadPoolConnector", strNbThreadPoolConnector},
-                { "scanner/nbThreadPoolManager", strNbThreadPoolManager},
-                { "scanner/nbThreadPoolDrivers", strNbThreadPoolDrivers},
-                { "scanner/scanDummyUps", scanDummyUps},
-                { "scanner/automaticPrioritySort", automaticPrioritySort},
-                { "scanner/prioritizeDmfDriver", prioritizeDmfDriver}
-            } ;
-            for (auto& property : properties) {
-                property.second = zconfig_get(cfg.get(), property.first.c_str(), std::string(property.second).c_str());
-                //std::cout << property.first << "=" << property.second << std::endl;
-            }
+            getConfig(cfg.get(), "log/config",  logConfig);
+            getConfig(cfg.get(), "log/verbose", logVerbose);
+
+            getConfig(cfg.get(), "configuration/threadPoolScannerSize",             configurationManagerParameters.threadPoolScannerSize);
+            getConfig(cfg.get(), "configuration/threadPoolMalamuteSize",            configurationConnectorParameters.threadPoolSize);
+            getConfig(cfg.get(), "configuration/nutRepositoryDirectory",            configurationManagerParameters.nutRepositoryDirectory);
+
+            getConfig(cfg.get(), "rescanPolicy/onStart",                            rescanOnStart);
+            getConfig(cfg.get(), "rescanPolicy/onSecurityWalletCreate",             configurationConnectorParameters.rescanOnSecurityWalletCreate);
+            getConfig(cfg.get(), "rescanPolicy/onSecurityWalletUpdate",             configurationConnectorParameters.rescanOnSecurityWalletUpdate);
+            getConfig(cfg.get(), "rescanPolicy/onSecurityWalletDelete",             configurationConnectorParameters.rescanOnSecurityWalletDelete);
+
+            getConfig(cfg.get(), "preferences/automaticPrioritySort",               configurationConnectorParameters.automaticPrioritySort);
+            getConfig(cfg.get(), "preferences/preferDmfForSnmp",                    configurationManagerParameters.preferDmfForSnmp);
+            getConfig(cfg.get(), "preferences/scanDummyUps",                        configurationManagerParameters.scanDummyUps);
         }
         else {
             std::cerr << "Couldn't load config file " << configFile << std::endl;
@@ -119,34 +140,28 @@ int main (int argc, char *argv [])
         }
     }
 
-    fty::nut::ConfigurationConnector::Parameters configurationParameters(
-        static_cast<uint>(std::stoul(strNbThreadPoolConnector)),
-        static_cast<uint>(std::stoul(strNbThreadPoolManager)),
-        scanDummyUps.compare("true") ? true : false,
-        automaticPrioritySort.compare("true") ? true : false,
-        prioritizeDmfDriver.compare("true") ? true : false);
-    fty::nut::ConfigurationDriversConnector::Parameters driversParameters(
-        static_cast<uint>(std::stoul(strNbThreadPoolDrivers)));
-
     // Set up logging.
-    ManageFtyLog::setInstanceFtylog(configurationParameters.agentName, logConfig);
+    ManageFtyLog::setInstanceFtylog(configurationConnectorParameters.agentName, logConfig);
     if (!configFile.empty()) {
         log_info ("Loaded config file '%s'.", configFile.c_str());
     }
 
-    bool verbose;
-    std::stringstream(logVerbose) >> verbose;
-
-    if (verbose) {
+    if (logVerbose) {
         ManageFtyLog::getInstanceFtylog()->setVeboseMode();
         log_trace ("Verbose mode OK");
     }
 
-    // Launch workers.
-    fty::nut::ConfigurationConnector nutConfigurationConnector(configurationParameters);
-    fty::nut::ConfigurationDriversConnector nutDriversConnector(driversParameters, g_exit);
+    // Launch managers.
+    fty::nut::ConfigurationManager  configurationManager(configurationManagerParameters);
+    fty::nut::DriverManager         driverManager(configurationManagerParameters.nutRepositoryDirectory);
 
-    nutConfigurationConnector.getInitialAssets();
+    // Launch workers.
+    fty::nut::ConfigurationConnector configurationConnector(configurationConnectorParameters, configurationManager);
+    fty::nut::DriverConnector       driverConnector(driverConnectorParameters, driverManager);
+
+    if (rescanOnStart) {
+        configurationConnector.triggerRescan();
+    }
 
     // Wait until interrupt.
     setSignalHandler();

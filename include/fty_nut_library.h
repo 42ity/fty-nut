@@ -121,10 +121,10 @@ typedef struct _fty_nut_configuration_repository_t fty_nut_configuration_reposit
 #define FTY_NUT_CONFIGURATION_REPOSITORY_T_DEFINED
 typedef struct _fty_nut_configuration_connector_t fty_nut_configuration_connector_t;
 #define FTY_NUT_CONFIGURATION_CONNECTOR_T_DEFINED
-typedef struct _fty_nut_drivers_manager_t fty_nut_drivers_manager_t;
-#define FTY_NUT_DRIVERS_MANAGER_T_DEFINED
-typedef struct _fty_nut_drivers_connector_t fty_nut_drivers_connector_t;
-#define FTY_NUT_DRIVERS_CONNECTOR_T_DEFINED
+typedef struct _fty_nut_driver_manager_t fty_nut_driver_manager_t;
+#define FTY_NUT_DRIVER_MANAGER_T_DEFINED
+typedef struct _fty_nut_driver_connector_t fty_nut_driver_connector_t;
+#define FTY_NUT_DRIVER_CONNECTOR_T_DEFINED
 typedef struct _fty_nut_configuration_server_t fty_nut_configuration_server_t;
 #define FTY_NUT_CONFIGURATION_SERVER_T_DEFINED
 typedef struct _alert_actor_t alert_actor_t;
@@ -142,8 +142,8 @@ typedef struct _sensor_actor_t sensor_actor_t;
 #include "fty_nut_configuration_manager.h"
 #include "fty_nut_configuration_repository.h"
 #include "fty_nut_configuration_connector.h"
-#include "fty_nut_drivers_manager.h"
-#include "fty_nut_drivers_connector.h"
+#include "fty_nut_driver_manager.h"
+#include "fty_nut_driver_connector.h"
 #include "fty_nut_configuration_server.h"
 #include "alert_actor.h"
 #include "sensor_actor.h"

@@ -22,6 +22,7 @@
 #ifndef FTY_NUT_CONFIGURATION_MANAGER_H_INCLUDED
 #define FTY_NUT_CONFIGURATION_MANAGER_H_INCLUDED
 
+#include "fty_nut_configuration_server.h"
 #include "fty_nut_configuration_repository.h"
 #include "fty_nut_library.h"
 
@@ -33,47 +34,90 @@ namespace nut
 class ConfigurationManager
 {
     public:
-        ConfigurationManager(const std::string& dbConn, const uint nbThreadPool, const bool scanDummyUps, const bool automaticPrioritySort, const bool prioritizeDmfDriver);
+        struct Parameters
+        {
+            Parameters();
+
+            std::string dbConn;
+            std::string nutRepositoryDirectory;
+            unsigned threadPoolScannerSize;
+            bool scanDummyUps;
+            bool preferDmfForSnmp;
+        };
+
+        ConfigurationManager(Parameters parameters);
         ~ConfigurationManager() = default;
 
-        static std::string serializeConfig(const std::string& name, fty::nut::DeviceConfiguration& config);
-        void automaticAssetConfigurationPrioritySort(fty_proto_t* asset, const fty::nut::SecwMap& credentials);
-        void scanAssetConfigurations(fty_proto_t* asset, const fty::nut::SecwMap& credentials);
+        /**
+         * \brief Handle asset update.
+         * \param asset Asset to update.
+         * \param credentials Security documents to use.
+         * \param forceScan If set, force scanning.
+         * \param forceSort If set, force re-ordering of configuration priorities.
+         * \return True if NUT configuration has been updated, false otherwise.
+         */
+        bool processAsset(fty_proto_t* asset, const fty::nut::SecwMap& credentials, bool forceScan, bool forceSort);
 
-        fty::nut::DeviceConfigurations getAssetConfigurations(fty_proto_t* asset, const fty::nut::SecwMap& credentials);
-        std::tuple<fty::nut::DeviceConfigurations, std::set<secw::Id>> getAssetConfigurationsWithSecwDocuments(fty_proto_t* asset, const fty::nut::SecwMap& credentials);
-        void saveAssetConfigurations(const std::string& assetName, std::tuple<fty::nut::DeviceConfigurations, std::set<secw::Id>>& configsAsset);
-        bool haveConfigurationsChanged(fty::nut::DeviceConfigurations& configsAssetToTest, fty::nut::DeviceConfigurations& configsAssetCurrent, bool initInProgress = false);
-        bool updateAssetConfiguration(fty_proto_t* asset, const fty::nut::SecwMap& credentials);
-        bool removeAssetConfiguration(fty_proto_t* asset);
-        void manageCredentialsConfiguration(const std::string& secwDocumentId, std::set<std::string>& assetListChange, const fty::nut::SecwMap& credentials);
-
-        ConfigurationRepositoryDirectory m_configurationRepositoryNut;
+        /**
+         * \brief Purge NUT configurations not in the list.
+         * \param assets NUT configurations to purge.
+         * \return NUT configurations purged.
+         */
+        std::vector<std::string> purgeNotInList(const std::set<std::string>& assets);
 
     private:
-        messagebus::PoolWorker m_poolScanners;
-        std::string m_dbConn;
-        bool m_scanDummyUps;
-        bool m_automaticPrioritySort;
-        bool m_prioritizeDmfDriver;
-        ConfigurationRepositoryMemory m_configurationRepositoryInMemory;
-        std::map<std::string, std::set<secw::Id>> m_deviceCredentialsMap;
-        std::mutex m_manageDriversMutex;
+        class AssetMutex
+        {
+            public:
+                std::mutex& operator[](const std::string& asset);
 
+            private:
+                std::mutex m_mutex;
+                std::map<std::string, std::mutex> m_mutexes;
+        };
+
+        /**
+         * \brief Reorder asset's driver configuration priorities according to the software's preferences.
+         * \param asset Asset to process.
+         */
+        void automaticAssetConfigurationPrioritySort(fty_proto_t* asset, const fty::nut::SecwMap& credentials);
+
+        /**
+         * \brief Scan an asset and update driver configurations in database.
+         * \param asset Asset to process.
+         *
+         * This method detects working configurations on the asset and updates the
+         * driver configuration database in response. The basic workflow is:
+         *  1. Scan the asset,
+         *  2. Compute DB updates from detected and from known driver configurations,
+         *  3. Mark existing configurations as working or non-working,
+         *  4. Persist newly-discovered driver configurations in database.
+         */
+        void scanAssetConfigurations(fty_proto_t* asset, const fty::nut::SecwMap& credentials);
+
+        /**
+         * \brief Get asset configurations.
+         * \param asset Asset to process.
+         * \return Configurations of asset.
+         */
+        fty::nut::DeviceConfigurations getAssetConfigurations(fty_proto_t* asset, const fty::nut::SecwMap& credentials);
+
+        /**
+         * \brief Select NUT driver configurations to use from available.
+         * \param asset Asset to select with.
+         * \param availableConfigurations Configurations to select from.
+         * \return Selected configurations.
+         */
+        fty::nut::DeviceConfigurations computeAssetConfigurationsToUse(fty_proto_t* asset, const fty::nut::DeviceConfigurations& availableConfigurations);
+
+        Parameters m_parameters;
+        messagebus::PoolWorker m_poolScanners;
+        ConfigurationRepositoryDirectory m_repositoryNut;
+        ConfigurationRepositoryMemory m_repositoryMemory;
+        AssetMutex m_assetMutexes;
 };
 
 }
 }
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-//  Self test of this class
-FTY_NUT_EXPORT void fty_nut_configuration_manager_test (bool verbose);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

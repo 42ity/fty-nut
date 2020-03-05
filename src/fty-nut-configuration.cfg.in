@@ -1,18 +1,21 @@
 #   fty-nut-configuration configuration
 
-server
-    timeout = 10000     #   Client connection timeout, msec
-    background = 0      #   Run as background process
-    workdir = .         #   Working directory for daemon
-
 log
-    config = /etc/fty/ftylog.cfg  # Log config file
-    verbose = false               # Do verbose logging of activity
+    config = "/etc/fty/ftylog.cfg"  # Log config file
+    verbose = "false"               # Do verbose logging of activity
 
-scanner
-    nbThreadPoolConnector = 10    # Number of thread pool for connector
-    nbThreadPoolManager = 20      # Number of thread pool for manager
-    nbThreadPoolDrivers = 10      # Number of thread pool for drivers
-    scanDummyUps = false          # Flag to enable scan of dummy ups drivers
-    automaticPrioritySort = true  # Flag to automatically sort configurations by priority
-    prioritizeDmfDriver = false   # Flag to prioritize dmf drivers during scan
+configuration
+    threadPoolScannerSize = 10
+    threadPoolMalamuteSize = 1
+    nutRepositoryDirectory = "/var/lib/fty/fty-nut/devices"
+
+rescanPolicy
+    onStart = "true"
+    onSecurityWalletCreate = "true"
+    onSecurityWalletUpdate = "true"
+    onSecurityWalletDelete = "false"
+
+preferences
+    automaticPrioritySort = "true"
+    preferDmfForSnmp = "false"
+    scanDummyUps = "false"

@@ -22,6 +22,7 @@
 #ifndef FTY_NUT_CONFIGURATION_SERVER_H_INCLUDED
 #define FTY_NUT_CONFIGURATION_SERVER_H_INCLUDED
 
+#include "fty_nut_configuration_helper.h"
 #include "fty_nut_library.h"
 
 namespace fty
@@ -33,13 +34,13 @@ using namespace DBAssetsDiscovery;
 
 typedef struct ComputeAssetConfigurationUpdateResult {
     /// \brief Known, working configuration.
-    nutcommon::DeviceConfigurations workingConfigurations;
+    fty::nut::DeviceConfigurations workingConfigurations;
     /// \brief Known, non-working configuration.
-    nutcommon::DeviceConfigurations nonWorkingConfigurations;
+    fty::nut::DeviceConfigurations nonWorkingConfigurations;
     /// \brief Unknown, working configuration.
-    nutcommon::DeviceConfigurations newConfigurations;
+    fty::nut::DeviceConfigurations newConfigurations;
     /// \brief Unknown, unassessable configuration.
-    nutcommon::DeviceConfigurations unknownStateConfigurations;
+    fty::nut::DeviceConfigurations unknownStateConfigurations;
 } ComputeAssetConfigurationUpdateResult;
 
 /**
@@ -54,11 +55,10 @@ typedef struct ComputeAssetConfigurationUpdateResult {
  *
  * \param pool PoolWorker to use.
  * \param asset fty_proto_t of asset to scan.
- * \param credentialsSnmpV1 SNMPv1 credentials to test.
- * \param credentialsSnmpV3 SNMPv3 credentials to test.
+ * \param credentials Credentials to test.
  * \return All detected and working NUT device configurations.
  */
-fty::nut::DeviceConfigurations assetScanDrivers(messagebus::PoolWorker& pool, fty_proto_t *asset, const SecwMap& credentials, const bool scanDummyUps);
+fty::nut::DeviceConfigurations assetScanDrivers(messagebus::PoolWorker& pool, fty_proto_t *asset, const fty::nut::SecwMap& credentials, const bool scanDummyUps);
 
 /**
  * \brief Sort NUT driver configurations into categories from known and detected configurations.
@@ -66,25 +66,7 @@ fty::nut::DeviceConfigurations assetScanDrivers(messagebus::PoolWorker& pool, ft
  * \param detectedConfigurations Detected NUT device configurations at runtime.
  * \return All NUT driver configurations sorted into categories.
  */
-ComputeAssetConfigurationUpdateResult computeAssetConfigurationUpdate(const nutcommon::DeviceConfigurations& knownConfigurations, const nutcommon::DeviceConfigurations& detectedConfigurations);
-
-nutcommon::DeviceConfigurations instanciateDatabaseConfigurations(const DeviceConfigurationInfos& dbConfs, fty_proto_t* asset, const std::vector<nutcommon::CredentialsSNMPv1>& credentialsSNMPv1, const std::vector<nutcommon::CredentialsSNMPv3>& credentialsSNMPv3);
-
-/**
- * \brief Request fty_proto_t from asset name.
- * \param assetName Asset name to request.
- * \return fty_proto_t (to be freed by caller) or nullptr.
- */
-fty_proto_t* fetchProtoFromAssetName(const std::string& assetName);
-
-/**
- * \brief Find which device configuration type a given device configuration best matches.
- * \param asset Asset to check with.
- * \param configuration Device configuration to match.
- * \param types Device configuration types to match against.
- * \return Iterator to best device configuration type match, or end of collection if no suitable match found.
- */
-DeviceConfigurationInfoDetails::const_iterator matchDeviceConfigurationToBestDeviceConfigurationType(fty_proto_t* asset, const nutcommon::DeviceConfiguration& configuration, const DeviceConfigurationInfoDetails& types);
+ComputeAssetConfigurationUpdateResult computeAssetConfigurationUpdate(const fty::nut::DeviceConfigurations& knownConfigurations, const fty::nut::DeviceConfigurations& detectedConfigurations);
 
 /**
  * \brief Return the order of preference for an asset's driver configurations.
@@ -94,6 +76,41 @@ DeviceConfigurationInfoDetails::const_iterator matchDeviceConfigurationToBestDev
  * \return List of indexes of driver configurations, ordered from most to least preferred.
  */
 std::vector<size_t> sortDeviceConfigurationPreferred(fty_proto_t* asset, const fty::nut::DeviceConfigurations& configurations, const bool prioritizeDmfDriver = false);
+
+/**
+ * \brief Find which device configuration type a given device configuration best matches.
+ * \param asset Asset to check with.
+ * \param configuration Device configuration to match.
+ * \param types Device configuration types to match against.
+ * \return Iterator to best device configuration type match, or end of collection if no suitable match found.
+ */
+DeviceConfigurationInfoDetails::const_iterator matchDeviceConfigurationToBestDeviceConfigurationType(fty_proto_t* asset, const fty::nut::DeviceConfiguration& configuration, const DeviceConfigurationInfoDetails& types);
+
+/**
+ * \brief Instanciate database configurations as NUT driver configurations.
+ * \param dbConfs Database configurations to instanciate.
+ * \param asset Asset to instanciate with.
+ * \param credentials Credentials to instanciate with.
+ * \return List of ready-to-use NUT device configurations.
+ */
+fty::nut::DeviceConfigurations instanciateDatabaseConfigurations(const DBAssetsDiscovery::DeviceConfigurationInfos& dbConfs, fty_proto_t* asset, const fty::nut::SecwMap& credentials);
+
+/**
+ * \brief Match security documents from driver configuration.
+ * \param conf Device configuration to search.
+ * \param credentials Security documents to match.
+ * \return Set of security document IDs matched.
+ */
+std::set<secw::Id> matchSecurityDocumentIDsFromDeviceConfiguration(const fty::nut::DeviceConfiguration& conf, const fty::nut::SecwMap& credentials);
+
+#if 0
+/**
+ * \brief Request fty_proto_t from asset name.
+ * \param assetName Asset name to request.
+ * \return fty_proto_t (to be freed by caller) or nullptr.
+ */
+fty_proto_t* fetchProtoFromAssetName(const std::string& assetName);
+#endif
 
 }
 }

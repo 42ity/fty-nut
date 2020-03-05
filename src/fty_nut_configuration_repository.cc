@@ -33,13 +33,13 @@ namespace nut {
 
 const std::string ConfigurationRepositoryDirectory::DEFAULT_NUT_CONFIGURATION_REPOSITORY = "/var/lib/fty/fty-nut/devices";
 
-std::vector<std::string> ConfigurationRepositoryMemory::listDevices()
+std::set<std::string> ConfigurationRepositoryMemory::listDevices()
 {
-    std::vector<std::string> result;
+    std::set<std::string> result;
     std::transform(
         m_configurations.begin(),
         m_configurations.end(),
-        std::back_inserter(result),
+        std::inserter(result, result.begin()),
         [](const RepositoryStore::value_type& device) -> std::string {
             return device.first;
         }
@@ -72,9 +72,10 @@ ConfigurationRepositoryDirectory::ConfigurationRepositoryDirectory(const std::st
     shared::mkdir_if_needed(m_directoryLocation.c_str());
 }
 
-std::vector<std::string> ConfigurationRepositoryDirectory::listDevices()
+std::set<std::string> ConfigurationRepositoryDirectory::listDevices()
 {
-    return shared::files_in_directory(m_directoryLocation.c_str());
+    const auto files = shared::files_in_directory(m_directoryLocation.c_str());
+    return std::set<std::string>(files.begin(), files.end());
 }
 
 fty::nut::DeviceConfigurations ConfigurationRepositoryDirectory::getConfigurations(const std::string& name)
@@ -169,7 +170,7 @@ fty_nut_configuration_repository_test(bool verbose)
         };
 
         repo->setConfigurations("ups-8", { testConf });
-        assert(repo->listDevices() == std::vector<std::string>({ "ups-8" }));
+        assert(repo->listDevices() == std::set<std::string>({ "ups-8" }));
         assert(repo->getConfigurations("ups-8") == fty::nut::DeviceConfigurations({testConf}));
 
         testConf["mibs"] = "ietf";
@@ -178,7 +179,7 @@ fty_nut_configuration_repository_test(bool verbose)
         assert(repo->getConfigurations("ups-9") == fty::nut::DeviceConfigurations({testConf}));
 
         repo->setConfigurations("ups-8", {});
-        assert(repo->listDevices() == std::vector<std::string>({ "ups-9" }));        
+        assert(repo->listDevices() == std::set<std::string>({ "ups-9" }));        
         repo->setConfigurations("ups-9", {});
         assert(repo->listDevices().empty());
 

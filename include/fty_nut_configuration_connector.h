@@ -22,9 +22,9 @@
 #ifndef FTY_NUT_CONFIGURATION_CONNECTOR_H_INCLUDED
 #define FTY_NUT_CONFIGURATION_CONNECTOR_H_INCLUDED
 
-#include "fty_nut_library.h"
 #include "fty_nut_configuration_manager.h"
-#include <fty_security_wallet.h>
+#include "fty_nut_configuration_server.h"
+#include "fty_nut_library.h"
 
 namespace fty
 {
@@ -34,38 +34,83 @@ namespace nut
 class ConfigurationConnector
 {
     public:
-        struct Parameters {
-            Parameters(const uint nbThreadPoolConnector, const uint nbThreadPoolManager,
-                const bool scanDummyUps, const bool automaticPrioritySort, const bool prioritizeDmfDriver);
+        struct Parameters
+        {
+            Parameters();
 
             std::string endpoint;
             std::string agentName;
             std::string requesterName;
-            std::string dbUrl;
-            uint nbThreadPoolConnector;
 
-            // FIXME: To remove when ConfigurationManager instantiated in main
-            uint nbThreadPoolManager;
-            bool scanDummyUps;
+            unsigned threadPoolSize;
             bool automaticPrioritySort;
-            bool prioritizeDmfDriver;
+
+            bool rescanOnSecurityWalletCreate;
+            bool rescanOnSecurityWalletUpdate;
+            bool rescanOnSecurityWalletDelete;
         };
 
-        ConfigurationConnector(Parameters params);
+        ConfigurationConnector(Parameters parameters, ConfigurationManager& manager);
         ~ConfigurationConnector() = default;
-        void getInitialAssets();
+
+        void triggerRescan();
 
     private:
+        /**
+         * \brief Handle request assets message.
+         * \param msg Message receive.
+         */
         void handleRequestAssets(messagebus::Message msg);
+
+        /**
+         * \brief Handle request asset detail message.
+         * \param msg Message received.
+         */
         void handleRequestAssetDetail(messagebus::Message msg);
+
+        /**
+         * \brief Handle request message of type asset notification.
+         * \param msg Message received.
+         */
         void handleNotificationAssets(messagebus::Message msg);
-        void handleNotificationSecurityWalletUpdate(const std::string& portfolio, secw::DocumentPtr oldDoc, secw::DocumentPtr newDoc);
-        void handleNotificationSecurityWalletDelete(const std::string& portfolio, secw::DocumentPtr doc);
+
+        /**
+         * \brief Handle request message of type security document added.
+         * \param portfolio Portfolio name.
+         * \param doc Security document added.
+         */
         void handleNotificationSecurityWalletCreate(const std::string& portfolio, secw::DocumentPtr doc);
-        void publishToDriversConnector(const std::string& asseName, const std::string& subject);
+
+        /**
+         * \brief Handle request message of type security document updated.
+         * \param portfolio Portfolio name.
+         * \param oldDoc Previous security document.
+         * \param newDoc New security document.
+         */
+        void handleNotificationSecurityWalletUpdate(const std::string& portfolio, secw::DocumentPtr oldDoc, secw::DocumentPtr newDoc);
+
+        /**
+         * \brief Handle request message of type security document deleted.
+         * \param portfolio Portfolio name.
+         * \param doc Security document removed.
+         */
+        void handleNotificationSecurityWalletDelete(const std::string& portfolio, secw::DocumentPtr doc);
+
+        /**
+         * \brief Request asset driver configuration refresh.
+         * \param assetNames Assets to refresh.
+         */
+        void publishToDriverConnector(const std::vector<std::string>& assetNames);
+
+        /**
+         * \brief Handle asset update.
+         * \param data Asset data in fty_proto form.
+         * \param forceScan Force scan of asset.
+         */
+        void handleAsset(const std::string& data, bool forceScan = false);
 
         Parameters m_parameters;
-        ConfigurationManager m_manager;
+        ConfigurationManager& m_manager;
         messagebus::PoolWorker m_worker;
         std::unique_ptr<messagebus::MessageBus> m_msgBusReceiver;
         std::unique_ptr<messagebus::MessageBus> m_msgBusRequester;
@@ -73,7 +118,6 @@ class ConfigurationConnector
         fty::SocketSyncClient m_syncClient;
         mlm::MlmStreamClient m_streamClient;
         secw::ConsumerAccessor m_consumerAccessor;
-        ProtectAsset m_protectAsset;
 };
 
 }

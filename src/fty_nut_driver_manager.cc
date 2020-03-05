@@ -1,5 +1,5 @@
 /*  =========================================================================
-    fty_nut_drivers_manager - fty nut drivers manager
+    fty_nut_driver_manager - fty nut driver manager
 
     Copyright (C) 2014 - 2018 Eaton
 
@@ -21,7 +21,7 @@
 
 /*
 @header
-    fty_nut_drivers_manager - fty nut drivers manager
+    fty_nut_driver_manager - fty nut driver manager
 @discuss
 @end
 */
@@ -34,44 +34,51 @@ namespace fty
 namespace nut
 {
 
-void ConfigurationDriversControl::addControl(const std::string& controlName)
+DriverManager::DriverManager(const std::string& nutDirectory) :
+    m_nutRepository(nutDirectory),
+    m_exit(false),
+    m_updateThread(&DriverManager::updateMainloop, this)
 {
-    std::lock_guard<std::mutex> lkControlDrivers(m_controlDriversMutex);
-    m_controlDrivers.insert(controlName);
 }
 
-std::set<std::string> ConfigurationDriversControl::clearControl() {
-    std::set<std::string> controlDrivers;
-    std::lock_guard<std::mutex> lkControlDrivers(m_controlDriversMutex);
-    controlDrivers = m_controlDrivers;
-    m_controlDrivers.clear();
-    return controlDrivers;
+DriverManager::~DriverManager()
+{
+    m_exit = true;
+    m_updateThread.join();
 }
 
-ConfigurationDriversManager::ConfigurationDriversManager(volatile bool &exit) : m_exit(exit)
-{
-    m_manageDriversThread = std::thread(&ConfigurationDriversManager::manageDrivers, this);
+void DriverManager::refreshDrivers(const std::vector<std::string>& assetNames)
+{   
+    const auto knownDrivers = m_nutRepository.listDevices();
+
+    std::lock_guard<std::mutex> lk(m_mutex);
+    for (const auto& assetName : assetNames) {
+        if (knownDrivers.count(assetName)) {
+            log_trace("Scheduling startup of NUT driver for asset %s.", assetName.c_str());
+            m_startDrivers.insert("nut-driver@" + assetName);
+        }
+        else {
+            log_trace("Scheduling shutdown of NUT driver for asset %s.", assetName.c_str());
+            m_stopDrivers.insert("nut-driver@" + assetName);
+        }
+    }
 }
 
-void ConfigurationDriversManager::addConfigDriver(const std::string& assetName)
+void DriverManager::updateMainloop()
 {
-    log_info("addConfigDriver: %s", assetName.c_str());
-    m_startDrivers.addControl("nut-driver@" + assetName);
-}
-
-void ConfigurationDriversManager::removeConfigDriver(const std::string& assetName)
-{
-    log_info("removeConfigDriver: %s", assetName.c_str());
-    m_stopDrivers.addControl("nut-driver@" + assetName);
-}
-
-void ConfigurationDriversManager::manageDrivers()
-{
-    while (!m_exit) {
+    while (!m_exit.load()) {
         std::this_thread::sleep_for(std::chrono::seconds(5));
 
-        std::set<std::string> stopDrivers = m_stopDrivers.clearControl();
-        std::set<std::string> startDrivers = m_startDrivers.clearControl();
+        // Safely grab work.
+        std::set<std::string> stopDrivers;
+        std::set<std::string> startDrivers;
+        {
+            std::lock_guard<std::mutex> lk(m_mutex);
+            stopDrivers = m_stopDrivers;
+            startDrivers = m_startDrivers;
+            m_stopDrivers.clear();
+            m_startDrivers.clear();
+        }
 
         if (!stopDrivers.empty() || !startDrivers.empty()) {
             if (!stopDrivers.empty()) {
@@ -90,13 +97,13 @@ void ConfigurationDriversManager::manageDrivers()
     }
 }
 
-void ConfigurationDriversManager::systemctl(const std::string &operation, const std::string &service)
+void DriverManager::systemctl(const std::string &operation, const std::string &service)
 {
     systemctl(operation, &service, &service + 1);
 }
 
 template<typename It>
-void ConfigurationDriversManager::systemctl(const std::string &operation, It first, It last)
+void DriverManager::systemctl(const std::string &operation, It first, It last)
 {
     if (first == last)
         return;
@@ -119,7 +126,7 @@ void ConfigurationDriversManager::systemctl(const std::string &operation, It fir
     }
 }
 
-void ConfigurationDriversManager::updateNUTConfig()
+void DriverManager::updateNUTConfig()
 {
     // Run the helper script
     std::vector<std::string> _argv = { "sudo", "fty-nutconfig" };
@@ -138,26 +145,4 @@ void ConfigurationDriversManager::updateNUTConfig()
 }
 
 }
-}
-
-//  --------------------------------------------------------------------------
-//  Self test of this class
-
-// If your selftest reads SCMed fixture data, please keep it in
-// src/selftest-ro; if your test creates filesystem objects, please
-// do so under src/selftest-rw.
-// The following pattern is suggested for C selftest code:
-//    char *filename = NULL;
-//    filename = zsys_sprintf ("%s/%s", SELFTEST_DIR_RO, "mytemplate.file");
-//    assert (filename);
-//    ... use the "filename" for I/O ...
-//    zstr_free (&filename);
-// This way the same "filename" variable can be reused for many subtests.
-#define SELFTEST_DIR_RO "src/selftest-ro"
-#define SELFTEST_DIR_RW "src/selftest-rw"
-
-void
-fty_nut_drivers_manager_test (bool verbose)
-{
-    std::cerr << " * fty_nut_drivers_manager: no test" << std::endl;
 }
