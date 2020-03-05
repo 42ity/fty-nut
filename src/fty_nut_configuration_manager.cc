@@ -41,6 +41,27 @@ namespace nut {
 
 const static std::string NUT_PART_STORE("/var/lib/fty/fty-nut/devices");
 
+static fty::nut::DeviceConfigurations assetUpsConfBlock(fty_proto_t* asset)
+{
+    fty::nut::DeviceConfigurations result;
+    const char* upsconf = fty_proto_ext_string(asset, "upsconf_block", nullptr);
+
+    if (upsconf && strlen(upsconf) > 2) {
+        char separator = upsconf[0];
+        std::string configurationFile(upsconf+1);
+        std::replace(configurationFile.begin(), configurationFile.end(), separator, '\n');
+
+        if (configurationFile.at(0) == '[') {
+            result = fty::nut::parseConfigurationFile(configurationFile);
+        }
+        else {
+            result = fty::nut::parseConfigurationFile(std::string("[") + fty_proto_name(asset) + "]\n" + configurationFile + "\n");
+        }
+    }
+
+    return result;
+}
+
 ConfigurationManager::Parameters::Parameters() :
     dbConn(DBConn::url),
     nutRepositoryDirectory(NUT_PART_STORE),
@@ -232,18 +253,26 @@ void ConfigurationManager::scanAssetConfigurations(fty_proto_t* asset, const fty
 fty::nut::DeviceConfigurations ConfigurationManager::getAssetConfigurations(fty_proto_t* asset, const fty::nut::SecwMap& credentials)
 {
     const std::string assetName = fty_proto_name(asset);
+    fty::nut::DeviceConfigurations upsConfBlock = assetUpsConfBlock(asset);
     fty::nut::DeviceConfigurations configs;
-    DBAssetsDiscovery::DeviceConfigurationInfos candidateDatabaseConfigurations;
 
-    try {
-        auto conn = tntdb::connectCached(m_parameters.dbConn);
-        candidateDatabaseConfigurations = DBAssetsDiscovery::get_candidate_config_list(conn, assetName);
-        
-    } catch (std::runtime_error &e) {
-        log_error("getAssetConfigurations: failed to get config for '%s': %s", assetName.c_str(), e.what());
+    if (!upsConfBlock.empty()) {
+        // Asset has an upsconf block, override with it.
+        configs = upsConfBlock;
+    }
+    else {
+        DBAssetsDiscovery::DeviceConfigurationInfos candidateDatabaseConfigurations;
+        try {
+            auto conn = tntdb::connectCached(m_parameters.dbConn);
+            candidateDatabaseConfigurations = DBAssetsDiscovery::get_candidate_config_list(conn, assetName);
+            
+        } catch (std::runtime_error &e) {
+            log_error("getAssetConfigurations: failed to get config for '%s': %s", assetName.c_str(), e.what());
+        }
+
+        configs = instanciateDatabaseConfigurations(candidateDatabaseConfigurations, asset, credentials);
     }
 
-    configs = instanciateDatabaseConfigurations(candidateDatabaseConfigurations, asset, credentials);
     return configs;
 }
 
@@ -254,9 +283,17 @@ fty::nut::DeviceConfigurations ConfigurationManager::computeAssetConfigurationsT
     fty::nut::DeviceConfigurations result;
 
     if (status == "active") {
-        // For now, return the most eligible configuration or nothing.
-        if (!availableConfigurations.empty()) {
-            result = { availableConfigurations[0] };
+        fty::nut::DeviceConfigurations upsConfBlock = assetUpsConfBlock(asset);
+        if (!upsConfBlock.empty()) {
+            // Asset has an upsconf block, override with it.
+            log_warning("Asset %s has an upsconf block, overriding normal configuration processing.", fty_proto_name(asset));
+            result = upsConfBlock;
+        }
+        else {
+            // For now, return the most eligible configuration or nothing.
+            if (!availableConfigurations.empty()) {
+                result = { availableConfigurations[0] };
+            }
         }
     }
 
