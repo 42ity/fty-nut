@@ -7,6 +7,10 @@ Requires=malamute.service fty-db-init.service nut-server.service
 After=malamute.service fty-db-init.service nut-server.service
 PartOf=bios.target
 
+After=fty-asset.service
+Requires=fty-asset.service
+BindsTo=fty-asset.service
+
 [Service]
 Type=simple
 User=discovery-monitoring-daemon
