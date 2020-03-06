@@ -57,8 +57,6 @@ all_tests [] = {
 // Tests for stable public classes:
     { "fty_nut_server", fty_nut_server_test, true, true, NULL },
     { "fty_nut_command_server", fty_nut_command_server_test, true, true, NULL },
-    { "fty_nut_configuration_protect_asset", fty_nut_configuration_protect_asset_test, true, true, NULL },
-    { "fty_nut_configuration_helper", fty_nut_configuration_helper_test, true, true, NULL },
     { "fty_nut_configuration_repository", fty_nut_configuration_repository_test, true, true, NULL },
     { "fty_nut_configuration_server", fty_nut_configuration_server_test, true, true, NULL },
     { "alert_actor", alert_actor_test, true, true, NULL },

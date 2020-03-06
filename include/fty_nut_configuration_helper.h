@@ -88,7 +88,11 @@ std::string serialize(const ComputeAssetConfigurationUpdateResult& results);
  * \return String of security document IDs.
  */
 std::string serialize(const std::set<secw::Id>& secwIDs);
-
+/**
+ * \brief Pretty-print NUT driver configuration.
+ * \param conf Configuration to serialize.
+ * \return String of NUT device configuration.
+ */
 std::string serialize(const fty::nut::DeviceConfiguration& conf);
 
 /**
@@ -109,19 +113,5 @@ fty::nut::DeviceConfiguration getAttributesFromDeviceConfiguration(const fty::nu
 
 }
 }
-
-// Break cyclic dependencies on headers by including the library late.
-#include "fty_nut_library.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-//  Self test of this class
-FTY_NUT_EXPORT void fty_nut_configuration_helper_test (bool verbose);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

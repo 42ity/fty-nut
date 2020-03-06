@@ -33,14 +33,6 @@ namespace fty
 namespace nut
 {
 
-/**
- * \brief Functor to check if an element is before another in a collection.
- * \param start Start of collection.
- * \param end End of collection.
- * \param a First element to check.
- * \param b Second element to check.
- * \return True if a is before b in collection (missing elements are considered to be at the end of the collection).
- */
 template <typename It, typename Val>
 bool isBefore(It start, It end , const Val& a, const Val& b) {
     const auto itA = std::find(start, end, a);
@@ -51,14 +43,6 @@ bool isBefore(It start, It end , const Val& a, const Val& b) {
 // FIXME: needed for compilation
 template bool isBefore(std::string const*, std::string const*, std::string const&, std::string const&);
 
-/**
- * \brief Check if we can assess a NUT driver configuration's working state.
- * \param configuration NUT driver configuration to assess.
- * \return True if it is assessable.
- *
- * Only drivers we know about can be assessed, as only they will be scanned by
- * assetScanDrivers().
- */
 bool canDeviceConfigurationWorkingStateBeAssessed(const fty::nut::DeviceConfiguration& configuration)
 {
     const static std::set<std::string> knownDrivers = {
@@ -71,11 +55,6 @@ bool canDeviceConfigurationWorkingStateBeAssessed(const fty::nut::DeviceConfigur
     return knownDrivers.count(configuration.at("driver"));
 }
 
-/**
- * \brief Extract the security document types from a device configuration.
- * \param configuration Device configuration to analyse.
- * \return Set of security document types found in the device configuration.
- */
 std::set<std::string> getSecurityDocumentTypesFromDeviceConfiguration(const fty::nut::DeviceConfiguration& configuration) {
     std::set<std::string> result;
 
@@ -89,11 +68,6 @@ std::set<std::string> getSecurityDocumentTypesFromDeviceConfiguration(const fty:
     return result;
 }
 
-/**
- * \brief Extract all IP addresses from an asset.
- * \param proto Asset to extract IP addresses from.
- * \return List of IP addresses as strings.
- */
 std::vector<std::string> getNetworkAddressesFromAsset(fty_proto_t* asset)
 {
     const static std::array<std::string, 2> prefixes = {
@@ -113,13 +87,6 @@ std::vector<std::string> getNetworkAddressesFromAsset(fty_proto_t* asset)
     return addresses;
 }
 
-
-/**
- * \brief Pretty-print ComputeAssetConfigurationUpdateResult.
- * \param os Output stream.
- * \param results ComputeAssetConfigurationUpdateResult.
- * \return Output stream.
- */
 std::string serialize( const ComputeAssetConfigurationUpdateResult& results)
 {
     std::stringstream ss;
@@ -139,11 +106,6 @@ std::string serialize( const ComputeAssetConfigurationUpdateResult& results)
     return ss.str();
 }
 
-/**
- * \brief Pretty-print set of security document IDs.
- * \param secwIDs Set of security document IDs to serialize.
- * \return String of security document IDs.
- */
 std::string serialize(const std::set<secw::Id>& secwIDs) {
     std::stringstream ss;
 
@@ -165,13 +127,6 @@ std::string serialize(const fty::nut::DeviceConfiguration& conf) {
     return ss.str();
 }
 
-
-/**
- * \brief Check if device configuration is a subset of another.
- * \param subset Device configuration subset.
- * \param superset Device configuration superset.
- * \return True iff subset of superset.
- */
 bool isDeviceConfigurationSubsetOf(const fty::nut::DeviceConfiguration& subset, const fty::nut::DeviceConfiguration& superset)
 {
     for (const auto& itSubset : subset) {
@@ -189,13 +144,6 @@ bool isDeviceConfigurationSubsetOf(const fty::nut::DeviceConfiguration& subset, 
     return true;
 }
 
-
-/**
- * \brief Get non-default attributes from device configuration.
- * \param configuration Device configuration to extract non-default attributes from.
- * \param type Device configuration type work with.
- * \return Non-default attributes from device configuration.
- */
 fty::nut::DeviceConfiguration getAttributesFromDeviceConfiguration(const fty::nut::DeviceConfiguration& configuration, const DeviceConfigurationInfoDetail& type)
 {
     fty::nut::DeviceConfiguration result = configuration;
@@ -229,26 +177,4 @@ fty::nut::DeviceConfiguration getAttributesFromDeviceConfiguration(const fty::nu
 }
 
 }
-}
-
-//  --------------------------------------------------------------------------
-//  Self test of this class
-
-// If your selftest reads SCMed fixture data, please keep it in
-// src/selftest-ro; if your test creates filesystem objects, please
-// do so under src/selftest-rw.
-// The following pattern is suggested for C selftest code:
-//    char *filename = NULL;
-//    filename = zsys_sprintf ("%s/%s", SELFTEST_DIR_RO, "mytemplate.file");
-//    assert (filename);
-//    ... use the "filename" for I/O ...
-//    zstr_free (&filename);
-// This way the same "filename" variable can be reused for many subtests.
-#define SELFTEST_DIR_RO "src/selftest-ro"
-#define SELFTEST_DIR_RW "src/selftest-rw"
-
-void
-fty_nut_configuration_helper_test (bool verbose)
-{
-    std::cerr << " * fty_nut_configuration_helper: no test" << std::endl;
 }

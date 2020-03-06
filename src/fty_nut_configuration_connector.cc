@@ -41,29 +41,6 @@ namespace nut
 {
 static const std::string SECW_SOCKET_PATH = "/run/fty-security-wallet/secw.socket";
 
-SecwMap getCredentials()
-{
-    fty::nut::SecwMap result;
-
-    // Grab security documents.
-    try {
-        fty::SocketSyncClient secwSyncClient(SECW_SOCKET_PATH);
-
-        auto client = secw::ConsumerAccessor(secwSyncClient);
-        auto secCreds = client.getListDocumentsWithPrivateData("default", "discovery_monitoring");
-
-        for (const auto &i : secCreds) {
-            result.emplace(i->getId(), i);
-        }
-        log_debug("Fetched %d credentials from security wallet.", result.size());
-    }
-    catch (std::exception &e) {
-        log_warning("Failed to fetch credentials from security wallet: %s", e.what());
-    }
-
-    return result;
-}
-
 ConfigurationConnector::Parameters::Parameters() :
     endpoint(MLM_ENDPOINT),
     agentName("fty-nut-configuration"),
@@ -302,27 +279,25 @@ void ConfigurationConnector::handleAsset(const std::string& data, bool forceScan
     }
 }
 
-}
-}
-
-//  --------------------------------------------------------------------------
-//  Self test of this class
-
-// If your selftest reads SCMed fixture data, please keep it in
-// src/selftest-ro; if your test creates filesystem objects, please
-// do so under src/selftest-rw.
-// The following pattern is suggested for C selftest code:
-//    char *filename = NULL;
-//    filename = zsys_sprintf ("%s/%s", SELFTEST_DIR_RO, "mytemplate.file");
-//    assert (filename);
-//    ... use the "filename" for I/O ...
-//    zstr_free (&filename);
-// This way the same "filename" variable can be reused for many subtests.
-#define SELFTEST_DIR_RO "src/selftest-ro"
-#define SELFTEST_DIR_RW "src/selftest-rw"
-
-void
-fty_nut_configuration_connector_test (bool verbose)
+SecwMap ConfigurationConnector::getCredentials()
 {
-    std::cerr << " * fty_nut_configuration_connector: no test" << std::endl;
+    fty::nut::SecwMap result;
+
+    // Grab security documents.
+    try {
+        auto secCreds = m_consumerAccessor.getListDocumentsWithPrivateData("default", "discovery_monitoring");
+
+        for (const auto &i : secCreds) {
+            result.emplace(i->getId(), i);
+        }
+        log_debug("Fetched %d credentials from security wallet.", result.size());
+    }
+    catch (std::exception &e) {
+        log_warning("Failed to fetch credentials from security wallet: %s", e.what());
+    }
+
+    return result;
+}
+
+}
 }

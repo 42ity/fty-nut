@@ -110,7 +110,7 @@ class ConfigurationManager
          */
         fty::nut::DeviceConfigurations computeAssetConfigurationsToUse(fty_proto_t* asset, const fty::nut::DeviceConfigurations& availableConfigurations);
 
-        Parameters m_parameters;
+        const Parameters m_parameters;
         messagebus::PoolWorker m_poolScanners;
         ConfigurationRepositoryDirectory m_repositoryNut;
         ConfigurationRepositoryMemory m_repositoryMemory;

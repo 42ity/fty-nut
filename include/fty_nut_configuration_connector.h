@@ -112,7 +112,13 @@ class ConfigurationConnector
          */
         void handleAsset(const std::string& data, bool forceScan = false);
 
-        Parameters m_parameters;
+        /**
+         * \brief Get credentials from security wallet.
+         * \return Security wallet documents.
+         */
+        SecwMap getCredentials();
+
+        const Parameters m_parameters;
         ConfigurationManager& m_manager;
         messagebus::PoolWorker m_worker;
         std::unique_ptr<messagebus::MessageBus> m_msgBusReceiver;
@@ -125,16 +131,5 @@ class ConfigurationConnector
 
 }
 }
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-//  Self test of this class
-FTY_NUT_EXPORT void fty_nut_configuration_connector_test (bool verbose);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

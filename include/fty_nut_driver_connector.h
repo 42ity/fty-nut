@@ -25,9 +25,6 @@
 #include "fty_nut_library.h"
 #include "fty_nut_driver_manager.h"
 
-#define DRIVERS_ADD_CONFIG    "addConfig"
-#define DRIVERS_REMOVE_CONFIG "removeConfig"
-
 namespace fty
 {
 namespace nut
@@ -50,7 +47,7 @@ class DriverConnector
         void handleMessage(messagebus::Message msg);
         void refreshConfig(messagebus::UserData data);
 
-        Parameters m_parameters;
+        const Parameters m_parameters;
         DriverManager& m_manager;
         messagebus::PoolWorker m_worker;
         messagebus::Dispatcher<std::string, std::function<void(messagebus::UserData)>, std::function<void(const std::string&, messagebus::UserData)>> m_dispatcher;

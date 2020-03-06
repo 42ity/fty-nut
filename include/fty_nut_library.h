@@ -109,8 +109,6 @@ typedef struct _fty_nut_server_t fty_nut_server_t;
 #define FTY_NUT_SERVER_T_DEFINED
 typedef struct _fty_nut_command_server_t fty_nut_command_server_t;
 #define FTY_NUT_COMMAND_SERVER_T_DEFINED
-typedef struct _fty_nut_configuration_protect_asset_t fty_nut_configuration_protect_asset_t;
-#define FTY_NUT_CONFIGURATION_PROTECT_ASSET_T_DEFINED
 typedef struct _fty_nut_configuration_helper_t fty_nut_configuration_helper_t;
 #define FTY_NUT_CONFIGURATION_HELPER_T_DEFINED
 typedef struct _fty_nut_configuration_manager_t fty_nut_configuration_manager_t;
@@ -134,7 +132,6 @@ typedef struct _sensor_actor_t sensor_actor_t;
 //  Public classes, each with its own header file
 #include "fty_nut_server.h"
 #include "fty_nut_command_server.h"
-#include "fty_nut_configuration_protect_asset.h"
 #include "fty_nut_configuration_helper.h"
 #include "fty_nut_configuration_manager.h"
 #include "fty_nut_configuration_repository.h"
