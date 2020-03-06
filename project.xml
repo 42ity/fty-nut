@@ -142,7 +142,6 @@
 
     <class name = "fty-nut-server" state = "stable">fty nut actor</class>
     <class name = "fty-nut-command-server" state = "stable">fty nut command actor</class>
-    <class name = "fty-nut-configuration-protect-asset" state = "stable">fty nut configuration protect asset</class>
     <class name = "fty-nut-configuration-helper" state = "stable">fty nut configuration helper</class>
     <class name = "fty-nut-configuration-manager" state = "stable" selftest = "0">fty nut configuration manager</class>
     <class name = "fty-nut-configuration-repository" state = "stable">fty nut configuration repository</class>
