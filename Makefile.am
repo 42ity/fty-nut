@@ -82,7 +82,6 @@ EXTRA_DIST += \
     src/ups_status.h \
     src/nut_device.h \
     src/nut_agent.h \
-    src/nut_configurator.h \
     src/alert_device.h \
     src/alert_device_list.h \
     src/sensor_device.h \

@@ -15,8 +15,6 @@ fty_nut_server.txt
 fty_nut_server.doc
 fty_nut_command_server.txt
 fty_nut_command_server.doc
-fty_nut_configurator_server.txt
-fty_nut_configurator_server.doc
 fty_nut_configuration_protect_asset.txt
 fty_nut_configuration_protect_asset.doc
 fty_nut_configuration_helper.txt
@@ -43,8 +41,6 @@ fty-nut-command.txt
 fty-nut-command.doc
 fty-nut-configuration.txt
 fty-nut-configuration.doc
-fty-nut-configurator.txt
-fty-nut-configurator.doc
 
 # Make sure to track the manually maintained project description
 !*.adoc

@@ -13,7 +13,7 @@ SYNOPSIS
 Project fty-nut aims to ... (short marketing pitch)
 
 It delivers several programs with their respective man pages:
- fty-nut.1 fty-nut-configurator.1
+ fty-nut.1 fty-nut-configuration.1
 and public classes in a shared library:
  fty_nut_server.3 fty_nut_configurator_server.3 alert_actor.3 sensor_actor.3
 

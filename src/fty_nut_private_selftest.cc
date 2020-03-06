@@ -48,8 +48,6 @@ fty_nut_private_selftest (bool verbose, const char *subtest)
         nut_device_test (verbose);
     if (streq (subtest, "$ALL") || streq (subtest, "nut_agent_test"))
         nut_agent_test (verbose);
-    if (streq (subtest, "$ALL") || streq (subtest, "nut_configurator_test"))
-        nut_configurator_test (verbose);
     if (streq (subtest, "$ALL") || streq (subtest, "alert_device_test"))
         alert_device_test (verbose);
     if (streq (subtest, "$ALL") || streq (subtest, "alert_device_list_test"))

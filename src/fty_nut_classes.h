@@ -53,10 +53,6 @@ typedef struct _nut_device_t nut_device_t;
 typedef struct _nut_agent_t nut_agent_t;
 #define NUT_AGENT_T_DEFINED
 #endif
-#ifndef NUT_CONFIGURATOR_T_DEFINED
-typedef struct _nut_configurator_t nut_configurator_t;
-#define NUT_CONFIGURATOR_T_DEFINED
-#endif
 #ifndef ALERT_DEVICE_T_DEFINED
 typedef struct _alert_device_t alert_device_t;
 #define ALERT_DEVICE_T_DEFINED
@@ -129,7 +125,6 @@ safe_malloc (size_t size, const char *file, unsigned line)
 #include "ups_status.h"
 #include "nut_device.h"
 #include "nut_agent.h"
-#include "nut_configurator.h"
 #include "alert_device.h"
 #include "alert_device_list.h"
 #include "sensor_device.h"
@@ -164,11 +159,6 @@ FTY_NUT_PRIVATE void
 //  Self test of this class.
 FTY_NUT_PRIVATE void
     nut_agent_test (bool verbose);
-
-//  *** Draft method, defined for internal use only ***
-//  Self test of this class.
-FTY_NUT_PRIVATE void
-    nut_configurator_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.

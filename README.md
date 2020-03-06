@@ -12,7 +12,7 @@ and configuration of NUT to monitor new devices as assets are created.
 make
 make check # to run self-test
 ```
-Compilation of fty-nut creates two binaries _fty-nut_ and _fty-nut-configurator_, which are run by systemd service.
+Compilation of fty-nut creates two binaries _fty-nut_ and _fty-nut-configuration_, which are run by systemd service.
 
 ## How to run
 
@@ -24,19 +24,19 @@ To run fty-nut project:
 ./src/fty-nut --mapping-file <path_to_mapping_file>
 ./src/fty-nut --mapping-file /usr/share/fty-common-nut/mapping.conf
 
-./src/fty-nut-configurator
+./src/fty-nut-configuration
 ```
 
 * from an installed base, using systemd, run:
 
 ```bash
 systemctl start fty-nut
-systemctl start fty-nut-configurator
+systemctl start fty-nut-configuration
 ```
 
 ### Configuration file
 
-To configure fty-nut, a two configuration files exist: _fty-nut.cfg_ and _fty-nut-configurator.cfg_.
+To configure fty-nut, a two configuration files exist: _fty-nut.cfg_ and _fty-nut-configuration.cfg_.
 Both contain standard configuration directives, under the server sections. Additional parameter
 
 * fty-nut.cfg
@@ -49,14 +49,6 @@ Mapping between NUT and fty-nut is saved in:
 /usr/share/fty-common-nut/mapping.conf
 ```
 
-### State File
-The fty-nut-configurator state file is located in
-
-```
-/var/lib/fty/fty-autoconfig/state
-
-```
-
 ## Architecture
 
 ### Overview
@@ -66,10 +58,6 @@ fty-nut is composed of three actors:
 * fty_nut_server - server actor
 * alert_actor - actor handling device alerts and thresholds coming from NUT
 * sensor_actor - actor handling sensor measurements coming from NUT.
-
-fty-nut-configurator is composed of 1 actor:
-
-* fty_nut_configurator_server - server actor which configures nut-server (upsd) based on results from nut scanner
 
 fty-nut-command is composed of 1 actor:
 

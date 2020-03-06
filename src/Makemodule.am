@@ -18,14 +18,12 @@ src_libfty_nut_la_SOURCES = \
     src/ups_status.cc \
     src/nut_device.cc \
     src/nut_agent.cc \
-    src/nut_configurator.cc \
     src/alert_device.cc \
     src/alert_device_list.cc \
     src/sensor_device.cc \
     src/sensor_list.cc \
     src/fty_nut_server.cc \
     src/fty_nut_command_server.cc \
-    src/fty_nut_configurator_server.cc \
     src/fty_nut_configuration_protect_asset.cc \
     src/fty_nut_configuration_helper.cc \
     src/fty_nut_configuration_manager.cc \
@@ -109,13 +107,6 @@ systemdsystemunit_DATA += src/fty-nut-configuration.service
 endif #WITH_SYSTEMD_UNITS
 endif #ENABLE_FTY_NUT_CONFIGURATION
 
-if ENABLE_FTY_NUT_CONFIGURATOR
-bin_PROGRAMS += src/fty-nut-configurator
-src_fty_nut_configurator_CPPFLAGS = ${AM_CPPFLAGS}
-src_fty_nut_configurator_LDADD = ${program_libs}
-src_fty_nut_configurator_SOURCES = src/fty_nut_configurator.cc
-endif #ENABLE_FTY_NUT_CONFIGURATOR
-
 if ENABLE_FTY_NUT_SELFTEST
 check_PROGRAMS += src/fty_nut_selftest
 noinst_PROGRAMS += src/fty_nut_selftest
@@ -134,7 +125,6 @@ src: \
 		src/fty-nut \
 		src/fty-nut-command \
 		src/fty-nut-configuration \
-		src/fty-nut-configurator \
 		src/fty_nut_selftest \
 		src/libfty_nut.la
 

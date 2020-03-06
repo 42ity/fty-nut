@@ -135,7 +135,6 @@
     <class name = "ups status"          private = "1">ups status converting functions</class>
     <class name = "nut device"          private = "1">classes for communicating with NUT daemon</class>
     <class name = "nut agent"           private = "1">NUT daemon wrapper - logic of what is being done with data from NUT daemon</class>
-    <class name = "nut configurator"    private = "1">NUT configurator class</class>
     <class name = "alert device"        private = "1">device producing alerts</class>
     <class name = "alert device list"   private = "1">collection of alerts</class>
     <class name = "sensor device"       private = "1">sensor attached to UPS</class>
@@ -143,7 +142,6 @@
 
     <class name = "fty-nut-server" state = "stable">fty nut actor</class>
     <class name = "fty-nut-command-server" state = "stable">fty nut command actor</class>
-    <class name = "fty-nut-configurator-server" state = "stable">fty nut configurator actor</class>
     <class name = "fty-nut-configuration-protect-asset" state = "stable">fty nut configuration protect asset</class>
     <class name = "fty-nut-configuration-helper" state = "stable">fty nut configuration helper</class>
     <class name = "fty-nut-configuration-manager" state = "stable" selftest = "0">fty nut configuration manager</class>
@@ -162,7 +160,6 @@
     <main name = "fty-nut" service = "1" />
     <main name = "fty-nut-command" service = "1" />
     <main name = "fty-nut-configuration" service = "1" />
-    <main name = "fty-nut-configurator" service = "0" />
     <bin name = "fty-nutconfig" />
     <bin name = "fty-dmf" />
 

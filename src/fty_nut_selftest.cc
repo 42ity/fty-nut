@@ -47,7 +47,6 @@ all_tests [] = {
     { "ups_status", NULL, true, false, "ups_status_test" },
     { "nut_device", NULL, true, false, "nut_device_test" },
     { "nut_agent", NULL, true, false, "nut_agent_test" },
-    { "nut_configurator", NULL, true, false, "nut_configurator_test" },
     { "alert_device", NULL, true, false, "alert_device_test" },
     { "alert_device_list", NULL, true, false, "alert_device_list_test" },
     { "sensor_device", NULL, true, false, "sensor_device_test" },
@@ -58,7 +57,6 @@ all_tests [] = {
 // Tests for stable public classes:
     { "fty_nut_server", fty_nut_server_test, true, true, NULL },
     { "fty_nut_command_server", fty_nut_command_server_test, true, true, NULL },
-    { "fty_nut_configurator_server", fty_nut_configurator_server_test, true, true, NULL },
     { "fty_nut_configuration_protect_asset", fty_nut_configuration_protect_asset_test, true, true, NULL },
     { "fty_nut_configuration_helper", fty_nut_configuration_helper_test, true, true, NULL },
     { "fty_nut_configuration_repository", fty_nut_configuration_repository_test, true, true, NULL },

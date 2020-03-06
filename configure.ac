@@ -1814,16 +1814,6 @@ AC_ARG_ENABLE([fty-nut-configuration],
 AM_CONDITIONAL([ENABLE_FTY_NUT_CONFIGURATION], [test x$enable_fty_nut_configuration != xno])
 AM_COND_IF([ENABLE_FTY_NUT_CONFIGURATION], [AC_MSG_NOTICE([ENABLE_FTY_NUT_CONFIGURATION defined])])
 
-# Check for fty-nut-configurator intent
-AC_ARG_ENABLE([fty-nut-configurator],
-    AS_HELP_STRING([--enable-fty-nut-configurator],
-        [Compile and install 'fty-nut-configurator' [default=yes]]),
-    [enable_fty_nut_configurator=$enableval],
-    [enable_fty_nut_configurator=yes])
-
-AM_CONDITIONAL([ENABLE_FTY_NUT_CONFIGURATOR], [test x$enable_fty_nut_configurator != xno])
-AM_COND_IF([ENABLE_FTY_NUT_CONFIGURATOR], [AC_MSG_NOTICE([ENABLE_FTY_NUT_CONFIGURATOR defined])])
-
 # Check for fty_nut_selftest intent
 AC_ARG_ENABLE([fty_nut_selftest],
     AS_HELP_STRING([--enable-fty_nut_selftest],

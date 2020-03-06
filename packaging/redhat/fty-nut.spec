@@ -150,8 +150,6 @@ find %{buildroot} -name '*.la' | xargs rm -f
 %{_mandir}/man1/fty-nut-command*
 %{_bindir}/fty-nut-configuration
 %{_mandir}/man1/fty-nut-configuration*
-%{_bindir}/fty-nut-configurator
-%{_mandir}/man1/fty-nut-configurator*
 %{_bindir}/fty-nutconfig
 %{_bindir}/fty-dmf
 %config(noreplace) %{_sysconfdir}/fty-nut/fty-nut.cfg
