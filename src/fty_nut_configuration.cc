@@ -133,6 +133,18 @@ int main (int argc, char *argv [])
             getConfig(cfg.get(), "preferences/automaticPrioritySort",               configurationConnectorParameters.automaticPrioritySort);
             getConfig(cfg.get(), "preferences/preferDmfForSnmp",                    configurationManagerParameters.preferDmfForSnmp);
             getConfig(cfg.get(), "preferences/scanDummyUps",                        configurationManagerParameters.scanDummyUps);
+
+            for (const auto& filter : std::vector<std::pair<zconfig_t*, std::set<std::string>&>>({
+                { zconfig_locate(cfg.get(), "configuration/deviceTypes"), configurationConnectorParameters.deviceTypes },
+                { zconfig_locate(cfg.get(), "configuration/deviceSubtypes"), configurationConnectorParameters.deviceSubtypes },
+            })) {
+                if (filter.first) {
+                    filter.second.clear();
+                    for (zconfig_t* filterItem = zconfig_child(filter.first); filterItem; filterItem = zconfig_next(filterItem)) {
+                        filter.second.emplace(zconfig_value(filterItem));
+                    }
+                }
+            }
         }
         else {
             std::cerr << "Couldn't load config file " << configFile << std::endl;

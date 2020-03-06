@@ -68,6 +68,8 @@ ConfigurationConnector::Parameters::Parameters() :
     endpoint(MLM_ENDPOINT),
     agentName("fty-nut-configuration"),
     requesterName("fty-nut-configuration-requester"),
+    deviceTypes({ "device" }),
+    deviceSubtypes({ "epdu", "pdu", "sts", "ups" }),
     threadPoolSize(1),
     automaticPrioritySort(false),
     rescanOnSecurityWalletCreate(false),
@@ -99,12 +101,33 @@ ConfigurationConnector::ConfigurationConnector(Parameters parameters, Configurat
             std::placeholders::_1, std::placeholders::_2));
     m_consumerAccessor.setCallbackOnCreate(std::bind(&ConfigurationConnector::handleNotificationSecurityWalletCreate, this,
             std::placeholders::_1, std::placeholders::_2));
+
+    // Log device filters.
+    std::string types, subtypes;
+    for (const auto& filter : std::vector<std::pair<std::string&, const std::set<std::string>&>>({
+        { types, m_parameters.deviceTypes },
+        { subtypes, m_parameters.deviceSubtypes },
+    })) {
+        std::stringstream ss;
+        for (auto it = filter.second.begin(); it != filter.second.end(); it++) {
+            if (it != filter.second.begin()) {
+                ss << "; ";
+            }
+            ss << *it;
+        }
+        filter.first = ss.str();
+    }
+
+    log_debug("ConfigurationConnector matches asset types (%s) and subtypes (%s).", types.c_str(), subtypes.c_str());
 }
 
 void ConfigurationConnector::triggerRescan()
 {
     // Get list of assets.
     const std::string uuid = messagebus::generateUuid();
+    messagebus::UserData data { "GET", uuid };
+    std::copy(m_parameters.deviceSubtypes.begin(), m_parameters.deviceSubtypes.end(), std::back_inserter(data));
+
     messagebus::Message message {
         {
             { messagebus::Message::RAW, "" },
@@ -114,7 +137,7 @@ void ConfigurationConnector::triggerRescan()
             { messagebus::Message::TO, "asset-agent" },
             { messagebus::Message::REPLY_TO, m_parameters.requesterName },
         },
-        { "GET", uuid, "ups", "epdu", "sts" },
+        data,
     };
 
     m_msgBusRequester->sendRequest("asset-agent", message);
@@ -269,10 +292,13 @@ void ConfigurationConnector::handleAsset(const std::string& data, bool forceScan
     const std::string type    = fty_proto_aux_string(proto.get(), "type", "");
     const std::string subtype = fty_proto_aux_string(proto.get(), "subtype", "");
 
-    if (type == "device" && (subtype == "ups" || subtype == "pdu" || subtype == "epdu" || subtype == "sts")) {
+    if (m_parameters.deviceTypes.count(type) && m_parameters.deviceSubtypes.count(subtype)) {
         if (m_manager.processAsset(proto.get(), getCredentials(), forceScan, m_parameters.automaticPrioritySort)) {
             publishToDriverConnector({name});
         }
+    }
+    else {
+        log_trace("Ignoring filtered-out asset %s (type: %s, subtype: %s).", name.c_str(), type.c_str(), subtype.c_str());
     }
 }
 

@@ -8,6 +8,13 @@ configuration
     threadPoolScannerSize = 10
     threadPoolMalamuteSize = 1
     nutRepositoryDirectory = "/var/lib/fty/fty-nut/devices"
+    deviceTypes = ""
+        0 = "device"
+    deviceSubtypes = ""
+        0 = "epdu"
+        1 = "pdu"
+        2 = "sts"
+        3 = "ups"
 
 rescanPolicy
     onStart = "true"

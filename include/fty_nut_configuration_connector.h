@@ -42,6 +42,9 @@ class ConfigurationConnector
             std::string agentName;
             std::string requesterName;
 
+            std::set<std::string> deviceTypes;
+            std::set<std::string> deviceSubtypes;
+
             unsigned threadPoolSize;
             bool automaticPrioritySort;
 
