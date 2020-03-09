@@ -120,9 +120,9 @@ bool ConfigurationManager::processAsset(fty_proto_t* asset, const fty::nut::Secw
     const auto configurationsToUse = computeAssetConfigurationsToUse(asset, configurationsInDatabase);
     if (configurationsInUse != configurationsToUse) {
         m_repositoryNut.setConfigurations(name, configurationsToUse);
-        m_repositoryMemory.setConfigurations(name, configurationsInDatabase);
         needsUpdate = true;
     }
+    m_repositoryMemory.setConfigurations(name, configurationsInDatabase);
 
     log_info("ConfigurationManager: processed asset %s, %srequires update.", name.c_str(), needsUpdate ? "" : "does not ");
 
