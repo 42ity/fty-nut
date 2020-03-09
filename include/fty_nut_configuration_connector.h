@@ -127,6 +127,10 @@ class ConfigurationConnector
         fty::SocketSyncClient m_syncClient;
         mlm::MlmStreamClient m_streamClient;
         secw::ConsumerAccessor m_consumerAccessor;
+
+        std::mutex m_secwMapMutex;
+        bool m_secwMapCacheValid;
+        SecwMap m_secwMapCache;
 };
 
 }

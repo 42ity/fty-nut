@@ -63,7 +63,8 @@ ConfigurationConnector::ConfigurationConnector(Parameters parameters, Configurat
     m_msgBusRequester(messagebus::MlmMessageBus(m_parameters.endpoint, m_parameters.requesterName)),
     m_syncClient("fty-nut-configuration.socket"),
     m_streamClient(m_parameters.agentName, SECW_NOTIFICATIONS, 1000, m_parameters.endpoint),
-    m_consumerAccessor(secw::ConsumerAccessor(m_syncClient, m_streamClient))
+    m_consumerAccessor(secw::ConsumerAccessor(m_syncClient, m_streamClient)),
+    m_secwMapCacheValid(false)
 {
     m_msgBusReceiver->connect();
     m_msgBusReceiver->subscribe(FTY_PROTO_STREAM_ASSETS, std::bind(&ConfigurationConnector::handleNotificationAssets, this, std::placeholders::_1));
@@ -203,10 +204,16 @@ void ConfigurationConnector::handleNotificationAssets(messagebus::Message msg)
 
 void ConfigurationConnector::handleNotificationSecurityWalletCreate(const std::string& portfolio, secw::DocumentPtr doc)
 {
-    log_info("ConfigurationConnector::handleNotificationSecurityWalletCreate: receive message (portfolio=%s name=%s id=%s)",
+    log_info("ConfigurationConnector::handleNotificationSecurityWalletCreate: received message (portfolio=%s name=%s id=%s)",
                 portfolio.c_str(), doc->getName().c_str(), doc->getId().c_str());
 
-    if (m_parameters.rescanOnSecurityWalletCreate && doc->getType() != INTERNAL_CERTIFICATE_TYPE) {
+    {
+        // Invalidate security wallet cache.
+        std::lock_guard<std::mutex> lk(m_secwMapMutex);
+        m_secwMapCacheValid = false;
+    }
+
+    if (m_parameters.rescanOnSecurityWalletCreate) {
         log_info("Triggering refresh on security wallet create (portfolio=%s; name=%s; id=%s).",
                     portfolio.c_str(), doc->getName().c_str(), doc->getId().c_str());
         triggerRescan();
@@ -218,7 +225,13 @@ void ConfigurationConnector::handleNotificationSecurityWalletUpdate(const std::s
     log_trace("ConfigurationConnector::handleNotificationSecurityWalletUpdate: received message (portfolio=%s; name=%s; id=%s).",
                 portfolio.c_str(), newDoc->getName().c_str(), newDoc->getId().c_str());
 
-    if (m_parameters.rescanOnSecurityWalletUpdate && newDoc->getType() != INTERNAL_CERTIFICATE_TYPE) {
+    {
+        // Invalidate security wallet cache.
+        std::lock_guard<std::mutex> lk(m_secwMapMutex);
+        m_secwMapCacheValid = false;
+    }
+
+    if (m_parameters.rescanOnSecurityWalletUpdate) {
         log_info("Triggering refresh on security wallet update (portfolio=%s; name=%s; id=%s).",
                     portfolio.c_str(), newDoc->getName().c_str(), newDoc->getId().c_str());
         triggerRescan();
@@ -227,10 +240,16 @@ void ConfigurationConnector::handleNotificationSecurityWalletUpdate(const std::s
 
 void ConfigurationConnector::handleNotificationSecurityWalletDelete(const std::string& portfolio, secw::DocumentPtr doc)
 {
-    log_trace("ConfigurationConnector::handleNotificationSecurityWalletDelete: receive message (portfolio=%s; name=%s; id=%s).",
+    log_trace("ConfigurationConnector::handleNotificationSecurityWalletDelete: received message (portfolio=%s; name=%s; id=%s).",
                 portfolio.c_str(), doc->getName().c_str(), doc->getId().c_str());
 
-    if (m_parameters.rescanOnSecurityWalletDelete && doc->getType() != INTERNAL_CERTIFICATE_TYPE) {
+    {
+        // Invalidate security wallet cache.
+        std::lock_guard<std::mutex> lk(m_secwMapMutex);
+        m_secwMapCacheValid = false;
+    }
+
+    if (m_parameters.rescanOnSecurityWalletDelete) {
         log_info("Triggering refresh on security wallet delete (portfolio=%s; name=%s; id=%s).",
                     portfolio.c_str(), doc->getName().c_str(), doc->getId().c_str());
         triggerRescan();
@@ -281,22 +300,27 @@ void ConfigurationConnector::handleAsset(const std::string& data, bool forceScan
 
 SecwMap ConfigurationConnector::getCredentials()
 {
-    fty::nut::SecwMap result;
+    std::lock_guard<std::mutex> lk(m_secwMapMutex);
 
-    // Grab security documents.
-    try {
-        auto secCreds = m_consumerAccessor.getListDocumentsWithPrivateData("default", "discovery_monitoring");
+    if (!m_secwMapCacheValid) {
+        try {
+            // Security wallet cache outdated, grab security documents.
+            auto secCreds = m_consumerAccessor.getListDocumentsWithPrivateData("default", "discovery_monitoring");
 
-        for (const auto &i : secCreds) {
-            result.emplace(i->getId(), i);
+            m_secwMapCache.clear();
+            for (const auto &i : secCreds) {
+                m_secwMapCache.emplace(i->getId(), i);
+            }
+            m_secwMapCacheValid = true;
+
+            log_debug("Fetched %d credentials from security wallet.", m_secwMapCache.size());
         }
-        log_debug("Fetched %d credentials from security wallet.", result.size());
-    }
-    catch (std::exception &e) {
-        log_warning("Failed to fetch credentials from security wallet: %s", e.what());
+        catch (std::exception &e) {
+            log_warning("Failed to fetch credentials from security wallet: %s.", e.what());
+        }
     }
 
-    return result;
+    return m_secwMapCache;
 }
 
 }
