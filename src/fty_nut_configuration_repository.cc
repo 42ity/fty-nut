@@ -179,7 +179,7 @@ fty_nut_configuration_repository_test(bool verbose)
         assert(repo->getConfigurations("ups-9") == fty::nut::DeviceConfigurations({testConf}));
 
         repo->setConfigurations("ups-8", {});
-        assert(repo->listDevices() == std::set<std::string>({ "ups-9" }));        
+        assert(repo->listDevices() == std::set<std::string>({ "ups-9" }));
         repo->setConfigurations("ups-9", {});
         assert(repo->listDevices().empty());
 

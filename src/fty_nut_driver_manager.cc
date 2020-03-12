@@ -48,7 +48,7 @@ DriverManager::~DriverManager()
 }
 
 void DriverManager::refreshDrivers(const std::vector<std::string>& assetNames)
-{   
+{
     const auto knownDrivers = m_nutRepository.listDevices();
 
     std::lock_guard<std::mutex> lk(m_mutex);
@@ -112,12 +112,12 @@ void DriverManager::systemctl(const std::string &operation, It first, It last)
     MlmSubprocess::SubProcess systemd(_argv);
     if( systemd.run() ) {
         int result = systemd.wait();
-        log_info("sudo systemctl %s result %i (%s) for following units",
+        log_debug("sudo systemctl %s result %i (%s) for following units",
                  operation.c_str(),
                  result,
                  (result == 0 ? "ok" : "failed"));
         for (It it = first; it != last; ++it)
-            log_info(" - %s", it->c_str());
+            log_debug(" - %s", it->c_str());
     } else {
         log_error("can't run sudo systemctl %s for following units",
                   operation.c_str());
@@ -134,7 +134,7 @@ void DriverManager::updateNUTConfig()
     if( systemd.run() ) {
         int result = systemd.wait();
         if (result == 0) {
-            log_info("Command 'sudo fty-nutconfig' succeeded.");
+            log_debug("Command 'sudo fty-nutconfig' succeeded.");
         }
         else {
             log_error("Command 'sudo fty-nutconfig' failed with status=%i.", result);

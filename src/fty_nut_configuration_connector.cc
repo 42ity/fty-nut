@@ -130,12 +130,12 @@ void ConfigurationConnector::handleRequestAssets(messagebus::Message msg)
             if (msg.userData().size() < 2 || *(std::next(msg.userData().cbegin(), 1)) != "OK") {
                 throw std::runtime_error("handleRequestAssets: bad ASSETS message");
             }
-            
+
             msg.userData().pop_front(); // Pop UUID.
             msg.userData().pop_front(); // Pop status.
 
             std::set<std::string> devicesList;
-    
+
             for (const auto& assetName : msg.userData()) {
                 // Get detail of asset received
                 const std::string uuid = messagebus::generateUuid();
@@ -214,7 +214,7 @@ void ConfigurationConnector::handleNotificationSecurityWalletCreate(const std::s
     }
 
     if (m_parameters.rescanOnSecurityWalletCreate) {
-        log_info("Triggering refresh on security wallet create (portfolio=%s; name=%s; id=%s).",
+        log_debug("Triggering refresh on security wallet create (portfolio=%s; name=%s; id=%s).",
                     portfolio.c_str(), doc->getName().c_str(), doc->getId().c_str());
         triggerRescan();
     }
@@ -232,7 +232,7 @@ void ConfigurationConnector::handleNotificationSecurityWalletUpdate(const std::s
     }
 
     if (m_parameters.rescanOnSecurityWalletUpdate) {
-        log_info("Triggering refresh on security wallet update (portfolio=%s; name=%s; id=%s).",
+        log_debug("Triggering refresh on security wallet update (portfolio=%s; name=%s; id=%s).",
                     portfolio.c_str(), newDoc->getName().c_str(), newDoc->getId().c_str());
         triggerRescan();
     }
@@ -250,7 +250,7 @@ void ConfigurationConnector::handleNotificationSecurityWalletDelete(const std::s
     }
 
     if (m_parameters.rescanOnSecurityWalletDelete) {
-        log_info("Triggering refresh on security wallet delete (portfolio=%s; name=%s; id=%s).",
+        log_debug("Triggering refresh on security wallet delete (portfolio=%s; name=%s; id=%s).",
                     portfolio.c_str(), doc->getName().c_str(), doc->getId().c_str());
         triggerRescan();
     }
@@ -287,14 +287,19 @@ void ConfigurationConnector::handleAsset(const std::string& data, bool forceScan
     const std::string name    = fty_proto_name(proto.get());
     const std::string type    = fty_proto_aux_string(proto.get(), "type", "");
     const std::string subtype = fty_proto_aux_string(proto.get(), "subtype", "");
+    const std::string op      = fty_proto_operation(proto.get());
 
-    if (m_parameters.deviceTypes.count(type) && m_parameters.deviceSubtypes.count(subtype)) {
-        if (m_manager.processAsset(proto.get(), getCredentials(), forceScan, m_parameters.automaticPrioritySort)) {
-            publishToDriverConnector({name});
+    // Don't care about auxilliary asset messages.
+    if (op == FTY_PROTO_ASSET_OP_CREATE || op == FTY_PROTO_ASSET_OP_UPDATE || op == FTY_PROTO_ASSET_OP_DELETE) {
+        // Filter out uninteresting assets.
+        if (m_parameters.deviceTypes.count(type) && m_parameters.deviceSubtypes.count(subtype)) {
+            if (m_manager.processAsset(proto.get(), getCredentials(), forceScan, m_parameters.automaticPrioritySort)) {
+                publishToDriverConnector({name});
+            }
         }
-    }
-    else {
-        log_trace("Ignoring filtered-out asset %s (type: %s, subtype: %s).", name.c_str(), type.c_str(), subtype.c_str());
+        else {
+            log_trace("Ignoring filtered-out asset %s (type: %s, subtype: %s).", name.c_str(), type.c_str(), subtype.c_str());
+        }
     }
 }
 
@@ -313,7 +318,7 @@ SecwMap ConfigurationConnector::getCredentials()
             }
             m_secwMapCacheValid = true;
 
-            log_debug("Fetched %d credentials from security wallet.", m_secwMapCache.size());
+            log_trace("Fetched %d credentials from security wallet.", m_secwMapCache.size());
         }
         catch (std::exception &e) {
             log_warning("Failed to fetch credentials from security wallet: %s.", e.what());

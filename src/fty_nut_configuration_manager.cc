@@ -128,7 +128,7 @@ bool ConfigurationManager::processAsset(fty_proto_t* asset, const fty::nut::Secw
         m_repositoryMemory.setConfigurations(name, operation != FTY_PROTO_ASSET_OP_DELETE ? configurationsInDatabase : fty::nut::DeviceConfigurations());
     }
 
-    log_info("ConfigurationManager: processed asset %s, %srequires update.", name.c_str(), needsUpdate ? "" : "does not ");
+    log_info("ConfigurationManager: processed asset %s, %s update.", name.c_str(), needsUpdate ? "requires" : "does not require");
 
     return needsUpdate;
 }
@@ -189,7 +189,7 @@ void ConfigurationManager::scanAssetConfigurations(fty_proto_t* asset, const fty
 
     /// Step 2: Compute DB updates from detected and from known driver configurations.
     const auto results = computeAssetConfigurationUpdate(knownConfigurations, detectedConfigurations);
-    log_debug("Summary of device configurations after scan for asset %s:\n%s", assetName.c_str(), serialize(results).c_str());
+    log_trace("Summary of device configurations after scan for asset %s:\n%s", assetName.c_str(), serialize(results).c_str());
 
     /// Step 3: Mark existing configurations as working or non-working.
     for (const auto& updateOrder : std::vector<std::pair<const fty::nut::DeviceConfigurations&, bool>>({
@@ -211,7 +211,7 @@ void ConfigurationManager::scanAssetConfigurations(fty_proto_t* asset, const fty
                     // Found match, update database.
                     matched = true;
                     DBAssetsDiscovery::set_config_working(conn, itKnownDatabaseConfiguration->id, updateOrder.second);
-                    log_info("Marked device configuration ID %u for asset %s as %s.",
+                    log_trace("Marked device configuration ID %u for asset %s as %s.",
                         itKnownDatabaseConfiguration->id,
                         assetName.c_str(),
                         updateOrder.second ? "working" : "non-working"
@@ -221,7 +221,7 @@ void ConfigurationManager::scanAssetConfigurations(fty_proto_t* asset, const fty
 
                 ++itKnownDatabaseConfiguration;
             }
-            
+
             if (!matched) {
                 log_warning("Failed to match known detected device configuration to what's in database, configuration ignored:\n%s", serialize(configuration).c_str());
             }
@@ -240,7 +240,7 @@ void ConfigurationManager::scanAssetConfigurations(fty_proto_t* asset, const fty
             const auto secwIDs = fty::nut::matchSecurityDocumentIDsFromDeviceConfiguration(newConfiguration, credentials);
             const auto configID = insert_config(conn, assetName, bestDeviceConfigurationType->id, true, true, secwIDs, attributes);
 
-            log_info("Instanciated device configuration type \"%s\" for asset %s (id=%u, driver=%s, port=%s, secwIDs={%s}).",
+            log_debug("Instanciated device configuration type \"%s\" for asset %s (id=%u, driver=%s, port=%s, secwIDs={%s}).",
                     bestDeviceConfigurationType->prettyName.c_str(),
                     assetName.c_str(),
                     configID,
@@ -269,7 +269,7 @@ fty::nut::DeviceConfigurations ConfigurationManager::getAssetConfigurations(fty_
         try {
             auto conn = tntdb::connectCached(m_parameters.dbConn);
             candidateDatabaseConfigurations = DBAssetsDiscovery::get_candidate_config_list(conn, assetName);
-            
+
         } catch (std::runtime_error &e) {
             log_error("getAssetConfigurations: failed to get config for '%s': %s", assetName.c_str(), e.what());
         }
