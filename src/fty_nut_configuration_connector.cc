@@ -204,7 +204,7 @@ void ConfigurationConnector::handleNotificationAssets(messagebus::Message msg)
 
 void ConfigurationConnector::handleNotificationSecurityWalletCreate(const std::string& portfolio, secw::DocumentPtr doc)
 {
-    log_info("ConfigurationConnector::handleNotificationSecurityWalletCreate: received message (portfolio=%s name=%s id=%s)",
+    log_trace("ConfigurationConnector::handleNotificationSecurityWalletCreate: received message (portfolio=%s name=%s id=%s)",
                 portfolio.c_str(), doc->getName().c_str(), doc->getId().c_str());
 
     {

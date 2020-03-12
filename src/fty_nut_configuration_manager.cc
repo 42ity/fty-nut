@@ -122,7 +122,7 @@ bool ConfigurationManager::processAsset(fty_proto_t* asset, const fty::nut::Secw
         m_repositoryNut.setConfigurations(name, configurationsToUse);
         needsUpdate = true;
     }
-    m_repositoryMemory.setConfigurations(name, configurationsInDatabase);
+    m_repositoryMemory.setConfigurations(name, operation != FTY_PROTO_ASSET_OP_DELETE ? configurationsInDatabase : fty::nut::DeviceConfigurations());
 
     log_info("ConfigurationManager: processed asset %s, %srequires update.", name.c_str(), needsUpdate ? "" : "does not ");
 
