@@ -61,7 +61,7 @@ ConfigurationConnector::ConfigurationConnector(Parameters parameters, Configurat
     m_worker(m_parameters.threadPoolSize),
     m_msgBusReceiver(messagebus::MlmMessageBus(m_parameters.endpoint, m_parameters.agentName)),
     m_msgBusRequester(messagebus::MlmMessageBus(m_parameters.endpoint, m_parameters.requesterName)),
-    m_syncClient("fty-nut-configuration.socket"),
+    m_syncClient(SECW_SOCKET_PATH),
     m_streamClient(m_parameters.agentName, SECW_NOTIFICATIONS, 1000, m_parameters.endpoint),
     m_consumerAccessor(secw::ConsumerAccessor(m_syncClient, m_streamClient)),
     m_secwMapCacheValid(false)
