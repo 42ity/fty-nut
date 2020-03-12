@@ -90,39 +90,43 @@ bool ConfigurationManager::processAsset(fty_proto_t* asset, const fty::nut::Secw
 {
     const std::string name              = fty_proto_name(asset);
     const std::string operation         = fty_proto_operation(asset);
-
-    std::lock_guard<std::mutex> lk(m_assetMutexes[name]);
-    log_info("ConfigurationManager: processing asset %s.", name.c_str());
-
-    auto configurationsInDatabase       = getAssetConfigurations(asset, credentials);
-    const auto configurationsInMemory   = m_repositoryMemory.getConfigurations(name);
-    const auto configurationsInUse      = m_repositoryNut.getConfigurations(name);
-
-    const bool willScan = forceScan ||
-        (operation == FTY_PROTO_ASSET_OP_CREATE) ||
-        ((operation == FTY_PROTO_ASSET_OP_UPDATE) && (configurationsInDatabase != configurationsInMemory)) ||
-        ((operation != FTY_PROTO_ASSET_OP_DELETE) && configurationsInDatabase.empty());
-    const bool willSort = forceSort;
+    const std::string daisyChain        = fty_proto_ext_string(asset, "daisy_chain", "0");
     bool needsUpdate = false;
 
-    if (willScan || willSort) {
-        if (willScan) {
-            scanAssetConfigurations(asset, credentials);
-        }
-        if (willSort) {
-            automaticAssetConfigurationPrioritySort(asset, credentials);
+    std::lock_guard<std::mutex> lk(m_assetMutexes[name]);
+    log_info("ConfigurationManager: processing asset %s (daisychain=%s).", name.c_str(), daisyChain.c_str());
+
+    // Only handle host or standalone devices.
+    if (daisyChain == "0" || daisyChain == "1") {
+        auto configurationsInDatabase       = getAssetConfigurations(asset, credentials);
+        const auto configurationsInMemory   = m_repositoryMemory.getConfigurations(name);
+        const auto configurationsInUse      = m_repositoryNut.getConfigurations(name);
+
+        const bool willScan = forceScan ||
+            (operation == FTY_PROTO_ASSET_OP_CREATE) ||
+            ((operation == FTY_PROTO_ASSET_OP_UPDATE) && (configurationsInDatabase != configurationsInMemory)) ||
+            ((operation != FTY_PROTO_ASSET_OP_DELETE) && configurationsInDatabase.empty());
+        const bool willSort = forceSort;
+
+        if (willScan || willSort) {
+            if (willScan) {
+                scanAssetConfigurations(asset, credentials);
+            }
+            if (willSort) {
+                automaticAssetConfigurationPrioritySort(asset, credentials);
+            }
+
+            configurationsInDatabase = getAssetConfigurations(asset, credentials);
         }
 
-        configurationsInDatabase = getAssetConfigurations(asset, credentials);
+        // If NUT configuration in use is obsolete, update it.
+        const auto configurationsToUse = computeAssetConfigurationsToUse(asset, configurationsInDatabase);
+        if (configurationsInUse != configurationsToUse) {
+            m_repositoryNut.setConfigurations(name, configurationsToUse);
+            needsUpdate = true;
+        }
+        m_repositoryMemory.setConfigurations(name, operation != FTY_PROTO_ASSET_OP_DELETE ? configurationsInDatabase : fty::nut::DeviceConfigurations());
     }
-
-    // If NUT configuration in use is obsolete, update it.
-    const auto configurationsToUse = computeAssetConfigurationsToUse(asset, configurationsInDatabase);
-    if (configurationsInUse != configurationsToUse) {
-        m_repositoryNut.setConfigurations(name, configurationsToUse);
-        needsUpdate = true;
-    }
-    m_repositoryMemory.setConfigurations(name, operation != FTY_PROTO_ASSET_OP_DELETE ? configurationsInDatabase : fty::nut::DeviceConfigurations());
 
     log_info("ConfigurationManager: processed asset %s, %srequires update.", name.c_str(), needsUpdate ? "" : "does not ");
 
