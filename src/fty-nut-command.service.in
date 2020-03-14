@@ -23,4 +23,3 @@ ExecStart=@prefix@/bin/fty-nut-command -c @sysconfdir@/@PACKAGE@/fty-nut-command
 
 [Install]
 WantedBy=bios.target
-WantedBy=nut-server.service
