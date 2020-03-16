@@ -194,7 +194,6 @@ void ConfigurationManager::scanAssetConfigurations(fty_proto_t* asset, const fty
     /// Step 3: Mark existing configurations as working or non-working.
     for (const auto& updateOrder : std::vector<std::pair<const fty::nut::DeviceConfigurations&, bool>>({
         { results.workingConfigurations, true },
-        { results.unknownStateConfigurations, true },
         { results.nonWorkingConfigurations, false },
     })) {
         // Match scan results to known driver configuration in database.
