@@ -18,7 +18,7 @@ BindsTo=fty-security-wallet.service
 
 [Service]
 Type=simple
-# User=@uid@
+User=discovery-monitoring-daemon
 Restart=always
 EnvironmentFile=-@prefix@/share/bios/etc/default/bios
 EnvironmentFile=-@prefix@/share/bios/etc/default/bios__%n.conf
