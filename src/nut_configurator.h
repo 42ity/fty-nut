@@ -55,13 +55,13 @@ class NUTConfigurator {
     // accessor methods to manage this setting.
     bool manage_systemctl {false};
  private:
-    nutcommon::DeviceConfigurations::const_iterator getBestSnmpMibConfiguration(const nutcommon::DeviceConfigurations &configs);
-    nutcommon::DeviceConfigurations::const_iterator getNetXMLConfiguration(const nutcommon::DeviceConfigurations &configs);
-    nutcommon::DeviceConfigurations::const_iterator selectBestConfiguration(const nutcommon::DeviceConfigurations &configs);
+    fty::nut::DeviceConfigurations::const_iterator getBestSnmpMibConfiguration(const fty::nut::DeviceConfigurations &configs);
+    fty::nut::DeviceConfigurations::const_iterator getNetXMLConfiguration(const fty::nut::DeviceConfigurations &configs);
+    fty::nut::DeviceConfigurations::const_iterator selectBestConfiguration(const fty::nut::DeviceConfigurations &configs);
     void updateNUTConfig();
-    nutcommon::DeviceConfigurations getConfigurationFromUpsConfBlock(const std::string &name, const AutoConfigurationInfo &info);
-    nutcommon::DeviceConfigurations getConfigurationFromScanningDevice(const std::string &name, const AutoConfigurationInfo &info);
-    void updateDeviceConfiguration(const std::string &name, const AutoConfigurationInfo &info, nutcommon::DeviceConfiguration config);
+    fty::nut::DeviceConfigurations getConfigurationFromUpsConfBlock(const std::string &name, const AutoConfigurationInfo &info);
+    fty::nut::DeviceConfigurations getConfigurationFromScanningDevice(const std::string &name, const AutoConfigurationInfo &info);
+    void updateDeviceConfiguration(const std::string &name, const AutoConfigurationInfo &info, fty::nut::DeviceConfiguration config);
     static void systemctl( const std::string &operation, const std::string &service );
     template<typename It>
     static void systemctl( const std::string &operation, It first, It last );

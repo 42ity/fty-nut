@@ -60,8 +60,8 @@ int main(int argc, char *argv []) {
     const char* polling = NULL;
     const char *config_file = "/etc/fty-nut/fty-nut.cfg";
     zconfig_t *config = NULL;
-    ManageFtyLog::setInstanceFtylog("fty-nut");
 
+    ManageFtyLog::setInstanceFtylog("fty-nut", FTY_COMMON_LOGGING_DEFAULT_CFG);
 
     // Some systems define struct option with non-"const" "char *"
 #if defined(__GNUC__) || defined(__GNUG__)

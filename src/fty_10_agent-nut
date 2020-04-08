@@ -19,4 +19,4 @@ Cmnd_Alias FTY_NUTCONFIG   = /usr/bin/fty-nutconfig
 # Overall, what is currently allowed with different privileges?
 Cmnd_Alias FTY_AGENT_NUT_PROGS	= FTY_NUTCONFIG
 
-BIOS_USERS ALL=(BIOS_RUNAS) NOPASSWD:FTY_NUTCONFIG
+discovery-monitoring-daemon ALL=(BIOS_RUNAS) NOPASSWD:FTY_NUTCONFIG

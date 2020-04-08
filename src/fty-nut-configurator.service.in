@@ -7,9 +7,13 @@ Requires=network.target malamute.service
 After=network.target malamute.service
 PartOf=bios.target
 
+After=fty-asset.service
+Requires=fty-asset.service
+BindsTo=fty-asset.service
+
 [Service]
 Type=simple
-User=bios
+User=discovery-monitoring-daemon
 Restart=always
 EnvironmentFile=-@prefix@/share/bios/etc/default/bios
 EnvironmentFile=-@prefix@/share/bios/etc/default/bios__%n.conf

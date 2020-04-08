@@ -5,12 +5,15 @@
 Description=fty-nut service
 Requires=network.target malamute.service
 After=network.target malamute.service
-Before=fty-asset.service
+#WAS#Before=fty-asset.service
+After=fty-asset.service
+Requires=fty-asset.service
+BindsTo=fty-asset.service
 PartOf=bios.target
 
 [Service]
 Type=simple
-User=bios
+User=discovery-monitoring-daemon
 Restart=always
 EnvironmentFile=-@prefix@/share/bios/etc/default/bios
 EnvironmentFile=-@prefix@/share/bios/etc/default/bios__agent-nut.service.conf

@@ -45,7 +45,7 @@ NUTCONFIGDIR=/etc/nut
 NUTCONFIG="$NUTCONFIGDIR/ups.conf"
 
 mkdir -p "${BIOSCONFDIR}"
-chown -R bios:bios-infra "${BIOSCONFDIR}"
+chown -R discovery-monitoring-daemon:bios-infra "${BIOSCONFDIR}"
 
 TMPFILE=$(mktemp -p "${TMPDIR}" nutconfig.XXXXXXXXXX)
 
