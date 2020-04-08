@@ -3,10 +3,18 @@
 
 [Unit]
 Description=fty-nut-configuration service
-After=network.target
-# Requires=network.target
-# Conflicts=shutdown.target
-# PartOf=fty-nut.target
+Requires=network.target malamute.service
+After=network.target malamute.service
+PartOf=bios.target
+
+# This implies starting-after/stopping-before fty-db.target as well
+After=fty-asset.service
+Requires=fty-asset.service
+BindsTo=fty-asset.service
+
+After=fty-security-wallet.service
+Requires=fty-security-wallet.service
+BindsTo=fty-security-wallet.service
 
 [Service]
 Type=simple
@@ -18,5 +26,4 @@ ExecStart=@prefix@/bin/fty-nut-configuration -c @sysconfdir@/@PACKAGE@/fty-nut-c
 Restart=always
 
 [Install]
-WantedBy=multi-user.target
-# WantedBy=fty-nut.target
+WantedBy=bios.target
