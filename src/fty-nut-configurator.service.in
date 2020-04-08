@@ -11,6 +11,10 @@ After=fty-asset.service
 Requires=fty-asset.service
 BindsTo=fty-asset.service
 
+After=fty-security-wallet.service
+Requires=fty-security-wallet.service
+BindsTo=fty-security-wallet.service
+
 [Service]
 Type=simple
 User=discovery-monitoring-daemon
