@@ -85,12 +85,14 @@ static bool isEpdu(const nutcommon::DeviceConfiguration &config)
 
 static bool isAts(const nutcommon::DeviceConfiguration &config)
 {
+    static const std::set<std::string> atsMibs = {
+        { "eaton_ats16" }, { "eaton_ats16_g2" }, { "eaton_ats30" }, { "apc_ats" }
+    } ;
+
     // Match MIBs.
     auto mibsIt = config.find("mibs");
     if (mibsIt != config.end()) {
-        // Sadly, no std::string::ends_with() yet...
-        const auto idx = mibsIt->second.find_last_of("ats");
-        if ((idx != std::string::npos) && (idx == mibsIt->second.size() - 3)) {
+        if (atsMibs.count(mibsIt->second)) {
             return true;
         }
     }
