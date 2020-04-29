@@ -247,17 +247,19 @@ void NUTAgent::advertisePhysics ()
         // send status and "in progress" test result as a bitmap
         if (device.second.hasProperty ("status.ups")) {
             std::string status_s = device.second.property ("status.ups");
-            std::string test_s = (device.second.hasProperty ("ups.test.result")?
-                device.second.property ("ups.test.result"):
-                "no test initiated");
-            uint16_t    status_i = upsstatus_to_int (status_s, test_s);
-            if (has_alarms) {
-                status_i |= STATUS_ALARM;
+            if (!status_s.empty()) {
+                std::string test_s = (device.second.hasProperty ("ups.test.result")?
+                    device.second.property ("ups.test.result"):
+                    "no test initiated");
+                uint16_t    status_i = upsstatus_to_int (status_s, test_s);
+                if (has_alarms) {
+                    status_i |= STATUS_ALARM;
+                }
+                int r = fty::shm::write_metric(device.second.assetName (), "status.ups", std::to_string(status_i), " ", _ttl);
+                if( r != 0 )
+                    log_error("failed to send measurement %s result %i", subject.c_str(), r);
+                device.second.setChanged ("status.ups", false);
             }
-            int r = fty::shm::write_metric(device.second.assetName (), "status.ups", std::to_string(status_i), " ", _ttl);
-            if( r != 0 )
-                log_error("failed to send measurement %s result %i", subject.c_str(), r);
-            device.second.setChanged ("status.ups", false);
         }
         
         //send epdu outlet status as bitmap
