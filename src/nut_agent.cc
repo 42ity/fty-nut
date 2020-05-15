@@ -255,7 +255,12 @@ void NUTAgent::advertisePhysics ()
                 if (has_alarms) {
                     status_i |= STATUS_ALARM;
                 }
-                int r = fty::shm::write_metric(device.second.assetName (), "status.ups", std::to_string(status_i), " ", _ttl);
+                // hotfix IPMVAL-1889 (status.ups and data-stale) > increase ttl from 60 to 90 sec.
+                // _ttl is 60
+                //    - see cfg file "nut/polling_interval = 30"
+                //    - see ttl computation (2*polling_interval) in actor_commands.cc cmd=ACTION_POLLING
+                // here we increase _ttl of 50%, to pass metric ttl to 90
+                int r = fty::shm::write_metric(device.second.assetName (), "status.ups", std::to_string(status_i), " ", _ttl * 3 / 2);
                 if( r != 0 )
                     log_error("failed to send measurement %s result %i", subject.c_str(), r);
                 device.second.setChanged ("status.ups", false);
