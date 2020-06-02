@@ -202,7 +202,7 @@ ups_status_test (bool verbose)
     for (int i = 0; test_vector[i].status; i++) {
         uint16_t result = upsstatus_to_int(test_vector[i].status, "");
         if (verbose) {
-            printf("status %+12s (expected 0x%04x), result: 0x%04x (%-12s)\n",
+            printf("status %12s (expected 0x%04x), result: 0x%04x (%12s)\n",
                 test_vector[i].status, test_vector[i].result, result, upsstatus_to_string(result).c_str());
         }
         assert(result == test_vector[i].result);
