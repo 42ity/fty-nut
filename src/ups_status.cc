@@ -29,6 +29,7 @@
 #include "ups_status.h"
 #include <fty_common_base.h>
 #include <string.h>
+#include <assert.h>
 
 // following definition is taken as it is from network ups tool project (dummy-ups.h):
 typedef struct {
@@ -105,6 +106,19 @@ upsstatus_to_int (const char *status, const char *test_result)
         //add calibration (CAL) flag to ups status
         result |= s_upsstatus_single_status_to_int ("CAL");
     }
+
+    // IPMVAL-1889: in some rare case, OL *and* OB bits are unset.
+    // This implies unexpected up/down trigger of onbattery & onacpoweroutage alarms, based on status.ups metric.
+    // In such a case, we try to set OL/OB bits knowing CHRG/DISCHRG bits.
+    if (!(result & (STATUS_OL | STATUS_OB))) { // !OL && !OB
+        if ((result & STATUS_CHRG) && !(result & STATUS_DISCHRG)) { // CHRG && !DISCHRG
+            result |= STATUS_OL; // set OL
+        }
+        else if (!(result & STATUS_CHRG) && (result & STATUS_DISCHRG)) { // !CHRG && DISCHRG
+            result |= STATUS_OB; // set OB
+        }
+    }
+
     return result;
 }
 
@@ -146,6 +160,54 @@ ups_status_test (bool verbose)
     printf (" * ups_status: ");
 
     //  @selftest
+
+    struct {
+        const char* status;
+        uint16_t result;
+    } test_vector[] = {
+        { "",        0 },
+        { "foo",     0 },
+        { "CAL",     STATUS_CAL },
+        { "TRIM",    STATUS_TRIM },
+        { "BOOST",   STATUS_BOOST },
+        { "OL",      STATUS_OL },
+        { "OB",      STATUS_OB },
+        { "OVER",    STATUS_OVER },
+        { "LB",      STATUS_LB },
+        { "RB",      STATUS_RB },
+        { "BYPASS",  STATUS_BYPASS },
+        { "OFF",     STATUS_OFF },
+    //  { "CHRG",    STATUS_CHRG}, // see WA IPMVAL-1889
+    //  { "DISCHRG", STATUS_DISCHRG},
+        { "HB",      STATUS_HB },
+        { "FSD",     STATUS_FSD },
+        { "ALARM",   STATUS_ALARM },
+
+        // WA IPMVAL-1889
+        { "OL",           STATUS_OL },
+        { "OL DISCHRG",   STATUS_OL | STATUS_DISCHRG },
+        { "OL CHRG",      STATUS_OL | STATUS_CHRG },
+        { "OB",           STATUS_OB },
+        { "OB DISCHRG",   STATUS_OB | STATUS_DISCHRG },
+        { "OB CHRG",      STATUS_OB | STATUS_CHRG },
+        { "CHRG DISCHRG", STATUS_CHRG | STATUS_DISCHRG },
+        { "CHRG",         STATUS_OL | STATUS_CHRG}, // fix active (set OL)
+        { "DISCHRG",      STATUS_OB | STATUS_DISCHRG}, // fix active (set OB)
+
+        { NULL, 0 } //term
+    };
+
+    if (verbose) printf("\n");
+
+    for (int i = 0; test_vector[i].status; i++) {
+        uint16_t result = upsstatus_to_int(test_vector[i].status, "");
+        if (verbose) {
+            printf("status %+12s (expected 0x%04x), result: 0x%04x (%-12s)\n",
+                test_vector[i].status, test_vector[i].result, result, upsstatus_to_string(result).c_str());
+        }
+        assert(result == test_vector[i].result);
+    }
+
     //  @end
     printf ("OK\n");
 }
