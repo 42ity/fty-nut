@@ -247,6 +247,7 @@ void NUTAgent::advertisePhysics ()
         // send status and "in progress" test result as a bitmap
         if (device.second.hasProperty ("status.ups")) {
             std::string status_s = device.second.property ("status.ups");
+            log_debug("%s status.ups: \"%s\"", device.second.assetName().c_str(), status_s.c_str());
             if (!status_s.empty()) { // fix IPMVAL-1889 (empty on data-stale)
                 std::string test_s = (device.second.hasProperty ("ups.test.result")?
                     device.second.property ("ups.test.result"):
