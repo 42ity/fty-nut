@@ -87,7 +87,7 @@ std::vector<std::string> getNetworkAddressesFromAsset(fty_proto_t* asset)
     return addresses;
 }
 
-std::string serialize( const ComputeAssetConfigurationUpdateResult& results)
+std::string serialize(const ComputeAssetConfigurationUpdateResult& results)
 {
     std::stringstream ss;
 
