@@ -294,6 +294,7 @@ void NUTAgent::advertiseInventory()
     for (auto& device : _deviceList) {
         std::string log;
         zhash_t *inventory = zhash_new ();
+        zhash_autofree(inventory);
         // !advertiseAll = advetise_Not_OnlyChanged
         for (auto& item : device.second.inventory (!advertiseAll) ) {
             if (item.first == "status.ups") {
