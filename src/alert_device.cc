@@ -347,7 +347,9 @@ Device::publishRule (mlm_client_t *client, DeviceAlert& alert)
     zmsg_t *message = zmsg_new ();
     assert (message);
     const char *alert_name = alert.name.c_str ();
-    const char *asset_name = assetName ().c_str ();
+
+    std::string assetNameStr = assetName();
+    const char *asset_name = assetNameStr.c_str ();
 
     char *ruleName = zsys_sprintf ("%s@%s", alert_name, asset_name);
     char *rule = zsys_sprintf (
