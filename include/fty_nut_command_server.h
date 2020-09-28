@@ -35,6 +35,7 @@ class NutCommandManager {
         NutCommandManager(const std::string& nutHost, const std::string& nutUsername, const std::string& nutPassword, const std::string& dbConn);
         ~NutCommandManager() = default;
 
+        dto::commands::GetAssetsByCommandReplyDto getAssetsByCommand(const std::string &command);
         dto::commands::CommandDescriptions getCommands(const std::string &asset);
         dto::commands::Commands computeCommands(const dto::commands::Commands &jobs);
         void performCommands(const dto::commands::Commands &jobs);
@@ -74,6 +75,7 @@ class NutCommandConnector {
         void handleRequest(messagebus::Message msg);
         void sendReply(const messagebus::MetaData& metadataRequest, bool status, const messagebus::UserData& dataReply);
 
+        messagebus::UserData requestGetAssetsByCommand(messagebus::UserData data);
         messagebus::UserData requestGetCommands(messagebus::UserData data);
         messagebus::UserData requestPerformCommands(messagebus::UserData data);
 

@@ -446,6 +446,42 @@ NutCommandManager::NutCommandManager(const std::string& nutHost, const std::stri
 {
 }
 
+dto::commands::GetAssetsByCommandReplyDto NutCommandManager::getAssetsByCommand(const std::string &command) {
+    dto::commands::GetAssetsByCommandReplyDto reply;
+
+    // Connect to stuff.
+    auto conn = tntdb::connectCached(m_dbConn);
+    nut::TcpClient client;
+    connectToNutServer(client, m_nutHost, m_nutUsername, m_nutPassword);
+
+    auto assets = DBAssets::list_devices_with_status(conn, "active");
+
+    for (const auto& asset : assets) {
+        dto::commands::CommandDescriptions commandDescriptions;
+
+        // Prepare our data query function helpers.
+        DeviceCommandRequester deviceCommandRequester = std::bind(deviceCommandRequesterNut, std::ref(client), std::placeholders::_1);
+        DaisyChainRequester daisyChainRequester = std::bind(daisyChainRequesterDatabase, std::ref(conn), std::placeholders::_1);
+
+        // Query native power commands.
+        auto nativeCommands = queryNativePowerCommands(deviceCommandRequester, daisyChainRequester, asset);
+        commandDescriptions.insert(commandDescriptions.end(), std::make_move_iterator(nativeCommands.begin()), std::make_move_iterator(nativeCommands.end()));
+
+        // Query power chain power commands.
+        auto powerchainCommands = queryPowerChainPowerCommands(asset);
+        commandDescriptions.insert(commandDescriptions.end(), std::make_move_iterator(powerchainCommands.begin()), std::make_move_iterator(powerchainCommands.end()));
+
+        for (const auto& commandDescription : commandDescriptions) {
+            if (commandDescription.command == command) {
+                reply.emplace_back(asset);
+                break;
+            }
+        }
+    }
+
+    return reply;
+}
+
 dto::commands::CommandDescriptions NutCommandManager::getCommands(const std::string &asset) {
     dto::commands::CommandDescriptions reply;
 
@@ -550,6 +586,7 @@ NutCommandConnector::NutCommandConnector(NutCommandConnector::Parameters params)
     m_parameters(params),
     m_manager(params.nutHost, params.nutUsername, params.nutPassword, params.dbUrl),
     m_dispatcher({
+        { "GetAssetsByCommand", std::bind(&NutCommandConnector::requestGetAssetsByCommand, this, std::placeholders::_1) },
         { "GetCommands", std::bind(&NutCommandConnector::requestGetCommands, this, std::placeholders::_1) },
         { "PerformCommands", std::bind(&NutCommandConnector::requestPerformCommands, this, std::placeholders::_1) }
     }),
@@ -614,6 +651,29 @@ messagebus::UserData NutCommandConnector::requestGetCommands(messagebus::UserDat
     }
 
     reply << commands;
+    return reply;
+}
+
+messagebus::UserData NutCommandConnector::requestGetAssetsByCommand(messagebus::UserData data) {
+    dto::commands::GetAssetsByCommandQueryDto query;
+    data >> query;
+
+    messagebus::UserData reply;
+    auto commands = m_manager.getAssetsByCommand(query.command);
+
+    {
+        std::stringstream logMessage;
+        logMessage << "Command '" << query.command << "' is supported by the following assets:" << std::endl;
+        for (const auto& i : commands) {
+            logMessage << "\t" << i << std::endl;
+        }
+        log_trace("%s", logMessage.str().c_str());
+    }
+
+    // FIXME: template substitution fails.
+    for (const auto& i : commands) {
+        reply.push_back(i);
+    }
     return reply;
 }
 
