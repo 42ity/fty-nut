@@ -63,6 +63,13 @@ AssetState::Asset::Asset(fty_proto_t* message)
         daisychain_ = std::stoi(fty_proto_ext_string(message,
                     "daisy_chain", ""));
     } catch (...) { }
+    zhash_t* ext = fty_proto_get_ext(message);
+    for (auto val = reinterpret_cast<char* const>(zhash_first(ext)); val; val = reinterpret_cast<char* const>(zhash_next(ext))) {
+        if (strncmp(zhash_cursor(ext), "endpoint.1.", 11) == 0) {
+            endpoint_.emplace(zhash_cursor(ext)+11, val);
+        }
+    }
+    zhash_destroy(&ext);
 }
 
 bool AssetState::handleAssetMessage(fty_proto_t* message)

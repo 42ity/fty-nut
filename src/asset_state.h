@@ -79,6 +79,14 @@ public:
         {
             return daisychain_;
         }
+        bool has_endpoint() const
+        {
+            return !endpoint_.empty();
+        }
+        const std::map<std::string, std::string>& endpoint() const
+        {
+            return endpoint_;
+        }
     private:
         std::string name_;
         std::string IP_;
@@ -86,6 +94,7 @@ public:
         std::string subtype_;
         std::string location_;
         std::string upsconf_block_;
+        std::map<std::string, std::string> endpoint_;
         double max_current_;
         double max_power_;
         bool have_upsconf_block_;

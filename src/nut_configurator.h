@@ -60,6 +60,7 @@ class NUTConfigurator {
     fty::nut::DeviceConfigurations::const_iterator selectBestConfiguration(const fty::nut::DeviceConfigurations &configs);
     void updateNUTConfig();
     fty::nut::DeviceConfigurations getConfigurationFromUpsConfBlock(const std::string &name, const AutoConfigurationInfo &info);
+    fty::nut::DeviceConfigurations getConfigurationFromEndpoint(const std::string &name, const AutoConfigurationInfo &info);
     fty::nut::DeviceConfigurations getConfigurationFromScanningDevice(const std::string &name, const AutoConfigurationInfo &info);
     void updateDeviceConfiguration(const std::string &name, const AutoConfigurationInfo &info, fty::nut::DeviceConfiguration config);
     static void systemctl( const std::string &operation, const std::string &service );

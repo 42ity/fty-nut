@@ -281,6 +281,63 @@ fty::nut::DeviceConfigurations NUTConfigurator::getConfigurationFromUpsConfBlock
     return configs;
 }
 
+fty::nut::DeviceConfigurations NUTConfigurator::getConfigurationFromEndpoint(const std::string &name, const AutoConfigurationInfo &info)
+{
+    const int scanTimeout = 10;
+    const std::string& IP = info.asset->IP();
+    fty::nut::DeviceConfigurations configs;
+
+    if (IP.empty()) {
+        log_error("Device '%s' has no IP address, cannot scan it.", name.c_str());
+    }
+    else {
+        // Grab security documents.
+        std::map<secw::Id, secw::DocumentPtr> secws;
+        try {
+            fty::SocketSyncClient secwSyncClient(SECW_SOCKET_PATH);
+
+            auto client = secw::ConsumerAccessor(secwSyncClient);
+            auto secCreds = client.getListDocumentsWithPrivateData("default", "discovery_monitoring");
+
+            for (const auto &i : secCreds) {
+                secws.emplace(i->getId(), i);
+            }
+            log_debug("Fetched %d credentials from security wallet.", secCreds.size());
+
+            auto const& endpoint = info.asset->endpoint();
+            if (endpoint.at("protocol") == "nut_xml_pdc") {
+                std::string port = IP;
+                if (endpoint.count("port")) {
+                    port = port + ":" + endpoint.at("port");
+                }
+                configs = { {
+                    { "driver", "netxml-ups" },
+                    { "port", port },
+                } };
+            }
+            else if (endpoint.at("protocol") == "nut_snmp") {
+                std::string port = IP;
+                if (endpoint.count("port")) {
+                    port = port + ":" + endpoint.at("port");
+                }
+                auto config = fty::nut::convertSecwDocumentToKeyValues(secws.at(endpoint.at("nut_snmp.secw_credential_id")), "snmp-ups");
+                config.emplace("driver", "snmp-ups");
+                config.emplace("port", port);
+                configs = { config };
+            }
+            else {
+                throw std::runtime_error((std::string("Unknown protocol ")+endpoint.at("protocol")).c_str());
+            }
+        }
+        catch (std::exception &e) {
+            log_warning("Failed to instanciate NUT configuration from endpoint: %s", e.what());
+        }
+    }
+
+    return configs;
+}
+
+
 fty::nut::DeviceConfigurations NUTConfigurator::getConfigurationFromScanningDevice(const std::string &name, const AutoConfigurationInfo &info)
 {
     const int scanTimeout = 10;
@@ -395,7 +452,7 @@ void NUTConfigurator::updateDeviceConfiguration(const std::string &name, const A
     }
 
     if (oldConfiguration != newConfiguration) {
-        log_info("Configuration file '%s' is outdated, creating new one.", configFilePath.c_str());
+        log_info("Configuration file '%s' is outdated, creating new one with driver '%s', port '%s'.", configFilePath.c_str(), config["driver"].c_str(), config["port"].c_str());
 
         std::ofstream cfgFile(configFilePath);
         cfgFile << newConfiguration;
@@ -417,20 +474,30 @@ bool NUTConfigurator::configure(const std::string &name, const AutoConfiguration
 
     if (info.asset->have_upsconf_block()) {
         // Device has a predefined configuration block.
+        log_debug("Device '%s' has upsconf_block property.", name.c_str());
         configs = getConfigurationFromUpsConfBlock(name, info);
+    }
+    else if (info.asset->has_endpoint()) {
+        // Device has an endpoint.
+        log_debug("Device '%s' has an endpoint configured.", name.c_str());
+        configs = getConfigurationFromEndpoint(name, info);
     }
     else {
         // Device has to be scanned.
+        log_debug("Device '%s' is not configured, falling back to legacy algorithm.", name.c_str());
         configs = getConfigurationFromScanningDevice(name, info);
+        auto it = selectBestConfiguration(configs);
+        if (it != configs.end()) {
+            configs = { *it };
+        }
     }
 
-    auto it = selectBestConfiguration(configs);
-    if (it == configs.end()) {
+    if (configs.empty()) {
         log_error("No suitable configuration found for device '%s'.", name.c_str());
         return false; // Try again later.
     }
 
-    updateDeviceConfiguration(name, info, *it);
+    updateDeviceConfiguration(name, info, configs[0]);
     return true;
 }
 
