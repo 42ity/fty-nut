@@ -35,6 +35,10 @@ public:
         // never modified, since different instances of AssetState may
         // share a pointer to it
         explicit Asset(fty_proto_t *message);
+        ~Asset()
+        {
+            fty_proto_destroy(&proto_);
+        }
         const std::string& name() const
         {
             return name_;
@@ -87,6 +91,10 @@ public:
         {
             return endpoint_;
         }
+        fty_proto_t* proto() const
+        {
+            return proto_;
+        }
     private:
         std::string name_;
         std::string IP_;
@@ -100,6 +108,7 @@ public:
         bool have_upsconf_block_;
         bool upsconf_enable_dmf_;
         int daisychain_;
+        fty_proto_t* proto_;
     };
     // Update the state from a received fty_proto message. Return true if an
     // update has actually been performed, false if the message was skipped

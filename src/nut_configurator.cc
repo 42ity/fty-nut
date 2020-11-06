@@ -337,8 +337,7 @@ fty::nut::DeviceConfigurations NUTConfigurator::getConfigurationFromEndpoint(con
     return configs;
 }
 
-
-fty::nut::DeviceConfigurations NUTConfigurator::getConfigurationFromScanningDevice(const std::string &name, const AutoConfigurationInfo &info)
+void NUTConfigurator::updateAssetFromScanningDevice(const std::string &name, const AutoConfigurationInfo &info)
 {
     const int scanTimeout = 10;
     const std::string& IP = info.asset->IP();
@@ -351,6 +350,7 @@ fty::nut::DeviceConfigurations NUTConfigurator::getConfigurationFromScanningDevi
         const bool use_dmf = info.asset->upsconf_enable_dmf();
         fty::nut::ScanProtocol snmpProtocol = use_dmf ? fty::nut::SCAN_PROTOCOL_SNMP_DMF : fty::nut::SCAN_PROTOCOL_SNMP;
 
+        std::vector<secw::DocumentPtr> secCreds;
         std::vector<secw::DocumentPtr> credentialsV3;
         std::vector<secw::DocumentPtr> credentialsV1;
 
@@ -359,7 +359,7 @@ fty::nut::DeviceConfigurations NUTConfigurator::getConfigurationFromScanningDevi
             fty::SocketSyncClient secwSyncClient(SECW_SOCKET_PATH);
 
             auto client = secw::ConsumerAccessor(secwSyncClient);
-            auto secCreds = client.getListDocumentsWithPrivateData("default", "discovery_monitoring");
+            secCreds = client.getListDocumentsWithPrivateData("default", "discovery_monitoring");
 
             for (const auto &i : secCreds) {
                 auto credV3 = secw::Snmpv3::tryToCast(i);
@@ -410,9 +410,85 @@ fty::nut::DeviceConfigurations NUTConfigurator::getConfigurationFromScanningDevi
             auto configsNetXML = fty::nut::scanDevice(fty::nut::SCAN_PROTOCOL_NETXML, IP, scanTimeout);
             configs.insert(configs.end(), configsNetXML.begin(), configsNetXML.end());
         }
-    }
 
-    return configs;
+        auto it = selectBestConfiguration(configs);
+        if (it != configs.end()) {
+            MlmClientGuard mb_client(mlm_client_new());
+            if (!mb_client) {
+                log_error("mlm_client_new() failed");
+                return;
+            }
+            if (mlm_client_connect(mb_client, MLM_ENDPOINT, 5000, "nut-configurator-updater") < 0) {
+                log_error("client %s failed to connect", "nut-configurator-updater");
+                return;
+            }
+            zmsg_t *msg = zmsg_new();
+            zmsg_addstr (msg, "GET");
+            zmsg_addstr (msg, "");
+            zmsg_addstr (msg, name.c_str());
+            if (mlm_client_sendto(mb_client, "asset-agent", "ASSET_DETAIL", NULL, 10, &msg) < 0) {
+                log_error("client %s failed to send query", "nut-configurator-updater");
+                return;
+            }
+            log_debug("client %s sent query for asset %s", "nut-configurator-updater", name.c_str());
+            zmsg_t *response = mlm_client_recv(mb_client);
+            if(!response) {
+                log_error("client %s empty response", "nut-configurator-updater");
+                return;
+            }
+            char* uuid = zmsg_popstr(response);
+            zstr_free(&uuid);
+            fty_proto_t* proto = fty_proto_decode(&response);
+            log_debug("client %s got response for asset %s", "nut-configurator-updater", name.c_str());
+            if(!proto) {
+                log_error("client %s failed query request", "nut-configurator-updater");
+                return;
+            }
+
+            fty_proto_set_operation(proto, FTY_PROTO_ASSET_OP_UPDATE);
+            if (it->at("driver") == "netxml-ups") {
+                fty_proto_ext_insert(proto, "endpoint.1.protocol", "nut_xml_pdc");
+                fty_proto_ext_insert(proto, "endpoint.1.port", "80");
+            }
+            else {
+                fty_proto_ext_insert(proto, "endpoint.1.protocol", "nut_snmp");
+                fty_proto_ext_insert(proto, "endpoint.1.port", "161");
+                for (const auto& i : secCreds) {
+                    try {
+                        auto keyvalues = fty::nut::convertSecwDocumentToKeyValues(i, "snmp-ups");
+                        if (std::includes(it->begin(), it->end(), keyvalues.begin(), keyvalues.end())) {
+                            fty_proto_ext_insert(proto, "endpoint.1.nut_snmp.secw_credential_id", i->getId().c_str());
+                            break;
+                        }
+                    }
+                    catch (...) {}
+                }
+            }
+
+            msg = fty_proto_encode(&proto);
+            zmsg_pushstrf (msg, "%s", "READWRITE");
+            if (mlm_client_sendto(mb_client, "asset-agent", "ASSET_MANIPULATION", NULL, 10, &msg) < 0) {
+                log_error("client %s failed to send update", "nut-configurator-updater");
+                return;
+            }
+            log_debug("client %s sent update request for asset %s", "nut-configurator-updater", name.c_str());
+            response = mlm_client_recv(mb_client);
+            if(!response) {
+                log_error("client %s empty response", "nut-configurator-updater");
+                return;
+            }
+            char *str_resp = zmsg_popstr(response);
+            log_debug("client %s got response %s for asset %s", "nut-configurator-updater", str_resp, name.c_str());
+            zmsg_destroy(&response);
+            if(!str_resp || !streq(str_resp, "OK")) {
+                zstr_free(&str_resp);
+                log_error("client %s failed update request", "nut-configurator-updater");
+                return;
+            }
+            zstr_free(&str_resp);
+            log_info("Persisted endpoint configuration from legacy scan algorithm for asset %s", name.c_str());
+        }
+    }
 }
 
 void NUTConfigurator::updateDeviceConfiguration(const std::string &name, const AutoConfigurationInfo &info, fty::nut::DeviceConfiguration config)
@@ -485,11 +561,7 @@ bool NUTConfigurator::configure(const std::string &name, const AutoConfiguration
     else {
         // Device has to be scanned.
         log_debug("Device '%s' is not configured, falling back to legacy algorithm.", name.c_str());
-        configs = getConfigurationFromScanningDevice(name, info);
-        auto it = selectBestConfiguration(configs);
-        if (it != configs.end()) {
-            configs = { *it };
-        }
+        updateAssetFromScanningDevice(name, info);
     }
 
     if (configs.empty()) {

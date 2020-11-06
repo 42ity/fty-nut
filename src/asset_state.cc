@@ -70,6 +70,7 @@ AssetState::Asset::Asset(fty_proto_t* message)
         }
     }
     zhash_destroy(&ext);
+    proto_ = fty_proto_dup(message);
 }
 
 bool AssetState::handleAssetMessage(fty_proto_t* message)

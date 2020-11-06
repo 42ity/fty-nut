@@ -61,7 +61,7 @@ class NUTConfigurator {
     void updateNUTConfig();
     fty::nut::DeviceConfigurations getConfigurationFromUpsConfBlock(const std::string &name, const AutoConfigurationInfo &info);
     fty::nut::DeviceConfigurations getConfigurationFromEndpoint(const std::string &name, const AutoConfigurationInfo &info);
-    fty::nut::DeviceConfigurations getConfigurationFromScanningDevice(const std::string &name, const AutoConfigurationInfo &info);
+    void updateAssetFromScanningDevice(const std::string &name, const AutoConfigurationInfo &info);
     void updateDeviceConfiguration(const std::string &name, const AutoConfigurationInfo &info, fty::nut::DeviceConfiguration config);
     static void systemctl( const std::string &operation, const std::string &service );
     template<typename It>
