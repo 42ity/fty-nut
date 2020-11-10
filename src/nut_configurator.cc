@@ -283,7 +283,6 @@ fty::nut::DeviceConfigurations NUTConfigurator::getConfigurationFromUpsConfBlock
 
 fty::nut::DeviceConfigurations NUTConfigurator::getConfigurationFromEndpoint(const std::string &name, const AutoConfigurationInfo &info)
 {
-    const int scanTimeout = 10;
     const std::string& IP = info.asset->IP();
     fty::nut::DeviceConfigurations configs;
 
