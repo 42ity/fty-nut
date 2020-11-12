@@ -305,7 +305,7 @@ fty::nut::DeviceConfigurations NUTConfigurator::getConfigurationFromEndpoint(con
 
             auto const& endpoint = info.asset->endpoint();
             if (endpoint.at("protocol") == "nut_xml_pdc") {
-                std::string port = IP;
+                std::string port = std::string("http://") + IP;
                 if (endpoint.count("port")) {
                     port = port + ":" + endpoint.at("port");
                 }
