@@ -281,7 +281,62 @@ fty::nut::DeviceConfigurations NUTConfigurator::getConfigurationFromUpsConfBlock
     return configs;
 }
 
-fty::nut::DeviceConfigurations NUTConfigurator::getConfigurationFromScanningDevice(const std::string &name, const AutoConfigurationInfo &info)
+fty::nut::DeviceConfigurations NUTConfigurator::getConfigurationFromEndpoint(const std::string &name, const AutoConfigurationInfo &info)
+{
+    const std::string& IP = info.asset->IP();
+    fty::nut::DeviceConfigurations configs;
+
+    if (IP.empty()) {
+        log_error("Device '%s' has no IP address, cannot scan it.", name.c_str());
+    }
+    else {
+        // Grab security documents.
+        std::map<secw::Id, secw::DocumentPtr> secws;
+        try {
+            fty::SocketSyncClient secwSyncClient(SECW_SOCKET_PATH);
+
+            auto client = secw::ConsumerAccessor(secwSyncClient);
+            auto secCreds = client.getListDocumentsWithPrivateData("default", "discovery_monitoring");
+
+            for (const auto &i : secCreds) {
+                secws.emplace(i->getId(), i);
+            }
+            log_debug("Fetched %d credentials from security wallet.", secCreds.size());
+
+            auto const& endpoint = info.asset->endpoint();
+            if (endpoint.at("protocol") == "nut_xml_pdc") {
+                std::string port = std::string("http://") + IP;
+                if (endpoint.count("port")) {
+                    port = port + ":" + endpoint.at("port");
+                }
+                configs = { {
+                    { "driver", "netxml-ups" },
+                    { "port", port },
+                } };
+            }
+            else if (endpoint.at("protocol") == "nut_snmp") {
+                std::string port = IP;
+                if (endpoint.count("port")) {
+                    port = port + ":" + endpoint.at("port");
+                }
+                auto config = fty::nut::convertSecwDocumentToKeyValues(secws.at(endpoint.at("nut_snmp.secw_credential_id")), "snmp-ups");
+                config.emplace("driver", "snmp-ups");
+                config.emplace("port", port);
+                configs = { config };
+            }
+            else {
+                throw std::runtime_error((std::string("Unknown protocol ")+endpoint.at("protocol")).c_str());
+            }
+        }
+        catch (std::exception &e) {
+            log_warning("Failed to instanciate NUT configuration from endpoint: %s", e.what());
+        }
+    }
+
+    return configs;
+}
+
+void NUTConfigurator::updateAssetFromScanningDevice(const std::string &name, const AutoConfigurationInfo &info)
 {
     const int scanTimeout = 10;
     const std::string& IP = info.asset->IP();
@@ -294,6 +349,7 @@ fty::nut::DeviceConfigurations NUTConfigurator::getConfigurationFromScanningDevi
         const bool use_dmf = info.asset->upsconf_enable_dmf();
         fty::nut::ScanProtocol snmpProtocol = use_dmf ? fty::nut::SCAN_PROTOCOL_SNMP_DMF : fty::nut::SCAN_PROTOCOL_SNMP;
 
+        std::vector<secw::DocumentPtr> secCreds;
         std::vector<secw::DocumentPtr> credentialsV3;
         std::vector<secw::DocumentPtr> credentialsV1;
 
@@ -302,7 +358,7 @@ fty::nut::DeviceConfigurations NUTConfigurator::getConfigurationFromScanningDevi
             fty::SocketSyncClient secwSyncClient(SECW_SOCKET_PATH);
 
             auto client = secw::ConsumerAccessor(secwSyncClient);
-            auto secCreds = client.getListDocumentsWithPrivateData("default", "discovery_monitoring");
+            secCreds = client.getListDocumentsWithPrivateData("default", "discovery_monitoring");
 
             for (const auto &i : secCreds) {
                 auto credV3 = secw::Snmpv3::tryToCast(i);
@@ -353,9 +409,85 @@ fty::nut::DeviceConfigurations NUTConfigurator::getConfigurationFromScanningDevi
             auto configsNetXML = fty::nut::scanDevice(fty::nut::SCAN_PROTOCOL_NETXML, IP, scanTimeout);
             configs.insert(configs.end(), configsNetXML.begin(), configsNetXML.end());
         }
-    }
 
-    return configs;
+        auto it = selectBestConfiguration(configs);
+        if (it != configs.end()) {
+            MlmClientGuard mb_client(mlm_client_new());
+            if (!mb_client) {
+                log_error("mlm_client_new() failed");
+                return;
+            }
+            if (mlm_client_connect(mb_client, MLM_ENDPOINT, 5000, "nut-configurator-updater") < 0) {
+                log_error("client %s failed to connect", "nut-configurator-updater");
+                return;
+            }
+            zmsg_t *msg = zmsg_new();
+            zmsg_addstr (msg, "GET");
+            zmsg_addstr (msg, "");
+            zmsg_addstr (msg, name.c_str());
+            if (mlm_client_sendto(mb_client, "asset-agent", "ASSET_DETAIL", NULL, 10, &msg) < 0) {
+                log_error("client %s failed to send query", "nut-configurator-updater");
+                return;
+            }
+            log_debug("client %s sent query for asset %s", "nut-configurator-updater", name.c_str());
+            zmsg_t *response = mlm_client_recv(mb_client);
+            if(!response) {
+                log_error("client %s empty response", "nut-configurator-updater");
+                return;
+            }
+            char* uuid = zmsg_popstr(response);
+            zstr_free(&uuid);
+            fty_proto_t* proto = fty_proto_decode(&response);
+            log_debug("client %s got response for asset %s", "nut-configurator-updater", name.c_str());
+            if(!proto) {
+                log_error("client %s failed query request", "nut-configurator-updater");
+                return;
+            }
+
+            fty_proto_set_operation(proto, FTY_PROTO_ASSET_OP_UPDATE);
+            if (it->at("driver") == "netxml-ups") {
+                fty_proto_ext_insert(proto, "endpoint.1.protocol", "nut_xml_pdc");
+                fty_proto_ext_insert(proto, "endpoint.1.port", "80");
+            }
+            else {
+                fty_proto_ext_insert(proto, "endpoint.1.protocol", "nut_snmp");
+                fty_proto_ext_insert(proto, "endpoint.1.port", "161");
+                for (const auto& i : secCreds) {
+                    try {
+                        auto keyvalues = fty::nut::convertSecwDocumentToKeyValues(i, "snmp-ups");
+                        if (std::includes(it->begin(), it->end(), keyvalues.begin(), keyvalues.end())) {
+                            fty_proto_ext_insert(proto, "endpoint.1.nut_snmp.secw_credential_id", i->getId().c_str());
+                            break;
+                        }
+                    }
+                    catch (...) {}
+                }
+            }
+
+            msg = fty_proto_encode(&proto);
+            zmsg_pushstrf (msg, "%s", "READWRITE");
+            if (mlm_client_sendto(mb_client, "asset-agent", "ASSET_MANIPULATION", NULL, 10, &msg) < 0) {
+                log_error("client %s failed to send update", "nut-configurator-updater");
+                return;
+            }
+            log_debug("client %s sent update request for asset %s", "nut-configurator-updater", name.c_str());
+            response = mlm_client_recv(mb_client);
+            if(!response) {
+                log_error("client %s empty response", "nut-configurator-updater");
+                return;
+            }
+            char *str_resp = zmsg_popstr(response);
+            log_debug("client %s got response %s for asset %s", "nut-configurator-updater", str_resp, name.c_str());
+            zmsg_destroy(&response);
+            if(!str_resp || !streq(str_resp, "OK")) {
+                zstr_free(&str_resp);
+                log_error("client %s failed update request", "nut-configurator-updater");
+                return;
+            }
+            zstr_free(&str_resp);
+            log_info("Persisted endpoint configuration from legacy scan algorithm for asset %s", name.c_str());
+        }
+    }
 }
 
 void NUTConfigurator::updateDeviceConfiguration(const std::string &name, const AutoConfigurationInfo &info, fty::nut::DeviceConfiguration config)
@@ -395,7 +527,7 @@ void NUTConfigurator::updateDeviceConfiguration(const std::string &name, const A
     }
 
     if (oldConfiguration != newConfiguration) {
-        log_info("Configuration file '%s' is outdated, creating new one.", configFilePath.c_str());
+        log_info("Configuration file '%s' is outdated, creating new one with driver '%s', port '%s'.", configFilePath.c_str(), config["driver"].c_str(), config["port"].c_str());
 
         std::ofstream cfgFile(configFilePath);
         cfgFile << newConfiguration;
@@ -417,20 +549,26 @@ bool NUTConfigurator::configure(const std::string &name, const AutoConfiguration
 
     if (info.asset->have_upsconf_block()) {
         // Device has a predefined configuration block.
+        log_debug("Device '%s' has upsconf_block property.", name.c_str());
         configs = getConfigurationFromUpsConfBlock(name, info);
+    }
+    else if (info.asset->has_endpoint()) {
+        // Device has an endpoint.
+        log_debug("Device '%s' has an endpoint configured.", name.c_str());
+        configs = getConfigurationFromEndpoint(name, info);
     }
     else {
         // Device has to be scanned.
-        configs = getConfigurationFromScanningDevice(name, info);
+        log_debug("Device '%s' is not configured, falling back to legacy algorithm.", name.c_str());
+        updateAssetFromScanningDevice(name, info);
     }
 
-    auto it = selectBestConfiguration(configs);
-    if (it == configs.end()) {
+    if (configs.empty()) {
         log_error("No suitable configuration found for device '%s'.", name.c_str());
         return false; // Try again later.
     }
 
-    updateDeviceConfiguration(name, info, *it);
+    updateDeviceConfiguration(name, info, configs[0]);
     return true;
 }
 
