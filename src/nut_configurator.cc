@@ -324,6 +324,13 @@ fty::nut::DeviceConfigurations NUTConfigurator::getConfigurationFromEndpoint(con
                 config.emplace("port", port);
                 configs = { config };
             }
+            else if (endpoint.at("protocol") == "nut_powercom") {
+                auto config = fty::nut::convertSecwDocumentToKeyValues(secws.at(endpoint.at("nut_powercom.secw_credential_id")), "etn-nut-powercom");
+                config.emplace("driver", "etn-nut-powercom");
+                config.emplace("port", IP);
+                config.emplace("auto", "true");
+                configs = { config };
+            }
             else {
                 throw std::runtime_error((std::string("Unknown protocol ")+endpoint.at("protocol")).c_str());
             }
