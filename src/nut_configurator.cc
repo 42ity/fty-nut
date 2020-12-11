@@ -504,7 +504,7 @@ void NUTConfigurator::updateDeviceConfiguration(const std::string &name, const A
 
     // Complete configuration.
     config["name"] = name;
-    if (isEpdu(config) && canSnmp(config)) {
+    if ((info.asset->subtype() == "epdu") && canSnmp(config)) {
         config["synchronous"] = "yes";
     }
     if (canNetXml(config)) {
