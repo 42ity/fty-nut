@@ -130,6 +130,8 @@ bool AssetState::handleLicensingMessage(fty_proto_t* message)
             return true;
         } catch (...) { }
     }
+
+    return false;
 }
 
 bool AssetState::updateFromProto(fty_proto_t* message)
