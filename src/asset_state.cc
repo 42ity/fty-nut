@@ -122,11 +122,14 @@ bool AssetState::handleLicensingMessage(fty_proto_t* message)
     assert (fty_proto_id(message) == FTY_PROTO_METRIC);
     if (streq (fty_proto_name(message), "rackcontroller-0") && streq (fty_proto_type(message), "monitoring.global")) {
         try {
-            license_limit_ = std::stoi(fty_proto_value(message));
+            int allowMonitoring = std::stoi(fty_proto_value(message));
+
+            //allow the monitoring when monitoring.global@rackcontroller-0 =>
+            m_allowMonitoring = (allowMonitoring == 1);
+
             return true;
         } catch (...) { }
     }
-    return false;
 }
 
 bool AssetState::updateFromProto(fty_proto_t* message)
