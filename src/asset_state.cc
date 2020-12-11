@@ -120,12 +120,17 @@ bool AssetState::handleAssetMessage(fty_proto_t* message)
 bool AssetState::handleLicensingMessage(fty_proto_t* message)
 {
     assert (fty_proto_id(message) == FTY_PROTO_METRIC);
-    if (streq (fty_proto_name(message), "rackcontroller-0") && streq (fty_proto_type(message), "power_nodes.max_active")) {
+    if (streq (fty_proto_name(message), "rackcontroller-0") && streq (fty_proto_type(message), "monitoring.global")) {
         try {
-            license_limit_ = std::stoi(fty_proto_value(message));
+            int allowMonitoring = std::stoi(fty_proto_value(message));
+
+            //allow the monitoring when monitoring.global@rackcontroller-0 =>
+            m_allowMonitoring = (allowMonitoring == 1);
+
             return true;
         } catch (...) { }
     }
+
     return false;
 }
 
@@ -169,18 +174,21 @@ void AssetState::recompute()
             ip2master_[ip] = i.first;
         }
     }
-    // If a limit is set, simply copy a prefix of powerdevices_ to
-    // allowed_powerdevices_ If requested, we could come up with some more
-    // fancy sorting...
+
+    // Check if we can monitor
     allowed_powerdevices_.clear();
-    AssetMap::const_iterator end;
-    if (license_limit_ < 0 || static_cast<size_t>(license_limit_) >= powerdevices_.size()) {
-        end = powerdevices_.end();
-    } else {
-        end = powerdevices_.begin();
-        std::advance(end, license_limit_);
+
+    if(m_allowMonitoring)
+    {
+        AssetMap::const_iterator end = powerdevices_.end();
+        allowed_powerdevices_ = AssetMap(powerdevices_.cbegin(), end);
+
+        log_info("Monitoring enable, %i devices will be monitored", allowed_powerdevices_.size());
     }
-    allowed_powerdevices_ = AssetMap(powerdevices_.cbegin(), end);
+    else
+    {
+        log_info("Monitoring disabled by licensing");
+    }
 }
 
 const std::string& AssetState::ip2master(const std::string& ip) const
