@@ -153,8 +153,8 @@ private:
     AssetMap allowed_powerdevices_;
     AssetMap sensors_;
     std::unordered_map<std::string, std::string> ip2master_;
-    // -1 for no limit, otherwise number of powerdevices to allow
-    int license_limit_ = -1;
+    // Active or not the monitoring
+    bool m_allowMonitoring = true;
 };
 
 #endif
