@@ -325,8 +325,8 @@ fty::nut::DeviceConfigurations NUTConfigurator::getConfigurationFromEndpoint(con
                 configs = { config };
             }
             else if (endpoint.at("protocol") == "nut_powercom") {
-                auto config = fty::nut::convertSecwDocumentToKeyValues(secws.at(endpoint.at("nut_powercom.secw_credential_id")), "etn-nut-powercom");
-                config.emplace("driver", "etn-nut-powercom");
+                auto config = fty::nut::convertSecwDocumentToKeyValues(secws.at(endpoint.at("nut_powercom.secw_credential_id")), "etn-nut-powerconnect");
+                config.emplace("driver", "etn-nut-powerconnect");
                 config.emplace("port", IP);
                 config.emplace("auto", "true");
                 configs = { config };
