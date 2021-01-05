@@ -263,6 +263,12 @@ void NUTAgent::advertisePhysics ()
                 int r = fty::shm::write_metric(device.second.assetName (), "status.ups", std::to_string(status_i), " ", _ttl * 3 / 2);
                 if( r != 0 )
                     log_error("failed to send measurement %s result %i", subject.c_str(), r);
+
+                // publish power.status (same ttl policy)
+                r = fty::shm::write_metric(device.second.assetName (), "power.status", power_status(status_i), " ", _ttl * 3 / 2);
+                if( r != 0 )
+                    log_error("failed to send power.status measurement %s result %i", subject.c_str(), r);
+
                 device.second.setChanged ("status.ups", false);
             }
         }
