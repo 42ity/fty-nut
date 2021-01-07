@@ -101,7 +101,7 @@ upsstatus_to_int (const char *status, const char *test_result)
         free (buff);
         buff = NULL;
     }
-    //detect if a test is in progress 
+    //detect if a test is in progress
     if(streq(test_result,"in progress")){
         //add calibration (CAL) flag to ups status
         result |= s_upsstatus_single_status_to_int ("CAL");
@@ -149,6 +149,21 @@ std::string
 upsstatus_to_string (const std::string& status)
 {
     return upsstatus_to_string (atoi (status.c_str ()));
+}
+
+//  --------------------------------------------------------------------------
+//  Compute power_status from ups_status
+
+const std::string
+power_status (uint16_t ups_status)
+{
+    if ((ups_status & STATUS_OL) && !(ups_status & STATUS_OB)) {
+        return POWERSTATUS_ONLINE;
+    }
+    if (!(ups_status & STATUS_OL) && (ups_status & STATUS_OB)) {
+        return POWERSTATUS_ONBATTERY;
+    }
+    return POWERSTATUS_UNDEFINED;
 }
 
 //  --------------------------------------------------------------------------
@@ -206,6 +221,32 @@ ups_status_test (bool verbose)
                 test_vector[i].status, test_vector[i].result, result, upsstatus_to_string(result).c_str());
         }
         assert(result == test_vector[i].result);
+    }
+
+    //power_status()
+    {
+        if (verbose) printf("\npower_status\n");
+
+        struct {
+            uint16_t ups_status;
+            const std::string expected;
+        } test_vector[] = {
+            { STATUS_OL,             POWERSTATUS_ONLINE},
+            { STATUS_OB,             POWERSTATUS_ONBATTERY},
+            { STATUS_OL | STATUS_OB, POWERSTATUS_UNDEFINED},
+            { 0,                     POWERSTATUS_UNDEFINED},
+            { 0xffff,                POWERSTATUS_UNDEFINED},
+        };
+
+        for (auto& test : test_vector) {
+            auto ups_status = test.ups_status;
+            auto powerstatus = power_status(ups_status);
+            auto expected = test.expected;
+            if (verbose) {
+                printf("status: 0x%04X, result: %s, expected: %s\n", ups_status, powerstatus.c_str(), expected.c_str());
+            }
+            assert(powerstatus == expected);
+        }
     }
 
     //  @end

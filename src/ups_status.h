@@ -60,6 +60,14 @@ std::string upsstatus_to_string (uint16_t status);
 // (e.g. "OL CHRG")
 std::string upsstatus_to_string (const std::string& status);
 
+// power-status tokens
+#define POWERSTATUS_ONLINE "ONLINE"
+#define POWERSTATUS_ONBATTERY "ONBATTERY"
+#define POWERSTATUS_UNDEFINED "UNDEFINED"
+
+// Compute power_status (token) from ups_status bitsfield
+const std::string power_status (uint16_t ups_status);
+
 //  Self test of this class
 void ups_status_test (bool verbose);
 //  @end
