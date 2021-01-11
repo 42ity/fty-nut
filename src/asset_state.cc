@@ -36,6 +36,7 @@
 AssetState::Asset::Asset(fty_proto_t* message)
 {
     name_ = fty_proto_name(message);
+    //serial_ = fty_proto_ext_string(message, "serial_no", "");
     IP_ = fty_proto_ext_string(message, "ip.1", "");
     port_ = fty_proto_ext_string(message, "port", "");
     subtype_ = fty_proto_aux_string(message, "subtype", "");
@@ -51,8 +52,7 @@ AssetState::Asset::Asset(fty_proto_t* message)
     upsconf_enable_dmf_ = strcmp(dmf, "true") == 0;
     max_current_ = NAN;
     try {
-        max_current_ = std::stod(fty_proto_ext_string(message,
-                    "max_current", ""));
+        max_current_ = std::stod(fty_proto_ext_string(message, "max_current", ""));
     } catch (...) { }
     max_power_ = NAN;
     try {
@@ -60,13 +60,14 @@ AssetState::Asset::Asset(fty_proto_t* message)
     } catch (...) { }
     daisychain_ = 0;
     try {
-        daisychain_ = std::stoi(fty_proto_ext_string(message,
-                    "daisy_chain", ""));
+        daisychain_ = std::stoi(fty_proto_ext_string(message, "daisy_chain", ""));
     } catch (...) { }
     zhash_t* ext = fty_proto_get_ext(message);
-    for (auto val = reinterpret_cast<char* const>(zhash_first(ext)); val; val = reinterpret_cast<char* const>(zhash_next(ext))) {
-        if (strncmp(zhash_cursor(ext), "endpoint.1.", 11) == 0) {
-            endpoint_.emplace(zhash_cursor(ext)+11, val);
+    if (ext) {
+        for (auto val = reinterpret_cast<char* const>(zhash_first(ext)); val; val = reinterpret_cast<char* const>(zhash_next(ext))) {
+            if (strncmp(zhash_cursor(ext), "endpoint.1.", 11) == 0) {
+                endpoint_.emplace(zhash_cursor(ext)+11, val);
+            }
         }
     }
     zhash_destroy(&ext);

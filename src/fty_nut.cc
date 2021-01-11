@@ -175,6 +175,7 @@ int main(int argc, char *argv []) {
 
     zstr_sendx(nut_device_alert, ACTION_POLLING, polling, NULL);
 
+    zstr_sendx(nut_sensor, ACTION_CONFIGURE, mapping_file.c_str(), NULL);
     zstr_sendx(nut_sensor, ACTION_POLLING, polling, NULL);
 
     zpoller_t *poller = zpoller_new(nut_server, nut_device_alert, nut_sensor, NULL);

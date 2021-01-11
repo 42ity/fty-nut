@@ -24,6 +24,8 @@
 
 #include "asset_state.h"
 
+#include <fty_common_nut.h>
+
 #include <map>
 #include <string>
 #include <nutclient.h>
@@ -36,23 +38,34 @@ class Sensor {
     Sensor () :
         _asset(nullptr),
         _parent(nullptr),
-        _nutMaster("invalidNutMaster")
+        _nutMaster("invalidNutMaster"),
+        _index(0)
     { };
     Sensor (const AssetState::Asset *asset, const AssetState::Asset *parent,
             ChildrenMap& children) :
         _asset(asset),
         _parent(parent),
         _children(children),
-        _nutMaster(asset->location())
+        _nutMaster(asset->location()),
+        _index(0)
     { };
     Sensor (const AssetState::Asset *asset, const AssetState::Asset *parent,
-            ChildrenMap& children, const std::string& nutMaster) :
+            ChildrenMap& children, int index) :
         _asset(asset),
         _parent(parent),
         _children(children),
-        _nutMaster(nutMaster)
+        _nutMaster(asset->location()),
+        _index(index)
     { };
-    void update (nut::TcpClient &conn);
+    Sensor (const AssetState::Asset *asset, const AssetState::Asset *parent,
+            ChildrenMap& children, const std::string& nutMaster, int index) :
+        _asset(asset),
+        _parent(parent),
+        _children(children),
+        _nutMaster(nutMaster),
+        _index(index)
+    { };
+    void update (nut::TcpClient &conn, const std::map <std::string, std::string>& mapping);
     void publish (mlm_client_t *client, int ttl);
     void addChild (const std::string& port, const std::string& child_name);
     ChildrenMap getChildren ();
@@ -75,7 +88,21 @@ class Sensor {
             return _asset->port();
         return "0";
     }
-
+    const fty::nut::KeyValues& inventory() const
+    {
+        return _inventory;
+    }
+    // get sub_address in endpoint
+    std::string subAddress() const
+    {
+        if (_asset && !_asset->endpoint().empty()) {
+            const auto it = _asset->endpoint().find("sub_address");
+            if (it != _asset->endpoint().end()) {
+                return it->second;
+            }
+        }
+        return "";
+    }
     // friend functions for unit-testing
     friend void sensor_device_test (bool verbose);
     friend void sensor_list_test (bool verbose);
@@ -84,14 +111,17 @@ class Sensor {
     const AssetState::Asset *_asset, *_parent;
     ChildrenMap _children;
     std::string _nutMaster;
+    int _index;
 
     std::string _temperature;
     std::string _humidity;
     std::vector <std::string> _contacts;  // contact status
+    fty::nut::KeyValues _inventory;
 
     std::string topicSuffixExternal (const std::string &port) const;
     std::string sensorPrefix() const;
     std::string nutPrefix() const;
+    int nutIndex() const;
     std::string topicSuffix() const;
 };
 

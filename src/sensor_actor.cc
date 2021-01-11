@@ -26,6 +26,74 @@
 #include <fty_log.h>
 
 #include <fty_common_mlm.h>
+
+int
+sensor_actor_commands (
+    mlm_client_t *client,
+    mlm_client_t *mb_client,
+    zmsg_t **message_p,
+    uint64_t& timeout,
+    Sensors& sensors
+)
+{
+    assert (message_p && *message_p);
+    zmsg_t *message = *message_p;
+
+    char *cmd = zmsg_popstr (message);
+    if (!cmd) {
+        log_error (
+                "aa: Given `which == pipe` function `zmsg_popstr (msg)` returned NULL. "
+                "Message received is most probably empty (has no frames).");
+        zmsg_destroy (message_p);
+        return 0;
+    }
+
+    int ret = 0;
+    log_debug ("aa: sensor actor command = '%s'", cmd);
+    if (streq (cmd, "$TERM")) {
+        log_info ("Got $TERM");
+        ret = 1;
+    }
+    else
+    if (streq (cmd, ACTION_POLLING)) {
+        char *polling = zmsg_popstr (message);
+        if (!polling) {
+            log_error (
+                "aa: Expected multipart string format: POLLING/value. "
+                "Received POLLING/nullptr");
+            zstr_free (&cmd);
+            zmsg_destroy (message_p);
+            return 0;
+        }
+        timeout = atoi(polling) * 1000;
+        if (timeout == 0) {
+            log_error ("aa: invalid POLLING value '%s', using default instead", polling);
+            timeout = 30000;
+        }
+        zstr_free (&polling);
+    }
+    else
+    if (streq (cmd, ACTION_CONFIGURE)) {
+        char *mapping = zmsg_popstr (message);
+        if (!mapping) {
+            log_error ("Expected multipart string format: CONFIGURE/mapping_file. "
+                       "Received CONFIGURE/nullptr");
+            zstr_free (&cmd);
+            zmsg_destroy (message_p);
+            return 0;
+        }
+        sensors.loadSensorMapping (mapping);
+        zstr_free (&mapping);
+    }
+    else {
+        log_warning ("aa: Command '%s' is unknown or not implemented", cmd);
+    }
+
+    zstr_free (&cmd);
+    zmsg_destroy (message_p);
+    return ret;
+}
+
 void
 sensor_actor (zsock_t *pipe, void *args)
 {
@@ -62,15 +130,19 @@ sensor_actor (zsock_t *pipe, void *args)
         void *which = zpoller_wait (poller, polling);
         if (which == NULL || zclock_mono() - publishtime > (int64_t)polling) {
             log_debug ("sa: sensor update");
-            sensors.updateSensorList ();
-            sensors.updateFromNUT ();
+            nut::TcpClient nutClient;
+            nutClient.connect ("localhost", 3493);
+            sensors.updateSensorList (nutClient, client);
+            sensors.updateFromNUT (nutClient);
+            sensors.advertiseInventory (client);
             sensors.publish (client, polling*2/1000);
+            nutClient.disconnect();
             publishtime = zclock_mono();
         }
         else if (which == pipe) {
             zmsg_t *msg = zmsg_recv (pipe);
             if (msg) {
-                int quit = alert_actor_commands (client, NULL, &msg, polling);
+                int quit = sensor_actor_commands (client, NULL, &msg, polling, sensors);
                 zmsg_destroy (&msg);
                 if (quit) break;
             }
@@ -118,9 +190,10 @@ sensor_actor_test (bool verbose)
     fty_proto_aux_insert(proto, "subtype", "sensor");
     fty_proto_aux_insert(proto, "parent_name.1", "PRG");
     fty_proto_ext_insert(proto, "port", "1");
+    fty_proto_ext_insert(proto, "endpoint.1.sub_address", "1");
     AssetState::Asset asset1(proto);
     fty_proto_destroy(&proto);
-    sensors._sensors["sensor1"] = Sensor (&asset1, nullptr, children, "nut");
+    sensors._sensors["sensor1"] = Sensor (&asset1, nullptr, children, "nut", 1);
     sensors._sensors["sensor1"]._humidity = "50";
 
     sensors.publish (producer, 300);
@@ -157,6 +230,19 @@ sensor_actor_test (bool verbose)
     assert (streq (fty_proto_type (bmsg), "humidity.1"));
     fty_proto_destroy (&bmsg);
 
+    sensors._sensors["sensor1"]._inventory = {{ "ambient.model", "Model 1"}, { "ambient.serial", "1111"}, { "ambient.name", "Ambient 1"}};
+    sensors.advertiseInventory (producer);
+    msg = mlm_client_recv (consumer);
+    assert (msg);
+    bmsg = fty_proto_decode (&msg);
+    assert (bmsg);
+    fty_proto_print (bmsg);
+    assert (fty_proto_ext_size (bmsg) == 3);
+    assert (streq (fty_proto_ext_string (bmsg, "ambient.model", ""), "Model 1"));
+    assert (streq (fty_proto_ext_string (bmsg, "ambient.serial", ""), "1111"));
+    assert (streq (fty_proto_ext_string (bmsg, "ambient.name", ""), "Ambient 1"));
+    fty_proto_destroy (&bmsg);
+
     // gpio on EMP001
     std::vector <std::string> contacts;
     children.emplace ("1", "sensorgpio-1");
@@ -172,9 +258,10 @@ sensor_actor_test (bool verbose)
     fty_proto_aux_insert(proto, "subtype", "sensor");
     fty_proto_aux_insert(proto, "parent_name.1", "PRG");
     fty_proto_ext_insert(proto, "port", "4");
+    fty_proto_ext_insert(proto, "endpoint.1.sub_address", "2");
     AssetState::Asset asset2(proto);
     fty_proto_destroy(&proto);
-    sensors._sensors["sensor1"] = Sensor (&asset2, nullptr, children, "nut");
+    sensors._sensors["sensor1"] = Sensor (&asset2, nullptr, children, "nut", 4);
     sensors._sensors["sensor1"]._contacts = contacts;
 
     sensors.publish (producer, 300);

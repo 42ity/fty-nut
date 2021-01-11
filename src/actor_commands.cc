@@ -134,6 +134,8 @@ actor_commands_test (bool verbose)
     static const char* endpoint = "ipc://fty-nut-server-test";
     static const char* logErrPath = "src/selftest-rw/stderr.txt";
 
+    ManageFtyLog::setInstanceFtylog("fty-nut-command-test");
+
     // malamute broker
     zactor_t *malamute = zactor_new (mlm_server, (void*) "Malamute");
     assert (malamute);
@@ -151,6 +153,7 @@ actor_commands_test (bool verbose)
 
     // --------------------------------------------------------------
     FILE *fp = freopen (logErrPath, "w+", stderr);
+    assert (fp);
     // empty message - expected fail
     message = zmsg_new ();
     assert (message);
@@ -165,6 +168,7 @@ actor_commands_test (bool verbose)
 
     // --------------------------------------------------------------
     fp = freopen (logErrPath, "w+", stderr);
+    assert (fp);
     // empty string - expected fail
     message = zmsg_new ();
     assert (message);
@@ -180,6 +184,7 @@ actor_commands_test (bool verbose)
 
     // --------------------------------------------------------------
     fp = freopen (logErrPath, "w+", stderr);
+    assert (fp);
     // unknown command - expected fail
     message = zmsg_new ();
     assert (message);
@@ -195,6 +200,7 @@ actor_commands_test (bool verbose)
 
     // --------------------------------------------------------------
     fp = freopen (logErrPath, "w+", stderr);
+    assert (fp);
     // CONFIGURE - expected fail
     message = zmsg_new ();
     assert (message);
@@ -211,6 +217,7 @@ actor_commands_test (bool verbose)
 
     // --------------------------------------------------------------
     fp = freopen (logErrPath, "w+", stderr);
+    assert (fp);
     // POLLING - expected fail
     message = zmsg_new ();
     assert (message);
@@ -227,6 +234,7 @@ actor_commands_test (bool verbose)
 
     // --------------------------------------------------------------
     fp = freopen (logErrPath, "w+", stderr);
+    assert (fp);
     // POLLING - expected fail (in a sense)
     message = zmsg_new ();
     assert (message);
@@ -252,6 +260,7 @@ actor_commands_test (bool verbose)
 
     // Prepare the error logger
     fp = freopen (logErrPath, "w+", stderr);
+    assert (fp);
 
     // CONFIGURE
     message = zmsg_new ();

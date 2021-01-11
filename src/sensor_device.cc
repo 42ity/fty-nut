@@ -26,7 +26,21 @@
 #include <vector>
 #include <string>
 
-void Sensor::update (nut::TcpClient &conn)
+#include <fty_common_nut.h>
+
+static std::string collapse_commas(const std::vector<std::string> &values)
+{
+    std::string inventory = "";
+    for(size_t i = 0 ; i < values.size() ; ++i ) {
+        inventory += values[i];
+        if( i < values.size() -1 ) {
+            inventory += ", ";
+        }
+    }
+    return inventory;
+}
+
+void Sensor::update (nut::TcpClient &conn, const std::map <std::string, std::string>& mapping)
 {
     log_debug ("sa: updating sensor(s) temperature and humidity from NUT device %s", _nutMaster.c_str());
     auto nutDevice = conn.getDevice(_nutMaster);
@@ -36,18 +50,18 @@ void Sensor::update (nut::TcpClient &conn)
     }
     try {
         std::string prefix = nutPrefix();
+        const int prefixId = nutIndex();
+        log_debug ("sa: prefix='%s' prefixId='%d'", prefix.c_str(), prefixId);
 
         // Translate NUT keys into 42ity keys.
-        /* FIXME: sensor should also have an updateInventory() method, since EMP002
-           provide inventory data (mfr, model, serial, ...)
-           However, limitations exists in the current performMapping, where indexed-to-unitary
-           conversion fail (like ambient.1.mfr -> manufacturer)
         {
-            auto mappedInventory = fty::nut::performMapping(mapping("sensorInventoryMapping"), scalarVars, prefixId);
-            for (auto value : mappedInventory) {
-                updateInventory(value.first, value.second);
+            std::map<std::string,std::vector<std::string>> deviceVars = nutDevice.getVariableValues();
+            fty::nut::KeyValues scalarVars;
+            for (auto var : deviceVars) {
+              scalarVars.emplace(var.first, collapse_commas(var.second));
             }
-        } */
+            _inventory = fty::nut::performMapping(mapping, scalarVars, prefixId);
+        }
 
         try {
             // Check for actual sensor presence, if ambient.present is available!
@@ -240,13 +254,23 @@ std::string Sensor::sensorPrefix() const
 std::string Sensor::nutPrefix() const
 {
     std::string prefix;
-    if (chain() != 0)  prefix = "device." + std::to_string(chain()) + ".";
+    if (chain() != 0) {
+        if (_index == 0) prefix = "device." + std::to_string(chain()) + ".";
+        else prefix = "device.1.";
+    }
     prefix += "ambient.";
     // Only add port index when different than 0
-    if (port() != "0") {
-        prefix += port() + ".";
+    if (_index != 0) {
+        prefix += std::to_string(_index) + ".";
     }
     return prefix;
+}
+
+int Sensor::nutIndex() const
+{
+    if (_index != 0) return _index;
+    else if (chain() != 0)  return chain();
+    return 0;
 }
 
 void Sensor::addChild (const std::string& child_port, const std::string& child_name)
@@ -266,9 +290,33 @@ sensor_device_test(bool verbose)
     printf (" * sensor_device: ");
 
     //  @selftest
-    // sensor connected to standalone ups
-    std::map <std::string, std::string> children;
+    // epdu master
     fty_proto_t *proto = fty_proto_new(FTY_PROTO_ASSET);
+    assert(proto);
+    fty_proto_set_name(proto, "epdu_m");
+    fty_proto_set_operation(proto, FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert(proto, "type", "device");
+    fty_proto_aux_insert(proto, "subtype", "epdu");
+    fty_proto_aux_insert(proto, "parent_name.1", "ups");
+    fty_proto_ext_insert(proto, "daisy_chain", "1");
+    AssetState::Asset epdu_m(proto);
+    fty_proto_destroy(&proto);
+    // epdu slave #1
+    proto = fty_proto_new(FTY_PROTO_ASSET);
+    assert(proto);
+    fty_proto_set_name(proto, "epdu_1");
+    fty_proto_set_operation(proto, FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert(proto, "type", "device");
+    fty_proto_aux_insert(proto, "subtype", "epdu");
+    fty_proto_aux_insert(proto, "parent_name.1", "ups");
+    fty_proto_ext_insert(proto, "daisy_chain", "2");
+    AssetState::Asset epdu_1(proto);
+    fty_proto_destroy(&proto);
+
+    std::map <std::string, std::string> children;
+
+    // sensor emp01 connected to standalone ups
+    proto = fty_proto_new(FTY_PROTO_ASSET);
     assert(proto);
     fty_proto_set_name(proto, "a");
     fty_proto_set_operation(proto, FTY_PROTO_ASSET_OP_CREATE);
@@ -280,8 +328,10 @@ sensor_device_test(bool verbose)
     Sensor a(&asset_a, nullptr, children);
     assert (a.sensorPrefix() == "ambient.");
     assert (a.topicSuffix() == ".0@ups");
+    assert (a.nutPrefix() == "ambient.");
+    assert (a.nutIndex() == 0);
 
-    // sensor 2 connected to standalone ups
+    // sensor emp02 connected to standalone ups
     proto = fty_proto_new(FTY_PROTO_ASSET);
     assert(proto);
     fty_proto_set_name(proto, "b");
@@ -290,60 +340,89 @@ sensor_device_test(bool verbose)
     fty_proto_aux_insert(proto, "subtype", "sensor");
     fty_proto_aux_insert(proto, "parent_name.1", "ups");
     fty_proto_ext_insert(proto, "port", "2");
+    fty_proto_ext_insert(proto, "endpoint.1.sub_address", "1");
     AssetState::Asset asset_b(proto);
     fty_proto_destroy(&proto);
-    Sensor b(&asset_b, nullptr, children);
+    Sensor b(&asset_b, nullptr, children, "ups", 2);
     assert (b.sensorPrefix() == "ambient.2.");
     assert (b.topicSuffix() == ".2@ups");
+    assert (b.nutPrefix() == "ambient.2.");
+    assert (b.nutIndex() == 2);
+    assert (b.subAddress() == "1");
 
-    // sensor connected to daisy-chain host
-    proto = fty_proto_new(FTY_PROTO_ASSET);
-    assert(proto);
-    fty_proto_set_name(proto, "epdu");
-    fty_proto_set_operation(proto, FTY_PROTO_ASSET_OP_CREATE);
-    fty_proto_aux_insert(proto, "type", "device");
-    fty_proto_aux_insert(proto, "subtype", "epdu");
-    fty_proto_aux_insert(proto, "parent_name.1", "ups");
-    fty_proto_ext_insert(proto, "daisy_chain", "1");
-    AssetState::Asset epdu(proto);
-    fty_proto_destroy(&proto);
+    // sensor emp01 connected to daisy-chain host
     proto = fty_proto_new(FTY_PROTO_ASSET);
     assert(proto);
     fty_proto_set_name(proto, "c");
     fty_proto_set_operation(proto, FTY_PROTO_ASSET_OP_CREATE);
     fty_proto_aux_insert(proto, "type", "device");
     fty_proto_aux_insert(proto, "subtype", "sensor");
-    fty_proto_aux_insert(proto, "parent_name.1", "epdu");
+    fty_proto_aux_insert(proto, "parent_name.1", "epdu_m");
+    fty_proto_ext_insert(proto, "endpoint.1.sub_address", "2");
     AssetState::Asset asset_c(proto);
     fty_proto_destroy(&proto);
-    Sensor c(&asset_c, &epdu, children);
+    Sensor c(&asset_c, &epdu_m, children, "epdu_m", 0);
     assert (c.sensorPrefix() == "device.1.ambient.");
-    assert (c.topicSuffix() == ".0@epdu");
+    assert (c.topicSuffix() == ".0@epdu_m");
+    assert (c.nutPrefix() == "device.1.ambient.");
+    assert (c.nutIndex() == 1);
+    assert (c.subAddress() == "2");
 
-    // sensor 3 connected to daisy-chain device 1
-    proto = fty_proto_new(FTY_PROTO_ASSET);
-    assert(proto);
-    fty_proto_set_name(proto, "epdu2");
-    fty_proto_set_operation(proto, FTY_PROTO_ASSET_OP_CREATE);
-    fty_proto_aux_insert(proto, "type", "device");
-    fty_proto_aux_insert(proto, "subtype", "epdu");
-    fty_proto_aux_insert(proto, "parent_name.1", "ups");
-    fty_proto_ext_insert(proto, "daisy_chain", "2");
-    AssetState::Asset epdu2(proto);
-    fty_proto_destroy(&proto);
+    // sensor emp01 connected to daisy-chain device 1
     proto = fty_proto_new(FTY_PROTO_ASSET);
     assert(proto);
     fty_proto_set_name(proto, "d");
     fty_proto_set_operation(proto, FTY_PROTO_ASSET_OP_CREATE);
     fty_proto_aux_insert(proto, "type", "device");
     fty_proto_aux_insert(proto, "subtype", "sensor");
-    fty_proto_aux_insert(proto, "parent_name.1", "epdu2");
-    fty_proto_ext_insert(proto, "port", "3");
+    fty_proto_aux_insert(proto, "parent_name.1", "epdu_1");
+    fty_proto_ext_insert(proto, "endpoint.1.sub_address", "2");
     AssetState::Asset asset_d(proto);
     fty_proto_destroy(&proto);
-    Sensor d(&asset_d, &epdu2, children, "ups2");
-    assert (d.sensorPrefix() == "device.2.ambient.3.");
-    assert (d.topicSuffix() == ".3@epdu2");
+    Sensor d(&asset_d, &epdu_1, children, "epdu_m", 0);
+    assert (d.sensorPrefix() == "device.2.ambient.");
+    assert (d.topicSuffix() == ".0@epdu_1");
+    assert (d.nutPrefix() == "device.2.ambient.");
+    assert (d.nutIndex() == 2);
+    assert (d.subAddress() == "2");
+
+    // sensor emp02 connected to daisy-chain master
+    proto = fty_proto_new(FTY_PROTO_ASSET);
+    assert(proto);
+    fty_proto_set_name(proto, "e");
+    fty_proto_set_operation(proto, FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert(proto, "type", "device");
+    fty_proto_aux_insert(proto, "subtype", "sensor");
+    fty_proto_aux_insert(proto, "parent_name.1", "epdu_m");
+    fty_proto_ext_insert(proto, "port", "3");
+    fty_proto_ext_insert(proto, "endpoint.1.sub_address", "8");
+    AssetState::Asset asset_e(proto);
+    fty_proto_destroy(&proto);
+    Sensor e(&asset_e, &epdu_m, children, "epdu_m", 3);
+    assert (e.sensorPrefix() == "device.1.ambient.3.");
+    assert (e.topicSuffix() == ".3@epdu_m");
+    assert (e.nutPrefix() == "device.1.ambient.3.");
+    assert (e.nutIndex() == 3);
+    assert (e.subAddress() == "8");
+
+    // sensor emp02 connected to daisy-chain device 1
+    proto = fty_proto_new(FTY_PROTO_ASSET);
+    assert(proto);
+    fty_proto_set_name(proto, "f");
+    fty_proto_set_operation(proto, FTY_PROTO_ASSET_OP_CREATE);
+    fty_proto_aux_insert(proto, "type", "device");
+    fty_proto_aux_insert(proto, "subtype", "sensor");
+    fty_proto_aux_insert(proto, "parent_name.1", "epdu_1");
+    fty_proto_ext_insert(proto, "port", "5");
+    fty_proto_ext_insert(proto, "endpoint.1.sub_address", "12");
+    AssetState::Asset asset_f(proto);
+    fty_proto_destroy(&proto);
+    Sensor f(&asset_f, &epdu_1, children, "epdu_m", 5);
+    assert (f.sensorPrefix() == "device.2.ambient.5.");
+    assert (f.topicSuffix() == ".5@epdu_1");
+    assert (f.nutPrefix() == "device.1.ambient.5.");
+    assert (f.nutIndex() == 5);
+    assert (f.subAddress() == "12");
 
     //  @end
     printf (" OK\n");
