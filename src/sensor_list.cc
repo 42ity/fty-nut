@@ -30,8 +30,7 @@
 #include "nut_agent.h"
 #include <fty_log.h>
 #include <fty_common_nut.h>
-// FIXME: To remove
-#include <fty_common_db.h>
+#include <fty_asset_accessor.h>
 
 Sensors::Sensors (StateManager::Reader *reader)
     : _state_reader(reader)
@@ -88,17 +87,16 @@ bool Sensors::updateAssetConfig (AssetState::Asset *asset, mlm_client_t *client)
         fty_proto_ext_insert(proto, "endpoint.1.sub_address", asset->subAddress().c_str());
         // Update parent
         fty_proto_aux_insert(proto, "parent_name.1", "%s", asset->location().c_str());
-        // FIXME: Find another solution without db (no access of database)
         // Get parent id from database
-        int parentId = DBAssets::name_to_asset_id (asset->location().c_str());
-        if (parentId < 0) {
+        auto parentId = fty::AssetAccessor::assetInameToID(asset->location().c_str());
+        if (!parentId) {
             log_error("updateAssetConfig for %s: get parent id failed", asset->name().c_str());
             zmsg_destroy (&msg);
             fty_proto_destroy (&proto);
             return false;
         }
         // Update parent id
-        fty_proto_aux_insert(proto, "parent", "%d", parentId);
+        fty_proto_aux_insert(proto, "parent", "%d", parentId.value());
 
         msg = fty_proto_encode(&proto);
         fty_proto_destroy (&proto);

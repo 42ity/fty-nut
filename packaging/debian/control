@@ -39,6 +39,7 @@ Build-Depends: debhelper (>= 9),
     libfty-common-socket-dev,
     libfty-security-wallet-dev,
     libfty-common-nut-dev,
+    libfty-asset-accessor-dev,
     libfty-shm-dev (>= 1.0.0),
     gcc (>= 4.9.0), g++ (>= 4.9.0),
     systemd,
@@ -73,6 +74,7 @@ Depends:
     libfty-common-socket-dev,
     libfty-security-wallet-dev,
     libfty-common-nut-dev,
+    libfty-asset-accessor-dev,
     libfty-shm-dev (>= 1.0.0),
     libfty-nut1 (= ${binary:Version})
 Description: fty-nut development tools
