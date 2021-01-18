@@ -24,7 +24,7 @@ git clone --quiet --depth 1 https://github.com/42ity/fty-common-mlm.git fty-comm
 git clone --quiet --depth 1 https://github.com/42ity/fty-common-socket.git fty-common-socket
 git clone --quiet --depth 1 https://github.com/42ity/fty-security-wallet.git fty-security-wallet
 git clone --quiet --depth 1 https://github.com/42ity/fty-common-nut.git fty-common-nut
-git clone --quiet --depth 1 https://github.com/42ity/fty-asset.git fty-asset
+git clone --quiet --depth 1 https://github.com/42ity/fty-asset.git fty-asset-accessor
 git clone --quiet --depth 1 https://github.com/42ity/fty-shm.git fty_shm
 cd -
 

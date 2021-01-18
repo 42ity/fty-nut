@@ -1421,7 +1421,7 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common_nut
 dnl END of enabled attempts to search for libfty_common_nut
 
 
-was_fty_asset_check_lib_detected=no
+was_fty_asset_accessor_check_lib_detected=no
 
 search_libfty_asset_accessor="yes"
 
@@ -1443,7 +1443,7 @@ AS_CASE([x"${with_libfty_asset_accessor}"],
 dnl We do not abort right now, because the maintainer/developer may have
 dnl something particular in mind, e.g. to build just parts of a project.
 AS_IF([test x"${search_libfty_asset_accessor}" = xno],
-    [AC_MSG_WARN([Required dependency on fty_asset was explicitly disabled during configuration by '--with-libfty-asset-accessor=no'; subsequent full build of fty-nut may fail])])
+    [AC_MSG_WARN([Required dependency on fty_asset_accessor was explicitly disabled during configuration by '--with-libfty-asset-accessor=no'; subsequent full build of fty-nut may fail])])
 
 AS_IF([test x"${search_libfty_asset_accessor}" = xyes], [
     # Archive previously detected and supplied flags
@@ -1451,21 +1451,21 @@ AS_IF([test x"${search_libfty_asset_accessor}" = xyes], [
     PRE_SEARCH_LIBS="${LIBS}"
 
     found_pkgconfig=""
-    PKG_CHECK_MODULES([fty_asset], [libfty-asset-accessor >= 0.0.0],
+    PKG_CHECK_MODULES([fty_asset_accessor], [libfty-asset-accessor >= 0.0.0],
     [
-        was_fty_asset_check_lib_detected=pkgcfg
+        was_fty_asset_accessor_check_lib_detected=pkgcfg
         found_pkgconfig="libfty-asset-accessor"
     ],
     [
         AC_MSG_NOTICE([Package libfty-asset-accessor not found; falling back to defined compilability tests])
 
-        fty_asset_synthetic_cflags=""
-        fty_asset_synthetic_libs="-lfty-asset"
+        fty_asset_accessor_synthetic_cflags=""
+        fty_asset_accessor_synthetic_libs="-lfty-asset-accessor"
 
         if test -n "${with_libfty_asset_accessor}" && test x"${with_libfty_asset_accessor}" != xyes && test x"${with_libfty_asset_accessor}" != xno; then
             if test -r "${with_libfty_asset_accessor}/include/fty_asset_accessor.h"; then
-                fty_asset_synthetic_cflags="-I${with_libfty_asset_accessor}/include"
-                fty_asset_synthetic_libs="-L${with_libfty_asset_accessor}/lib -lfty-asset"
+                fty_asset_accessor_synthetic_cflags="-I${with_libfty_asset_accessor}/include"
+                fty_asset_accessor_synthetic_libs="-L${with_libfty_asset_accessor}/lib -lfty-asset-accessor"
             else
             AC_MSG_ERROR([Header file ${with_libfty-asset-accessor}/include/fty_asset_accessor.h was not found. Please check libfty-asset-accessor prefix])
             fi
@@ -1475,34 +1475,46 @@ AS_IF([test x"${search_libfty_asset_accessor}" = xyes], [
                 )
         fi
 
-        AC_CHECK_LIB([fty-asset], [fty-asset-accessor-test],
+        AC_CHECK_LIB([fty-asset-accessor], [fty-asset-accessor-test],
             [
-                was_fty_asset_check_lib_detected=yes
-                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty-asset"
+                was_fty_asset_accessor_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty-asset-accessor"
             ],
-            [AC_MSG_ERROR([cannot link with -lfty-asset, install libfty-asset-accessor])])
+            [AC_MSG_ERROR([cannot link with -lfty-asset-accessor, install libfty-asset-accessor])])
     ])
 
 dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_asset_accessor
-    AS_CASE(["x${was_fty_asset_check_lib_detected}"],
+    AS_CASE(["x${was_fty_asset_accessor_check_lib_detected}"],
         [xpkgcfg], [
                 PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
-                CFLAGS="${fty_asset_CFLAGS} ${CFLAGS}"
-                LIBS="${fty_asset_LIBS} ${LIBS}"
+                CFLAGS="${fty_asset_accessor_CFLAGS} ${CFLAGS}"
+                LIBS="${fty_asset_accessor_LIBS} ${LIBS}"
             ],
         [xyes], [
-                CFLAGS="${fty_asset_synthetic_cflags} ${CFLAGS}"
-                LDFLAGS="${fty_asset_synthetic_libs} ${LDFLAGS}"
-                LIBS="${fty_asset_synthetic_libs} ${LIBS}"
+                CFLAGS="${fty_asset_accessor_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${fty_asset_accessor_synthetic_libs} ${LDFLAGS}"
+                LIBS="${fty_asset_accessor_synthetic_libs} ${LIBS}"
 
-                AC_SUBST([fty_asset_CFLAGS],[${fty_asset_synthetic_cflags}])
-                AC_SUBST([fty_asset_LIBS],[${fty_asset_synthetic_libs}])
+                AC_SUBST([fty_asset_accessor_CFLAGS],[${fty_asset_accessor_synthetic_cflags}])
+                AC_SUBST([fty_asset_accessor_LIBS],[${fty_asset_accessor_synthetic_libs}])
             ],
         [xno], [
             AC_MSG_ERROR([Cannot find pkg-config metadata for libfty-asset-accessor 0.0.0 or higher])
     ])
 ])
 dnl END of enabled attempts to search for libfty_asset_accessor
+
+
+AC_MSG_NOTICE([fty_common_socket_CFLAGS TEST=${fty_common_socket_CFLAGS}])
+AC_MSG_NOTICE([fty_common_socket_LIBS TEST=${fty_common_socket_LIBS}])
+
+AC_MSG_NOTICE([fty_asset_accessor_CFLAGS TEST=${fty_asset_accessor_CFLAGS}])
+AC_MSG_NOTICE([fty_asset_accessor_LIBS TEST=${fty_asset_accessor_LIBS}])
+AC_MSG_NOTICE([fty_asset_accessor_synthetic_libs TEST=${fty_asset_accessor_synthetic_libs}])
+AC_MSG_NOTICE([fty_asset_accessor_synthetic_cflags TEST=${fty_asset_accessor_synthetic_cflags}])
+AC_MSG_NOTICE([LIBS TEST=${LIBS}])
+AC_MSG_NOTICE([CFLAGS TEST=${CFLAGS}])
+AC_MSG_NOTICE([LDFLAGS TEST=${LDFLAGS}])
 
 
 was_fty_shm_check_lib_detected=no

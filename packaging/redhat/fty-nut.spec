@@ -70,7 +70,7 @@ BuildRequires:  fty-common-mlm-devel
 BuildRequires:  fty-common-socket-devel
 BuildRequires:  fty-security-wallet-devel
 BuildRequires:  fty-common-nut-devel
-BuildRequires:  fty-asset-devel
+BuildRequires:  fty-asset-accessor-devel
 BuildRequires:  fty_shm-devel >= 1.0.0
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
@@ -110,7 +110,7 @@ Requires:       fty-common-mlm-devel
 Requires:       fty-common-socket-devel
 Requires:       fty-security-wallet-devel
 Requires:       fty-common-nut-devel
-Requires:       fty-asset-devel
+Requires:       fty-asset-accessor-devel
 Requires:       fty_shm-devel >= 1.0.0
 
 %description devel

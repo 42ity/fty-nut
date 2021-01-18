@@ -112,7 +112,7 @@
         repository = "https://github.com/42ity/fty-common-nut.git"
         test = "fty_common_nut_selftest" />
 
-    <use project = "fty-asset" libname = "libfty-asset-accessor" header = "fty_asset_accessor.h"
+    <use project = "fty-asset-accessor" libname = "libfty-asset-accessor" header = "fty_asset_accessor.h"
         repository = "https://github.com/42ity/fty-asset.git"
         test = "fty-asset-accessor-test" />
 
