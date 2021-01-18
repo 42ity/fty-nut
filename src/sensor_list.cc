@@ -95,6 +95,7 @@ bool Sensors::updateAssetConfig (AssetState::Asset *asset, mlm_client_t *client)
             fty_proto_destroy (&proto);
             return false;
         }
+        log_info("updateAssetConfig for %s: get parent id=%d", asset->name().c_str(), parentId.value());
         // Update parent id
         fty_proto_aux_insert(proto, "parent", "%d", parentId.value());
 
