@@ -2,7 +2,7 @@ Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: fty-nut
 
 Files: *
-Copyright: 2015- fty-nut Developers <eatonipcopensource@eaton.com>
+Copyright: 2016- fty-nut Developers <eatonipcopensource@eaton.com>
 License: fty-nut_license
  Copyright (C) 2014 - 2020 Eaton
  .

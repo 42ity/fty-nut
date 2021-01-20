@@ -72,6 +72,24 @@ alert_actor_commands (
         }
         zstr_free (&polling);
     }
+    else
+    if (streq (cmd, ACTION_CONFIGURE)) {
+        char *mapping = zmsg_popstr (message);
+        if (!mapping) {
+            log_error (
+                    "Expected multipart string format: CONFIGURE/mapping_file. "
+                    "Received CONFIGURE/nullptr");
+            zstr_free (&mapping);
+            zstr_free (&cmd);
+            zmsg_destroy (message_p);
+            return 0;
+        }
+        /*bool rv = nut_agent.loadMapping (mapping);
+        if (rv == false) {
+            log_error ("NUTAgent::loadMapping (mapping = '%s') failed", mapping);
+        }*/
+        zstr_free (&mapping);
+    }
     else {
         log_warning ("aa: Command '%s' is unknown or not implemented", cmd);
     }

@@ -43,6 +43,22 @@ public:
         {
             return name_;
         }
+        /*const std::string& serial() const
+        {
+            return serial_;
+        }*/
+        std::string subAddress() const
+        {
+            const auto it = endpoint_.find("sub_address");
+            if (it != endpoint_.end()) {
+                return it->second;
+            }
+            return "";
+        }
+        void setSubAddress(const std::string& subAddress)
+        {
+            endpoint_.emplace("sub_address", subAddress);
+        }
         const std::string& IP() const
         {
             return IP_;
@@ -58,6 +74,10 @@ public:
         const std::string& location() const
         {
             return location_;
+        }
+        void setLocation(const std::string& location)
+        {
+            location_ = location;
         }
         const std::string& upsconf_block() const
         {
@@ -97,6 +117,8 @@ public:
         }
     private:
         std::string name_;
+        // FIXME To add ??
+        //std::string serial_;
         std::string IP_;
         std::string port_;
         std::string subtype_;

@@ -13,4 +13,5 @@
    fty-nut -> fty-common-socket;
    fty-nut -> fty-security-wallet;
    fty-nut -> fty-common-nut;
+   fty-nut -> fty-asset-accessor;
    fty-nut -> fty_shm;
