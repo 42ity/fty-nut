@@ -121,7 +121,7 @@ void Sensor::update (nut::TcpClient &conn, const std::map <std::string, std::str
                     }
                 }
                 _contacts.push_back (state);
-                log_debug ("sa: %scontact.%i.status state %s", prefix.c_str (), i, state.c_str ());
+                log_debug ("sa: %scontact.%i.status state %s (%s)", prefix.c_str (), i, state.c_str (), assetName().c_str());
             }
             else {
                 log_debug ("sa: %scontact.%i.status state '%s' not supported and discarded", prefix.c_str (), i, state.c_str ());
@@ -132,14 +132,14 @@ void Sensor::update (nut::TcpClient &conn, const std::map <std::string, std::str
 
 std::string Sensor::topicSuffix () const
 {
-    return "." + port() + "@" + location();
+    return "." + std::to_string (_index) + "@" + location();
 }
 
 // topic for GPI sensors wired to EMP001
 std::string Sensor::topicSuffixExternal (const std::string& gpiPort) const
 {
     // status.GPI<port>.<epmPort>@location
-    return ".GPI" + gpiPort + "." + port() + "@" + location();
+    return ".GPI" + gpiPort + "." + std::to_string (_index) + "@" + location();
 }
 
 void Sensor::publish (mlm_client_t *client, int ttl)
@@ -150,13 +150,13 @@ void Sensor::publish (mlm_client_t *client, int ttl)
     if (! _temperature.empty()) {
         zhash_t *aux = zhash_new ();
         zhash_autofree (aux);
-        zhash_insert (aux, "port", (void*) port().c_str());
+        zhash_insert (aux, "port", (void*) std::to_string(_index).c_str());
         zhash_insert (aux, "sname", (void *) assetName().c_str ());
         zmsg_t *msg = fty_proto_encode_metric (
             aux,
             time (NULL),
             ttl,
-            ("temperature." + port ()).c_str (),
+            ("temperature." + std::to_string(_index)).c_str (),
             location().c_str (),
             _temperature.c_str (),
             "C");
@@ -173,13 +173,13 @@ void Sensor::publish (mlm_client_t *client, int ttl)
     if (!_humidity.empty ()) {
         zhash_t *aux = zhash_new ();
         zhash_autofree (aux);
-        zhash_insert (aux, "port", (void*) port().c_str());
+        zhash_insert (aux, "port", (void*) std::to_string(_index).c_str());
         zhash_insert (aux, "sname", (void *) assetName().c_str ());
         zmsg_t *msg = fty_proto_encode_metric (
             aux,
             time (NULL),
             ttl,
-            ("humidity." + port ()).c_str (),
+            ("humidity." + std::to_string(_index)).c_str (),
             location().c_str (),
             _humidity.c_str (),
             "%");
@@ -201,21 +201,20 @@ void Sensor::publish (mlm_client_t *client, int ttl)
         {
             std::string extport = std::to_string(gpiPort);
             auto search  = _children.find (extport);
-
             if (search != _children.end())
             {
                 std::string sname = search->second;
 
                 zhash_t *aux = zhash_new ();
                 zhash_autofree (aux);
-                zhash_insert (aux, "port", (void*) port().c_str ());
+                zhash_insert (aux, "port", (void*) std::to_string(_index).c_str());
                 zhash_insert (aux, "ext-port", (void *) extport.c_str ());
                 zhash_insert (aux, "sname", (void *) sname.c_str ()); // sname of the child sensor if any
                 zmsg_t *msg = fty_proto_encode_metric (
                     aux,
                     ::time (NULL),
                     ttl,
-                    ("status.GPI" + std::to_string (gpiPort) + "." + port ()).c_str (),
+                    ("status.GPI" + std::to_string (gpiPort) + "." + std::to_string(_index)).c_str(),
                     location().c_str (),
                     contact.c_str (),
                     "");
