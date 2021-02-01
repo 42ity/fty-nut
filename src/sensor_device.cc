@@ -120,6 +120,10 @@ void Sensor::update (nut::TcpClient &conn, const std::map <std::string, std::str
                         log_debug ("sa: new style dry-contact status, but missing config");
                     }
                 }
+                // workaround for EMP01: state is "open" or "closed"
+                else if (state == "open") {
+                    state = "opened";
+                }
                 _contacts.push_back (state);
                 log_debug ("sa: %scontact.%i.status state %s (%s)", prefix.c_str (), i, state.c_str (), assetName().c_str());
             }
