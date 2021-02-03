@@ -24,6 +24,7 @@
 #include <fty_common_macros.h>
 
 #include <ftyproto.h>
+#include <stdexcept>
 
 void
 Device::fixAlertLimits (DeviceAlert& alert) {

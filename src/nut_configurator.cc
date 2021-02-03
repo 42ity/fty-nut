@@ -41,6 +41,7 @@
 #include <czmq.h>
 #include <string>
 #include <regex>
+#include <stdexcept>
 
 using namespace shared;
 

@@ -30,6 +30,7 @@
 
 #include <functional>
 #include <regex>
+#include <stdexcept>
 
 namespace ftynut {
 
