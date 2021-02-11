@@ -551,7 +551,8 @@ NutCommandConnector::NutCommandConnector(NutCommandConnector::Parameters params)
     m_manager(params.nutHost, params.nutUsername, params.nutPassword, params.dbUrl),
     m_dispatcher({
         { "GetCommands", std::bind(&NutCommandConnector::requestGetCommands, this, std::placeholders::_1) },
-        { "PerformCommands", std::bind(&NutCommandConnector::requestPerformCommands, this, std::placeholders::_1) }
+        { "PerformCommands", std::bind(&NutCommandConnector::requestPerformCommands, this, std::placeholders::_1) },
+        { "PerformGroupCommands", std::bind(&NutCommandConnector::requestPerformGroupCommands, this, std::placeholders::_1) },
     }),
     m_msgBus(messagebus::MlmMessageBus(params.endpoint, params.agentName))
 {
@@ -643,6 +644,58 @@ messagebus::UserData NutCommandConnector::requestPerformCommands(messagebus::Use
 
     m_manager.performCommands(computedCommands);
     return {};
+}
+
+messagebus::UserData NutCommandConnector::requestPerformGroupCommands(messagebus::UserData data) {
+    dto::commands::PerformCommandsQueryDto query;
+    data >> query;
+
+    /// XXX: make this suck less.
+    std::unique_ptr<messagebus::MessageBus> requester { messagebus::MlmMessageBus(m_parameters.endpoint, m_parameters.agentName + "-automatic-group-resolver") };
+    requester->connect();
+
+    dto::commands::PerformCommandsQueryDto resolvedQuery;
+    for (const auto& command : query.commands) {
+        log_debug("Expanding automatic group '%s'", command.asset.c_str());
+
+        // Build query to fty-automatic-group
+        cxxtools::SerializationInfo requestSI;
+        requestSI.addMember("id") <<= stoi(command.asset);
+        std::ostringstream requestStream;
+        cxxtools::JsonSerializer requestSerializer(requestStream);
+        requestSerializer.serialize(requestSI);
+        requestSerializer.finish();
+
+        messagebus::Message replyMsg;
+        replyMsg.metaData() = {
+            { messagebus::Message::CORRELATION_ID, messagebus::generateUuid() },
+            { messagebus::Message::SUBJECT, "RESOLVE" },
+            { messagebus::Message::TO, "automatic-group" },
+            { messagebus::Message::FROM, m_parameters.agentName + "-automatic-group-resolver" },
+            { messagebus::Message::REPLY_TO, m_parameters.agentName + "-automatic-group-resolver" },
+        } ;
+        replyMsg.userData() = { requestStream.str() };
+
+        auto reply = requester->request("FTY.Q.GROUP.QUERY", replyMsg, 5);
+        if (reply.metaData().at(messagebus::Message::STATUS) != "ok") {
+            throw std::runtime_error(*reply.userData().begin());
+        }
+
+        cxxtools::SerializationInfo replySI;
+        std::istringstream replyStream(*reply.userData().begin());
+        cxxtools::JsonDeserializer replyDeserializer(replyStream);
+        replyDeserializer.deserialize(replySI);
+
+        for (const auto& replyItem : replySI) {
+            std::string asset;
+            replyItem.getMember("name").getValue(asset);
+            resolvedQuery.commands.emplace_back(asset, command.command, command.target, command.argument);
+        }
+    }
+
+    messagebus::UserData resolvedData;
+    resolvedData << resolvedQuery;
+    return requestPerformCommands(resolvedData);
 }
 
 }
