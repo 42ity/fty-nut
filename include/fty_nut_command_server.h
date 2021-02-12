@@ -76,6 +76,7 @@ class NutCommandConnector {
 
         messagebus::UserData requestGetCommands(messagebus::UserData data);
         messagebus::UserData requestPerformCommands(messagebus::UserData data);
+        messagebus::UserData requestPerformGroupCommands(messagebus::UserData data);
 
         Parameters m_parameters;
         NutCommandManager m_manager;
