@@ -276,41 +276,52 @@ Autoconfig::onUpdateFromSecw(secw::DocumentPtr oldDoc, secw::DocumentPtr newDoc,
         auto &asset = it.second.asset;
         if (asset) {
             auto &endpoint = asset->endpoint();
-            if (endpoint.count("nut_snmp.secw_credential_id")) {
-                auto &secw_id_asset = endpoint.at("nut_snmp.secw_credential_id");
-                // if the modified secw document is configured in the asset
-                if (secw_id == secw_id_asset) {
-                    // here we consider only credentials modification
-                    // get protocol and compare old config and new one
-                    std::string protocol;
-                    if (endpoint.at("protocol") == "nut_snmp") {
-                        protocol = "snmp-ups";
-                    }
-                    else if (endpoint.at("protocol") == "nut_powercom") {
-                        protocol = "etn-nut-powerconnect";
-                    }
-                    else if (endpoint.at("protocol") == "nut_xml_pdc") {
-                        // no credentials for nut_xml_pdc
-                        continue;
-                    }
-                    else {
-                        log_error("Unknown protocol %s", endpoint.at("protocol").c_str());
-                        continue;
-                    }
-                    auto oldConfig = fty::nut::convertSecwDocumentToKeyValues(oldDoc, protocol);
-                    auto newConfig = fty::nut::convertSecwDocumentToKeyValues(newDoc, protocol);
-                    // if credential configurations are different, reconfigure asset
-                    if (oldConfig.size() != newConfig.size() ||
-                        !std::equal(oldConfig.begin(), oldConfig.end(), newConfig.begin())) {
-                        log_info("Reconfigure asset %s", name.c_str());
-                        // reconfigure asset
-                        NUTConfigurator configurator;
-                        configurator.configure(name, it.second);
-                        // this is an updated asset, mark it for reconfiguration
-                        it.second.state = AutoConfigurationInfo::STATE_NEW;
-                        state_writer->commit();
-                        setPollingInterval();
-                    }
+            // get protocol and credential id of asset
+            std::string protocol;
+            secw::Id secw_id_asset;
+            if (endpoint.at("protocol") == "nut_snmp") {
+                protocol = "snmp-ups";
+                if (endpoint.count("nut_snmp.secw_credential_id") == 0) {
+                    log_error("No credential id for %s", name.c_str());
+                    continue;
+                }
+                secw_id_asset = endpoint.at("nut_snmp.secw_credential_id");
+            }
+            else if (endpoint.at("protocol") == "nut_powercom") {
+                protocol = "etn-nut-powerconnect";
+                if (endpoint.count("nut_powercom.secw_credential_id") == 0) {
+                    log_error("No credential id for %s", name.c_str());
+                    continue;
+                }
+                secw_id_asset = endpoint.at("nut_powercom.secw_credential_id");
+            }
+            else if (endpoint.at("protocol") == "nut_xml_pdc") {
+                // no credentials for nut_xml_pdc
+                continue;
+            }
+            else {
+                log_error("Unknown protocol %s", endpoint.at("protocol").c_str());
+                continue;
+            }
+
+            // if the modified secw document is configured in the asset
+            if (secw_id == secw_id_asset) {
+                // here we consider only credentials modification
+                // compare public data of old config and new one (private data are not send during notification)
+                // TBD: Check private data when security wallet will be modified (add information if private data changed)
+                auto oldConfig = fty::nut::convertSecwDocumentToKeyValues(oldDoc, protocol);
+                auto newConfig = fty::nut::convertSecwDocumentToKeyValues(newDoc, protocol);
+                // if credential configurations are different, reconfigure asset
+                if (oldConfig.size() != newConfig.size() ||
+                    !std::equal(oldConfig.begin(), oldConfig.end(), newConfig.begin())) {
+                    log_info("Reconfigure asset %s", name.c_str());
+                    // reconfigure asset
+                    NUTConfigurator configurator;
+                    configurator.configure(name, it.second);
+                    // this is an updated asset, mark it for reconfiguration
+                    it.second.state = AutoConfigurationInfo::STATE_NEW;
+                    state_writer->commit();
+                    setPollingInterval();
                 }
             }
         }
