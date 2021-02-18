@@ -241,7 +241,7 @@ void NUTConfigurator::systemctl( const std::string &operation, It first, It last
 void NUTConfigurator::updateNUTConfig()
 {
     // Run the helper script
-    std::vector<std::string> _argv = { "sudo", "fty-nutconfig" };
+    std::vector<std::string> _argv = { "sudo", "/usr/bin/fty-nutconfig" };
     MlmSubprocess::SubProcess systemd( _argv );
     if( systemd.run() ) {
         int result = systemd.wait();
