@@ -47,8 +47,6 @@ using namespace shared;
 
 #define NUT_PART_STORE "/var/lib/fty/fty-nut/devices"
 
-static const std::string SECW_SOCKET_PATH = "/run/fty-security-wallet/secw.socket";
-
 static std::string s_getPollingInterval()
 {
     std::string polling = "30";

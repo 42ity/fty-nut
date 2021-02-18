@@ -38,6 +38,9 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <functional>
+
+static const std::string SECW_DEFAULT_ENDPOINT = "ipc://@/malamute";
 
 class Autoconfig {
  public:
@@ -45,6 +48,7 @@ class Autoconfig {
 
     void onPoll();
     void onUpdate();
+    void onUpdateFromSecw(secw::DocumentPtr oldDoc, secw::DocumentPtr newDoc, StateManager::Writer *state_writer);
     int timeout () const {return _timeout;}
     void handleLimitations (fty_proto_t **message );
  private:
@@ -256,12 +260,84 @@ void Autoconfig::setPollingInterval( )
 }
 
 void
+Autoconfig::onUpdateFromSecw(secw::DocumentPtr oldDoc, secw::DocumentPtr newDoc, StateManager::Writer *state_writer)
+{
+    if (!(oldDoc.get() && newDoc.get() && state_writer)) return;
+
+    secw::Id secw_id = newDoc.get()->getId();
+    if (secw_id != oldDoc.get()->getId()) {
+        // here we consider only data modification of the same secw document
+        return;
+    }
+
+    // for each config, find if the modified secw document is configured in asset
+    for(auto &it : _configDevices) {
+        const std::string& name = it.first;
+        auto &asset = it.second.asset;
+        if (asset) {
+            auto &endpoint = asset->endpoint();
+            if (endpoint.count("nut_snmp.secw_credential_id")) {
+                auto &secw_id_asset = endpoint.at("nut_snmp.secw_credential_id");
+                // if the modified secw document is configured in the asset
+                if (secw_id == secw_id_asset) {
+                    // here we consider only credentials modification
+                    // get protocol and compare old config and new one
+                    std::string protocol;
+                    if (endpoint.at("protocol") == "nut_snmp") {
+                        protocol = "snmp-ups";
+                    }
+                    else if (endpoint.at("protocol") == "nut_powercom") {
+                        protocol = "etn-nut-powerconnect";
+                    }
+                    else if (endpoint.at("protocol") == "nut_xml_pdc") {
+                        // no credentials for nut_xml_pdc
+                        continue;
+                    }
+                    else {
+                        log_error("Unknown protocol %s", endpoint.at("protocol").c_str());
+                        continue;
+                    }
+                    auto oldConfig = fty::nut::convertSecwDocumentToKeyValues(oldDoc, protocol);
+                    auto newConfig = fty::nut::convertSecwDocumentToKeyValues(newDoc, protocol);
+                    // if credential configurations are different, reconfigure asset
+                    if (oldConfig.size() != newConfig.size() ||
+                        !std::equal(oldConfig.begin(), oldConfig.end(), newConfig.begin())) {
+                        log_info("Reconfigure asset %s", name.c_str());
+                        // reconfigure asset
+                        NUTConfigurator configurator;
+                        configurator.configure(name, it.second);
+                        // this is an updated asset, mark it for reconfiguration
+                        it.second.state = AutoConfigurationInfo::STATE_NEW;
+                        state_writer->commit();
+                        setPollingInterval();
+                    }
+                }
+            }
+        }
+    }
+}
+
+void
+callbackUpdated(const std::string& portfolio, secw::DocumentPtr oldDoc, secw::DocumentPtr newDoc, Autoconfig *agent, StateManager::Writer *state_writer)
+{
+    if (agent) {
+        agent->onUpdateFromSecw(oldDoc, newDoc, state_writer);
+    }
+}
+
+void
 fty_nut_configurator_server (zsock_t *pipe, void *args)
 {
     StateManager state_manager;
     StateManager::Writer& state_writer = state_manager.getWriter();
     Autoconfig agent(state_manager.getReader());
     const char *endpoint = static_cast<const char *>(args);
+
+    fty::SocketSyncClient secwSyncClient(SECW_SOCKET_PATH);
+    mlm::MlmStreamClient notificationStream(SECURITY_WALLET_AGENT, SECW_NOTIFICATIONS, 1000, SECW_DEFAULT_ENDPOINT);
+    auto secwClient = secw::ConsumerAccessor(secwSyncClient, notificationStream);
+    // register the callback on security wallet update
+    secwClient.setCallbackOnUpdate(std::bind(callbackUpdated, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, &agent, &state_writer));
 
     MlmClientGuard client(mlm_client_new());
     if (!client) {
