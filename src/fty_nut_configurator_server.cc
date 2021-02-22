@@ -48,7 +48,7 @@ class Autoconfig {
 
     void onPoll();
     void onUpdate();
-    void onUpdateFromSecw(secw::DocumentPtr oldDoc, secw::DocumentPtr newDoc, StateManager::Writer *state_writer);
+    void onUpdateFromSecw(secw::Id secw_id, StateManager::Writer *state_writer);
     int timeout () const {return _timeout;}
     void handleLimitations (fty_proto_t **message );
  private:
@@ -260,15 +260,9 @@ void Autoconfig::setPollingInterval( )
 }
 
 void
-Autoconfig::onUpdateFromSecw(secw::DocumentPtr oldDoc, secw::DocumentPtr newDoc, StateManager::Writer *state_writer)
+Autoconfig::onUpdateFromSecw(secw::Id secw_id, StateManager::Writer *state_writer)
 {
-    if (!(oldDoc.get() && newDoc.get() && state_writer)) return;
-
-    secw::Id secw_id = newDoc.get()->getId();
-    if (secw_id != oldDoc.get()->getId()) {
-        // here we consider only data modification of the same secw document
-        return;
-    }
+    if (!state_writer) return;
 
     // for each config, find if the modified secw document is configured in asset
     for(auto &it : _configDevices) {
@@ -276,11 +270,9 @@ Autoconfig::onUpdateFromSecw(secw::DocumentPtr oldDoc, secw::DocumentPtr newDoc,
         auto &asset = it.second.asset;
         if (asset) {
             auto &endpoint = asset->endpoint();
-            // get protocol and credential id of asset
-            std::string protocol;
+            // get credential id of asset
             secw::Id secw_id_asset;
             if (endpoint.at("protocol") == "nut_snmp") {
-                protocol = "snmp-ups";
                 if (endpoint.count("nut_snmp.secw_credential_id") == 0) {
                     log_error("No credential id for %s", name.c_str());
                     continue;
@@ -288,7 +280,6 @@ Autoconfig::onUpdateFromSecw(secw::DocumentPtr oldDoc, secw::DocumentPtr newDoc,
                 secw_id_asset = endpoint.at("nut_snmp.secw_credential_id");
             }
             else if (endpoint.at("protocol") == "nut_powercom") {
-                protocol = "etn-nut-powerconnect";
                 if (endpoint.count("nut_powercom.secw_credential_id") == 0) {
                     log_error("No credential id for %s", name.c_str());
                     continue;
@@ -306,33 +297,28 @@ Autoconfig::onUpdateFromSecw(secw::DocumentPtr oldDoc, secw::DocumentPtr newDoc,
 
             // if the modified secw document is configured in the asset
             if (secw_id == secw_id_asset) {
-                // here we consider only credentials modification
-                // compare public data of old config and new one (private data are not send during notification)
-                // TBD: Check private data when security wallet will be modified (add information if private data changed)
-                auto oldConfig = fty::nut::convertSecwDocumentToKeyValues(oldDoc, protocol);
-                auto newConfig = fty::nut::convertSecwDocumentToKeyValues(newDoc, protocol);
-                // if credential configurations are different, reconfigure asset
-                if (oldConfig.size() != newConfig.size() ||
-                    !std::equal(oldConfig.begin(), oldConfig.end(), newConfig.begin())) {
-                    log_info("Reconfigure asset %s", name.c_str());
-                    // reconfigure asset
-                    NUTConfigurator configurator;
-                    configurator.configure(name, it.second);
-                    // this is an updated asset, mark it for reconfiguration
-                    it.second.state = AutoConfigurationInfo::STATE_NEW;
-                    state_writer->commit();
-                    setPollingInterval();
-                }
+                log_info("Reconfigure asset %s", name.c_str());
+                // reconfigure asset
+                NUTConfigurator configurator;
+                configurator.configure(name, it.second);
+                // this is an updated asset, mark it for reconfiguration
+                it.second.state = AutoConfigurationInfo::STATE_NEW;
+                state_writer->commit();
+                setPollingInterval();
             }
         }
     }
 }
 
 void
-callbackUpdated(const std::string& portfolio, secw::DocumentPtr oldDoc, secw::DocumentPtr newDoc, Autoconfig *agent, StateManager::Writer *state_writer)
+callbackUpdated(const std::string& portfolio, secw::DocumentPtr oldDoc, secw::DocumentPtr newDoc,
+                bool non_secret_changed, bool secret_changed, Autoconfig *agent, StateManager::Writer *state_writer)
 {
-    if (agent) {
-        agent->onUpdateFromSecw(oldDoc, newDoc, state_writer);
+    // here we consider only credentials modification
+    // compare public and private data of old config and new one (private data are not send during notification)
+    if (agent && (non_secret_changed || secret_changed)) {
+        secw::Id secw_id = newDoc.get()->getId();
+        agent->onUpdateFromSecw(secw_id, state_writer);
     }
 }
 
@@ -348,7 +334,8 @@ fty_nut_configurator_server (zsock_t *pipe, void *args)
     mlm::MlmStreamClient notificationStream(SECURITY_WALLET_AGENT, SECW_NOTIFICATIONS, 1000, SECW_DEFAULT_ENDPOINT);
     auto secwClient = secw::ConsumerAccessor(secwSyncClient, notificationStream);
     // register the callback on security wallet update
-    secwClient.setCallbackOnUpdate(std::bind(callbackUpdated, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, &agent, &state_writer));
+    secwClient.setCallbackOnUpdate(std::bind(callbackUpdated, std::placeholders::_1, std::placeholders::_2,
+      std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, &agent, &state_writer));
 
     MlmClientGuard client(mlm_client_new());
     if (!client) {
