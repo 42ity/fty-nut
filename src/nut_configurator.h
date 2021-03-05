@@ -29,6 +29,8 @@
 #include <string>
 #include <fty_common_nut.h>
 
+static const std::string SECW_SOCKET_PATH = "/run/fty-security-wallet/secw.socket";
+
 struct AutoConfigurationInfo
 {
     enum {

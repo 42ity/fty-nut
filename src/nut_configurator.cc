@@ -47,8 +47,6 @@ using namespace shared;
 
 #define NUT_PART_STORE "/var/lib/fty/fty-nut/devices"
 
-static const std::string SECW_SOCKET_PATH = "/run/fty-security-wallet/secw.socket";
-
 static std::string s_getPollingInterval()
 {
     std::string polling = "30";
@@ -241,7 +239,7 @@ void NUTConfigurator::systemctl( const std::string &operation, It first, It last
 void NUTConfigurator::updateNUTConfig()
 {
     // Run the helper script
-    std::vector<std::string> _argv = { "sudo", "fty-nutconfig" };
+    std::vector<std::string> _argv = { "sudo", "/usr/bin/fty-nutconfig" };
     MlmSubprocess::SubProcess systemd( _argv );
     if( systemd.run() ) {
         int result = systemd.wait();
