@@ -229,6 +229,7 @@ void Sensors::updateSensorList (nut::TcpClient &conn, mlm_client_t *client)
                         }
                     } catch (std::exception &e) {
                         log_error("Nut object %s not found for (%s): %s", addressDeviceName.c_str(), master.c_str(), e.what());
+                        continue;
                     }
                 }
             }
@@ -269,25 +270,28 @@ void Sensors::updateSensorList (nut::TcpClient &conn, mlm_client_t *client)
                             i.second->setSubAddress(addressDevice);
                         }
                     } catch (std::exception &e) {
-                        log_error("sa: nut object %s not found for (%s): %s", addressDeviceName.c_str(), master.c_str(), e.what());
+                        log_warning("sa: nut object %s not found for (%s): %s", addressDeviceName.c_str(), master.c_str(), e.what());
                     }
                     // Update asset config values
                     updateAssetConfig(i.second.get(), client);
                 }
             }
-            // If no daisychain
-            if (chain == 0) {
-                _sensors[name] = Sensor(i.second.get(), parent, children, index);
-                log_debug ("sa: adding sensor, with parent (not daisy) and index %d: '%s'", index, parent_name.c_str());
-            }
-            // else daisychain
-            else {
-                if (master.empty()) {
-                    log_error ("sa: daisychain host for %s not found", parent_name.c_str());
-                    removeInventory(name);
-                } else {
-                    _sensors[name] = Sensor(i.second.get(), parent, children, master, index);
-                    log_debug ("sa: adding sensor, with parent (daisy) and index %d: '%s'", index, parent_name.c_str());
+            // If found correct index
+            if (index > 0) {
+                // If no daisychain
+                if (chain == 0) {
+                    _sensors[name] = Sensor(i.second.get(), parent, children, index);
+                    log_debug ("sa: adding sensor, with parent (not daisy) and index %d: '%s'", index, parent_name.c_str());
+                }
+                // else daisychain
+                else {
+                    if (master.empty()) {
+                        log_error ("sa: daisychain host for %s not found", parent_name.c_str());
+                        removeInventory(name);
+                    } else {
+                        _sensors[name] = Sensor(i.second.get(), parent, children, master, index);
+                        log_debug ("sa: adding sensor, with parent (daisy) and index %d: '%s'", index, parent_name.c_str());
+                    }
                 }
             }
         }
