@@ -48,6 +48,7 @@ class Sensors {
     uint64_t _inventoryTimestamp_ms = 0; // [ms] it is not an actual timestamp, it is just a reference point in time, when inventory was advertised
     std::map <std::string, std::string> _sensorInventoryMapping; //!< sensor inventory mapping
     bool _sensorMappingLoaded = false;
+    bool _sensorListError = false;  // Flag to detect if error during initialisation of sensors list
 };
 
 //  Self test of this class

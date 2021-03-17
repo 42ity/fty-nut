@@ -135,7 +135,9 @@ sensor_actor (zsock_t *pipe, void *args)
             sensors.updateSensorList (nutClient, client);
             sensors.updateFromNUT (nutClient);
             sensors.advertiseInventory (client);
-            sensors.publish (client, polling*2/1000);
+            // hotfix IPMVAL-2713 (data stale on device which host sensors cause communication failure alarms on sensors)
+            // increase ttl from 60 to 240 sec (polling is equal to 30 sec).
+            sensors.publish (client, (polling*8)/1000);
             nutClient.disconnect();
             publishtime = zclock_mono();
         }

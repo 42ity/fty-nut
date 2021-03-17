@@ -129,8 +129,11 @@ bool Sensors::updateAssetConfig (AssetState::Asset *asset, mlm_client_t *client)
 
 void Sensors::updateSensorList (nut::TcpClient &conn, mlm_client_t *client)
 {
-    if (!_state_reader->refresh())
+    // Note: force refresh sensors list if an error has been detected
+    if (!_sensorListError && !_state_reader->refresh())
         return;
+
+    bool sensorListError = false;
     const AssetState& deviceState = _state_reader->getState();
     auto& devices = deviceState.getPowerDevices();
     auto& sensors = deviceState.getSensors();
@@ -229,11 +232,13 @@ void Sensors::updateSensorList (nut::TcpClient &conn, mlm_client_t *client)
                         }
                     } catch (std::exception &e) {
                         log_error("Nut object %s not found for (%s): %s", addressDeviceName.c_str(), master.c_str(), e.what());
+                        // Error of communication detected with nut driver, need to refresh sensors list later
+                        sensorListError = true;
                         continue;
                     }
                 }
             }
-            // Backward compatibility with port (no modubus address)
+            // Backward compatibility with port (no modbus address)
             else {
                 log_debug ("sa: backward compatibility with port (no modubus address)");
                 std::string port = i.second->port();
@@ -296,7 +301,11 @@ void Sensors::updateSensorList (nut::TcpClient &conn, mlm_client_t *client)
             }
         }
     }
-    log_debug ("sa: loaded %zd nut sensors", _sensors.size());
+    _sensorListError = sensorListError;
+    if (_sensorListError)
+        log_debug ("sa: loaded %zd nut sensors with error(s): retry in a moment", _sensors.size());
+    else
+        log_debug ("sa: loaded %zd nut sensors", _sensors.size());
 
 }
 
