@@ -43,10 +43,10 @@ public:
         {
             return name_;
         }
-        /*const std::string& serial() const
+        const std::string& serial() const
         {
             return serial_;
-        }*/
+        }
         std::string subAddress() const
         {
             const auto it = endpoint_.find("sub_address");
@@ -117,8 +117,7 @@ public:
         }
     private:
         std::string name_;
-        // FIXME To add ??
-        //std::string serial_;
+        std::string serial_;
         std::string IP_;
         std::string port_;
         std::string subtype_;

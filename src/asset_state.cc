@@ -36,7 +36,7 @@
 AssetState::Asset::Asset(fty_proto_t* message)
 {
     name_ = fty_proto_name(message);
-    //serial_ = fty_proto_ext_string(message, "serial_no", "");
+    serial_ = fty_proto_ext_string(message, "serial_no", "");
     IP_ = fty_proto_ext_string(message, "ip.1", "");
     port_ = fty_proto_ext_string(message, "port", "");
     subtype_ = fty_proto_aux_string(message, "subtype", "");
