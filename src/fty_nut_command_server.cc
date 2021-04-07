@@ -690,7 +690,14 @@ messagebus::UserData NutCommandConnector::requestPerformGroupCommands(messagebus
         for (const auto& replyItem : replySI) {
             std::string asset;
             replyItem.getMember("name").getValue(asset);
-            resolvedQuery.commands.emplace_back(asset, command.command, command.target, command.argument);
+
+            /// XXX: fty-command-nut shouldn't do that.
+            if (asset.find("server-") == 0) {
+                resolvedQuery.commands.emplace_back(asset, command.command, command.target, command.argument);
+            }
+            else {
+                log_warning("Throwing out asset '%s' from automatic group '%s' resolve result.", command.asset.c_str(), asset.c_str());
+            }
         }
     }
 

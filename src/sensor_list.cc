@@ -200,8 +200,6 @@ void Sensors::updateSensorList (nut::TcpClient &conn, mlm_client_t *client)
         else {
             std::string prefix;
             int index = 0;
-            int offset = 0;
-
             if (chain == 0) {
                 // connected to standalone ups
                 master = parent->name();
@@ -209,7 +207,6 @@ void Sensors::updateSensorList (nut::TcpClient &conn, mlm_client_t *client)
                 // ugh, sensor connected to daisy chain device
                 master = deviceState.ip2master(ip);
                 prefix = "device.1.";
-                offset = (chain -1) * 3;
             }
 
             std::string subAddress = i.second->subAddress();
@@ -217,24 +214,38 @@ void Sensors::updateSensorList (nut::TcpClient &conn, mlm_client_t *client)
             // Normal treatment with modbus address
             if (!subAddress.empty()) {
                 // search index corresponding to sub address
-                for (int iSensor = offset + 1; iSensor <= offset + 3; iSensor ++) {
-                    std::string addressDeviceName = prefix + std::string("ambient.") + std::to_string(iSensor) + std::string(".address");
-                    try {
-                        std::vector<std::string> values = conn.getDeviceVariableValue(master, addressDeviceName);
-                        if (values.size() > 0) {
-                            std::string subAddressDevice = values.at(0);
-                            log_debug ("sa: get device sub address: %s", subAddressDevice.c_str());
-                            if (subAddressDevice == subAddress) {
-                                index = iSensor;
-                                log_debug ("sa: found index %d for sub address %s", index, subAddressDevice.c_str());
-                                break;
+                std::string sensorCountName = prefix + std::string("ambient.count");
+                std::vector<std::string> values = {};
+                try {
+                    values = conn.getDeviceVariableValue(master, sensorCountName);
+                } catch (std::exception &e) {
+                    log_error("Nut object %s not found for (%s): %s", sensorCountName.c_str(), master.c_str(), e.what());
+                    // Error of communication detected with nut driver, need to refresh sensors list later
+                    sensorListError = true;
+                    continue;
+                }
+                if (values.size() > 0) {
+                    int sensorCount = std::atoi(values.at(0).c_str());
+                    log_debug ("sa: sensor count: %d", sensorCount);
+                    for (int iSensor = 1; iSensor <= sensorCount; iSensor ++) {
+                        std::string addressDeviceName = prefix + std::string("ambient.") + std::to_string(iSensor) + std::string(".address");
+                        try {
+                            values = conn.getDeviceVariableValue(master, addressDeviceName);
+                            if (values.size() > 0) {
+                                std::string subAddressDevice = values.at(0);
+                                log_debug ("sa: get device sub address: %s", subAddressDevice.c_str());
+                                if (subAddressDevice == subAddress) {
+                                    index = iSensor;
+                                    log_debug ("sa: found index %d for sub address %s", index, subAddressDevice.c_str());
+                                    break;
+                                }
                             }
+                        } catch (std::exception &e) {
+                            log_error("Nut object %s not found for (%s): %s", addressDeviceName.c_str(), master.c_str(), e.what());
+                            // Error of communication detected with nut driver, need to refresh sensors list later
+                            sensorListError = true;
+                            continue;
                         }
-                    } catch (std::exception &e) {
-                        log_error("Nut object %s not found for (%s): %s", addressDeviceName.c_str(), master.c_str(), e.what());
-                        // Error of communication detected with nut driver, need to refresh sensors list later
-                        sensorListError = true;
-                        continue;
                     }
                 }
             }
@@ -244,23 +255,36 @@ void Sensors::updateSensorList (nut::TcpClient &conn, mlm_client_t *client)
                 std::string port = i.second->port();
                 index = std::atoi(port.c_str());
                 if (index > 0) {
-                    // Update parent
+                    // update parent if necessary
                     AssetState::Asset *newParent = nullptr;
-                    int newChain = (index / 3) + 1;
-                    // Here we have the master for location, need to find the good parent and update location
-                    if (newChain > 1) {
-                        for (auto device : devices) {
-                            const std::string& ipDevice = device.second->IP();
-                            int chainDevice = device.second->daisychain();
-                            if (ipDevice == ip && chainDevice == newChain) {
-                                newParent = device.second.get();
-                                break;
+                    // get serial number of parent
+                    std::string parentSerialNumberName = prefix + std::string("ambient.") + port + std::string(".parent.serial");
+                    std::vector<std::string> values = {};
+                    try {
+                        values = conn.getDeviceVariableValue(master, parentSerialNumberName);
+                    } catch (std::exception &e) {
+                        log_error("Nut object %s not found for (%s): %s", parentSerialNumberName.c_str(), master.c_str(), e.what());
+                        // Error of communication detected with nut driver, need to refresh sensors list later
+                        sensorListError = true;
+                        continue;
+                    }
+                    if (values.size() > 0) {
+                        std::string parentSerialNumber = values.at(0);
+                        // Here we have the master for location, need to find the good parent and update location if different of master
+                        if (!parentSerialNumber.empty() && parentSerialNumber != parent->serial()) {
+                            for (auto device : devices) {
+                                const std::string& ipDevice = device.second->IP();
+                                const std::string& serialDevice = device.second->serial();
+                                if (ipDevice == ip && serialDevice == parentSerialNumber) {
+                                    newParent = device.second.get();
+                                    break;
+                                }
                             }
-                        }
-                        if (newParent) {
-                            log_debug ("sa: set new parent %s", newParent->name().c_str());
-                            parent = newParent;
-                            i.second->setLocation(newParent->name());
+                            if (newParent) {
+                                log_debug ("sa: set new parent %s", newParent->name().c_str());
+                                parent = newParent;
+                                i.second->setLocation(newParent->name());
+                            }
                         }
                     }
                     // update modbus address
