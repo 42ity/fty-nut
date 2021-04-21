@@ -26,14 +26,18 @@
 @end
 */
 
+#include "fty_nut_classes.h"
+/*
 #include "fty_nut_configurator_server.h"
 #include "state_manager.h"
 #include "nut_mlm.h"
 #include "nut_configurator.h"
 #include "state_manager.h"
+*/
+
 #include <fty_log.h>
 #include <fty_common_mlm.h>
-#include <ftyproto.h>
+#include <fty_proto.h>
 #include <fstream>
 #include <algorithm>
 #include <string>

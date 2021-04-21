@@ -22,8 +22,6 @@
 #ifndef FTY_NUT_COMMAND_SERVER_H_INCLUDED
 #define FTY_NUT_COMMAND_SERVER_H_INCLUDED
 
-#include "fty_nut_library.h"
-
 namespace ftynut {
 /**
  * \brief NUT command manager for 42ity.

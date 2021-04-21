@@ -28,6 +28,7 @@
 
 #include "sensor_list.h"
 #include "nut_agent.h"
+
 #include <fty_log.h>
 #include <fty_common_nut.h>
 #include <fty_asset_accessor.h>
@@ -465,7 +466,6 @@ sensor_list_test (bool verbose)
     writer.getState().updateFromProto(asset);
     fty_proto_destroy(&asset);
 
-
     asset = fty_proto_new (FTY_PROTO_ASSET);
     fty_proto_set_name (asset, "epdu-1");
     fty_proto_set_operation (asset, FTY_PROTO_ASSET_OP_CREATE);
@@ -506,6 +506,7 @@ sensor_list_test (bool verbose)
     fty_proto_ext_insert (asset, "port", "1");
     writer.getState().updateFromProto(asset);
     fty_proto_destroy(&asset);
+
     writer.commit();
 
     nut::TcpClient nutClient;
@@ -514,6 +515,31 @@ sensor_list_test (bool verbose)
     list.updateSensorList (nutClient, nullptr);
     nutClient.disconnect();
     assert (list._sensors.size() == 2);
+
+    if (verbose) {
+        printf("\n");
+        printf("-- sensors map\n");
+        for (auto& it : list._sensors) {
+            printf("%s\n", it.first.c_str());
+        }
+
+        printf("--\n");
+        printf("list._sensors[\"sensor-1\"].sensorPrefix(): '%s'\n", list._sensors["sensor-1"].sensorPrefix().c_str());
+        printf("list._sensors[\"sensor-1\"].topicSuffix(): '%s'\n", list._sensors["sensor-1"].topicSuffix().c_str());
+        printf("list._sensors[\"sensor-1\"].nutPrefix(): '%s'\n", list._sensors["sensor-1"].nutPrefix().c_str());
+        printf("list._sensors[\"sensor-1\"].nutIndex(): %d\n", list._sensors["sensor-1"].nutIndex());
+        printf("list._sensors[\"sensor-1\"].location(): '%s'\n", list._sensors["sensor-1"].location().c_str());
+        printf("list._sensors[\"sensor-1\"].subAddress(): '%s'\n", list._sensors["sensor-1"].subAddress().c_str());
+
+        printf("--\n");
+        printf("list._sensors[\"sensor-2\"].sensorPrefix(): '%s'\n", list._sensors["sensor-2"].sensorPrefix().c_str());
+        printf("list._sensors[\"sensor-2\"].topicSuffix(): '%s'\n", list._sensors["sensor-2"].topicSuffix().c_str());
+        printf("list._sensors[\"sensor-2\"].nutPrefix(): '%s'\n", list._sensors["sensor-2"].nutPrefix().c_str());
+        printf("list._sensors[\"sensor-2\"].nutIndex(): %d\n", list._sensors["sensor-2"].nutIndex());
+        printf("list._sensors[\"sensor-2\"].location(): '%s'\n", list._sensors["sensor-2"].location().c_str());
+        printf("list._sensors[\"sensor-2\"].subAddress(): '%s'\n", list._sensors["sensor-2"].subAddress().c_str());
+        printf("list._sensors[\"sensor-2\"].chain(): %d\n", list._sensors["sensor-2"].chain());
+    }
 
     assert (list._sensors["sensor-1"].sensorPrefix() == "ambient.");
     assert (list._sensors["sensor-1"].topicSuffix() == ".0@ups-1");

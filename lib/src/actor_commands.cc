@@ -28,8 +28,9 @@
 
 #include "actor_commands.h"
 #include "nut_agent.h"
-#include <fty_log.h>
 #include "nut_mlm.h"
+
+#include <fty_log.h>
 #include <fty_common_mlm.h>
 
 int
@@ -128,11 +129,14 @@ actor_commands (
 void
 actor_commands_test (bool verbose)
 {
+    #define SELFTEST_RO "selftest-ro"
+    #define SELFTEST_RW "selftest-rw"
+
     printf (" * actor_commands: \n");
 
     //  @selftest
     static const char* endpoint = "ipc://fty-nut-server-test";
-    static const char* logErrPath = "src/selftest-rw/stderr.txt";
+    static const char* logErrPath = SELFTEST_RW "/stderr.txt";
 
     ManageFtyLog::setInstanceFtylog("fty-nut-command-test");
 
@@ -266,7 +270,7 @@ actor_commands_test (bool verbose)
     message = zmsg_new ();
     assert (message);
     zmsg_addstr (message, ACTION_CONFIGURE);
-    zmsg_addstr (message, "src/selftest-ro/mapping.conf");
+    zmsg_addstr (message, SELFTEST_RO "/mapping.conf");
     rv = actor_commands (client, &message, actor_polling, nut_agent);
     assert (rv == 0);
     assert (message == NULL);

@@ -26,7 +26,8 @@
 @end
 */
 
-#include "fty_nut_command_server.h"
+#include "fty_nut_classes.h"
+//#include "fty_nut_command_server.h"
 
 #include <functional>
 #include <regex>

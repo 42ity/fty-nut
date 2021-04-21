@@ -26,11 +26,15 @@
 @end
 */
 
+#include "fty_nut_classes.h"
+/*
 #include "actor_commands.h"
 #include "fty_nut_server.h"
 #include "state_manager.h"
 #include "nut_agent.h"
 #include "nut_mlm.h"
+*/
+
 #include <fty_log.h>
 #include <fty_common_mlm.h>
 

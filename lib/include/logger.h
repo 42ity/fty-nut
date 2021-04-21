@@ -28,15 +28,15 @@ extern "C" {
 
 //  @interface
 //  Create a new logger
-AGENT_NUT_EXPORT logger_t *
+logger_t *
     logger_new (void);
 
 //  Destroy the logger
-AGENT_NUT_EXPORT void
+void
     logger_destroy (logger_t **self_p);
 
 //  Self test of this class
-AGENT_NUT_EXPORT void
+void
     logger_test (bool verbose);
 //  @end
 

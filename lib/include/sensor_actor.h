@@ -1,5 +1,5 @@
 /*  =========================================================================
-    fty_nut_configurator_server - fty nut configurator actor
+    alert_device - structure for device producing alerts
 
     Copyright (C) 2014 - 2020 Eaton
 
@@ -19,26 +19,21 @@
     =========================================================================
 */
 
-#ifndef FTY_NUT_CONFIGURATOR_SERVER_H_INCLUDED
-#define FTY_NUT_CONFIGURATOR_SERVER_H_INCLUDED
+#ifndef __SENSOR_ACTOR_H
+#define __SENSOR_ACTOR_H
 
-#include "fty_nut_library.h"
+#include <malamute.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-//  @interface
-//  Create a fty_nut_configurator_server
-void fty_nut_configurator_server (zsock_t *pipe, void *args);
+void sensor_actor (zsock_t *pipe, void *args);
 
-//  Self test of this class
-void fty_nut_configurator_server_test (bool verbose);
-
-//  @end
+void sensor_actor_test (bool verbose);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif
+#endif // __SENSOR_ACTOR_H

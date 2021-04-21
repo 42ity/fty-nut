@@ -19,12 +19,15 @@
     =========================================================================
 */
 
+#include "fty_nut_classes.h"
+/*
 #include "sensor_actor.h"
 #include "alert_actor.h"
 #include "sensor_list.h"
 #include "nut_mlm.h"
-#include <fty_log.h>
+*/
 
+#include <fty_log.h>
 #include <fty_common_mlm.h>
 
 int

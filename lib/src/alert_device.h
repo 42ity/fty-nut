@@ -22,8 +22,7 @@
 #ifndef __ALERT_DEVICE
 #define __ALERT_DEVICE
 
-#include "alert_actor.h"
-#include "asset_state.h"
+#include "fty_nut_classes.h"
 
 #include <nutclient.h>
 #include <malamute.h>

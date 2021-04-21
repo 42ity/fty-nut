@@ -18,14 +18,19 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     =========================================================================
 */
+
+#include "fty_nut_classes.h"
+/*
 #include "alert_device_list.h"
 #include "alert_actor.h"
 #include "asset_state.h"
 #include "nut_mlm.h"
+*/
+
 #include <fty_common_mlm.h>
 #include <fty_log.h>
 
-#include <ftyproto.h>
+#include <fty_proto.h>
 #include <malamute.h>
 
 int

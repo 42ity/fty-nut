@@ -19,11 +19,13 @@
     =========================================================================
 */
 
-#include "alert_device.h"
+#include "fty_nut_classes.h"
+//#include "alert_device.h"
+
 #include <fty_log.h>
 #include <fty_common_macros.h>
 
-#include <ftyproto.h>
+#include <fty_proto.h>
 #include <stdexcept>
 
 void

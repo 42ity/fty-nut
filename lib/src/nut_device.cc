@@ -728,13 +728,15 @@ NUTDeviceList::~NUTDeviceList() {
 void
 nut_device_test (bool verbose)
 {
+    #define SELFTEST_RO "selftest-ro"
+
     printf (" * nutdevice: ");
 
     //  @selftest
 
     // test case: load the mappig file
     drivers::nut::NUTDeviceList self {};
-    const char* path = "src/selftest-ro/mapping.conf";
+    const char* path = SELFTEST_RO "/mapping.conf";
 
     self.load_mapping (path);
 
