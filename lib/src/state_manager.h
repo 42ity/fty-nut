@@ -67,6 +67,7 @@
  * them.
  */
 
+#include <malamute.h>
 #include <atomic>
 #include <memory>
 #include <mutex>

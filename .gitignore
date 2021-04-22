@@ -1,4 +1,5 @@
 build/
+packaging/debian/.debhelper/
 
 # Object files
 *.o

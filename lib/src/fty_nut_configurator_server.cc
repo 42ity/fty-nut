@@ -27,6 +27,7 @@
 */
 
 #include "fty_nut_classes.h"
+#include "nut_mlm.h"
 /*
 #include "fty_nut_configurator_server.h"
 #include "state_manager.h"
@@ -35,6 +36,7 @@
 #include "state_manager.h"
 */
 
+#include <malamute.h>
 #include <fty_log.h>
 #include <fty_common_mlm.h>
 #include <fty_proto.h>
