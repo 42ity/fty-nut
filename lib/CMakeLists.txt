@@ -18,18 +18,17 @@ etn_target(static ${PROJECT_NAME}-lib
         mlm
         cxxtools
         tntdb
-        fty_common_logging
-        fty_common
         fty_proto
+        fty_shm
+        fty_security_wallet
+        fty_common
+        fty_common_logging
         fty_common_db
         fty_common_mlm
         fty_common_socket
-        fty_security_wallet
         fty_common_nut
-        fty_shm
         fty_common_messagebus
         fty_common_dto
-        #protobuf
         fty-asset-accessor # ZZZ
     PRIVATE
 )
@@ -50,15 +49,15 @@ if (BUILD_TESTING)
             mlm
             cxxtools
             tntdb
-            fty_common_logging
-            fty_common
             fty_proto
+            fty_shm
+            fty_security_wallet
+            fty_common
+            fty_common_logging
             fty_common_db
             fty_common_mlm
             fty_common_socket
-            fty_security_wallet
             fty_common_nut
-            fty_shm
             fty_common_messagebus
             fty_common_dto
             fty-asset-accessor # ZZZ
