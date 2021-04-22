@@ -17,84 +17,39 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-Source:         fty-nut
-Section:        net
-Priority:       optional
-Maintainer:     fty-nut Developers <eatonipcopensource@eaton.com>
+Source: fty-nut
+Section: net
+Priority: optional
+Maintainer: fty-nut Developers <eatonipcopensource@eaton.com>
 Standards-Version: 4.0.1.0
 Build-Depends: debhelper (>= 9),
+    cmake (>=3.0),
+    fty-cmake-dev,
     pkg-config,
     libcxxtools-dev,
-    libcidr0-dev,
+#    libcidr0-dev,
     libnutclient-dev,
     libtntdb-dev,
-    libfty-common-logging-dev,
-    libfty-common-dev,
-    libzmq3-dev,
     libczmq-dev,
     libmlm-dev,
-    libfty-proto-dev (>= 1.0.0),
+    libfty-shm-dev,
+    libfty-proto-dev,
+    libfty-common-dev,
+    libfty-common-logging-dev,
     libfty-common-db-dev,
     libfty-common-mlm-dev,
     libfty-common-socket-dev,
-    libfty-security-wallet-dev,
     libfty-common-nut-dev,
+    libfty-security-wallet-dev,
     libfty-asset-accessor-dev,
-    libfty-shm-dev (>= 1.0.0),
-    gcc (>= 4.9.0), g++ (>= 4.9.0),
     systemd,
     dh-systemd,
     asciidoc-base | asciidoc, xmlto,
     dh-autoreconf
 
-Package: libfty-nut1
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: fty-nut shared library
- This package contains shared library for fty-nut:
- nut (network ups tools) daemon wrapper/proxy
-
-Package: libfty-nut-dev
-Architecture: any
-Section: libdevel
-Depends:
-    ${misc:Depends},
-    libcxxtools-dev,
-    libcidr0-dev,
-    libnutclient-dev,
-    libtntdb-dev,
-    libfty-common-logging-dev,
-    libfty-common-dev,
-    libzmq3-dev,
-    libczmq-dev,
-    libmlm-dev,
-    libfty-proto-dev (>= 1.0.0),
-    libfty-common-db-dev,
-    libfty-common-mlm-dev,
-    libfty-common-socket-dev,
-    libfty-security-wallet-dev,
-    libfty-common-nut-dev,
-    libfty-asset-accessor-dev,
-    libfty-shm-dev (>= 1.0.0),
-    libfty-nut1 (= ${binary:Version})
-Description: fty-nut development tools
- This package contains development files for fty-nut:
- nut (network ups tools) daemon wrapper/proxy
-
 Package: fty-nut
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends},
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: runnable binaries from fty-nut
  Main package for fty-nut:
  nut (network ups tools) daemon wrapper/proxy
-
-Package: fty-nut-dbg
-Architecture: any
-Section: debug
-Priority: optional
-Depends:
-    fty-nut (= ${binary:Version}),
-    ${misc:Depends}
-Description: fty-nut debugging symbols
- This package contains the debugging symbols for fty-nut:
- nut (network ups tools) daemon wrapper/proxy.

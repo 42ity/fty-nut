@@ -18,7 +18,7 @@ Environment='SYSTEMD_UNIT_FULLNAME=%n'
 EnvironmentFile=-/etc/default/bios-nut-admin
 EnvironmentFile=-/etc/default/bios-db-ro
 
-ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/fty-nut-command -c @sysconfdir@/@PACKAGE@/fty-nut-command.cfg
+ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/fty-nut-command -c @CMAKE_INSTALL_FULL_SYSCONFDIR@/@PROJECT_NAME@/fty-nut-command.cfg
 
 [Install]
 WantedBy=bios.target

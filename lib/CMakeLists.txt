@@ -29,7 +29,7 @@ etn_target(static ${PROJECT_NAME}-lib
         fty_shm
         fty_common_messagebus
         fty_common_dto
-        protobuf
+        #protobuf
         fty-asset-accessor # ZZZ
     PRIVATE
 )
@@ -61,12 +61,12 @@ if (BUILD_TESTING)
             fty_shm
             fty_common_messagebus
             fty_common_dto
-            protobuf
             fty-asset-accessor # ZZZ
             Catch2::Catch2
             stdc++fs
             log4cplus
             openssl
+            protobuf
     )
 
     #copy selftest-ro, build selftest-rw for test in/out

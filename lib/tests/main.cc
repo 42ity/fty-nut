@@ -26,10 +26,10 @@ typedef struct {
     void (*test) (bool);            // function to run the test (or NULL for private tests)
 } test_item_t;
 
-#define SENSOR_LIST_TESTS_DISABLED
+#define SENSOR_LIST_TESTS_DISABLED  //FIXME known issue
 //#undef SENSOR_LIST_TESTS_DISABLED
 #ifdef SENSOR_LIST_TESTS_DISABLED
-#   pragma message "=== SENSOR_LIST_DISABLED ==="
+#   pragma message "=== SENSOR_LIST_TESTS_DISABLED ==="
 #endif
 
 static test_item_t
@@ -77,4 +77,8 @@ TEST_CASE("All the stuff of before")
 {
     std::cout << "Current path is " << std::filesystem::current_path() << std::endl;
     test_runall(true);
+
+#ifdef SENSOR_LIST_TESTS_DISABLED
+    std::cout << "\n=== SENSOR_LIST_TESTS_DISABLED\n" << std::endl;
+#endif
 }
