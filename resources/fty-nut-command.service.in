@@ -1,6 +1,3 @@
-# This is a skeleton created by zproject.
-# You can add hand-written code here.
-
 [Unit]
 Description=fty-nut-command service
 Requires=malamute.service fty-db.target nut-server.service
@@ -13,13 +10,15 @@ BindsTo=fty-asset.service
 
 [Service]
 Type=simple
-User=discovery-monitoring-daemon
+User=@AGENT_USER@
 Restart=always
-Environment="prefix=@prefix@"
+
+Environment="prefix=/usr"
 Environment='SYSTEMD_UNIT_FULLNAME=%n'
-EnvironmentFile=-@sysconfdir@/default/bios-nut-admin
-EnvironmentFile=-@sysconfdir@/default/bios-db-ro
-ExecStart=@prefix@/bin/fty-nut-command -c @sysconfdir@/@PACKAGE@/fty-nut-command.cfg
+EnvironmentFile=-/etc/default/bios-nut-admin
+EnvironmentFile=-/etc/default/bios-db-ro
+
+ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/fty-nut-command -c @sysconfdir@/@PACKAGE@/fty-nut-command.cfg
 
 [Install]
 WantedBy=bios.target

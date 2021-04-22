@@ -1,8 +1,5 @@
-# This is a skeleton created by zproject.
-# You can add hand-written code here.
-
 [Unit]
-Description=fty-nut service
+Description=@PROJECT_NAME@ service
 Requires=network.target malamute.service
 After=network.target malamute.service
 #WAS#Before=fty-asset.service
@@ -13,20 +10,23 @@ PartOf=bios.target
 
 [Service]
 Type=simple
-User=discovery-monitoring-daemon
+User=@AGENT_USER@
 Restart=always
-EnvironmentFile=-@prefix@/share/bios/etc/default/bios
-EnvironmentFile=-@prefix@/share/bios/etc/default/bios__agent-nut.service.conf
-EnvironmentFile=-@prefix@/share/bios/etc/default/bios__%n.conf
-EnvironmentFile=-@prefix@/share/fty/etc/default/fty
-EnvironmentFile=-@prefix@/share/fty/etc/default/fty__%n.conf
-EnvironmentFile=-@sysconfdir@/default/bios
-EnvironmentFile=-@sysconfdir@/default/bios__agent-nut.service.conf
-EnvironmentFile=-@sysconfdir@/default/bios__%n.conf
-EnvironmentFile=-@sysconfdir@/default/fty
-EnvironmentFile=-@sysconfdir@/default/fty__%n.conf
-Environment="prefix=@prefix@"
-ExecStart=@prefix@/bin/fty-nut --mapping-file @datadir@/fty-common-nut/mapping.conf
+
+Environment="prefix=/usr"
+Environment='SYSTEMD_UNIT_FULLNAME=%n'
+EnvironmentFile=-/usr/share/bios/etc/default/bios
+EnvironmentFile=-/usr/share/bios/etc/default/bios__agent-nut.service.conf
+EnvironmentFile=-/usr/share/bios/etc/default/bios__%n.conf
+EnvironmentFile=-/usr/share/fty/etc/default/fty
+EnvironmentFile=-/usr/share/fty/etc/default/fty__%n.conf
+EnvironmentFile=-/etc/default/bios
+EnvironmentFile=-/etc/default/bios__agent-nut.service.conf
+EnvironmentFile=-/etc/default/bios__%n.conf
+EnvironmentFile=-/etc/default/fty
+EnvironmentFile=-/etc/default/fty__%n.conf
+
+ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/@PROJECT_NAME@ --mapping-file @AGENT_MAPPING_FILE@
 
 [Install]
 WantedBy=bios.target
