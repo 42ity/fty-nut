@@ -26,10 +26,14 @@
 @end
 */
 
-#include "fty_nut_configurator_server.h"
-#include "nut_mlm.h"
-#include <fty_log.h>
+#include "fty_nut.h"
+#include "../lib/src/nut_mlm.h"
+
+//#include "fty_nut_configurator_server.h"
+//#include "nut_mlm.h"
+
 #include <czmq.h>
+#include <fty_log.h>
 #include <fty_common_mlm.h>
 
 int main (int argc, char *argv [])
@@ -37,7 +41,7 @@ int main (int argc, char *argv [])
     bool verbose = false;
     int argn;
     char *log_config = NULL;
-    const char *default_log_config = "/etc/fty/ftylog.cfg";
+    const char *default_log_config = FTY_COMMON_LOGGING_DEFAULT_CFG;
     ManageFtyLog::setInstanceFtylog("fty-nut-configurator");
 
     for (argn = 1; argn < argc; argn++) {
@@ -47,7 +51,7 @@ int main (int argc, char *argv [])
             puts ("  --verbose / -v         verbose test output");
             puts ("  --help / -h            this information");
             puts ("  --config / -c          log configuration ");
-            return 0;
+            return EXIT_SUCCESS;
         }
         else
         if (streq (argv [argn], "--verbose")
@@ -61,7 +65,7 @@ int main (int argc, char *argv [])
         }
         else {
             printf ("Unknown option: %s\n", argv [argn]);
-            return 1;
+            return EXIT_FAILURE;
         }
     }
     if (log_config == NULL)
@@ -69,10 +73,15 @@ int main (int argc, char *argv [])
 
     ManageFtyLog::getInstanceFtylog()->setConfigFile(std::string(log_config));
     if (verbose)
-        ManageFtyLog::getInstanceFtylog()->setVeboseMode();
+        ManageFtyLog::getInstanceFtylog()->setVerboseMode();
 
-    log_info ("fty_nut_configurator  ");
     zactor_t *server = zactor_new (fty_nut_configurator_server, MLM_ENDPOINT_VOID);
+    if (!server) {
+        log_fatal("fty_nut_configurator: failed to create server");
+        return EXIT_FAILURE;
+    }
+
+    log_info ("fty_nut_configurator started");
 
     // code from src/malamute.c, under MPL
     //  Accept and print any message back from server
@@ -88,7 +97,9 @@ int main (int argc, char *argv [])
         }
     }
 
+    log_info ("fty_nut_configurator ended");
+
     zactor_destroy (&server);
 
-    return 0;
+    return EXIT_SUCCESS;
 }

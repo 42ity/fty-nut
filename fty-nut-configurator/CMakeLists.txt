@@ -4,7 +4,7 @@ cmake_policy(VERSION 3.13)
 ########################################################################################################################
 
 #Create the target
-etn_target(exe ${PROJECT_NAME}
+etn_target(exe fty-nut-configurator
     SOURCES
         src/*.cc
     USES

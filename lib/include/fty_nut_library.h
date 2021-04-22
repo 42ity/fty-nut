@@ -38,6 +38,8 @@
 #include <fty_common_socket.h>
 #include <fty_security_wallet.h>
 #include <fty_common_nut.h>
+#include <fty_common_messagebus.h>
+#include <fty_common_dto.h>
 #include <fty_asset_accessor.h>
 #include <fty_shm.h>
 

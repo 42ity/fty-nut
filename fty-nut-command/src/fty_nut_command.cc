@@ -26,9 +26,17 @@
 @end
 */
 
-#include "fty_nut_command_server.h"
+#include "fty_nut.h"
+#include "../lib/src/nut_mlm.h"
 
-#include "nut_mlm.h"
+//#include "fty_nut_command_server.h"
+//#include "nut_mlm.h"
+
+#include <czmq.h>
+#include <fty_log.h>
+#include <fty_common_mlm.h>
+#include <fty_common_db.h>
+
 #include <csignal>
 #include <mutex>
 
@@ -58,7 +66,7 @@ int main (int argc, char *argv [])
 
     // Create default configuration
     ftynut::NutCommandConnector::Parameters commandParameters;
-    std::string logConfig = "/etc/fty/ftylog.cfg";
+    std::string logConfig = FTY_COMMON_LOGGING_DEFAULT_CFG;
     std::string logVerbose = "false";
     std::string configFile;
 
@@ -70,7 +78,7 @@ int main (int argc, char *argv [])
             puts ("  --config / -c          configuration file");
             puts ("  --help / -h            this information");
             puts ("  --verbose / -v         verbose test output");
-            return 0;
+            return EXIT_SUCCESS;
         }
         else
         if (streq (argv [argn], "--verbose")
@@ -84,7 +92,7 @@ int main (int argc, char *argv [])
         }
         else {
             std::cerr << "Unknown option: " << argv[argn] << std::endl;
-            return 1;
+            return EXIT_FAILURE;
         }
     }
 
@@ -119,7 +127,7 @@ int main (int argc, char *argv [])
     std::stringstream(logVerbose) >> verbose;
 
     if (verbose) {
-        ManageFtyLog::getInstanceFtylog()->setVeboseMode();
+        ManageFtyLog::getInstanceFtylog()->setVerboseMode();
         log_trace ("Verbose mode OK");
     }
 

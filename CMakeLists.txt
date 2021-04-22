@@ -12,7 +12,9 @@ find_package(fty-cmake PATHS ${CMAKE_BINARY_DIR})
 ########################################################################################################################
 
 add_subdirectory(lib)
-#add_subdirectory(agent)
+add_subdirectory(agent)
+add_subdirectory(fty-nut-command)
+add_subdirectory(fty-nut-configurator)
 
 ## agent configuration
 ## https://cmake.org/cmake/help/v3.0/module/GNUInstallDirs.html

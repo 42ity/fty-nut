@@ -26,14 +26,19 @@
 @end
  */
 
+#include "fty_nut.h"
+#include "../lib/src/nut_mlm.h"
+
+/*
 #include "fty_nut_server.h"
 #include "sensor_actor.h"
 #include "alert_actor.h"
-#include "ftyproto.h"
+#include "fty_proto.h"
 #include "nut_mlm.h"
+*/
 
-#include <fty_common_mlm.h>
 #include <fty_log.h>
+#include <fty_common_mlm.h>
 
 #include <getopt.h>
 #include <stdio.h>
@@ -105,7 +110,7 @@ int main(int argc, char *argv []) {
             }
             case 'v':
             {
-                ManageFtyLog::getInstanceFtylog()->setVeboseMode();
+                ManageFtyLog::getInstanceFtylog()->setVerboseMode();
                 break;
             }
             case 'p':
@@ -145,7 +150,7 @@ int main(int argc, char *argv []) {
 
     // VERBOSE
     if (streq(zconfig_get(config, "server/verbose", "false"), "true")) {
-        ManageFtyLog::getInstanceFtylog()->setVeboseMode();
+        ManageFtyLog::getInstanceFtylog()->setVerboseMode();
     }
     // POLLING
     polling = zconfig_get(config, CONFIG_POLLING, "30");
@@ -155,19 +160,19 @@ int main(int argc, char *argv []) {
     zactor_t *nut_server = zactor_new(fty_nut_server, MLM_ENDPOINT_VOID);
     if (!nut_server) {
         log_fatal("zactor_new (task = 'fty_nut_server', args = 'NULL') failed");
-        return -1;
+        return EXIT_FAILURE;
     }
 
     zactor_t *nut_device_alert = zactor_new(alert_actor, MLM_ENDPOINT_VOID);
     if (!nut_device_alert) {
         log_fatal("zactor_new (task = 'nut_device_server', args = 'NULL') failed");
-        return -1;
+        return EXIT_FAILURE;
     }
 
     zactor_t *nut_sensor = zactor_new(sensor_actor, MLM_ENDPOINT_VOID);
     if (!nut_sensor) {
         log_fatal("zactor_new (task = 'nut_sensor', args = 'NULL') failed");
-        return -1;
+        return EXIT_FAILURE;
     }
 
     zstr_sendx(nut_server, ACTION_CONFIGURE, mapping_file.c_str(), NULL);
@@ -218,5 +223,6 @@ int main(int argc, char *argv []) {
     if (config) {
         zconfig_destroy(&config);
     }
-    return 0;
+
+    return EXIT_SUCCESS;
 }
