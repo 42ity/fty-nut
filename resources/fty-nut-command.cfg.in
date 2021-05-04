@@ -1,0 +1,12 @@
+#   fty-nut-command configuration
+
+server
+    timeout = 10000     #   Client connection timeout, msec
+    background = 0      #   Run as background process
+    workdir = .         #   Working directory for daemon
+log
+    verbose = 0         #   Do verbose logging of activity?
+#nut
+#    host = localhost
+#    username = myuser
+#    password = mypassword

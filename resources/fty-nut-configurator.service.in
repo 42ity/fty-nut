@@ -1,0 +1,35 @@
+[Unit]
+Description=fty-nut-configurator service
+Requires=network.target malamute.service
+After=network.target malamute.service
+PartOf=bios.target
+
+After=fty-asset.service
+Requires=fty-asset.service
+BindsTo=fty-asset.service
+
+After=fty-security-wallet.service
+Requires=fty-security-wallet.service
+BindsTo=fty-security-wallet.service
+
+[Service]
+Type=simple
+User=@AGENT_USER@
+Restart=always
+
+Environment="prefix=/usr"
+Environment='SYSTEMD_UNIT_FULLNAME=%n'
+EnvironmentFile=-/usr/share/bios/etc/default/bios
+EnvironmentFile=-/usr/share/bios/etc/default/bios__%n.conf
+EnvironmentFile=-/usr/share/fty/etc/default/fty
+EnvironmentFile=-/usr/share/fty/etc/default/fty__%n.conf
+EnvironmentFile=-/etc/default/bios
+EnvironmentFile=-/etc/default/bios__%n.conf
+EnvironmentFile=-/etc/default/fty
+EnvironmentFile=-/etc/default/fty__%n.conf
+
+ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/fty-nut-configurator
+#ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/fty-nut-configurator -c @CMAKE_INSTALL_FULL_SYSCONFDIR@/@PROJECT_NAME@/fty-nut-configurator.logger
+
+[Install]
+WantedBy=bios.target

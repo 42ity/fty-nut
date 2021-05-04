@@ -1,0 +1,24 @@
+[Unit]
+Description=fty-nut-command service
+Requires=malamute.service fty-db.target nut-server.service
+After=malamute.service fty-db.target nut-server.service
+PartOf=bios.target
+
+After=fty-asset.service
+Requires=fty-asset.service
+BindsTo=fty-asset.service
+
+[Service]
+Type=simple
+User=@AGENT_USER@
+Restart=always
+
+Environment="prefix=/usr"
+Environment='SYSTEMD_UNIT_FULLNAME=%n'
+EnvironmentFile=-/etc/default/bios-nut-admin
+EnvironmentFile=-/etc/default/bios-db-ro
+
+ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/fty-nut-command -c @CMAKE_INSTALL_FULL_SYSCONFDIR@/@PROJECT_NAME@/fty-nut-command.cfg
+
+[Install]
+WantedBy=bios.target

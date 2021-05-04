@@ -1,0 +1,32 @@
+[Unit]
+Description=@PROJECT_NAME@ service
+Requires=network.target malamute.service
+After=network.target malamute.service
+#WAS#Before=fty-asset.service
+After=fty-asset.service
+Requires=fty-asset.service
+BindsTo=fty-asset.service
+PartOf=bios.target
+
+[Service]
+Type=simple
+User=@AGENT_USER@
+Restart=always
+
+Environment="prefix=/usr"
+Environment='SYSTEMD_UNIT_FULLNAME=%n'
+EnvironmentFile=-/usr/share/bios/etc/default/bios
+EnvironmentFile=-/usr/share/bios/etc/default/bios__agent-nut.service.conf
+EnvironmentFile=-/usr/share/bios/etc/default/bios__%n.conf
+EnvironmentFile=-/usr/share/fty/etc/default/fty
+EnvironmentFile=-/usr/share/fty/etc/default/fty__%n.conf
+EnvironmentFile=-/etc/default/bios
+EnvironmentFile=-/etc/default/bios__agent-nut.service.conf
+EnvironmentFile=-/etc/default/bios__%n.conf
+EnvironmentFile=-/etc/default/fty
+EnvironmentFile=-/etc/default/fty__%n.conf
+
+ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/@PROJECT_NAME@ --mapping-file @AGENT_MAPPING_FILE@
+
+[Install]
+WantedBy=bios.target
