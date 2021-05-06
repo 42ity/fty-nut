@@ -17,16 +17,17 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-Source: fty-nut
-Section: net
-Priority: optional
-Maintainer: fty-nut Developers <eatonipcopensource@eaton.com>
+Source:         fty-nut
+Section:        net
+Priority:       optional
+Maintainer:     fty-nut Developers <eatonipcopensource@eaton.com>
 Standards-Version: 4.0.1.0
 Build-Depends: debhelper (>= 9),
     cmake (>=3.0),
     fty-cmake-dev,
     libcidr0-dev,
     libnutclient-dev,
+    libnutclientstub-dev,
     libczmq-dev,
     libmlm-dev,
     libcxxtools-dev,

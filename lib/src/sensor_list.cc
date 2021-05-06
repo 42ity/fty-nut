@@ -24,6 +24,7 @@
 #include <fty_asset_accessor.h>
 #include <fty_common_nut.h>
 #include <fty_log.h>
+#include <nutclientmem.h>
 
 Sensors::Sensors(StateManager::Reader* reader)
     : _state_reader(reader)
@@ -121,23 +122,23 @@ bool Sensors::updateAssetConfig(AssetState::Asset* asset, mlm_client_t* client)
     return true;
 }
 
-void Sensors::updateSensorList(nut::TcpClient& conn, mlm_client_t* client)
+void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
 {
     // Note: force refresh sensors list if an error has been detected
     if (!_sensorListError && !_state_reader->refresh())
         return;
 
-    bool              sensorListError = false;
-    const AssetState& deviceState     = _state_reader->getState();
-    auto&             devices         = deviceState.getPowerDevices();
-    auto&             sensors         = deviceState.getSensors();
+    bool sensorListError = false;
+    const AssetState& deviceState = _state_reader->getState();
+    auto& devices = deviceState.getPowerDevices();
+    auto& sensors = deviceState.getSensors();
 
     log_debug("sa: updating sensors list");
 
     log_debug("sa: %zd sensors in assets", sensors.size());
     _sensors.clear();
     for (auto i : sensors) {
-        const std::string& name        = i.first;
+        const std::string& name = i.first;
         const std::string& parent_name = i.second->location();
         // do we know where is sensor connected?
         if (parent_name.empty()) {
@@ -173,9 +174,9 @@ void Sensors::updateSensorList(nut::TcpClient& conn, mlm_client_t* client)
                 "sa: sensor parent found: '%s' (chain: %d)", parent_name.c_str(), parent_it->second->daisychain());
 
         const AssetState::Asset* parent = parent_it->second.get();
-        const std::string&       ip     = parent->IP();
-        int                      chain  = parent->daisychain();
-        std::string              master;
+        const std::string& ip = parent->IP();
+        int chain = parent->daisychain();
+        std::string master;
 
         Sensor::ChildrenMap children = _sensors[name].getChildren();
         // for emp01 sensor
@@ -184,7 +185,7 @@ void Sensors::updateSensorList(nut::TcpClient& conn, mlm_client_t* client)
                 _sensors[name] = Sensor(i.second.get(), parent, children);
                 log_debug("sa: adding sensor, with parent (not daisy): '%s'", parent_name.c_str());
             } else {
-                master         = deviceState.ip2master(ip);
+                master = deviceState.ip2master(ip);
                 _sensors[name] = Sensor(i.second.get(), parent, children, master, 0);
                 log_debug("sa: adding sensor, with parent (daisy) and index %d: '%s'", 0, parent_name.c_str());
             }
@@ -192,7 +193,7 @@ void Sensors::updateSensorList(nut::TcpClient& conn, mlm_client_t* client)
         // for emp02 sensor
         else {
             std::string prefix;
-            int         index = 0;
+            int index = 0;
             if (chain == 0) {
                 // connected to standalone ups
                 master = parent->name();
@@ -207,8 +208,8 @@ void Sensors::updateSensorList(nut::TcpClient& conn, mlm_client_t* client)
             // Normal treatment with modbus address
             if (!subAddress.empty()) {
                 // search index corresponding to sub address
-                std::string              sensorCountName = prefix + std::string("ambient.count");
-                std::vector<std::string> values          = {};
+                std::string sensorCountName = prefix + std::string("ambient.count");
+                std::vector<std::string> values = {};
                 try {
                     values = conn.getDeviceVariableValue(master, sensorCountName);
                 } catch (std::exception& e) {
@@ -249,13 +250,14 @@ void Sensors::updateSensorList(nut::TcpClient& conn, mlm_client_t* client)
             else {
                 log_debug("sa: backward compatibility with port (no modubus address)");
                 std::string port = i.second->port();
-                index            = std::atoi(port.c_str());
+                index = std::atoi(port.c_str());
                 if (index > 0) {
                     // update parent if necessary
                     AssetState::Asset* newParent = nullptr;
                     // get serial number of parent
                     std::string parentSerialNumberName =
                         prefix + std::string("ambient.") + port + std::string(".parent.serial");
+                    log_debug ("sa: parentSerialNumberName=%s", parentSerialNumberName.c_str());
                     std::vector<std::string> values = {};
                     try {
                         values = conn.getDeviceVariableValue(master, parentSerialNumberName);
@@ -268,12 +270,13 @@ void Sensors::updateSensorList(nut::TcpClient& conn, mlm_client_t* client)
                     }
                     if (values.size() > 0) {
                         std::string parentSerialNumber = values.at(0);
-                        // Here we have the master for location, need to find the good parent and update location if
-                        // different of master
+                        log_debug ("sa: parentSerialNumber %s parent=%s", parentSerialNumber.c_str(), parent->serial().c_str());
+                        // Here we have the master for location, need to find the good parent and update location if different of master
                         if (!parentSerialNumber.empty() && parentSerialNumber != parent->serial()) {
                             for (auto device : devices) {
-                                const std::string& ipDevice     = device.second->IP();
+                                const std::string& ipDevice = device.second->IP();
                                 const std::string& serialDevice = device.second->serial();
+                                log_debug ("sa: ipDevice %s serialDevice %s", ipDevice.c_str(), serialDevice.c_str());
                                 if (ipDevice == ip && serialDevice == parentSerialNumber) {
                                     newParent = device.second.get();
                                     break;
@@ -360,7 +363,7 @@ bool Sensors::isInventoryChanged(std::string name)
         if (!buffer.empty()) {
             log_debug("sa: publish sensor inventory for %s: buffer=%s", it_sensor->second.assetName().c_str(),
                 buffer.c_str());
-            std::size_t hash    = std::hash<std::string>{}(buffer);
+            std::size_t hash = std::hash<std::string>{}(buffer);
             const auto& it_hash = _lastInventoryHashs.find(name);
             if (it_hash != _lastInventoryHashs.end() && hash == it_hash->second) {
                 return false;
@@ -379,7 +382,7 @@ void Sensors::advertiseInventory(mlm_client_t* client)
 {
     bool advertiseAll = false;
     if (_inventoryTimestamp_ms + NUT_INVENTORY_REPEAT_AFTER_MS < static_cast<uint64_t>(zclock_mono())) {
-        advertiseAll           = true;
+        advertiseAll = true;
         _inventoryTimestamp_ms = static_cast<uint64_t>(zclock_mono());
     }
 
