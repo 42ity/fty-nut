@@ -48,6 +48,7 @@ etn_target(static ${PROJECT_NAME}-lib
     USES_PRIVATE
         cidr
         nutclient
+        nutclientstub
         czmq
         mlm
         cxxtools
@@ -73,7 +74,7 @@ etn_target(static ${PROJECT_NAME}-lib
 etn_test_target(${PROJECT_NAME}-lib
     CONFIGS
         tests/selftest-ro/mapping.conf
-    SOURCES
+        SOURCES
         tests/actor_commands.cpp
         tests/alert_actor.cpp
         tests/alert_device.cpp
@@ -86,11 +87,11 @@ etn_test_target(${PROJECT_NAME}-lib
         tests/sensor_device.cpp
         tests/state_manager.cpp
         tests/ups_status.cpp
-    INCLUDE_DIR
-        include
-    PREPROCESSOR -DCATCH_CONFIG_FAST_COMPILE
-    USES
-        stdc++fs
+        INCLUDE_DIR
+            include
+        PREPROCESSOR -DCATCH_CONFIG_FAST_COMPILE
+        USES
+            stdc++fs
         pthread
 )
 
