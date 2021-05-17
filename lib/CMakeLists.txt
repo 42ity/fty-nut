@@ -48,7 +48,6 @@ etn_target(static ${PROJECT_NAME}-lib
     USES_PRIVATE
         cidr
         nutclient
-        nutclientstub
         czmq
         mlm
         cxxtools
