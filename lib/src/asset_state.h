@@ -23,9 +23,10 @@
 #define ASSET_STATE_H_INCLUDED
 
 #include <unordered_map>
-#include <ftyproto.h>
+#include <fty_proto.h>
 #include <memory>
 #include <map>
+#include <string>
 
 class AssetState {
 public:
