@@ -4,27 +4,28 @@ fty-nut is a family of agents responsible for 42ITy interaction with NUT (see
 [http://www.networkupstools.org]) including both collection of device data
 and configuration of NUT to monitor new devices as assets are created.
 
-## To build fty-nut project run:
+## To build, run:
 
 ```bash
-./autogen.sh
-./configure
+mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=usr -DBUILD_TESTING=On ..
 make
-make check # to run self-test
+sudo make install
 ```
+
 Compilation of fty-nut creates two binaries _fty-nut_ and _fty-nut-configurator_, which are run by systemd service.
 
 ## How to run
 
 To run fty-nut project:
 
-* from within the source tree, run:
+* from within the build/ tree, run:
 
 ```bash
-./src/fty-nut --mapping-file <path_to_mapping_file>
-./src/fty-nut --mapping-file /usr/share/fty-common-nut/mapping.conf
+./agent/fty-nut --mapping-file <path_to_mapping_file>
+./agent/fty-nut --mapping-file /usr/share/fty-common-nut/mapping.conf
 
-./src/fty-nut-configurator
+./fty-nut-configurator/fty-nut-configurator
 ```
 
 * from an installed base, using systemd, run:
