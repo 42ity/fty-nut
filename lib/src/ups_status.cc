@@ -74,10 +74,10 @@ static uint16_t s_upsstatus_single_status_to_int(const char* status)
 
 uint16_t upsstatus_to_int(const char* status, const char* test_result)
 {
-    uint16_t result = 0;
-    char*    buff   = strdup(status);
-    char*    b      = buff;
-    char*    e;
+    int   result = 0;
+    char* buff   = strdup(status);
+    char* b      = buff;
+    char* e;
 
     if (!buff) {
         return 0;
@@ -112,7 +112,7 @@ uint16_t upsstatus_to_int(const char* status, const char* test_result)
         }
     }
 
-    return result;
+    return uint16_t(result);
 }
 
 uint16_t upsstatus_to_int(const std::string& status, const std::string& test_result)
