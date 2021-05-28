@@ -108,7 +108,7 @@ int main (int argc, char *argv [])
                 { "nut/password", commandParameters.nutPassword }
             } ;
             for (auto& property : properties) {
-                property.second = zconfig_get(cfg.get(), property.first.c_str(), std::string(property.second).c_str());
+                property.second = zconfig_get(cfg.get(), property.first.c_str(), property.second.c_str());
             }
         }
         else {

@@ -27,7 +27,7 @@
         assert(sz > 0);                                                                                                \
     }
 
-#define SELFTEST_RO "selftest-ro"
+#define SELFTEST_RO "tests/selftest-ro"
 
 TEST_CASE("actor commands test")
 {

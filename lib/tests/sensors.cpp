@@ -4,7 +4,7 @@
 #include <fty_proto.h>
 #include <nutclient.h>
 
-TEST_CASE("sensor list test")
+TEST_CASE("sensor list test", "[.]")
 {
     StateManager manager;
     auto&        writer = manager.getWriter();

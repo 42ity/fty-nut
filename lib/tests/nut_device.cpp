@@ -3,7 +3,7 @@
 
 TEST_CASE("nut device test")
 {
-    #define SELFTEST_RO "selftest-ro"
+    #define SELFTEST_RO "tests/selftest-ro"
 
     // test case: load the mappig file
     drivers::nut::NUTDeviceList self;
