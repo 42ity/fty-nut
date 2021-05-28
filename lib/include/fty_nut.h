@@ -19,10 +19,10 @@
     =========================================================================
 */
 
-#ifndef FTY_NUT_H_H_INCLUDED
-#define FTY_NUT_H_H_INCLUDED
+#pragma once
 
-//  Include the project library file
-#include "fty_nut_library.h"
-
-#endif
+#include "alert_actor.h"
+#include "fty_nut_command_server.h"
+#include "fty_nut_configurator_server.h"
+#include "fty_nut_server.h"
+#include "sensor_actor.h"

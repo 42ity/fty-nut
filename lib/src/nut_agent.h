@@ -19,52 +19,54 @@
     =========================================================================
 */
 
-#ifndef NUT_FTY_H_INCLUDED
-#define NUT_FTY_H_INCLUDED
+#pragma once
 
-#include "state_manager.h"
 #include "nut_device.h"
+#include "state_manager.h"
 
-#define NUT_INVENTORY_REPEAT_AFTER_MS      3600000
+#define NUT_INVENTORY_REPEAT_AFTER_MS 3600000
 
-class NUTAgent {
- public:
-    explicit NUTAgent(StateManager::Reader *reader);
-    bool loadMapping (const char *path_to_file);
-    bool isMappingLoaded () const;
+class NUTAgent
+{
+public:
+    explicit NUTAgent(StateManager::Reader* reader);
+    bool loadMapping(const char* path_to_file);
+    bool isMappingLoaded() const;
 
-    void setClient (mlm_client_t *client);
-    void setiClient (mlm_client_t *client);
+    void setClient(mlm_client_t* client);
+    void setiClient(mlm_client_t* client);
 
-    void updateDeviceList ();
-    void onPoll ();
+    void updateDeviceList();
+    void onPoll();
 
-    void TTL (int ttl) { _ttl = ttl; };
-    int TTL () const { return _ttl; };
- protected:
-    std::string physicalQuantityShortName (const std::string& longName) const;
-    std::string physicalQuantityToUnits (const std::string& quantity) const;
-    void advertisePhysics ();
-    void advertiseInventory ();
-    int send (const std::string& subject, zmsg_t **message_p);
-    int isend (const std::string& subject, zmsg_t **message_p);
+    void TTL(int ttl)
+    {
+        _ttl = ttl;
+    };
+    int TTL() const
+    {
+        return _ttl;
+    };
 
-    int _ttl = 60;
+protected:
+    std::string physicalQuantityShortName(const std::string& longName) const;
+    std::string physicalQuantityToUnits(const std::string& quantity) const;
+    void        advertisePhysics();
+    void        advertiseInventory();
+    int         send(const std::string& subject, zmsg_t** message_p);
+    int         isend(const std::string& subject, zmsg_t** message_p);
+
+    int      _ttl        = 60;
     uint64_t _lastUpdate = 0;
 
     drivers::nut::NUTDeviceList _deviceList;
-    uint64_t _inventoryTimestamp_ms = 0; // [ms] it is not an actual timestamp, it is just a reference point in time, when inventory was advertised
+    uint64_t                    _inventoryTimestamp_ms =
+        0; // [ms] it is not an actual timestamp, it is just a reference point in time, when inventory was advertised
 
-    static const std::map <std::string, std::string> _units;
+    static const std::map<std::string, std::string> _units;
 
-    std::string _conf;
-    mlm_client_t *_client = NULL;
-    mlm_client_t *_iclient = NULL;
+    std::string                           _conf;
+    mlm_client_t*                         _client  = nullptr;
+    mlm_client_t*                         _iclient = nullptr;
     std::unique_ptr<StateManager::Reader> _state_reader;
 };
-
-//  Self test of this class
-void nut_agent_test (bool verbose);
-//  @end
-
-#endif

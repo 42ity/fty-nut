@@ -19,8 +19,7 @@
     =========================================================================
 */
 
-#ifndef STATE_MANAGER_H_INCLUDED
-#define STATE_MANAGER_H_INCLUDED
+#pragma once
 
 /*
  * The StateManager stores fty-nut's view of existing assets. It allows one
@@ -67,45 +66,49 @@
  * them.
  */
 
-#include <malamute.h>
+#include "asset_state.h"
 #include <atomic>
+#include <list>
+#include <malamute.h>
 #include <memory>
 #include <mutex>
-#include <list>
 #include <set>
-
-#include "asset_state.h"
 
 class StateManagerTest;
 
-class StateManager {
+class StateManager
+{
 private:
-    typedef std::list<AssetState> StatesList;
-    typedef unsigned int CounterInt;
+    typedef std::list<AssetState>   StatesList;
+    typedef unsigned int            CounterInt;
     typedef std::atomic<CounterInt> Counter;
+
 public:
-    class Reader {
+    class Reader
+    {
     public:
         Reader(const Reader&) = delete;
         ~Reader()
         {
             manager_.putReader(this);
         }
-        bool refresh();
+        bool              refresh();
         const AssetState& getState() const
         {
             return *current_view_;
         }
+
     private:
         explicit Reader(StateManager& manager);
-        StateManager& manager_;
+        StateManager&                            manager_;
         StateManager::StatesList::const_iterator current_view_;
-        Counter read_counter_;
-        bool first_refresh_;
+        Counter                                  read_counter_;
+        bool                                     first_refresh_;
         friend class StateManager;
     };
 
-    class Writer {
+    class Writer
+    {
     public:
         Writer(const Writer&) = delete;
         void commit()
@@ -116,6 +119,7 @@ public:
         {
             return manager_.getUncommittedAssets();
         }
+
     private:
         explicit Writer(StateManager& manager);
         StateManager& manager_;
@@ -129,28 +133,25 @@ public:
         return writer_;
     }
     Reader* getReader();
-    void putReader(Reader* reader);
+    void    putReader(Reader* reader);
+
+public:
+    void        cleanup();
+    StatesList& states();
+
 private:
     AssetState& getUncommittedAssets()
     {
         return uncommitted_;
     }
-    void commit();
-    void cleanup();
-    AssetState uncommitted_;
-    StatesList states_;
-    Writer writer_;
-    std::mutex readers_mutex_;
+    void              commit();
+    AssetState        uncommitted_;
+    StatesList        states_;
+    Writer            writer_;
+    std::mutex        readers_mutex_;
     std::set<Reader*> readers_;
-    Counter write_counter_, delete_counter_;
-    friend class StateManagerTest;
+    Counter           write_counter_, delete_counter_;
 };
 
-// fty_nut_server.cc
 extern StateManager NutStateManager;
-void get_initial_assets(StateManager::Writer& state_writer, mlm_client_t *client, bool query_licensing = false);
-
-//  Self test of this class
-void state_manager_test (bool verbose);
-
-#endif
+void get_initial_assets(StateManager::Writer& state_writer, mlm_client_t* client, bool query_licensing = false);

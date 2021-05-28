@@ -19,342 +19,283 @@
     =========================================================================
 */
 
-#ifndef NUTDEVICE_H_INCLUDED
-#define NUTDEVICE_H_INCLUDED
+#pragma once
 
 // Taken from 'core' repo, src/agents/nut/nut-driver.(h|c)
 // Original authors: Tomas Halman, Karol Hrdina, Alena Chernikava
 
 #include "asset_state.h"
-
-#include <map>
-#include <vector>
 #include <functional>
+#include <map>
 #include <nutclient.h>
+#include <vector>
 
 namespace nutclient = nut;
 
-namespace drivers
-{
-namespace nut
-{
+namespace drivers::nut {
 
-struct NUTInventoryValue {
-    bool changed;
+struct NUTInventoryValue
+{
+    bool        changed;
     std::string value;
 };
 
-struct NUTPhysicalValue {
-    bool changed;
+struct NUTPhysicalValue
+{
+    bool        changed;
     std::string value;
     std::string candidate;
 };
 
-// Class for keeping status information of one UPS/ePDU/...
-// Keeps inventory, status and measurement values of one device as it is presented by NUT.
-class NUTDevice {
+/// Class for keeping status information of one UPS/ePDU/...
+/// Keeps inventory, status and measurement values of one device as it is presented by NUT.
+class NUTDevice
+{
     friend class NUTDeviceList;
- public:
-    // Creates new NUTDevice with empty set of values without name and no
-    // asset information
+
+public:
+    /// Creates new NUTDevice with empty set of values without name and no asset information
     NUTDevice();
 
-    // Creates new NUTDevice linked to given asset
-    explicit NUTDevice(const AssetState::Asset *asset);
-    NUTDevice(const AssetState::Asset *asset, const std::string& nut_name);
+    /// Creates new NUTDevice linked to given asset
+    explicit NUTDevice(const AssetState::Asset* asset);
+    NUTDevice(const AssetState::Asset* asset, const std::string& nut_name);
 
-    // Returns true if there are some changes in device since last
-    // statusMessage has been called.
+    /// Returns true if there are some changes in device since last statusMessage has been called.
     bool changed() const;
 
-    // Returns true if property has changed since last check.
-    bool changed(const char *name) const;
+    /// Returns true if property has changed since last check.
+    bool changed(const char* name) const;
     bool changed(const std::string& name) const;
 
-    // Sets status of all properties
+    /// Sets status of all properties
     void setChanged(const bool status);
 
-    // Set status of particular property
-    void setChanged(const char *name, const bool status);
-    void setChanged(const std::string& name,const bool status);
+    /// Set status of particular property
+    void setChanged(const char* name, const bool status);
+    void setChanged(const std::string& name, const bool status);
 
-    /**
-     * \brief Produces a std::string with device status in JSON format.
-     * \return std::string
-     * \see changed()
-     *
-     * Method returns string with device status message. Method returs the
-     * actual status in json like std::string.
-     *
-     *    if( UPS.changed() ) {
-     *        cout << UPS.toString() << endl;
-     *        UPS.changed(false);
-     *    }
-     */
+    /// Produces a std::string with device status in JSON format.
+    /// @return std::string
+    /// @see changed()
+    ///
+    /// Method returns string with device status message. Method returs the
+    /// actual status in json like std::string.
+    ///
+    ///    if( UPS.changed() ) {
+    ///        cout << UPS.toString() << endl;
+    ///        UPS.changed(false);
+    ///    }
     std::string toString() const;
 
-    // Returns true if this device reports particular property
-    // (i.e. property exists for this device)
-    bool hasProperty(const char *name) const;
+    /// Returns true if this device reports particular property
+    /// (i.e. property exists for this device)
+    bool hasProperty(const char* name) const;
     bool hasProperty(const std::string& name) const;
 
-    // Returns true if this device reports particular physical (measurement) property.
-    // (i.e. physical (measurement) property exists for this device)
-    bool hasPhysics(const char *name) const;
+    /// Returns true if this device reports particular physical (measurement) property.
+    /// (i.e. physical (measurement) property exists for this device)
+    bool hasPhysics(const char* name) const;
     bool hasPhysics(const std::string& name) const;
 
-    /**
-     * \brief Method returns list of physical properties. If the parameter
-     *        is true, only changed properties are returned. Otherways
-     *        all properties are returned.
-     * \return bool, true if property exists
-     */
-    std::map<std::string,std::string> physics(bool onlyChanged) const;
+    /// Method returns list of physical properties. If the parameter
+    ///        is true, only changed properties are returned. Otherways
+    ///        all properties are returned.
+    /// @`return bool, true if property exists
+    std::map<std::string, std::string> physics(bool onlyChanged) const;
 
-    /**
-     * \brief Method returns list of inventory properties. If the parameter
-     *        is true, only changed properties are returned. Otherways
-     *        all properties are returned.
-     * \return bool, true if property exists
-     */
-    std::map<std::string,std::string> inventory(bool onlyChanged) const;
+    /// Method returns list of inventory properties. If the parameter
+    ///        is true, only changed properties are returned. Otherways
+    ///        all properties are returned.
+    /// @return bool, true if property exists
+    std::map<std::string, std::string> inventory(bool onlyChanged) const;
 
-    /**
-     * \brief method returns particular device property.
-     * \return std::string, property value as a string or empty
-     *         string ("") if property doesn't exists
-     *
-     *    if( UPS.hasProperty("voltage") ) {
-     *        cout << "voltage " << UPS.property("voltage") << "\n";
-     *    } else {
-     *        cout << "voltage unknown\n";
-     *    }
-     */
-    std::string property(const char *name) const;
+    /// method returns particular device property.
+    /// @return std::string, property value as a string or empty
+    ///         string ("") if property doesn't exists
+    ///
+    ///    if( UPS.hasProperty("voltage") ) {
+    ///        cout << "voltage " << UPS.property("voltage") << "\n";
+    ///    } else {
+    ///        cout << "voltage unknown\n";
+    ///    }
+    std::string property(const char* name) const;
     std::string property(const std::string& name) const;
 
-    /**
-     * \brief method returns all discovered properties of device.
-     * \return std::map<std::string,std::string> property values
-     *
-     * Method transforms all properties (physical and inventory) to
-     * map. Numeric values are converted to strings using itof() method.
-     */
-    std::map<std::string,std::string> properties() const;
+    /// method returns all discovered properties of device.
+    /// @return std::map<std::string,std::string> property values
+    ///
+    /// Method transforms all properties (physical and inventory) to
+    /// map. Numeric values are converted to strings using itof() method.
+    std::map<std::string, std::string> properties() const;
 
-    /**
-     * \brief Forgot all physics and inventory data
-     */
+    /// Forgot all physics and inventory data
     void clear();
 
-    /**
-     * \brief Return the timestamp of last succesfull update (i. e. response from device)
-     */
-    time_t lastUpdate() const { return _lastUpdate; }
-
-    /**
-     * \brief get the device name like it is in assets
-     */
-    std::string assetName () const
+    /// Return the timestamp of last succesfull update (i. e. response from device)
+    time_t lastUpdate() const
     {
-        return  _asset ? _asset->name() : std::string();
+        return _lastUpdate;
     }
 
-    /**
-     * \brief get the device name like it is in nut
-     */
-    std::string nutName () const { return _nutName; }
+    /// get the device name like it is in assets
+    std::string assetName() const
+    {
+        return _asset ? _asset->name() : std::string();
+    }
 
-    /**
-     * \brief get the asset subtype
-     */
-    std::string subtype () const
+    /// get the device name like it is in nut
+    std::string nutName() const
+    {
+        return _nutName;
+    }
+
+    /// get the asset subtype
+    std::string subtype() const
     {
         return _asset ? _asset->subtype() : std::string();
     }
 
-    /**
-     * \brief get the daisy-chain index
-     */
+    /// get the daisy-chain index
     int daisyChainIndex() const
     {
         return _asset ? _asset->daisychain() : 0;
     }
 
-    /**
-     * \bried get max_current as configured in the asset or NAN
-     */
+    /// get max_current as configured in the asset or NAN
     double maxCurrent() const
     {
-        return _asset ? _asset->maxCurrent() : NAN;
+        return _asset ? _asset->maxCurrent() : std::nan("");
     }
 
-    /**
-     * \bried get max_power as configured in the asset or NAN
-     */
+    /// get max_power as configured in the asset or NAN
     double maxPower() const
     {
-        return _asset ? _asset->maxPower() : NAN;
+        return _asset ? _asset->maxPower() : std::nan("");
     }
 
     ~NUTDevice();
- private:
-    /**
-     * \brief the respective asset element, if known (owned by the state
-     * manager)
-     */
-    const AssetState::Asset *_asset;
 
-    /**
-     * \brief Updates physical or measurement value (like current or load) from float.
-     *
-     * Updates the value if new value is significantly differen (> threshold%). Flag _change is
-     * set if new value is saved.
-     */
+private:
+    /// the respective asset element, if known (owned by the state manager)
+    const AssetState::Asset* _asset;
+
+    /// Updates physical or measurement value (like current or load) from float.
+    ///
+    /// Updates the value if new value is significantly differen (> threshold%). Flag _change is
+    /// set if new value is saved.
     void updatePhysics(const std::string& varName, const std::string& newValue);
 
-    /**
-     * \brief Updates inventory value.
-     *
-     * Updates the value with values from vector. Flag _change is
-     * set if new value is different from old one.
-     */
+    /// Updates inventory value.
+    ///
+    /// Updates the value with values from vector. Flag _change is
+    /// set if new value is different from old one.
     void updateInventory(const std::string& varName, const std::string& inventory);
 
-    /**
-     * \brief Updates all values from NUT.
-     */
-    void update (std::map<std::string,std::vector<std::string>> vars,
-                 std::function <const std::map <std::string, std::string>&(const char *)> mapping,
-                 bool forceUpdate = false );
+    /// Updates all values from NUT.
+    void update(std::map<std::string, std::vector<std::string>>               vars,
+        std::function<const std::map<std::string, std::string>&(const char*)> mapping, bool forceUpdate = false);
 
-    /**
-     * \brief Set variable dst with value from src if dst not present and src is
-     *
-     * This method is used to normalize the NUT output from different drivers/devices.
-     */
-    void NUTSetIfNotPresent (const std::string& prefix, std::map< std::string,std::vector<std::string> > &vars, const std::string &dst, const std::string &src);
+    /// Set variable dst with value from src if dst not present and src is
+    ///
+    /// This method is used to normalize the NUT output from different drivers/devices.
+    void NUTSetIfNotPresent(const std::string& prefix, std::map<std::string, std::vector<std::string>>& vars,
+        const std::string& dst, const std::string& src);
 
-    /**
-     * \brief Commit chages for changed calculated by updatePhysics.
-     */
+    /// Commit chages for changed calculated by updatePhysics.
     void commitChanges();
 
-    /**
-     * \brief prefix of device in daisy chain
-     *
-     * \return std::string result is "" or device.X. where X if index in chain
-     */
+    /// prefix of device in daisy chain
+    ///
+    /// @return std::string result is "" or device.X. where X if index in chain
     std::string daisyPrefix() const;
 
-    /**
-     * \brief map of physical values.
-     *
-     * Values are multiplied by 100 and stored as integer
-     */
+    /// map of physical values.
+    ///
+    /// Values are multiplied by 100 and stored as integer
     std::map<std::string, NUTPhysicalValue> _physics;
-    //! \brief map of inventory values
+
+    /// map of inventory values
     std::map<std::string, NUTInventoryValue> _inventory;
 
-    //! \brief device name in nut
+    /// device name in nut
     std::string _nutName;
 
-    //! \brief Transformation of our integer (x100) back
+    /// Transformation of our integer (x100) back
     std::string itof(const long int) const;
-    //! \brief calculate ups.load if not present
-    void NUTFixMissingLoad (const std::string& prefix, std::map< std::string,std::vector<std::string> > &vars);
-    //! \brief calculate ups.realpower from output.Lx.realpower if not present
-    void NUTRealpowerFromOutput (const std::string& prefix,  std::map< std::string,std::vector<std::string> > &vars);
-    //! \brief NUT values transformation function
-    void NUTValuesTransformation (const std::string& prefix, std::map< std::string,std::vector<std::string> > &vars);
-    //! \brief last succesfull communication timestamp
+
+    /// calculate ups.load if not present
+    void NUTFixMissingLoad(const std::string& prefix, std::map<std::string, std::vector<std::string>>& vars);
+
+    /// calculate ups.realpower from output.Lx.realpower if not present
+    void NUTRealpowerFromOutput(const std::string& prefix, std::map<std::string, std::vector<std::string>>& vars);
+
+    /// NUT values transformation function
+    void NUTValuesTransformation(const std::string& prefix, std::map<std::string, std::vector<std::string>>& vars);
+
+    /// last succesfull communication timestamp
     time_t _lastUpdate = 0;
 };
 
-/**
- * \brief NUTDeviceList is class for holding list of NUTDevice objects.
- */
-class NUTDeviceList {
- public:
+/// NUTDeviceList is class for holding list of NUTDevice objects.
+class NUTDeviceList
+{
+public:
     NUTDeviceList();
 
-    /**
-     * \brief Loads mapping from configuration file 'path_to_file'
-     *
-     * Overwrites old values on successfull deserialization from json configuration file
-     */
-    void load_mapping (const char *path_to_file);
+    /// Loads mapping from configuration file 'path_to_file'
+    ///
+    /// Overwrites old values on successfull deserialization from json configuration file
+    void load_mapping(const char* path_to_file);
 
-    bool mappingLoaded () const;
+    bool mappingLoaded() const;
 
-    /**
-     * \brief Returns requested mapping
-     */
-    const std::map <std::string, std::string>& get_mapping (const char *mapping) const;
+    /// Returns requested mapping
+    const std::map<std::string, std::string>& get_mapping(const char* mapping) const;
 
-    /**
-     * \brief Reads status information from NUT daemon.
-     *
-     * Method reads values from NUT and updates information of particular
-     * devices. Newly discovered davices are added to list, removed devices
-     * are also removed from list.
-     */
-    void update( bool forceUpdate = false );
+    /// Reads status information from NUT daemon.
+    ///
+    /// Method reads values from NUT and updates information of particular
+    /// devices. Newly discovered davices are added to list, removed devices
+    /// are also removed from list.
+    void update(bool forceUpdate = false);
 
-    /**
-     * \brief Returns true if there is at least one device claiming change.
-     */
+    /// Returns true if there is at least one device claiming change.
     bool changed() const;
 
-    /**
-     * \brief returns the size of device list (number of devices)
-     */
+    /// returns the size of device list (number of devices)
     size_t size() const;
 
-    //! \brief get the NUTDevice object by name
-    NUTDevice& operator[](const std::string &name);
+    /// get the NUTDevice object by name
+    NUTDevice& operator[](const std::string& name);
 
-    //! \brief get the iterators, to be able to go trough list of devices
+    /// get the iterators, to be able to go trough list of devices
     std::map<std::string, NUTDevice>::iterator begin();
     std::map<std::string, NUTDevice>::iterator end();
 
-    //! \brief update list of NUT devices
+    /// update list of NUT devices
     void updateDeviceList(const AssetState& state);
 
     ~NUTDeviceList();
 
- private:
+private:
     // see http://www.networkupstools.org/docs/user-manual.chunked/apcs01.html
-    std::map <std::string, std::string> _physicsMapping; //!< physics mapping
-    std::map <std::string, std::string> _inventoryMapping; //!< inventory mapping
+    std::map<std::string, std::string> _physicsMapping;   //!< physics mapping
+    std::map<std::string, std::string> _inventoryMapping; //!< inventory mapping
+    nutclient::TcpClient               nutClient;         //!< Connection to NUT daemon
+    std::map<std::string, NUTDevice>   _devices;          //!< list of NUT devices
+    bool                               _mappingLoaded = false;
 
-    //! \brief Connection to NUT daemon
-    nutclient::TcpClient nutClient;
-
-    //! \brief list of NUT devices
-    std::map<std::string, NUTDevice> _devices;
-
-    //! \brief connect to NUT daemon
+private:
+    /// connect to NUT daemon
     bool connect();
 
-    //! \brief disconnect from NUT daemon
+    /// disconnect from NUT daemon
     void disconnect();
 
-    //! \brief update status of NUT devices
-    void updateDeviceStatus( bool forceUpdate = false );
-
-    bool _mappingLoaded = false;
+    /// update status of NUT devices
+    void updateDeviceStatus(bool forceUpdate = false);
 };
 
 
-
 } // namespace drivers::nut
-} // namespace drivers
-
-
-//  Self test of this class
-void nut_device_test (bool verbose);
-//  @end
-
-
-#endif

@@ -19,14 +19,12 @@
     =========================================================================
 */
 
-#ifndef ACTOR_COMMANDS_H_INCLUDED
-#define ACTOR_COMMANDS_H_INCLUDED
+#pragma once
 
 #include <malamute.h>
 #include <string>
 
 class NUTAgent;
-
 
 // Supported actor commands:
 //  $TERM
@@ -50,18 +48,7 @@ class NUTAgent;
 //
 
 
-
-// Performs the actor commands logic
-// Destroys the message
-// Returns 1 for $TERM (means exit), 0 otherwise
-int actor_commands (
-            mlm_client_t *client,
-            zmsg_t **message_p,
-            uint64_t& timeout,
-            NUTAgent& nut_agent);
-
-//  Self test of this class
-void actor_commands_test (bool verbose);
-//  @end
-
-#endif
+/// Performs the actor commands logic
+/// Destroys the message
+/// Returns 1 for $TERM (means exit), 0 otherwise
+int actor_commands(mlm_client_t* client, zmsg_t** message_p, uint64_t& timeout, NUTAgent& nut_agent);

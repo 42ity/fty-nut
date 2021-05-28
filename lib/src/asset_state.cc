@@ -19,54 +19,50 @@
     =========================================================================
 */
 
-/*
-@header
-    asset_state - list of known assets
-@discuss
-@end
-*/
-
 #include "asset_state.h"
+#include <cmath>
 #include <fty_common_mlm.h>
 #include <fty_log.h>
-
 #include <iterator>
-#include <cmath>
 
 AssetState::Asset::Asset(fty_proto_t* message)
 {
-    name_ = fty_proto_name(message);
-    serial_ = fty_proto_ext_string(message, "serial_no", "");
-    IP_ = fty_proto_ext_string(message, "ip.1", "");
-    port_ = fty_proto_ext_string(message, "port", "");
-    subtype_ = fty_proto_aux_string(message, "subtype", "");
-    location_ = fty_proto_aux_string(message, "parent_name.1", "");
-    const char *block = fty_proto_ext_string(message, "upsconf_block", NULL);
+    name_             = fty_proto_name(message);
+    serial_           = fty_proto_ext_string(message, "serial_no", "");
+    IP_               = fty_proto_ext_string(message, "ip.1", "");
+    port_             = fty_proto_ext_string(message, "port", "");
+    subtype_          = fty_proto_aux_string(message, "subtype", "");
+    location_         = fty_proto_aux_string(message, "parent_name.1", "");
+    const char* block = fty_proto_ext_string(message, "upsconf_block", NULL);
     if (block) {
-        upsconf_block_ = block;
+        upsconf_block_      = block;
         have_upsconf_block_ = true;
     } else {
         have_upsconf_block_ = false;
     }
-    const char *dmf = fty_proto_ext_string(message, "upsconf_enable_dmf", "");
+    const char* dmf     = fty_proto_ext_string(message, "upsconf_enable_dmf", "");
     upsconf_enable_dmf_ = strcmp(dmf, "true") == 0;
-    max_current_ = NAN;
+    max_current_        = std::nan("");
     try {
         max_current_ = std::stod(fty_proto_ext_string(message, "max_current", ""));
-    } catch (...) { }
-    max_power_ = NAN;
+    } catch (...) {
+    }
+    max_power_ = std::nan("");
     try {
         max_power_ = std::stod(fty_proto_ext_string(message, "max_power", ""));
-    } catch (...) { }
+    } catch (...) {
+    }
     daisychain_ = 0;
     try {
         daisychain_ = std::stoi(fty_proto_ext_string(message, "daisy_chain", ""));
-    } catch (...) { }
+    } catch (...) {
+    }
     zhash_t* ext = fty_proto_get_ext(message);
     if (ext) {
-        for (auto val = reinterpret_cast<char* const>(zhash_first(ext)); val; val = reinterpret_cast<char* const>(zhash_next(ext))) {
+        for (auto val = reinterpret_cast<const char*>(zhash_first(ext)); val;
+             val      = reinterpret_cast<const char*>(zhash_next(ext))) {
             if (strncmp(zhash_cursor(ext), "endpoint.1.", 11) == 0) {
-                endpoint_.emplace(zhash_cursor(ext)+11, val);
+                endpoint_.emplace(zhash_cursor(ext) + 11, val);
             }
         }
     }
@@ -78,39 +74,34 @@ bool AssetState::handleAssetMessage(fty_proto_t* message)
 {
     std::string name(fty_proto_name(message));
     std::string operation(fty_proto_operation(message));
-    if (operation == FTY_PROTO_ASSET_OP_DELETE ||
-        operation == FTY_PROTO_ASSET_OP_RETIRE ||
-        !streq(fty_proto_aux_string (message, FTY_PROTO_ASSET_STATUS, "active"), "active")) {
+    if (operation == FTY_PROTO_ASSET_OP_DELETE || operation == FTY_PROTO_ASSET_OP_RETIRE ||
+        !streq(fty_proto_aux_string(message, FTY_PROTO_ASSET_STATUS, "active"), "active")) {
         return (powerdevices_.erase(name) > 0 || sensors_.erase(name) > 0);
     }
 
-    std::string type(fty_proto_aux_string (message, "type", ""));
+    std::string type(fty_proto_aux_string(message, "type", ""));
     if (type != "device")
         return false;
-    std::string subtype(fty_proto_aux_string (message, "subtype", ""));
-    AssetMap* map;
+    std::string subtype(fty_proto_aux_string(message, "subtype", ""));
+    AssetMap*   map;
     if (subtype == "epdu" || subtype == "ups" || subtype == "sts")
         map = &powerdevices_;
     else if (subtype == "sensor") {
         // skip sensors connected to rackcontrollers
-        if (streq (fty_proto_aux_string(message, "parent_name.1", ""), "rackcontroller-0"))
+        if (streq(fty_proto_aux_string(message, "parent_name.1", ""), "rackcontroller-0"))
             return false;
         map = &sensors_;
-    }
-    else if (subtype == "sensorgpio") {
+    } else if (subtype == "sensorgpio") {
         // skip gpi sensors connected to rackcontrollers
-        if (streq (fty_proto_aux_string(message, "parent_name.1", ""), "rackcontroller-0"))
+        if (streq(fty_proto_aux_string(message, "parent_name.1", ""), "rackcontroller-0"))
             return false;
-        if (streq (fty_proto_aux_string(message, "parent_name.2", ""), "rackcontroller-0"))
+        if (streq(fty_proto_aux_string(message, "parent_name.2", ""), "rackcontroller-0"))
             return false;
         map = &sensors_;
-    }
-    else
+    } else
         return false;
-    if (operation != FTY_PROTO_ASSET_OP_CREATE &&
-            operation != FTY_PROTO_ASSET_OP_UPDATE) {
-        log_error("unknown asset operation '%s'. Skipping.",
-                operation.c_str());
+    if (operation != FTY_PROTO_ASSET_OP_CREATE && operation != FTY_PROTO_ASSET_OP_UPDATE) {
+        log_error("unknown asset operation '%s'. Skipping.", operation.c_str());
         return false;
     }
     (*map)[name] = std::shared_ptr<Asset>(new Asset(message));
@@ -120,16 +111,17 @@ bool AssetState::handleAssetMessage(fty_proto_t* message)
 // Destroys passed message
 bool AssetState::handleLicensingMessage(fty_proto_t* message)
 {
-    assert (fty_proto_id(message) == FTY_PROTO_METRIC);
-    if (streq (fty_proto_name(message), "rackcontroller-0") && streq (fty_proto_type(message), "monitoring.global")) {
+    assert(fty_proto_id(message) == FTY_PROTO_METRIC);
+    if (streq(fty_proto_name(message), "rackcontroller-0") && streq(fty_proto_type(message), "monitoring.global")) {
         try {
             int allowMonitoring = std::stoi(fty_proto_value(message));
 
-            //allow the monitoring when monitoring.global@rackcontroller-0 =>
+            // allow the monitoring when monitoring.global@rackcontroller-0 =>
             m_allowMonitoring = (allowMonitoring == 1);
 
             return true;
-        } catch (...) { }
+        } catch (...) {
+        }
     }
 
     return false;
@@ -138,9 +130,9 @@ bool AssetState::handleLicensingMessage(fty_proto_t* message)
 bool AssetState::updateFromProto(fty_proto_t* message)
 {
     // proto messages are always assumed to be asset updates
-    if (fty_proto_id (message) == FTY_PROTO_ASSET) {
+    if (fty_proto_id(message) == FTY_PROTO_ASSET) {
         return handleAssetMessage(message);
-    } else if (fty_proto_id (message) == FTY_PROTO_METRIC) {
+    } else if (fty_proto_id(message) == FTY_PROTO_METRIC) {
         return handleLicensingMessage(message);
     }
     return false;
@@ -150,12 +142,12 @@ bool AssetState::updateFromMsg(zmsg_t* message)
 {
     bool ret = false;
     if (is_fty_proto(message)) {
-        fty_proto_t *proto = fty_proto_decode (&message);
+        fty_proto_t* proto = fty_proto_decode(&message);
         if (!proto) {
             zmsg_destroy(&message);
             return false;
         }
-        ret = updateFromProto (proto);
+        ret = updateFromProto(proto);
         fty_proto_destroy(&proto);
     }
     return ret;
@@ -179,15 +171,12 @@ void AssetState::recompute()
     // Check if we can monitor
     allowed_powerdevices_.clear();
 
-    if(m_allowMonitoring)
-    {
+    if (m_allowMonitoring) {
         AssetMap::const_iterator end = powerdevices_.end();
-        allowed_powerdevices_ = AssetMap(powerdevices_.cbegin(), end);
+        allowed_powerdevices_        = AssetMap(powerdevices_.cbegin(), end);
 
         log_info("Monitoring enable, %i devices will be monitored", allowed_powerdevices_.size());
-    }
-    else
-    {
+    } else {
         log_info("Monitoring disabled by licensing");
     }
 }

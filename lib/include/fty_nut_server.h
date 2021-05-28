@@ -19,26 +19,9 @@
     =========================================================================
 */
 
-#ifndef FTY_NUT_SERVER_H_INCLUDED
-#define FTY_NUT_SERVER_H_INCLUDED
+#pragma once
 
 #include <czmq.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-//  @interface
-//  Create a new fty_nut_server
-void fty_nut_server (zsock_t *pipe, void *args);
-
-//  Self test of this class
-void fty_nut_server_test (bool verbose);
-
-//  @end
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif
+///  Create a new fty_nut_server
+void fty_nut_server(zsock_t* pipe, void* args);

@@ -18,37 +18,32 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     =========================================================================
 */
-#ifndef __ALERT_DEVICE_LIST
-#define __ALERT_DEVICE_LIST
+#pragma once
 
-#include "state_manager.h"
 #include "alert_device.h"
+#include "state_manager.h"
 
-class Devices {
- public:
-    explicit Devices (StateManager::Reader *reader);
-    void updateFromNUT ();
-    void updateDeviceList ();
-    void publishAlerts (mlm_client_t *client);
-    void publishRules (mlm_client_t *client);
-    void setPollingMs (uint64_t polling_ms) {
+class Devices
+{
+public:
+    explicit Devices(StateManager::Reader* reader);
+    void updateFromNUT();
+    void updateDeviceList();
+    void publishAlerts(mlm_client_t* client);
+    void publishRules(mlm_client_t* client);
+    void setPollingMs(uint64_t polling_ms)
+    {
         _polling_ms = polling_ms;
     }
 
-    // friend function for unit-testing
-    friend void alert_actor_test (bool verbose);
- private:
-    uint64_t _polling_ms = 30000;
-    std::map <std::string, Device>  _devices;
+    std::map<std::string, Device>& devices();
+
+private:
+    uint64_t                              _polling_ms = 30000;
+    std::map<std::string, Device>         _devices;
     std::unique_ptr<StateManager::Reader> _state_reader;
 
-    void updateDeviceCapabilities (nut::TcpClient& nutClient);
-    void updateDevices (nut::TcpClient& nutClient);
-    void addIfNotPresent (Device dev);
+    void updateDeviceCapabilities(nut::TcpClient& nutClient);
+    void updateDevices(nut::TcpClient& nutClient);
+    void addIfNotPresent(const Device& dev);
 };
-
-
-//  Self test of this class
-void alert_device_list_test (bool verbose);
-
-#endif // __ALERT_DEVICE_LIST
