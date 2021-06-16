@@ -141,7 +141,7 @@ bool AssetState::updateFromProto(fty_proto_t* message)
 bool AssetState::updateFromMsg(zmsg_t* message)
 {
     bool ret = false;
-    if (is_fty_proto(message)) {
+    if (fty_proto_is(message)) {
         fty_proto_t* proto = fty_proto_decode(&message);
         if (!proto) {
             zmsg_destroy(&message);

@@ -91,7 +91,7 @@ TEST_CASE("alert actor test")
         CHECK(which);
         zmsg_t* msg1 = mlm_client_recv(alert_list);
         REQUIRE(msg1);
-        CHECK(is_fty_proto(msg1));
+        CHECK(fty_proto_is(msg1));
         fty_proto_t* bp = fty_proto_decode(&msg1);
         CHECK(bp);
 
@@ -119,7 +119,7 @@ TEST_CASE("alert actor test")
         REQUIRE(which);
         zmsg_t* msg1 = mlm_client_recv(alert_list);
         REQUIRE(msg1);
-        CHECK(is_fty_proto(msg1));
+        CHECK(fty_proto_is(msg1));
         fty_proto_t* bp = fty_proto_decode(&msg1);
         CHECK(bp);
         CHECK(streq(fty_proto_command(bp), "ALERT"));

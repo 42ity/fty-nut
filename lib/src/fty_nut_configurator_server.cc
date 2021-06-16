@@ -378,7 +378,7 @@ void fty_nut_configurator_server(zsock_t* pipe, void* args)
             continue;
         }
         zmsg_t* msg = mlm_client_recv(client);
-        if (is_fty_proto(msg)) {
+        if (fty_proto_is(msg)) {
             fty_proto_t* proto = fty_proto_decode(&msg);
             if (!proto) {
                 zmsg_destroy(&msg);

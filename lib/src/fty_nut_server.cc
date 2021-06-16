@@ -128,7 +128,7 @@ void get_initial_assets(StateManager::Writer& state_writer, mlm_client_t* client
             zmsg_destroy(&reply1);
             continue;
         }
-        if (!is_fty_proto(reply1)) {
+        if (!fty_proto_is(reply1)) {
             log_warning("Response to an ASSET_DETAIL message is not fty_proto");
             zmsg_destroy(&reply1);
             continue;
@@ -269,7 +269,7 @@ void fty_nut_server(zsock_t* pipe, void* args)
             log_error("Given `which == mlm_client_msgpipe (client)`, function `mlm_client_recv ()` returned NULL");
             continue;
         }
-        if (is_fty_proto(message)) {
+        if (fty_proto_is(message)) {
             if (state_writer.getState().updateFromMsg(message))
                 state_writer.commit();
             continue;

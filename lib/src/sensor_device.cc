@@ -22,7 +22,7 @@
 #include "sensor_device.h"
 #include <fty_common_nut.h>
 #include <fty_log.h>
-#include <ftyproto.h>
+#include <fty_proto.h>
 #include <string>
 #include <vector>
 
