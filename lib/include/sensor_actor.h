@@ -19,21 +19,7 @@
     =========================================================================
 */
 
-#ifndef __SENSOR_ACTOR_H
-#define __SENSOR_ACTOR_H
+#pragma once
+#include <czmq.h>
 
-#include <malamute.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void sensor_actor (zsock_t *pipe, void *args);
-
-void sensor_actor_test (bool verbose);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif // __SENSOR_ACTOR_H
+void sensor_actor(zsock_t* pipe, void* args);

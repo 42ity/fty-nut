@@ -69,7 +69,7 @@ int main (int argc, char *argv [])
         }
     }
     if (log_config == NULL)
-        log_config = (char *)default_log_config;
+        log_config = const_cast<char*>(default_log_config);
 
     ManageFtyLog::getInstanceFtylog()->setConfigFile(std::string(log_config));
     if (verbose)

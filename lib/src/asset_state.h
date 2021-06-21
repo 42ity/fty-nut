@@ -19,23 +19,24 @@
     =========================================================================
 */
 
-#ifndef ASSET_STATE_H_INCLUDED
-#define ASSET_STATE_H_INCLUDED
+#pragma once
 
-#include <unordered_map>
 #include <fty_proto.h>
-#include <memory>
 #include <map>
+#include <memory>
 #include <string>
+#include <unordered_map>
 
-class AssetState {
+class AssetState
+{
 public:
-    class Asset {
+    class Asset
+    {
     public:
         // The Asset class is created from a proto message and
         // never modified, since different instances of AssetState may
         // share a pointer to it
-        explicit Asset(fty_proto_t *message);
+        explicit Asset(fty_proto_t* message);
         ~Asset()
         {
             fty_proto_destroy(&proto_);
@@ -84,11 +85,11 @@ public:
         {
             return upsconf_block_;
         }
-        const bool have_upsconf_block() const
+        bool have_upsconf_block() const
         {
             return have_upsconf_block_;
         }
-        const bool upsconf_enable_dmf() const
+        bool upsconf_enable_dmf() const
         {
             return upsconf_enable_dmf_;
         }
@@ -116,22 +117,24 @@ public:
         {
             return proto_;
         }
+
     private:
-        std::string name_;
-        std::string serial_;
-        std::string IP_;
-        std::string port_;
-        std::string subtype_;
-        std::string location_;
-        std::string upsconf_block_;
+        std::string                        name_;
+        std::string                        serial_;
+        std::string                        IP_;
+        std::string                        port_;
+        std::string                        subtype_;
+        std::string                        location_;
+        std::string                        upsconf_block_;
         std::map<std::string, std::string> endpoint_;
-        double max_current_;
-        double max_power_;
-        bool have_upsconf_block_;
-        bool upsconf_enable_dmf_;
-        int daisychain_;
-        fty_proto_t* proto_;
+        double                             max_current_;
+        double                             max_power_;
+        bool                               have_upsconf_block_;
+        bool                               upsconf_enable_dmf_;
+        int                                daisychain_;
+        fty_proto_t*                       proto_;
     };
+
     // Update the state from a received fty_proto message. Return true if an
     // update has actually been performed, false if the message was skipped
     bool updateFromProto(fty_proto_t* message);
@@ -142,7 +145,7 @@ public:
     void recompute();
     // Use a std::map to process the assets in a defined order each time
     // Additions and removals do not happen _that_ often to worry about
-    typedef std::map<std::string, std::shared_ptr<Asset> > AssetMap;
+    typedef std::map<std::string, std::shared_ptr<Asset>> AssetMap;
     // Return a map of power devices allowed by the current license
     const AssetMap& getPowerDevices() const
     {
@@ -167,16 +170,15 @@ public:
     }
     // Return the name of the asset with given IP address
     const std::string& ip2master(const std::string& ip) const;
+
 private:
-    bool handleAssetMessage(fty_proto_t* message);
-    bool handleLicensingMessage(fty_proto_t* message);
+    bool     handleAssetMessage(fty_proto_t* message);
+    bool     handleLicensingMessage(fty_proto_t* message);
     AssetMap powerdevices_;
     // subset of powerdevices_ that are allowed by the license
-    AssetMap allowed_powerdevices_;
-    AssetMap sensors_;
+    AssetMap                                     allowed_powerdevices_;
+    AssetMap                                     sensors_;
     std::unordered_map<std::string, std::string> ip2master_;
     // Active or not the monitoring
     bool m_allowMonitoring = true;
 };
-
-#endif

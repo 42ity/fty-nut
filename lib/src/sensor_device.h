@@ -19,62 +19,55 @@
     =========================================================================
 */
 
-#ifndef __SENSOR_DEVICE_H
-#define __SENSOR_DEVICE_H
+#pragma once
 
 #include "asset_state.h"
-
 #include <fty_common_nut.h>
-
-#include <map>
-#include <string>
-#include <nutclient.h>
 #include <malamute.h>
+#include <map>
+#include <nutclient.h>
+#include <string>
 
-class Sensor {
- public:
+class Sensor
+{
+public:
     // port | child_name
     typedef std::map<std::string, std::string> ChildrenMap;
-    Sensor () :
-        _asset(nullptr),
-        _parent(nullptr),
-        _nutMaster("invalidNutMaster"),
-        _index(0)
-    { };
-    Sensor (const AssetState::Asset *asset, const AssetState::Asset *parent,
-            ChildrenMap& children) :
-        _asset(asset),
-        _parent(parent),
-        _children(children),
-        _nutMaster(asset->location()),
-        _index(0)
-    { };
-    Sensor (const AssetState::Asset *asset, const AssetState::Asset *parent,
-            ChildrenMap& children, int index) :
-        _asset(asset),
-        _parent(parent),
-        _children(children),
-        _nutMaster(asset->location()),
-        _index(index)
-    { };
-    Sensor (const AssetState::Asset *asset, const AssetState::Asset *parent,
-            ChildrenMap& children, const std::string& nutMaster, int index) :
-        _asset(asset),
-        _parent(parent),
-        _children(children),
-        _nutMaster(nutMaster),
-        _index(index)
-    { };
-    void update (nut::TcpClient &conn, const std::map <std::string, std::string>& mapping);
-    void publish (mlm_client_t *client, int ttl);
-    void addChild (const std::string& port, const std::string& child_name);
-    ChildrenMap getChildren ();
+    Sensor()
+        : _asset(nullptr)
+        , _parent(nullptr)
+        , _nutMaster("invalidNutMaster")
+        , _index(0){};
+    Sensor(const AssetState::Asset* asset, const AssetState::Asset* parent, ChildrenMap& children)
+        : _asset(asset)
+        , _parent(parent)
+        , _children(children)
+        , _nutMaster(asset->location())
+        , _index(0){};
+    Sensor(const AssetState::Asset* asset, const AssetState::Asset* parent, ChildrenMap& children, int index)
+        : _asset(asset)
+        , _parent(parent)
+        , _children(children)
+        , _nutMaster(asset->location())
+        , _index(index){};
+    Sensor(const AssetState::Asset* asset, const AssetState::Asset* parent, ChildrenMap& children,
+        const std::string& nutMaster, int index)
+        : _asset(asset)
+        , _parent(parent)
+        , _children(children)
+        , _nutMaster(nutMaster)
+        , _index(index){};
+
+    void        update(nut::TcpClient& conn, const std::map<std::string, std::string>& mapping);
+    void        publish(mlm_client_t* client, int ttl);
+    void        addChild(const std::string& port, const std::string& child_name);
+    ChildrenMap getChildren();
     std::string assetName() const
     {
         return _asset ? _asset->name() : std::string();
     }
     // get the daisychain value of the parent powerdevice, not the sensor
-    int chain () const
+    int chain() const
     {
         return _parent ? _parent->daisychain() : 0;
     }
@@ -103,29 +96,26 @@ class Sensor {
         }
         return "";
     }
-    // friend functions for unit-testing
-    friend void sensor_device_test (bool verbose);
-    friend void sensor_list_test (bool verbose);
-    friend void sensor_actor_test (bool verbose);
- protected:
-    const AssetState::Asset *_asset, *_parent;
-    ChildrenMap _children;
-    std::string _nutMaster;
-    int _index;
 
-    std::string _temperature;
-    std::string _humidity;
-    std::vector <std::string> _contacts;  // contact status
-    fty::nut::KeyValues _inventory;
+    void setContacts(const std::vector<std::string>& contacts);
+    void setHumidity(const std::string& humidity);
+    void setInventory(const fty::nut::KeyValues& values);
+    void setTemperature(const std::string& temp);
 
-    std::string topicSuffixExternal (const std::string &port) const;
+    std::string topicSuffixExternal(const std::string& port) const;
     std::string sensorPrefix() const;
     std::string nutPrefix() const;
-    int nutIndex() const;
+    int         nutIndex() const;
     std::string topicSuffix() const;
+
+protected:
+    const AssetState::Asset *_asset, *_parent;
+    ChildrenMap              _children;
+    std::string              _nutMaster;
+    int                      _index;
+
+    std::string              _temperature;
+    std::string              _humidity;
+    std::vector<std::string> _contacts; // contact status
+    fty::nut::KeyValues      _inventory;
 };
-
-void sensor_device_test(bool verbose);
-
-
-#endif // __ALERT_DEVICE
