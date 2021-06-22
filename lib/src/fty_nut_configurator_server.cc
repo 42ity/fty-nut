@@ -326,7 +326,7 @@ void fty_nut_configurator_server(zsock_t* pipe, void* args)
     const char*           endpoint = static_cast<const char*>(args);
 
     fty::SocketSyncClient secwSyncClient(SECW_SOCKET_PATH);
-    mlm::MlmStreamClient  notificationStream(SECURITY_WALLET_AGENT, SECW_NOTIFICATIONS, 1000, SECW_DEFAULT_ENDPOINT);
+    mlm::MlmStreamClient  notificationStream(SECURITY_WALLET_AGENT, SECW_NOTIFICATIONS, 1000, endpoint);
     auto                  secwClient = secw::ConsumerAccessor(secwSyncClient, notificationStream);
     // register the callback on security wallet update
     secwClient.setCallbackOnUpdate(std::bind(callbackUpdated, std::placeholders::_1, std::placeholders::_2,
