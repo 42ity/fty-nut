@@ -123,7 +123,7 @@ void get_initial_assets(StateManager::Writer& state_writer, mlm_client_t* client
     bool changed = false;
     while (!uuids.empty()) {
         zmsg_t* reply1 = mlm_client_recv(client);
-        if (uuids.erase(ZstrGuard(zmsg_popstr(reply)).get()) == 0) {
+        if (uuids.erase(ZstrGuard(zmsg_popstr(reply1)).get()) == 0) {
             log_warning("Mismatching response to an ASSET_DETAIL request");
             zmsg_destroy(&reply1);
             continue;
