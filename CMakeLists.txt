@@ -30,8 +30,8 @@ set(res "resources")
 install(FILES "${PROJECT_SOURCE_DIR}/${res}/fty_10_agent-nut" DESTINATION "${CMAKE_INSTALL_FULL_SYSCONFDIR}/sudoers.d/")
 
 ## (fty-nutconfig, fty-dmf) -> usr/bin
-install(FILES "${PROJECT_SOURCE_DIR}/${res}/fty-nutconfig" DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
-install(FILES "${PROJECT_SOURCE_DIR}/${res}/fty-dmf" DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
+install(PROGRAMS "${PROJECT_SOURCE_DIR}/${res}/fty-nutconfig" DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
+install(PROGRAMS "${PROJECT_SOURCE_DIR}/${res}/fty-dmf" DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
 
 ## .conf file -> lib/tmpfiles.d/
 configure_file("${PROJECT_SOURCE_DIR}/${res}/${PROJECT_NAME}.conf.in" "${PROJECT_BINARY_DIR}/${res}/${PROJECT_NAME}.conf" @ONLY)
