@@ -30,10 +30,10 @@ public:
     explicit Sensors(StateManager::Reader* reader);
     void                                      updateFromNUT(nut::TcpClient& conn);
     bool                                      updateAssetConfig(AssetState::Asset* asset, mlm_client_t* client);
-    void                                      updateSensorList(nut::TcpClient& conn, mlm_client_t* client);
+    void                                      updateSensorList(nut::Client& conn, mlm_client_t* client);
     void                                      publish(mlm_client_t* client, int ttl);
-    void                                      removeInventory(std::string name);
-    bool                                      isInventoryChanged(std::string name);
+    void removeInventory(std::string name);
+    bool isInventoryChanged(std::string name);
     void                                      advertiseInventory(mlm_client_t* client);
     const std::map<std::string, std::string>& getSensorMapping() const
     {
@@ -50,6 +50,6 @@ protected:
     // [ms] it is not an actual timestamp, it is just a reference point in time, when inventory was advertised
     uint64_t                           _inventoryTimestamp_ms = 0;
     std::map<std::string, std::string> _sensorInventoryMapping; //!< sensor inventory mapping
-    bool                               _sensorMappingLoaded = false;
-    bool _sensorListError = false; // Flag to detect if error during initialisation of sensors list
+    bool _sensorMappingLoaded = false;
+    bool _sensorListError = false;  // Flag to detect if error during initialisation of sensors list
 };

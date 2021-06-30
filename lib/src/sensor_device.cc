@@ -232,7 +232,7 @@ std::string Sensor::sensorPrefix() const
     if (chain() != 0)
         prefix = "device." + std::to_string(chain()) + ".";
     prefix += "ambient.";
-    if (_asset && !_asset->port().empty()) {
+    if (_asset && !_asset->port().empty() && _asset->port() != "0") {
         prefix += _asset->port() + ".";
     }
     return prefix;
