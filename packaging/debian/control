@@ -45,7 +45,6 @@ Build-Depends: debhelper (>= 9),
     libfty-common-dto-dev,
     libfty-asset-accessor-dev,
     systemd,
-    dh-systemd,
     libfty-utils-dev
 
 Package: fty-nut
