@@ -63,7 +63,7 @@ protected:
     uint64_t                    _inventoryTimestamp_ms =
         0; // [ms] it is not an actual timestamp, it is just a reference point in time, when inventory was advertised
 
-    static const std::map<std::string, std::string> _units;
+    static const std::map<std::string, std::string> _unitNameToSymbol;
 
     std::string                           _conf;
     mlm_client_t*                         _client  = nullptr;

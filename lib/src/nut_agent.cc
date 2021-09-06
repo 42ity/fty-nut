@@ -21,13 +21,13 @@
 
 #include "nut_agent.h"
 #include "ups_status.h"
-#include <cmath>
 #include <fty_log.h>
 #include <fty_shm.h>
+//#include <cmath>
 #include <string>
 
 // clang-format off
-const std::map<std::string, std::string> NUTAgent::_units =
+const std::map<std::string, std::string> NUTAgent::_unitNameToSymbol =
 {
     { "temperature", "C" },
     { "realpower",   "W" },
@@ -149,8 +149,8 @@ std::string NUTAgent::physicalQuantityShortName(const std::string& longName) con
 
 std::string NUTAgent::physicalQuantityToUnits(const std::string& quantity) const
 {
-    auto it = _units.find(quantity);
-    if (it == _units.end()) {
+    auto it = _unitNameToSymbol.find(quantity);
+    if (it == _unitNameToSymbol.end()) {
         return "";
     }
     return it->second;
@@ -160,19 +160,30 @@ void NUTAgent::advertisePhysics()
 {
     _deviceList.update(true);
     for (auto& device : _deviceList) {
-        std::string subject;
-        auto        measurements = device.second.physics(false); // take  NOT only changed
-        for (const auto& measurement : measurements) {
-            std::string type  = physicalQuantityShortName(measurement.first);
-            std::string units = physicalQuantityToUnits(type);
+        const std::string assetName{device.second.assetName()};
 
-            int r =
-                fty::shm::write_metric(device.second.assetName(), measurement.first, measurement.second, units, _ttl);
-            if (r != 0)
-                log_error(
-                    "failed to send measurement %s@%s", measurement.first.c_str(), device.second.assetName().c_str());
-            device.second.setChanged(measurement.first, false);
+        //map<str::quantity,str::value>
+        auto measurements = device.second.physics(false); // take NOT only changed
+
+#if 0 // DBG, display <quantity, value> pairs owned by the asset
+        log_debug("### advertisePhysics, measurements for %s:", assetName.c_str());
+        for (const auto& measurement : measurements) {
+            log_debug("### \t%s: '%s'", measurement.first.c_str(), measurement.second.c_str());
         }
+#endif
+
+        for (const auto& measurement : measurements) {
+            const std::string quantity{measurement.first}; // or property
+            const std::string value{measurement.second};
+            std::string type{physicalQuantityShortName(quantity)};
+            std::string units{physicalQuantityToUnits(type)};
+
+            int r = fty::shm::write_metric(assetName, quantity, value, units, _ttl);
+            if (r != 0)
+                log_error("failed to send measurement %s@%s", quantity.c_str(), assetName.c_str());
+            device.second.setChanged(quantity, false);
+        }
+
         // 'load' computing
         // BIOS-1185 start
         // if it is epdu, that doesn't provide load.default,
@@ -180,11 +191,11 @@ void NUTAgent::advertisePhysics()
         if (device.second.subtype() == "epdu" && measurements.count("load.default") == 0) {
             if (measurements.count("load.input.L1") != 0) {
                 std::string value = measurements.at("load.input.L1");
-                int         r     = fty::shm::write_metric(device.second.assetName(), "load.default", value, "%", _ttl);
+                int r = fty::shm::write_metric(assetName, "load.default", value, "%", _ttl);
                 if (r != 0)
-                    log_error("failed to send measurement %s result %i", subject.c_str(), r);
-            } else if (measurements.count("current.input.L1") != 0) // it is a mapped value!!!!!!!!!!!
-            {
+                    log_error("failed to write load.default@%s, result %i", assetName.c_str(), r);
+            }
+            else if (measurements.count("current.input.L1") != 0) { // it is a mapped value!!!!!!!!!!!
                 // try to compute it
                 // 1. Determine the MAX value
                 double max_value = std::nan("");
@@ -192,9 +203,11 @@ void NUTAgent::advertisePhysics()
                     try {
                         max_value = std::stod(measurements.at("current.input.nominal"));
                         log_debug("load.default: max_value %lf from UPS", max_value);
-                    } catch (...) {
                     }
-                } else {
+                    catch (...) {
+                    }
+                }
+                else {
                     max_value = device.second.maxCurrent();
                     log_debug("load.default: max_value %lf from user", max_value);
                 }
@@ -210,9 +223,9 @@ void NUTAgent::advertisePhysics()
                     sprintf(buffer, "%lf", value * 100 / max_value); // because it is %!!!!
                     // 4. form message
                     // 5. send the messsage
-                    int r = fty::shm::write_metric(device.second.assetName(), "load.default", buffer, "%", _ttl);
+                    int r = fty::shm::write_metric(assetName, "load.default", buffer, "%", _ttl);
                     if (r != 0)
-                        log_error("failed to send measurement %s result %i", subject.c_str(), r);
+                        log_error("failed to write load.default@%s, result %i", assetName.c_str(), r);
                 }
             }
         }
@@ -238,11 +251,13 @@ void NUTAgent::advertisePhysics()
             if (alarms.find("Internal failure!") != std::string::npos) {
                 bitfield |= (1 << internal_failure_bit);
             }
-            int r = fty::shm::write_metric(device.second.assetName(), "ups.alarm", std::to_string(bitfield), "", _ttl);
+            int r = fty::shm::write_metric(assetName, "ups.alarm", std::to_string(bitfield), "", _ttl);
             if (r != 0)
-                log_error("failed to send measurement %s result %i", subject.c_str(), r);
+                log_error("failed to write ups.alarm@%s, result %i", assetName.c_str(), r);
+
             device.second.setChanged("ups.alarm", false);
         }
+
         // send status and "in progress" test result as a bitmap
         if (device.second.hasProperty("status.ups")) {
             std::string status_s = device.second.property("status.ups");
@@ -259,23 +274,21 @@ void NUTAgent::advertisePhysics()
                 //    - see cfg file "nut/polling_interval = 30"
                 //    - see ttl computation (2*polling_interval) in actor_commands.cc cmd=ACTION_POLLING
                 // here we increase _ttl of 50%, to pass metric ttl to 90
-                int r = fty::shm::write_metric(
-                    device.second.assetName(), "status.ups", std::to_string(status_i), " ", _ttl * 3 / 2);
+                int r = fty::shm::write_metric(assetName, "status.ups", std::to_string(status_i), " ", _ttl * 3 / 2);
                 if (r != 0)
-                    log_error("failed to send measurement %s result %i", subject.c_str(), r);
+                    log_error("failed to write status.ups@%s, result %i", assetName.c_str(), r);
 
                 // publish power.status (same ttl policy)
-                r = fty::shm::write_metric(
-                    device.second.assetName(), "power.status", power_status(status_i), " ", _ttl * 3 / 2);
+                r = fty::shm::write_metric(assetName, "power.status", power_status(status_i), " ", _ttl * 3 / 2);
                 if (r != 0)
-                    log_error("failed to send power.status measurement %s result %i", subject.c_str(), r);
+                    log_error("failed to write power.status@%s, result %i", assetName.c_str(), r);
 
                 device.second.setChanged("status.ups", false);
             }
         }
 
         // send epdu outlet status as bitmap
-        for (int i = 1; i != 100; i++) {
+        for (int i = 1; i < 100; i++) {
             std::string property = "status.outlet." + std::to_string(i);
             // assumption, if outlet.10 does not exists, outlet.11 does not as well
             if (!device.second.hasProperty(property))
@@ -283,9 +296,10 @@ void NUTAgent::advertisePhysics()
             std::string status_s = device.second.property(property);
             uint16_t    status_i = status_s == "on" ? 42 : 0;
 
-            int r = fty::shm::write_metric(device.second.assetName(), property, std::to_string(status_i), " ", _ttl);
+            int r = fty::shm::write_metric(assetName, property, std::to_string(status_i), " ", _ttl);
             if (r != 0)
-                log_error("failed to send measurement %s result %i", subject.c_str(), r);
+                log_error("failed to write %s@%s, result %i", property.c_str(), assetName.c_str(), r);
+
             device.second.setChanged(property, false);
         }
     }
@@ -298,11 +312,15 @@ void NUTAgent::advertiseInventory()
         advertiseAll           = true;
         _inventoryTimestamp_ms = static_cast<uint64_t>(zclock_mono());
     }
+
     for (auto& device : _deviceList) {
-        std::string log;
-        zhash_t*    inventory = zhash_new();
+        const std::string assetName{device.second.assetName()};
+
+        zhash_t* inventory = zhash_new();
         zhash_autofree(inventory);
-        // !advertiseAll = advetise_Not_OnlyChanged
+
+        // !advertiseAll = advertise_Not_OnlyChanged
+        std::string log; //dbg
         for (auto& item : device.second.inventory(!advertiseAll)) {
             if (item.first == "status.ups") {
                 // this value is not advertised as inventory information
@@ -312,15 +330,16 @@ void NUTAgent::advertiseInventory()
             log += item.first + " = \"" + item.second + "\"; ";
             device.second.setChanged(item.first, false);
         }
+
         if (zhash_size(inventory) == 0) {
             zhash_destroy(&inventory);
             continue;
         }
 
-        zmsg_t* message = fty_proto_encode_asset(NULL, device.second.assetName().c_str(), "inventory", inventory);
+        zmsg_t* message = fty_proto_encode_asset(NULL, assetName.c_str(), "inventory", inventory);
 
         if (message) {
-            std::string topic = "inventory@" + device.second.assetName();
+            std::string topic = "inventory@" + assetName;
             log_debug("new inventory message '%s': %s", topic.c_str(), log.c_str());
             int r = isend(topic, &message);
             if (r != 0)
