@@ -347,6 +347,27 @@ static std::string s_rule_desc(const std::string& alert_name)
         return "{}";
 }
 
+// HOTFIX arrange as we can the alert name displayed (en_US)
+// TODO use translation string instead
+// NOTE: alertname modified on return
+// ex.: "input.L3.voltage" -> "Input L3 voltage"
+
+static void makeAlertNameMoreHumanReadable(const char* alertname)
+{
+    if (!alertname) return;
+
+    bool capitalize = true;
+    for (char* p = const_cast<char*>(alertname); (*p) != 0; p++) {
+        if (capitalize) { // capitalize 1st char
+            capitalize = false;
+            *p = char(toupper(*p));
+        }
+        if ((*p)== '.') { // subs '.' with ' '
+            *p = ' ';
+        }
+    }
+}
+
 void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
 {
     if (!client || alert.rulePublished)
@@ -354,74 +375,105 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
 
     zmsg_t* message = zmsg_new();
     assert(message);
-    const char* alert_name = alert.name.c_str();
 
-    std::string assetNameStr = assetName();
+    std::string alertNameStr = alert.name;
+    const char* alert_name   = alertNameStr.c_str();
+
+    std::string alertNameLabelStr = alert.name; // cpy
+    const char* alert_name_label  = alertNameStr.c_str();
+    makeAlertNameMoreHumanReadable(alert_name_label);
+
+    std::string assetNameStr = assetName(); //iname
     const char* asset_name   = assetNameStr.c_str();
 
-    char* ruleName = zsys_sprintf("%s@%s", alert_name, asset_name);
+    std::string assetFriendlyNameStr = assetFriendlyName();
+    const char* asset_friendly_name  = assetFriendlyNameStr.c_str();
+
+    char* ruleName = NULL;
+	asprintf(&ruleName, "%s@%s", alert_name, asset_name);
+
     // clang-format off
-    char *rule = zsys_sprintf (
-        "{ \"threshold\" : {"
-        "  \"rule_name\"     : \"%s\","
-        "  \"rule_source\"   : \"NUT\","
-        "  \"rule_class\"    : \"Device internal\","
-        "  \"rule_hierarchy\": \"internal.device\","
-        "  \"rule_desc\"     : %s,"
-        "  \"target\"        : \"%s\","
-        "  \"element\"       : \"%s\","
-        "  \"values_unit\"   : \"%s\","
-        "  \"values\"        : ["
-        "    { \"low_warning\"  : \"%s\"},"
-        "    { \"low_critical\" : \"%s\"},"
-        "    { \"high_warning\"  : \"%s\"},"
-        "    { \"high_critical\" : \"%s\"}"
-        "    ],"
-        "  \"results\"       : ["
-        "    { \"low_critical\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is critically low for {{ename}}.)\", \"variables\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\", \"assetLink\" : \"%s\" } } } } },"
-        "    { \"low_warning\"   : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is low for {{ename}}.)\", \"variables\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\", \"assetLink\" : \"%s\" } } } } },"
-        "    { \"high_warning\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is high for {{ename}}.)\", \"variables\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\", \"assetLink\" : \"%s\" } } } } },"
-        "    { \"high_critical\" : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : {\"key\" : \"TRANSLATE_LUA ({{alert_name}} is critically high for {{ename}}.)\", \"variables\" : {\"alert_name\" : \"%s\", \"ename\" : { \"value\" : \"%s\", \"assetLink\" : \"%s\" } } } } } ] } } ",
-        ruleName,
-        s_rule_desc (alert.name).c_str (),
-        ruleName,
+    char *rule = NULL;
+    asprintf (&rule,
+        "{"
+            "\"threshold\" : {"
+            "  \"rule_name\"     : \"%s\"," //@1
+            "  \"rule_source\"   : \"NUT\","
+            "  \"rule_class\"    : \"Device internal\","
+            "  \"rule_hierarchy\": \"internal.device\","
+            "  \"rule_desc\"     : %s," //@2
+            "  \"target\"        : \"%s\"," //@3
+            "  \"element\"       : \"%s\"," //@4
+            "  \"values_unit\"   : \"%s\"," //@5
+            "  \"values\" : ["
+            "    { \"low_warning\"  : \"%s\"  }," //@6
+            "    { \"low_critical\" : \"%s\"  }," //@7
+            "    { \"high_warning\"  : \"%s\" }," //@8
+            "    { \"high_critical\" : \"%s\" }" //@9
+            "  ],"
+            "  \"results\" : ["
+            "    { \"low_critical\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : \"  {\\\"key\\\" : \\\"TRANSLATE_LUA ({{alert_name}} is critically low for {{ename}}.)\\\",  \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } },"
+            "    { \"low_warning\"   : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : \"  {\\\"key\\\" : \\\"TRANSLATE_LUA ({{alert_name}} is low for {{ename}}.)\\\",             \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } },"
+            "    { \"high_warning\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : \"  {\\\"key\\\" : \\\"TRANSLATE_LUA ({{alert_name}} is high for {{ename}}.)\\\",            \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } },"
+            "    { \"high_critical\" : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : \"  {\\\"key\\\" : \\\"TRANSLATE_LUA ({{alert_name}} is critically high for {{ename}}.)\\\", \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } }"
+            "  ]"
+            "}"
+        "}",
+
+        ruleName, //@1
+        s_rule_desc (alert.name).c_str (), //@2
+        ruleName, //@3
+        asset_name, //@4
+        s_values_unit (alert.name).c_str (), //@5
+
+        alert.lowWarning.c_str (),  //@6
+        alert.lowCritical.c_str (), //@7
+        alert.highWarning.c_str (), //@8
+        alert.highCritical.c_str (), //@9
+
+        //low_critical
+        alert_name_label,
+        asset_friendly_name,
         asset_name,
-        s_values_unit (alert.name).c_str (),
-        alert.lowWarning.c_str (),
-        alert.lowCritical.c_str (),
-        alert.highWarning.c_str (),
-        alert.highCritical.c_str (),
-        alert_name,
+
+        //low_warning
+        alert_name_label,
+        asset_friendly_name,
         asset_name,
+
+        //high_warning
+        alert_name_label,
+        asset_friendly_name,
         asset_name,
-        alert_name,
-        asset_name,
-        asset_name,
-        alert_name,
-        asset_name,
-        asset_name,
-        alert_name,
-        asset_name,
-        asset_name);
+
+        //high_critical
+        alert_name_label,
+        asset_friendly_name,
+        asset_name
+    );
     // clang-format on
 
     log_debug("aa: publishing rule %s", ruleName);
+
     zmsg_addstr(message, "ADD");
     zmsg_addstr(message, rule);
+
     if (mlm_client_sendto(client, "fty-alert-engine", "rfc-evaluator-rules", NULL, 1000, &message) == 0) {
         zmsg_t* resp   = mlm_client_recv(client);
         char*   result = zmsg_popstr(resp);
         char*   reason = zmsg_popstr(resp);
 
-        if (streq(result, "OK") || streq(reason, "ALREADY_EXISTS"))
+        if (streq(result, "OK") || streq(reason, "ALREADY_EXISTS")) {
             alert.rulePublished = true;
-        else
+		}
+        else {
             log_error("Error %s when requesting %s to ADD rule \n%s.", reason, mlm_client_sender(client), rule);
+        }
 
         zstr_free(&reason);
         zstr_free(&result);
         zmsg_destroy(&resp);
-    };
+    }
 
     zstr_free(&rule);
     zstr_free(&ruleName);

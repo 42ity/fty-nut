@@ -67,7 +67,7 @@ public:
     void nutName(const std::string& aName)
     {
         _nutName = aName;
-    };
+    }
     std::string nutName() const
     {
         return _nutName;
@@ -75,6 +75,10 @@ public:
     std::string assetName() const
     {
         return _asset ? _asset->name() : std::string();
+    }
+    std::string assetFriendlyName() const
+    {
+        return _asset ? _asset->friendlyName() : std::string();
     }
     int chain() const
     {
