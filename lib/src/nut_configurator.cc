@@ -330,7 +330,11 @@ fty::nut::DeviceConfigurations NUTConfigurator::getConfigurationFromEndpoint(
                 auto config = fty::nut::convertSecwDocumentToKeyValues(
                     secws.at(endpoint.at("nut_powercom.secw_credential_id")), "etn-nut-powerconnect");
                 config.emplace("driver", "etn-nut-powerconnect");
-                config.emplace("port", IP);
+                std::string port = IP;
+                if (endpoint.count("port")) {
+                    port = port + ":" + endpoint.at("port");
+                }
+                config.emplace("port", port);
                 config.emplace("auto", "true");
                 configs = {config};
             } else {
