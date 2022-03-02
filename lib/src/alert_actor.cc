@@ -68,7 +68,6 @@ int alert_actor_commands(mlm_client_t* /*client*/, mlm_client_t* /*mb_client*/, 
             log_error(
                 "Expected multipart string format: CONFIGURE/mapping_file. "
                 "Received CONFIGURE/nullptr");
-            zstr_free(&mapping);
             zstr_free(&cmd);
             zmsg_destroy(message_p);
             return 0;

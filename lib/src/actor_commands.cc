@@ -51,7 +51,6 @@ int actor_commands(mlm_client_t* /*client*/, zmsg_t** message_p, uint64_t& timeo
             log_error(
                 "Expected multipart string format: CONFIGURE/mapping_file. "
                 "Received CONFIGURE/nullptr");
-            zstr_free(&mapping);
             zstr_free(&cmd);
             zmsg_destroy(message_p);
             return 0;

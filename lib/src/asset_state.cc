@@ -138,13 +138,17 @@ bool AssetState::updateFromProto(fty_proto_t* message)
     return false;
 }
 
-bool AssetState::updateFromMsg(zmsg_t* message)
+bool AssetState::updateFromMsg(zmsg_t** message)
 {
+    if (!(message && *message)) {
+        return  false;
+    }
+
     bool ret = false;
-    if (fty_proto_is(message)) {
-        fty_proto_t* proto = fty_proto_decode(&message);
+    if (fty_proto_is(*message)) {
+        fty_proto_t* proto = fty_proto_decode(message);
         if (!proto) {
-            zmsg_destroy(&message);
+            zmsg_destroy(message);
             return false;
         }
         ret = updateFromProto(proto);
