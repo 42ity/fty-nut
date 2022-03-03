@@ -40,7 +40,6 @@ static bool get_initial_licensing(StateManager::Writer& state_writer, mlm_client
     }
     zmsg_t* reply = mlm_client_recv(client);
     if (!reply) {
-        zmsg_destroy(&reply);
         log_error("Getting response to LIMITATION_QUERY failed");
         return false;
     }
@@ -58,7 +57,7 @@ static bool get_initial_licensing(StateManager::Writer& state_writer, mlm_client
     }
     // The rest is a series of value/item/category triplets that
     // updateFromMsg() can grok
-    return state_writer.getState().updateFromMsg(reply);
+    return state_writer.getState().updateFromMsg(&reply);
 }
 
 // Query fty-asset about existing devices. This has to be done after
@@ -86,6 +85,7 @@ void get_initial_assets(StateManager::Writer& state_writer, mlm_client_t* client
     zmsg_addstr(msg, "sensor");
     zmsg_addstr(msg, "sensorgpio");
     if (mlm_client_sendto(client, "asset-agent", "ASSETS", NULL, 5000, &msg) < 0) {
+        zmsg_destroy(&msg);
         log_error("Sending ASSETS message failed");
         return;
     }
@@ -116,6 +116,7 @@ void get_initial_assets(StateManager::Writer& state_writer, mlm_client_t* client
         zmsg_addstr(req, i.first->c_str());
         zmsg_addstr(req, asset);
         if (mlm_client_sendto(client, "asset-agent", "ASSET_DETAIL", NULL, 5000, &req) < 0) {
+            zmsg_destroy(&req);
             log_error("Sending ASSET_DETAIL message for %s failed", asset.get());
         }
         asset = zmsg_popstr(reply);
@@ -133,8 +134,9 @@ void get_initial_assets(StateManager::Writer& state_writer, mlm_client_t* client
             zmsg_destroy(&reply1);
             continue;
         }
-        if (state_writer.getState().updateFromMsg(reply1))
+        if (state_writer.getState().updateFromMsg(&reply1))
             changed = true;
+        zmsg_destroy(&reply1); // secure
     }
     if (query_licensing) {
         if (get_initial_licensing(state_writer, client))
@@ -270,7 +272,7 @@ void fty_nut_server(zsock_t* pipe, void* args)
             continue;
         }
         if (fty_proto_is(message)) {
-            if (state_writer.getState().updateFromMsg(message))
+            if (state_writer.getState().updateFromMsg(&message))
                 state_writer.commit();
             continue;
         }

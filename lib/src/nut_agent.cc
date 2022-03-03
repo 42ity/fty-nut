@@ -114,6 +114,7 @@ int NUTAgent::send(const std::string& subject, zmsg_t** message_p)
     fty_proto_t* m_decoded = fty_proto_decode(message_p);
     zmsg_destroy(message_p);
     *message_p = fty_proto_encode(&m_decoded);
+    fty_proto_destroy(&m_decoded); // secure if encode failed
 
     int rv = mlm_client_send(_client, subject.c_str(), message_p);
     if (rv == -1) {
@@ -129,6 +130,7 @@ int NUTAgent::isend(const std::string& subject, zmsg_t** message_p)
     fty_proto_t* m_decoded = fty_proto_decode(message_p);
     zmsg_destroy(message_p);
     *message_p = fty_proto_encode(&m_decoded);
+    fty_proto_destroy(&m_decoded); // secure if encode failed
 
     int rv = mlm_client_send(_iclient, subject.c_str(), message_p);
     if (rv == -1) {
