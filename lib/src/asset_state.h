@@ -45,6 +45,10 @@ public:
         {
             return name_;
         }
+        const std::string& friendlyName() const
+        {
+            return friendlyName_;
+        }
         const std::string& serial() const
         {
             return serial_;
@@ -120,6 +124,7 @@ public:
 
     private:
         std::string                        name_;
+        std::string                        friendlyName_;
         std::string                        serial_;
         std::string                        IP_;
         std::string                        port_;
