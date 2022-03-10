@@ -67,7 +67,7 @@ TEST_CASE("state manager test")
         fty_proto_ext_insert(msg, "ip.1", "192.0.2.2");
         // update via encoded zmsg
         zmsg_t* zmsg = fty_proto_encode(&msg);
-        writer.getState().updateFromMsg(zmsg);
+        writer.getState().updateFromMsg(&zmsg);
         writer.commit();
         assert(manager.states().size() == 3);
         assert(reader1->refresh());

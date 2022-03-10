@@ -140,7 +140,7 @@ public:
     bool updateFromProto(fty_proto_t* message);
     // Same for encoded proto messages or licensing messages which are not
     // proto. Note that this overload destroys the passed zmsg
-    bool updateFromMsg(zmsg_t* message);
+    bool updateFromMsg(zmsg_t** message);
     // Build the ip2master map and the list of allowed devices
     void recompute();
     // Use a std::map to process the assets in a defined order each time

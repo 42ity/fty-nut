@@ -441,6 +441,7 @@ void NUTConfigurator::updateAssetFromScanningDevice(const std::string& name, con
             zmsg_addstr(msg, name.c_str());
             if (mlm_client_sendto(mb_client, "asset-agent", "ASSET_DETAIL", NULL, 10, &msg) < 0) {
                 log_error("client %s failed to send query", "nut-configurator-updater");
+                zmsg_destroy(&msg);
                 return;
             }
             log_debug("client %s sent query for asset %s", "nut-configurator-updater", name.c_str());
@@ -455,6 +456,7 @@ void NUTConfigurator::updateAssetFromScanningDevice(const std::string& name, con
             log_debug("client %s got response for asset %s", "nut-configurator-updater", name.c_str());
             if (!proto) {
                 log_error("client %s failed query request", "nut-configurator-updater");
+                zmsg_destroy(&response);  // secure if decode failed
                 return;
             }
 
@@ -481,6 +483,7 @@ void NUTConfigurator::updateAssetFromScanningDevice(const std::string& name, con
             zmsg_pushstrf(msg, "%s", "READWRITE");
             if (mlm_client_sendto(mb_client, "asset-agent", "ASSET_MANIPULATION", NULL, 10, &msg) < 0) {
                 log_error("client %s failed to send update", "nut-configurator-updater");
+                zmsg_destroy(&msg);  // secure
                 return;
             }
             log_debug("client %s sent update request for asset %s", "nut-configurator-updater", name.c_str());
