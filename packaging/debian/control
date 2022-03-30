@@ -25,7 +25,7 @@ Standards-Version: 4.0.1.0
 Build-Depends: debhelper (>= 9),
     cmake (>=3.0),
     fty-cmake-dev,
-    libcidr0-dev,
+    libcidr-dev,
     libnutclient-dev,
     libnutclientstub-dev,
     libczmq-dev,
