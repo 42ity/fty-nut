@@ -232,7 +232,7 @@ void NUTAgent::advertisePhysics()
             }
         }
 
-        // send alarms as bitmap
+        // send alarms as a bitsfield
         bool has_alarms = false;
         if (device.second.hasProperty("ups.alarm")) {
             const auto& alarms               = device.second.property("ups.alarm");
@@ -260,10 +260,12 @@ void NUTAgent::advertisePhysics()
             device.second.setChanged("ups.alarm", false);
         }
 
-        // send status and "in progress" test result as a bitmap
+        // send status and "in progress" test result as a bitsfield
         if (device.second.hasProperty("status.ups")) {
             std::string status_s = device.second.property("status.ups");
-            if (!status_s.empty()) { // fix IPMVAL-1889 (empty on data-stale)
+            if (!status_s.empty() // fix IPMVAL-1889 (empty on data-stale)
+                && device.second.subtype() != "epdu") // ups.status doesn't make sense for epdu
+            {
                 std::string test_s =
                     (device.second.hasProperty("ups.test.result") ? device.second.property("ups.test.result")
                                                                   : "no test initiated");
@@ -289,7 +291,7 @@ void NUTAgent::advertisePhysics()
             }
         }
 
-        // send epdu outlet status as bitmap
+        // send epdu outlet status as bitsfield
         for (int i = 1; i < 100; i++) {
             std::string property = "status.outlet." + std::to_string(i);
             // assumption, if outlet.10 does not exists, outlet.11 does not as well
