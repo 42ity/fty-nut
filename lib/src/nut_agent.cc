@@ -264,7 +264,7 @@ void NUTAgent::advertisePhysics()
         if (device.second.hasProperty("status.ups")) {
             std::string status_s = device.second.property("status.ups");
             if (!status_s.empty() // fix IPMVAL-1889 (empty on data-stale)
-                && device.second.subtype() != "epdu") // ups.status doesn't make sense for epdu
+                && (device.second.subtype() == "ups" || device.second.subtype() == "sts")) // ups.status make sense only for ups/sts
             {
                 std::string test_s =
                     (device.second.hasProperty("ups.test.result") ? device.second.property("ups.test.result")
