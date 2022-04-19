@@ -230,7 +230,7 @@ int Device::scanCapabilities(nut::TcpClient& conn)
             if (!found)
                 break;
         }
-    } catch (std::exception& e) {
+    } catch (const std::exception& e) {
         log_error("aa: Communication problem with %s (%s)", assetName().c_str(), e.what());
         retval = 0;
         goto cleanup;
@@ -380,7 +380,7 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
     const char* alert_name   = alertNameStr.c_str();
 
     std::string alertNameLabelStr = alert.name; // cpy
-    const char* alert_name_label  = alertNameStr.c_str();
+    const char* alert_name_label  = alertNameLabelStr.c_str();
     makeAlertNameMoreHumanReadable(alert_name_label);
 
     std::string assetNameStr = assetName(); //iname
@@ -390,7 +390,7 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
     const char* asset_friendly_name  = assetFriendlyNameStr.c_str();
 
     char* ruleName = NULL;
-	asprintf(&ruleName, "%s@%s", alert_name, asset_name);
+    asprintf(&ruleName, "%s@%s", alert_name, asset_name);
 
     // clang-format off
     char *rule = NULL;
@@ -465,7 +465,7 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
 
         if (streq(result, "OK") || streq(reason, "ALREADY_EXISTS")) {
             alert.rulePublished = true;
-		}
+        }
         else {
             log_error("Error %s when requesting %s to ADD rule \n%s.", reason, mlm_client_sender(client), rule);
         }
