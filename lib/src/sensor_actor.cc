@@ -119,15 +119,18 @@ void sensor_actor(zsock_t* pipe, void* args)
         if (which == NULL || zclock_mono() - publishtime > int64_t(polling)) {
             log_debug("sa: sensor update");
             nut::TcpClient nutClient;
-            nutClient.connect("localhost", 3493);
-            sensors.updateSensorList(nutClient, client);
-            sensors.updateFromNUT(nutClient);
-            sensors.advertiseInventory(client);
-            // hotfix IPMVAL-2713 (data stale on device which host sensors cause communication failure alarms on
-            // sensors) increase ttl from 60 to 240 sec (polling is equal to 30 sec).
-            sensors.publish(client, int((polling * 8) / 1000));
-            nutClient.disconnect();
-            publishtime = zclock_mono();
+            try {
+                nutClient.connect("localhost", 3493);
+                sensors.updateSensorList(nutClient, client);
+                sensors.updateFromNUT(nutClient);
+                sensors.advertiseInventory(client);
+                // hotfix IPMVAL-2713 (data stale on device which host sensors cause communication failure alarms on
+                // sensors) increase ttl from 60 to 240 sec (polling is equal to 30 sec).
+                sensors.publish(client, int((polling * 8) / 1000));
+                nutClient.disconnect();
+                publishtime = zclock_mono();
+            } catch (...) {
+            }
         } else if (which == pipe) {
             zmsg_t* msg = zmsg_recv(pipe);
             if (msg) {
