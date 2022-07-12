@@ -415,8 +415,8 @@ void Sensors::advertiseInventory(mlm_client_t* client)
                         log_error("failed to send inventory %s result %" PRIi32, topic.c_str(), r);
                     zmsg_destroy(&message);
                 }
-                zhash_destroy(&inventory);
             }
+            zhash_destroy(&inventory);
         }
     }
 }
