@@ -111,6 +111,8 @@ void NUTAgent::updateDeviceList()
 
 int NUTAgent::send(const std::string& subject, zmsg_t** message_p)
 {
+	if (zsys_interrupted) return -100;
+
     fty_proto_t* m_decoded = fty_proto_decode(message_p);
     zmsg_destroy(message_p);
     *message_p = fty_proto_encode(&m_decoded);
@@ -127,6 +129,8 @@ int NUTAgent::send(const std::string& subject, zmsg_t** message_p)
 // MVY: a hack for inventory messages
 int NUTAgent::isend(const std::string& subject, zmsg_t** message_p)
 {
+	if (zsys_interrupted) return -100;
+
     fty_proto_t* m_decoded = fty_proto_decode(message_p);
     zmsg_destroy(message_p);
     *message_p = fty_proto_encode(&m_decoded);
@@ -162,6 +166,8 @@ void NUTAgent::advertisePhysics()
 {
     _deviceList.update(true);
     for (auto& device : _deviceList) {
+        if (zsys_interrupted) break;
+
         const std::string assetName{device.second.assetName()};
 
         //map<str::quantity,str::value>
@@ -316,20 +322,22 @@ void NUTAgent::advertiseInventory()
     }
 
     for (auto& device : _deviceList) {
+        if (zsys_interrupted) break;
+
         const std::string assetName{device.second.assetName()};
 
         zhash_t* inventory = zhash_new();
         zhash_autofree(inventory);
 
         // !advertiseAll = advertise_Not_OnlyChanged
-        std::string log; //dbg
+        //std::string log; //dbg
         for (auto& item : device.second.inventory(!advertiseAll)) {
             if (item.first == "status.ups") {
                 // this value is not advertised as inventory information
                 continue;
             }
             zhash_insert(inventory, item.first.c_str(), const_cast<char*>(item.second.c_str()));
-            log += item.first + " = \"" + item.second + "\"; ";
+            //log += item.first + " = \"" + item.second + "\"; ";
             device.second.setChanged(item.first, false);
         }
 
@@ -342,7 +350,8 @@ void NUTAgent::advertiseInventory()
 
         if (message) {
             std::string topic = "inventory@" + assetName;
-            log_debug("new inventory message '%s': %s", topic.c_str(), log.c_str());
+            //log_debug("new inventory message '%s': %s", topic.c_str(), log.c_str());
+            log_debug("new inventory message '%s'", topic.c_str());
             int r = isend(topic, &message);
             if (r != 0)
                 log_error("failed to send inventory %s result %i", topic.c_str(), r);

@@ -57,7 +57,9 @@ static bool get_initial_licensing(StateManager::Writer& state_writer, mlm_client
     }
     // The rest is a series of value/item/category triplets that
     // updateFromMsg() can grok
-    return state_writer.getState().updateFromMsg(&reply);
+    bool res = state_writer.getState().updateFromMsg(&reply);
+    zmsg_destroy(&reply); // secure
+    return res;
 }
 
 // Query fty-asset about existing devices. This has to be done after
@@ -214,6 +216,8 @@ void fty_nut_server(zsock_t* pipe, void* args)
 
     zsock_signal(pipe, 0);
 
+    log_info("fty-nut started");
+
     nut_agent.setClient(client);
     nut_agent.setiClient(iclient);
 
@@ -274,10 +278,13 @@ void fty_nut_server(zsock_t* pipe, void* args)
         if (fty_proto_is(message)) {
             if (state_writer.getState().updateFromMsg(&message))
                 state_writer.commit();
+            zmsg_destroy(&message); // secure
             continue;
         }
         log_error("Unhandled message (%s/%s)", mlm_client_command(client), mlm_client_subject(client));
         zmsg_print(message);
         zmsg_destroy(&message);
     } // while (!zsys_interrupted)
+
+    log_info("fty-nut ended");
 }
