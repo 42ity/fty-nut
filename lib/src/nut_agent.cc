@@ -111,7 +111,7 @@ void NUTAgent::updateDeviceList()
 
 int NUTAgent::send(const std::string& subject, zmsg_t** message_p)
 {
-	if (zsys_interrupted) return -100;
+    if (zsys_interrupted) return -100;
 
     fty_proto_t* m_decoded = fty_proto_decode(message_p);
     zmsg_destroy(message_p);
@@ -129,7 +129,7 @@ int NUTAgent::send(const std::string& subject, zmsg_t** message_p)
 // MVY: a hack for inventory messages
 int NUTAgent::isend(const std::string& subject, zmsg_t** message_p)
 {
-	if (zsys_interrupted) return -100;
+    if (zsys_interrupted) return -100;
 
     fty_proto_t* m_decoded = fty_proto_decode(message_p);
     zmsg_destroy(message_p);
