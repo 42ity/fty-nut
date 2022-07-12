@@ -137,7 +137,7 @@ public:
         bool                               have_upsconf_block_;
         bool                               upsconf_enable_dmf_;
         int                                daisychain_;
-        fty_proto_t*                       proto_;
+        fty_proto_t*                       proto_{nullptr};
     };
 
     // Update the state from a received fty_proto message. Return true if an

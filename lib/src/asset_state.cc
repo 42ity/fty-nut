@@ -60,9 +60,9 @@ AssetState::Asset::Asset(fty_proto_t* message)
     }
     zhash_t* ext = fty_proto_get_ext(message);
     if (ext) {
-        for (auto val = reinterpret_cast<const char*>(zhash_first(ext)); val;
-             val      = reinterpret_cast<const char*>(zhash_next(ext))) {
+        for (void* item = zhash_first(ext); item; item = zhash_next(ext)) {
             if (strncmp(zhash_cursor(ext), "endpoint.1.", 11) == 0) {
+                auto val = reinterpret_cast<const char*>(item);
                 endpoint_.emplace(zhash_cursor(ext) + 11, val);
             }
         }
@@ -142,19 +142,19 @@ bool AssetState::updateFromProto(fty_proto_t* message)
 bool AssetState::updateFromMsg(zmsg_t** message)
 {
     if (!(message && *message)) {
-        return  false;
+        return false;
     }
 
     bool ret = false;
     if (fty_proto_is(*message)) {
         fty_proto_t* proto = fty_proto_decode(message);
-        if (!proto) {
-            zmsg_destroy(message);
-            return false;
+        if (proto) {
+            ret = updateFromProto(proto);
+            fty_proto_destroy(&proto);
         }
-        ret = updateFromProto(proto);
-        fty_proto_destroy(&proto);
     }
+
+    zmsg_destroy(message);
     return ret;
 }
 
