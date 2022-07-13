@@ -58,7 +58,7 @@ TEST_CASE("actor commands test")
     // empty message - expected fail
     message = zmsg_new();
     REQUIRE(message);
-    int rv = actor_commands(client, &message, actor_polling, nut_agent);
+    int rv = actor_commands(&message, actor_polling, nut_agent);
     REQUIRE(rv == 0);
     CHECK(message == nullptr);
     CHECK(actor_polling == 0);
@@ -74,7 +74,7 @@ TEST_CASE("actor commands test")
     message = zmsg_new();
     REQUIRE(message);
     zmsg_addstr(message, "");
-    rv = actor_commands(client, &message, actor_polling, nut_agent);
+    rv = actor_commands(&message, actor_polling, nut_agent);
     REQUIRE(rv == 0);
     CHECK(message == nullptr);
     CHECK(actor_polling == 0);
@@ -90,7 +90,7 @@ TEST_CASE("actor commands test")
     message = zmsg_new();
     REQUIRE(message);
     zmsg_addstr(message, "MAGIC!");
-    rv = actor_commands(client, &message, actor_polling, nut_agent);
+    rv = actor_commands(&message, actor_polling, nut_agent);
     REQUIRE(rv == 0);
     CHECK(message == nullptr);
     CHECK(actor_polling == 0);
@@ -107,7 +107,7 @@ TEST_CASE("actor commands test")
     REQUIRE(message);
     zmsg_addstr(message, ACTION_CONFIGURE);
     // missing mapping_file here
-    rv = actor_commands(client, &message, actor_polling, nut_agent);
+    rv = actor_commands(&message, actor_polling, nut_agent);
     REQUIRE(rv == 0);
     CHECK(message == nullptr);
     CHECK(actor_polling == 0);
@@ -124,7 +124,7 @@ TEST_CASE("actor commands test")
     REQUIRE(message);
     zmsg_addstr(message, ACTION_POLLING);
     // missing value here
-    rv = actor_commands(client, &message, actor_polling, nut_agent);
+    rv = actor_commands(&message, actor_polling, nut_agent);
     REQUIRE(rv == 0);
     CHECK(message == nullptr);
     CHECK(actor_polling == 0);
@@ -141,7 +141,7 @@ TEST_CASE("actor commands test")
     REQUIRE(message);
     zmsg_addstr(message, ACTION_POLLING);
     zmsg_addstr(message, "a14s2"); // Bad value
-    rv = actor_commands(client, &message, actor_polling, nut_agent);
+    rv = actor_commands(&message, actor_polling, nut_agent);
     REQUIRE(rv == 0);
     CHECK(message == nullptr);
     CHECK(actor_polling == 30000);
@@ -168,7 +168,7 @@ TEST_CASE("actor commands test")
     REQUIRE(message);
     zmsg_addstr(message, ACTION_CONFIGURE);
     zmsg_addstr(message, SELFTEST_RO "/mapping.conf");
-    rv = actor_commands(client, &message, actor_polling, nut_agent);
+    rv = actor_commands(&message, actor_polling, nut_agent);
     REQUIRE(rv == 0);
     CHECK(message == nullptr);
     CHECK(actor_polling == 0);
@@ -179,7 +179,7 @@ TEST_CASE("actor commands test")
     message = zmsg_new();
     REQUIRE(message);
     zmsg_addstr(message, "$TERM");
-    rv = actor_commands(client, &message, actor_polling, nut_agent);
+    rv = actor_commands(&message, actor_polling, nut_agent);
     REQUIRE(rv == 1);
     CHECK(message == nullptr);
     CHECK(actor_polling == 0);
@@ -191,7 +191,7 @@ TEST_CASE("actor commands test")
     REQUIRE(message);
     zmsg_addstr(message, ACTION_POLLING);
     zmsg_addstr(message, "150");
-    rv = actor_commands(client, &message, actor_polling, nut_agent);
+    rv = actor_commands(&message, actor_polling, nut_agent);
     REQUIRE(rv == 0);
     CHECK(message == nullptr);
     CHECK(actor_polling == 150000);

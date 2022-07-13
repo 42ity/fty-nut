@@ -186,17 +186,19 @@ int main(int argc, char *argv []) {
     zpoller_t *poller = zpoller_new(nut_server, nut_device_alert, nut_sensor, NULL);
     assert(poller);
 
-    while (!zsys_interrupted) {
+    while (!zsys_interrupted)
+    {
         void *which = zpoller_wait(poller, 10000);
-        if (which) {
-            char *message = zstr_recv(which);
-            if (message) {
-                puts(message);
-                zstr_free(&message);
-            }
-        } else {
-            if (zpoller_terminated(poller)) {
+        if (which == NULL) {
+            if (zpoller_terminated(poller) || zsys_interrupted) {
                 break;
+            }
+        }
+        else {
+            char *msg = zstr_recv(which);
+            if (msg) {
+                puts(msg);
+                zstr_free(&msg);
             }
         }
 

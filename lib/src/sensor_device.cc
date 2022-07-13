@@ -160,6 +160,7 @@ void Sensor::publish(mlm_client_t* client, int ttl)
         zmsg_t* msg = fty_proto_encode_metric(aux, uint64_t(time(nullptr)), uint32_t(ttl),
             ("temperature." + std::to_string(_index)).c_str(), location().c_str(), _temperature.c_str(), "C");
         zhash_destroy(&aux);
+
         if (msg) {
             std::string topic = "temperature" + topicSuffix();
             log_debug("sending new temperature for element_src = '%s', value = '%s' on topic '%s'", location().c_str(),
@@ -170,6 +171,7 @@ void Sensor::publish(mlm_client_t* client, int ttl)
             zmsg_destroy(&msg);
         }
     }
+
     if (!_humidity.empty()) {
         zhash_t* aux = zhash_new();
         zhash_autofree(aux);
@@ -178,6 +180,7 @@ void Sensor::publish(mlm_client_t* client, int ttl)
         zmsg_t* msg = fty_proto_encode_metric(aux, uint64_t(time(nullptr)), uint32_t(ttl),
             ("humidity." + std::to_string(_index)).c_str(), location().c_str(), _humidity.c_str(), "%");
         zhash_destroy(&aux);
+
         if (msg) {
             std::string topic = "humidity" + topicSuffix();
             log_debug("sending new humidity for element_src = '%s', value = '%s' on topic '%s'", location().c_str(),

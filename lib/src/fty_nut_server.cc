@@ -79,6 +79,9 @@ void get_initial_assets(StateManager::Writer& state_writer, mlm_client_t* client
         log_error("Creating UUID for the ASSETS message failed");
         return;
     }
+
+log_debug("send request assets");
+
     zmsg_addstr(msg, "GET");
     zmsg_addstr(msg, zuuid_str_canonical(uuid));
     zmsg_addstr(msg, "ups");
@@ -93,6 +96,8 @@ void get_initial_assets(StateManager::Writer& state_writer, mlm_client_t* client
     }
     ZmsgGuard reply;
     while ((reply = mlm_client_recv(client))) {
+        if (zsys_interrupted) break;
+
         ZstrGuard uuid_reply(zmsg_popstr(reply));
         if (strcmp(uuid_reply, zuuid_str_canonical(uuid)) != 0) {
             log_warning("Mismatching response to an ASSETS request");
@@ -111,12 +116,17 @@ void get_initial_assets(StateManager::Writer& state_writer, mlm_client_t* client
     // Remember which UUIDs we sent
     std::set<std::string> uuids;
     while (asset) {
+        if (zsys_interrupted) break;
+
         ZuuidGuard uuid1(zuuid_new());
         auto       i   = uuids.emplace(zuuid_str_canonical(uuid1));
         zmsg_t*    req = zmsg_new();
         zmsg_addstr(req, "GET");
         zmsg_addstr(req, i.first->c_str());
         zmsg_addstr(req, asset);
+
+log_debug("send request asset detail '%s'", asset.get());
+
         if (mlm_client_sendto(client, "asset-agent", "ASSET_DETAIL", NULL, 5000, &req) < 0) {
             zmsg_destroy(&req);
             log_error("Sending ASSET_DETAIL message for %s failed", asset.get());
@@ -125,6 +135,10 @@ void get_initial_assets(StateManager::Writer& state_writer, mlm_client_t* client
     }
     bool changed = false;
     while (!uuids.empty()) {
+        if (zsys_interrupted) break;
+
+log_debug("get asset detail (uuids.size(): %zu)", uuids.size());
+
         zmsg_t* reply1 = mlm_client_recv(client);
         if (uuids.erase(ZstrGuard(zmsg_popstr(reply1)).get()) == 0) {
             log_warning("Mismatching response to an ASSET_DETAIL request");
@@ -212,14 +226,15 @@ void fty_nut_server(zsock_t* pipe, void* args)
         return;
     }
 
-    NUTAgent nut_agent(NutStateManager.getReader());
-
     zsock_signal(pipe, 0);
 
     log_info("fty-nut started");
 
+    NUTAgent nut_agent(NutStateManager.getReader());
     nut_agent.setClient(client);
     nut_agent.setiClient(iclient);
+
+    log_info("============================= fty-nut started 2");
 
     StateManager::Writer& state_writer = NutStateManager.getWriter();
     // (Ab)use the iclient for the initial assets mailbox request, because it
@@ -228,20 +243,27 @@ void fty_nut_server(zsock_t* pipe, void* args)
 
     uint64_t timestamp = static_cast<uint64_t>(zclock_mono());
     uint64_t timeout   = 30000;
-
     uint64_t last = uint64_t(zclock_mono());
+
+    log_info("============================= fty-nut started 3");
+
     while (!zsys_interrupted) {
-        void*    which = zpoller_wait(poller, int(polling_timeout(timestamp, timeout)));
-        uint64_t now   = uint64_t(zclock_mono());
-        if (now - last >= timeout) {
+        uint64_t now = uint64_t(zclock_mono());
+        if ((now - last) >= timeout) {
             last = now;
+            log_info("============================= Periodic polling");
             log_debug("Periodic polling");
             nut_agent.updateDeviceList();
             nut_agent.onPoll();
         }
+
+        log_debug("YYYYYYYYYYYYYYYYYYYYYYYYYYYYY wait %zu", timeout);
+
+        void* which = zpoller_wait(poller, int(polling_timeout(timestamp, timeout)));
+
         if (which == NULL) {
             if (zpoller_terminated(poller) || zsys_interrupted) {
-                log_warning("zpoller_terminated () or zsys_interrupted");
+                log_debug("zpoller_terminated () or zsys_interrupted");
                 break;
             }
             if (zpoller_expired(poller)) {
@@ -251,14 +273,18 @@ void fty_nut_server(zsock_t* pipe, void* args)
         }
 
         if (which == pipe) {
+            log_debug("XXXXXXXXXXXXXXXXXXXXXXXYYYYYYYYYYYYYYY");
             zmsg_t* message = zmsg_recv(pipe);
             if (!message) {
                 log_error("Given `which == pipe`, function `zmsg_recv (pipe)` returned NULL");
                 continue;
             }
-            if (actor_commands(client, &message, timeout, nut_agent) == 1) {
+            log_debug("XXXXXXXXXXXXXXXXXXXXXXX");
+            zmsg_print(message);
+            if (actor_commands(&message, timeout, nut_agent) == 1) {
                 break;
             }
+            zmsg_destroy(&message); // secure
             continue;
         }
 
@@ -270,7 +296,7 @@ void fty_nut_server(zsock_t* pipe, void* args)
             continue;
         }
 
-        zmsg_t* message = mlm_client_recv(client);
+        zmsg_t* message = NULL; //mlm_client_recv(client);
         if (!message) {
             log_error("Given `which == mlm_client_msgpipe (client)`, function `mlm_client_recv ()` returned NULL");
             continue;
