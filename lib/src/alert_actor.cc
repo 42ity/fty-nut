@@ -27,7 +27,7 @@
 #include "alert_device_list.h"
 
 //returns 1 if $TERM, else 0
-int alert_actor_commands(zmsg_t** message_p, uint64_t& timeout)
+static int alert_actor_commands(zmsg_t** message_p, uint64_t& timeout_ms)
 {
     assert(message_p && *message_p);
     zmsg_t* message = *message_p;
@@ -43,7 +43,7 @@ int alert_actor_commands(zmsg_t** message_p, uint64_t& timeout)
             "Message received is most probably empty (has no frames).");
     }
     else if (streq(cmd, "$TERM")) {
-        log_info("aa: Got $TERM");
+        log_debug("aa: Got $TERM");
         ret = 1;
     }
     else if (streq(cmd, ACTION_POLLING)) {
@@ -55,12 +55,13 @@ int alert_actor_commands(zmsg_t** message_p, uint64_t& timeout)
         }
         else {
             char* end;
-            timeout = std::strtoul(polling, &end, 10) * 1000;
-            if (timeout == 0) {
+            timeout_ms = std::strtoul(polling, &end, 10) * 1000;
+            if (timeout_ms == 0) {
                 log_error("aa: invalid POLLING value '%s', using default instead", polling);
-                timeout = 30000;
+                timeout_ms = 30000;
             }
         }
+        log_debug("aa: timeout: %zu ms", timeout_ms);
         zstr_free(&polling);
     }
     else {
@@ -109,7 +110,7 @@ void alert_actor(zsock_t* pipe, void* args)
     zsock_signal(pipe, 0);
 
     uint64_t last = uint64_t(zclock_mono());
-    uint64_t polling  = 30000; //ms
+    uint64_t polling = 30000; //ms
 
     Devices devices(NutStateManager.getReader());
     devices.setPollingMs(polling);
@@ -120,12 +121,14 @@ void alert_actor(zsock_t* pipe, void* args)
     {
         uint64_t now = uint64_t(zclock_mono());
         if ((now - last) >= polling) {
-            last = now;
             log_debug("aa: Polling data now");
             devices.updateDeviceList();
             devices.updateFromNUT();
             devices.publishRules(mb_client);
             devices.publishAlerts(client);
+
+            last = uint64_t(zclock_mono());
+            log_debug("aa: Polling lap time: %zu ms", (last - now));
         }
 
         void* which = zpoller_wait(poller, int(polling));
@@ -140,14 +143,15 @@ void alert_actor(zsock_t* pipe, void* args)
             zmsg_t* msg = zmsg_recv(pipe);
             if (msg) {
                 int quit = alert_actor_commands(&msg, polling);
-                devices.setPollingMs(polling);
                 zmsg_destroy(&msg);
-                if (quit)
-                    break;
+                if (quit) {
+                    break; //$TERM
+                }
+                devices.setPollingMs(polling);
             }
         }
         else if (which == mlm_client_msgpipe(client)) {
-            zmsg_t* msg = zmsg_recv(client);
+            zmsg_t* msg = mlm_client_recv(client);
             zmsg_destroy(&msg);
             log_debug("aa: Message not handled (%s/%s)",
                 mlm_client_sender(client), mlm_client_subject(client));

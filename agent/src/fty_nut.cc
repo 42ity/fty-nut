@@ -28,24 +28,12 @@
 
 #include "fty_nut.h"
 #include "../lib/src/nut_mlm.h"
-
-/*
-#include "fty_nut_server.h"
-#include "sensor_actor.h"
-#include "alert_actor.h"
-#include "fty_proto.h"
-#include "nut_mlm.h"
-*/
-
 #include <fty_log.h>
 #include <fty_common_mlm.h>
-
 #include <getopt.h>
 #include <stdio.h>
 #include <czmq.h>
 #include <string>
-
-#define str(x) #x
 
 void usage() {
     puts("fty-nut [options] ...\n"
@@ -142,17 +130,11 @@ int main(int argc, char *argv []) {
         exit(EXIT_FAILURE);
     }
 
-    std::string logConfigFile = std::string (zconfig_get (config, "log/config", ""));
-    if (!logConfigFile.empty ())
-    {
-      ManageFtyLog::getInstanceFtylog ()->setConfigFile (logConfigFile);
-    }
-
     // VERBOSE
     if (streq(zconfig_get(config, "server/verbose", "false"), "true")) {
         ManageFtyLog::getInstanceFtylog()->setVerboseMode();
     }
-    // POLLING
+    // POLLING (sec)
     polling = zconfig_get(config, CONFIG_POLLING, "30");
 
     log_info("fty_nut - NUT (Network UPS Tools) wrapper/daemon");
@@ -165,12 +147,15 @@ int main(int argc, char *argv []) {
 
     zactor_t *nut_device_alert = zactor_new(alert_actor, MLM_ENDPOINT_VOID);
     if (!nut_device_alert) {
+        zactor_destroy(&nut_server);
         log_fatal("zactor_new (task = 'nut_device_server', args = 'NULL') failed");
         return EXIT_FAILURE;
     }
 
     zactor_t *nut_sensor = zactor_new(sensor_actor, MLM_ENDPOINT_VOID);
     if (!nut_sensor) {
+        zactor_destroy(&nut_server);
+        zactor_destroy(&nut_device_alert);
         log_fatal("zactor_new (task = 'nut_sensor', args = 'NULL') failed");
         return EXIT_FAILURE;
     }
@@ -184,7 +169,13 @@ int main(int argc, char *argv []) {
     zstr_sendx(nut_sensor, ACTION_POLLING, polling, NULL);
 
     zpoller_t *poller = zpoller_new(nut_server, nut_device_alert, nut_sensor, NULL);
-    assert(poller);
+    if (!poller) {
+        zactor_destroy(&nut_server);
+        zactor_destroy(&nut_device_alert);
+        zactor_destroy(&nut_sensor);
+        log_fatal("zpoller_new() failed");
+        return EXIT_FAILURE;
+    }
 
     while (!zsys_interrupted)
     {
@@ -219,9 +210,9 @@ int main(int argc, char *argv []) {
     }
 
     zpoller_destroy(&poller);
-    zactor_destroy(&nut_server);
-    zactor_destroy(&nut_device_alert);
     zactor_destroy(&nut_sensor);
+    zactor_destroy(&nut_device_alert);
+    zactor_destroy(&nut_server);
     if (config) {
         zconfig_destroy(&config);
     }

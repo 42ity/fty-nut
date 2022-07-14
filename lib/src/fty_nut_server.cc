@@ -24,42 +24,72 @@
 #include "nut_agent.h"
 #include "nut_mlm.h"
 #include "state_manager.h"
+#include <fty_common_agents.h>
 #include <fty_common_mlm.h>
 #include <fty_log.h>
 
 StateManager NutStateManager;
 
+// mlm_client_recv() wrapper using optional poller/timeout
+// returns the recv message (to be freed by caller)
+static zmsg_t* recv_response(mlm_client_t* client, zpoller_t* poller, int poller_timeout_ms)
+{
+    if (!client)
+        return NULL;
+    if (poller) { // optional
+        void* which = zpoller_wait(poller, poller_timeout_ms);
+        if (!which) {
+            log_error("recv_response() timed out (%d ms)", poller_timeout_ms);
+            return NULL;
+        }
+    }
+    return mlm_client_recv(client);
+}
+
 static bool get_initial_licensing(StateManager::Writer& state_writer, mlm_client_t* client)
 {
-    ZuuidGuard uuid(zuuid_new());
-    int        err = mlm_client_sendtox(
-        client, "etn-licensing", "LIMITATIONS", "LIMITATION_QUERY", zuuid_str_canonical(uuid), "*", "*", NULL);
-    if (err < 0) {
-        log_error("Sending LIMITATION_QUERY message to etn-licensing failed");
-        return false;
-    }
-    zmsg_t* reply = mlm_client_recv(client);
-    if (!reply) {
-        log_error("Getting response to LIMITATION_QUERY failed");
-        return false;
-    }
-    ZstrGuard reply_str(zmsg_popstr(reply));
-    if (!reply_str || strcmp(reply_str, zuuid_str_canonical(uuid)) != 0) {
-        zmsg_destroy(&reply);
-        log_warning("Mismatching response to a LIMITATION_QUERY request");
-        return false;
-    }
-    reply_str = zmsg_popstr(reply);
-    if (!reply_str || strcmp(reply_str, "REPLY") != 0) {
-        zmsg_destroy(&reply);
-        log_error("Got malformed message from etn-licensing");
-        return false;
-    }
-    // The rest is a series of value/item/category triplets that
-    // updateFromMsg() can grok
-    bool res = state_writer.getState().updateFromMsg(&reply);
-    zmsg_destroy(&reply); // secure
-    return res;
+    log_debug("Get initial licensing");
+
+    bool ret = false;
+    zmsg_t* reply = NULL;
+
+    do { // for break facilities
+        if (!client)
+            { log_error("client is NULL"); break; }
+
+        ZpollerGuard poller(zpoller_new(mlm_client_msgpipe(client), NULL));
+        if (!poller)
+            { log_error("Poller creation failed"); break; }
+
+        ZuuidGuard uuid(zuuid_new());
+        if (!uuid)
+            { log_error("Creating UUID failed"); break; }
+
+        int r = mlm_client_sendtox(client, "etn-licensing", "LIMITATIONS", "LIMITATION_QUERY",
+            zuuid_str_canonical(uuid), "*", "*", NULL);
+        if (r < 0)
+            { log_error("Sending LIMITATION_QUERY message to etn-licensing failed"); break; }
+
+        reply = recv_response(client, poller, 5000);
+        if (!reply)
+            { log_error("Getting response to LIMITATION_QUERY failed"); break; }
+
+        ZstrGuard str(zmsg_popstr(reply));
+        if (!str || !streq(str, zuuid_str_canonical(uuid)))
+            { log_error("Mismatching response to a LIMITATION_QUERY request"); break; }
+
+        str = zmsg_popstr(reply);
+        if (!str || !streq(str, "REPLY"))
+            { log_error("Got malformed message from etn-licensing"); break; }
+
+        // The rest is a series of value/item/category triplets that
+        // updateFromMsg() can grok
+        ret = state_writer.getState().updateFromMsg(&reply);
+        break;
+    } while(0);
+
+    zmsg_destroy(&reply);
+    return ret;
 }
 
 // Query fty-asset about existing devices. This has to be done after
@@ -68,117 +98,160 @@ static bool get_initial_licensing(StateManager::Writer& state_writer, mlm_client
 // the stream.
 void get_initial_assets(StateManager::Writer& state_writer, mlm_client_t* client, bool query_licensing)
 {
-    zmsg_t* msg = zmsg_new();
-    if (!msg) {
-        log_error("Creating ASSETS message failed");
-        return;
-    }
-    ZuuidGuard uuid(zuuid_new());
-    if (!uuid) {
-        zmsg_destroy(&msg);
-        log_error("Creating UUID for the ASSETS message failed");
+    log_debug("Get initial assets");
+
+    if (!client)
+        { log_error("client is NULL"); return; }
+
+    const int pollerTimeout_ms = 5000; //ms
+
+    ZpollerGuard poller(zpoller_new(mlm_client_msgpipe(client), NULL));
+    if (!poller) {
+        log_error("Poller creation failed");
         return;
     }
 
-log_debug("send request assets");
-
-    zmsg_addstr(msg, "GET");
-    zmsg_addstr(msg, zuuid_str_canonical(uuid));
-    zmsg_addstr(msg, "ups");
-    zmsg_addstr(msg, "epdu");
-    zmsg_addstr(msg, "sts");
-    zmsg_addstr(msg, "sensor");
-    zmsg_addstr(msg, "sensorgpio");
-    if (mlm_client_sendto(client, "asset-agent", "ASSETS", NULL, 5000, &msg) < 0) {
-        zmsg_destroy(&msg);
-        log_error("Sending ASSETS message failed");
-        return;
-    }
+    log_debug("send request ASSETS");
     ZmsgGuard reply;
-    while ((reply = mlm_client_recv(client))) {
-        if (zsys_interrupted) break;
+    {
+        ZuuidGuard uuid(zuuid_new());
+        if (!uuid) {
+            log_error("Creating UUID for the ASSETS message failed");
+            return;
+        }
+
+        zmsg_t* msg = zmsg_new();
+        if (!msg) {
+            log_error("Creating ASSETS message failed");
+            return;
+        }
+        zmsg_addstr(msg, "GET");
+        zmsg_addstr(msg, zuuid_str_canonical(uuid));
+        zmsg_addstr(msg, "ups");
+        zmsg_addstr(msg, "epdu");
+        zmsg_addstr(msg, "sts");
+        zmsg_addstr(msg, "sensor");
+        zmsg_addstr(msg, "sensorgpio");
+        int r = mlm_client_sendto(client, AGENT_FTY_ASSET, "ASSETS", NULL, 5000, &msg);
+        zmsg_destroy(&msg);
+        if (r < 0) {
+            log_error("Sending ASSETS message failed");
+            return;
+        }
+
+        if (zsys_interrupted) {
+            return; //$TERM
+        }
+
+        reply = recv_response(client, poller, pollerTimeout_ms);
+        if (!reply) {
+            log_error("No response received from ASSETS message");
+            return;
+        }
 
         ZstrGuard uuid_reply(zmsg_popstr(reply));
-        if (strcmp(uuid_reply, zuuid_str_canonical(uuid)) != 0) {
-            log_warning("Mismatching response to an ASSETS request");
-            continue;
+        if (!streq(uuid_reply, zuuid_str_canonical(uuid))) {
+            log_error("Mismatching response to an ASSETS request");
+            return;
         }
         ZstrGuard status(zmsg_popstr(reply));
-        if (strcmp(status, "OK") != 0) {
-            log_warning("Got %s response to an ASSETS request", status.get());
+        if (!streq(status, "OK")) {
+            log_error("Got %s response to an ASSETS request", status.get());
             zmsg_print(reply);
             return;
         }
-        break;
     }
 
-    ZstrGuard asset(zmsg_popstr(reply));
-    // Remember which UUIDs we sent
-    std::set<std::string> uuids;
-    while (asset) {
-        if (zsys_interrupted) break;
+    log_debug("send %zu ASSET_DETAIL requests", zmsg_size(reply.get()));
+    std::set<std::string> uuids; // Remember which UUIDs we sent
+    {
+        ZstrGuard asset(zmsg_popstr(reply));
+        while (asset) {
+            if (zsys_interrupted) {
+                return; //$TERM
+            }
 
-        ZuuidGuard uuid1(zuuid_new());
-        auto       i   = uuids.emplace(zuuid_str_canonical(uuid1));
-        zmsg_t*    req = zmsg_new();
-        zmsg_addstr(req, "GET");
-        zmsg_addstr(req, i.first->c_str());
-        zmsg_addstr(req, asset);
+            ZuuidGuard uuid(zuuid_new());
+            if (!uuid) {
+                log_error("Creating UUID for the ASSET_DETAIL message failed");
+                return;
+            }
+            const char* uuid_str = zuuid_str_canonical(uuid);
 
-log_debug("send request asset detail '%s'", asset.get());
+            //log_debug("send request asset detail '%s'", asset.get());
+            zmsg_t* msg = zmsg_new();
+            if (!msg) {
+                log_error("Creating ASSET_DETAIL message failed");
+                return;
+            }
+            zmsg_addstr(msg, "GET");
+            zmsg_addstr(msg, uuid_str);
+            zmsg_addstr(msg, asset);
+            int r = mlm_client_sendto(client, AGENT_FTY_ASSET, "ASSET_DETAIL", NULL, 5000, &msg);
+            zmsg_destroy(&msg);
+            if (r < 0) {
+                log_warning("Sending ASSET_DETAIL message for %s failed", asset.get());
+            }
+            else {
+                uuids.emplace(uuid_str); // ok, remember uuid
+            }
 
-        if (mlm_client_sendto(client, "asset-agent", "ASSET_DETAIL", NULL, 5000, &req) < 0) {
-            zmsg_destroy(&req);
-            log_error("Sending ASSET_DETAIL message for %s failed", asset.get());
+            asset = zmsg_popstr(reply); // next
         }
-        asset = zmsg_popstr(reply);
+        //log_debug("%zu ASSET_DETAIL requests sent", uuids.size());
     }
+
+    log_debug("recv %zu ASSET_DETAIL responses", uuids.size());
     bool changed = false;
-    while (!uuids.empty()) {
-        if (zsys_interrupted) break;
+    {
+        size_t noResponseCnt = 0;
+        while (uuids.size() > noResponseCnt) {
+            if (zsys_interrupted) {
+                return; //$TERM
+            }
 
-log_debug("get asset detail (uuids.size(): %zu)", uuids.size());
+            zmsg_t* msg = recv_response(client, poller, pollerTimeout_ms);
+            if (!msg) {
+                noResponseCnt++;
+                continue;
+            }
 
-        zmsg_t* reply1 = mlm_client_recv(client);
-        if (uuids.erase(ZstrGuard(zmsg_popstr(reply1)).get()) == 0) {
-            log_warning("Mismatching response to an ASSET_DETAIL request");
-            zmsg_destroy(&reply1);
-            continue;
+            char* uuid = zmsg_popstr(msg);
+
+            if (!uuid || uuids.erase(uuid) == 0) {
+                log_warning("Mismatching response to an ASSET_DETAIL request");
+            }
+            else if (!fty_proto_is(msg)) {
+                log_warning("Response to an ASSET_DETAIL message is not fty_proto");
+            }
+            else if (state_writer.getState().updateFromMsg(&msg)) {
+                changed = true;
+            }
+
+            zstr_free(&uuid);
+            zmsg_destroy(&msg);
         }
-        if (!fty_proto_is(reply1)) {
-            log_warning("Response to an ASSET_DETAIL message is not fty_proto");
-            zmsg_destroy(&reply1);
-            continue;
+
+        if (uuids.size() != 0) {
+            log_warning("Missed %zu ASSET_DETAIL responses", uuids.size());
         }
-        if (state_writer.getState().updateFromMsg(&reply1))
-            changed = true;
-        zmsg_destroy(&reply1); // secure
     }
+
     if (query_licensing) {
-        if (get_initial_licensing(state_writer, client))
+        if (get_initial_licensing(state_writer, client)) {
             changed = true;
-    }
-    if (changed)
-        state_writer.commit();
-    log_info("Initial ASSETS request complete (%zd/%zd powerdevices, %zd/%zd sensors)",
-        state_writer.getState().getPowerDevices().size(), state_writer.getState().getAllPowerDevices().size(),
-        state_writer.getState().getSensors().size(), state_writer.getState().getAllSensors().size());
-}
-
-uint64_t polling_timeout(uint64_t last_poll, uint64_t polling_timeout)
-{
-    static uint32_t too_short_poll_count = 0;
-
-    uint64_t now = static_cast<uint64_t>(zclock_mono());
-    if (last_poll + polling_timeout < now) {
-        too_short_poll_count++;
-        if (too_short_poll_count > 10) {
-            log_error("Can't handle so many devices in so short polling interval");
         }
-        return 0;
     }
-    too_short_poll_count = 0;
-    return last_poll + polling_timeout - now;
+
+    if (changed) {
+        state_writer.commit();
+    }
+
+    log_info("Initial ASSETS request complete (%zu/%zu powerdevices, %zu/%zu sensors)",
+        state_writer.getState().getPowerDevices().size(),
+        state_writer.getState().getAllPowerDevices().size(),
+        state_writer.getState().getSensors().size(),
+        state_writer.getState().getAllSensors().size());
 }
 
 void fty_nut_server(zsock_t* pipe, void* args)
@@ -228,89 +301,62 @@ void fty_nut_server(zsock_t* pipe, void* args)
 
     zsock_signal(pipe, 0);
 
-    log_info("fty-nut started");
+    log_info("fty-nut starting...");
 
     NUTAgent nut_agent(NutStateManager.getReader());
     nut_agent.setClient(client);
     nut_agent.setiClient(iclient);
-
-    log_info("============================= fty-nut started 2");
 
     StateManager::Writer& state_writer = NutStateManager.getWriter();
     // (Ab)use the iclient for the initial assets mailbox request, because it
     // will not receive any interfering stream messages
     get_initial_assets(state_writer, iclient, true);
 
-    uint64_t timestamp = static_cast<uint64_t>(zclock_mono());
-    uint64_t timeout   = 30000;
-    uint64_t last = uint64_t(zclock_mono());
+    log_info("fty-nut started");
 
-    log_info("============================= fty-nut started 3");
+    uint64_t timeout = 30000; //ms
+    uint64_t last = uint64_t(zclock_mono());
 
     while (!zsys_interrupted) {
         uint64_t now = uint64_t(zclock_mono());
         if ((now - last) >= timeout) {
-            last = now;
-            log_info("============================= Periodic polling");
             log_debug("Periodic polling");
             nut_agent.updateDeviceList();
             nut_agent.onPoll();
+
+            last = uint64_t(zclock_mono());
+            log_debug("Periodic polling lap time: %zu ms", (last - now));
         }
 
-        log_debug("YYYYYYYYYYYYYYYYYYYYYYYYYYYYY wait %zu", timeout);
-
-        void* which = zpoller_wait(poller, int(polling_timeout(timestamp, timeout)));
+        void* which = zpoller_wait(poller, int(timeout));
 
         if (which == NULL) {
             if (zpoller_terminated(poller) || zsys_interrupted) {
                 log_debug("zpoller_terminated () or zsys_interrupted");
                 break;
             }
-            if (zpoller_expired(poller)) {
-                timestamp = static_cast<uint64_t>(zclock_mono());
+        }
+        else if (which == pipe) {
+            zmsg_t* msg = zmsg_recv(pipe);
+            if (msg) {
+                int quit = actor_commands(&msg, timeout, nut_agent);
+                zmsg_destroy(&msg);
+                if (quit) {
+                    break; //$TERM
+                }
             }
-            continue;
         }
-
-        if (which == pipe) {
-            log_debug("XXXXXXXXXXXXXXXXXXXXXXXYYYYYYYYYYYYYYY");
-            zmsg_t* message = zmsg_recv(pipe);
-            if (!message) {
-                log_error("Given `which == pipe`, function `zmsg_recv (pipe)` returned NULL");
-                continue;
+        else if (which == mlm_client_msgpipe(client)) {
+            zmsg_t* msg = mlm_client_recv(client);
+            if (msg && fty_proto_is(msg)) {
+                bool changed = state_writer.getState().updateFromMsg(&msg);
+                if (changed) {
+                    state_writer.commit();
+                }
             }
-            log_debug("XXXXXXXXXXXXXXXXXXXXXXX");
-            zmsg_print(message);
-            if (actor_commands(&message, timeout, nut_agent) == 1) {
-                break;
-            }
-            zmsg_destroy(&message); // secure
-            continue;
+            zmsg_destroy(&msg);
         }
-
-        // paranoid non-destructive assertion of a twisted mind
-        if (which != mlm_client_msgpipe(client)) {
-            log_fatal(
-                "zpoller_wait () returned address that is different from "
-                "`pipe`, `mlm_client_msgpipe (client)`, NULL.");
-            continue;
-        }
-
-        zmsg_t* message = NULL; //mlm_client_recv(client);
-        if (!message) {
-            log_error("Given `which == mlm_client_msgpipe (client)`, function `mlm_client_recv ()` returned NULL");
-            continue;
-        }
-        if (fty_proto_is(message)) {
-            if (state_writer.getState().updateFromMsg(&message))
-                state_writer.commit();
-            zmsg_destroy(&message); // secure
-            continue;
-        }
-        log_error("Unhandled message (%s/%s)", mlm_client_command(client), mlm_client_subject(client));
-        zmsg_print(message);
-        zmsg_destroy(&message);
-    } // while (!zsys_interrupted)
+    }
 
     log_info("fty-nut ended");
 }

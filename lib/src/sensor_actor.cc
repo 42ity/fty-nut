@@ -27,8 +27,7 @@
 #include <fty_log.h>
 
 //returns 1 if $TERM, else 0
-static int sensor_actor_commands(
-    mlm_client_t* /*client*/, mlm_client_t* /*mb_client*/, zmsg_t** message_p, uint64_t& timeout, Sensors& sensors)
+static int sensor_actor_commands(zmsg_t** message_p, uint64_t& timeout_ms, Sensors& sensors)
 {
     assert(message_p && *message_p);
     zmsg_t* message = *message_p;
@@ -56,12 +55,13 @@ static int sensor_actor_commands(
         }
         else {
             char* end;
-            timeout = std::strtoul(polling, &end, 10) * 1000;
-            if (timeout == 0) {
+            timeout_ms = std::strtoul(polling, &end, 10) * 1000;
+            if (timeout_ms == 0) {
                 log_error("sa: invalid POLLING value '%s', using default instead", polling);
-                timeout = 30000;
+                timeout_ms = 30000;
             }
         }
+        log_debug("sa: timeout: %zu ms", timeout_ms);
         zstr_free(&polling);
     }
     else if (streq(cmd, ACTION_CONFIGURE)) {
@@ -114,17 +114,16 @@ void sensor_actor(zsock_t* pipe, void* args)
     log_info("sensor actor started");
 
     uint64_t last = uint64_t(zclock_mono());
-    uint64_t polling = 30000; //ms
+    uint64_t timeout = 30000; //ms
 
     Sensors sensors(NutStateManager.getReader());
 
     while (!zsys_interrupted)
     {
         uint64_t now = uint64_t(zclock_mono());
-        if ((now - last) > polling) {
-            last = now;
+        if ((now - last) >= timeout) {
+            log_debug("sa: sensor update");
             try {
-                log_debug("sa: sensor update");
                 nut::TcpClient nutClient;
                 nutClient.connect("localhost", 3493);
 
@@ -132,16 +131,19 @@ void sensor_actor(zsock_t* pipe, void* args)
                 sensors.updateFromNUT(nutClient);
                 sensors.advertiseInventory(client);
                 // hotfix IPMVAL-2713 (data stale on device which host sensors cause communication failure alarms on
-                // sensors) increase ttl from 60 to 240 sec (polling is equal to 30 sec).
-                sensors.publish(client, int((polling * 8) / 1000));
+                // sensors) increase ttl from 60 to 240 sec (polling period is equal to 30 sec).
+                sensors.publish(client, int((timeout * 8) / 1000));
 
                 nutClient.disconnect();
             }
             catch (...) {
             }
+
+            last = uint64_t(zclock_mono());
+            log_debug("sa: sensor update lap time: %zu ms", (last - now));
         }
 
-        void* which = zpoller_wait(poller, int(polling));
+        void* which = zpoller_wait(poller, int(timeout));
 
         if (which == NULL) {
             if (zpoller_terminated(poller) || zsys_interrupted) {
@@ -152,14 +154,15 @@ void sensor_actor(zsock_t* pipe, void* args)
         else if (which == pipe) {
             zmsg_t* msg = zmsg_recv(pipe);
             if (msg) {
-                int quit = sensor_actor_commands(client, NULL, &msg, polling, sensors);
+                int quit = sensor_actor_commands(&msg, timeout, sensors);
                 zmsg_destroy(&msg);
-                if (quit)
-                    break;
+                if (quit) {
+                    break; //$TERM
+                }
             }
         }
         else if (which == mlm_client_msgpipe(client)) {
-            zmsg_t* msg = zmsg_recv(client);
+            zmsg_t* msg = mlm_client_recv(client);
             zmsg_destroy(&msg);
             log_debug("sa: Message not handled (%s/%s)",
                 mlm_client_sender(client), mlm_client_subject(client));

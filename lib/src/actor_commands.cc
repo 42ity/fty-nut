@@ -26,15 +26,15 @@
 #include <fty_log.h>
 
 //returns 1 if $TERM, else 0
-int actor_commands(zmsg_t** message_p, uint64_t& timeout, NUTAgent& nut_agent)
+int actor_commands(zmsg_t** message_p, uint64_t& timeout_ms, NUTAgent& nut_agent)
 {
     assert(message_p && *message_p);
     zmsg_t* message = *message_p;
 
     char* cmd = zmsg_popstr(message);
-    log_debug("XXXXXXXXXXXXXXXXXX actor command = '%s'", cmd);
+    log_debug("actor command = '%s'", cmd);
 
-    int ret = 0;
+    int ret = 0; // default
 
     if (!cmd) {
         log_error(
@@ -42,7 +42,7 @@ int actor_commands(zmsg_t** message_p, uint64_t& timeout, NUTAgent& nut_agent)
             "Message received is most probably empty (has no frames).");
     }
     else if (streq(cmd, "$TERM")) {
-        log_info("Got $TERM");
+        log_debug("Got $TERM");
         ret = 1;
     }
     else if (streq(cmd, ACTION_CONFIGURE)) {
@@ -69,13 +69,14 @@ int actor_commands(zmsg_t** message_p, uint64_t& timeout, NUTAgent& nut_agent)
         }
         else {
             char* end;
-            timeout = std::strtoul(polling, &end, 10) * 1000;
-            if (timeout == 0) {
+            timeout_ms = std::strtoul(polling, &end, 10) * 1000;
+            if (timeout_ms == 0) {
                 log_error("invalid POLLING value '%s', using default instead", polling);
-                timeout = 30000;
+                timeout_ms = 30000;
             }
-            nut_agent.TTL(int(timeout * 2 / 1000));
+            nut_agent.TTL(int((timeout_ms * 2) / 1000));
         }
+        log_debug("timeout: %zu ms", timeout_ms);
         zstr_free(&polling);
     }
     else {
@@ -84,6 +85,5 @@ int actor_commands(zmsg_t** message_p, uint64_t& timeout, NUTAgent& nut_agent)
 
     zstr_free(&cmd);
     zmsg_destroy(message_p);
-
     return ret;
 }

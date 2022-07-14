@@ -34,6 +34,7 @@ AssetState::Asset::Asset(fty_proto_t* message)
     port_             = fty_proto_ext_string(message, "port", "");
     subtype_          = fty_proto_aux_string(message, "subtype", "");
     location_         = fty_proto_aux_string(message, "parent_name.1", "");
+
     const char* block = fty_proto_ext_string(message, "upsconf_block", NULL);
     if (block) {
         upsconf_block_      = block;
@@ -41,13 +42,16 @@ AssetState::Asset::Asset(fty_proto_t* message)
     } else {
         have_upsconf_block_ = false;
     }
+
     const char* dmf     = fty_proto_ext_string(message, "upsconf_enable_dmf", "");
     upsconf_enable_dmf_ = strcmp(dmf, "true") == 0;
+
     max_current_        = std::nan("");
     try {
         max_current_ = std::stod(fty_proto_ext_string(message, "max_current", ""));
     } catch (...) {
     }
+
     max_power_ = std::nan("");
     try {
         max_power_ = std::stod(fty_proto_ext_string(message, "max_power", ""));
@@ -58,6 +62,7 @@ AssetState::Asset::Asset(fty_proto_t* message)
         daisychain_ = std::stoi(fty_proto_ext_string(message, "daisy_chain", ""));
     } catch (...) {
     }
+
     zhash_t* ext = fty_proto_get_ext(message);
     if (ext) {
         for (void* item = zhash_first(ext); item; item = zhash_next(ext)) {
@@ -68,52 +73,69 @@ AssetState::Asset::Asset(fty_proto_t* message)
         }
     }
     zhash_destroy(&ext);
+
     proto_ = fty_proto_dup(message);
 }
 
 bool AssetState::handleAssetMessage(fty_proto_t* message)
 {
+    // message id: FTY_PROTO_ASSET
     std::string name(fty_proto_name(message));
     std::string operation(fty_proto_operation(message));
-    if (operation == FTY_PROTO_ASSET_OP_DELETE || operation == FTY_PROTO_ASSET_OP_RETIRE ||
-        !streq(fty_proto_aux_string(message, FTY_PROTO_ASSET_STATUS, "active"), "active")) {
+    std::string status(fty_proto_aux_string(message, FTY_PROTO_ASSET_STATUS, "active"));
+
+    if (operation == FTY_PROTO_ASSET_OP_DELETE
+        || operation == FTY_PROTO_ASSET_OP_RETIRE
+        || status != "active")
+    {
         return (powerdevices_.erase(name) > 0 || sensors_.erase(name) > 0);
     }
 
-    std::string type(fty_proto_aux_string(message, "type", ""));
-    if (type != "device")
-        return false;
-    std::string subtype(fty_proto_aux_string(message, "subtype", ""));
-    AssetMap*   map;
-    if (subtype == "epdu" || subtype == "ups" || subtype == "sts")
-        map = &powerdevices_;
-    else if (subtype == "sensor") {
-        // skip sensors connected to rackcontrollers
-        if (streq(fty_proto_aux_string(message, "parent_name.1", ""), "rackcontroller-0"))
+    if (operation == FTY_PROTO_ASSET_OP_UPDATE
+        || operation == FTY_PROTO_ASSET_OP_CREATE)
+    {
+        std::string type(fty_proto_aux_string(message, "type", ""));
+        std::string subtype(fty_proto_aux_string(message, "subtype", ""));
+        AssetMap* map = nullptr;
+
+        if (type != "device") {
             return false;
-        map = &sensors_;
-    } else if (subtype == "sensorgpio") {
-        // skip gpi sensors connected to rackcontrollers
-        if (streq(fty_proto_aux_string(message, "parent_name.1", ""), "rackcontroller-0"))
+        }
+        else if (subtype == "epdu" || subtype == "ups" || subtype == "sts") {
+            map = &powerdevices_;
+        }
+        else if (subtype == "sensor") {
+            // ignore sensors connected to rackcontrollers
+            if (streq(fty_proto_aux_string(message, "parent_name.1", ""), "rackcontroller-0"))
+                return false;
+            map = &sensors_;
+        }
+        else if (subtype == "sensorgpio") {
+            // ignore gpi sensors connected to rackcontrollers
+            if (streq(fty_proto_aux_string(message, "parent_name.1", ""), "rackcontroller-0"))
+                return false;
+            if (streq(fty_proto_aux_string(message, "parent_name.2", ""), "rackcontroller-0"))
+                return false;
+            map = &sensors_;
+        }
+        else {
             return false;
-        if (streq(fty_proto_aux_string(message, "parent_name.2", ""), "rackcontroller-0"))
-            return false;
-        map = &sensors_;
-    } else
-        return false;
-    if (operation != FTY_PROTO_ASSET_OP_CREATE && operation != FTY_PROTO_ASSET_OP_UPDATE) {
-        log_error("unknown asset operation '%s'. Skipping.", operation.c_str());
-        return false;
+        }
+
+        (*map)[name] = std::shared_ptr<Asset>(new Asset(message));
+        return true;
     }
-    (*map)[name] = std::shared_ptr<Asset>(new Asset(message));
-    return true;
+
+    //log_trace("Asset operation not handled (%s)", operation.c_str());
+    return false;
 }
 
-// Destroys passed message
 bool AssetState::handleLicensingMessage(fty_proto_t* message)
 {
-    assert(fty_proto_id(message) == FTY_PROTO_METRIC);
-    if (streq(fty_proto_name(message), "rackcontroller-0") && streq(fty_proto_type(message), "monitoring.global")) {
+    // message id: FTY_PROTO_METRIC
+    if (streq(fty_proto_name(message), "rackcontroller-0")
+        && streq(fty_proto_type(message), "monitoring.global"))
+    {
         try {
             int allowMonitoring = std::stoi(fty_proto_value(message));
 
@@ -130,7 +152,11 @@ bool AssetState::handleLicensingMessage(fty_proto_t* message)
 
 bool AssetState::updateFromProto(fty_proto_t* message)
 {
-    // proto messages are always assumed to be asset updates
+    if (!message) {
+        return false;
+    }
+
+    // proto messages are always assumed to be asset/metric updates
     if (fty_proto_id(message) == FTY_PROTO_ASSET) {
         return handleAssetMessage(message);
     } else if (fty_proto_id(message) == FTY_PROTO_METRIC) {
