@@ -138,7 +138,7 @@ public:
         bool                               upsconf_enable_dmf_;
         int                                daisychain_;
         fty_proto_t*                       proto_{nullptr};
-    };
+    };//class Asset
 
     // Update the state from a received fty_proto message. Return true if an
     // update has actually been performed, false if the message was skipped

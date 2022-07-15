@@ -1,5 +1,5 @@
 /*  =========================================================================
-    alert_device - structure for device producing alerts
+    sensor_actor - actor handling sensors
 
     Copyright (C) 2014 - 2020 Eaton
 

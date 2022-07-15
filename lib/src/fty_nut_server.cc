@@ -31,7 +31,7 @@
 StateManager NutStateManager;
 
 // mlm_client_recv() wrapper using optional poller/timeout
-// returns the recv message (to be freed by caller)
+// returns the recv message (to be freed by caller), NULL if failed
 static zmsg_t* recv_response(mlm_client_t* client, zpoller_t* poller, int poller_timeout_ms)
 {
     if (!client)
@@ -103,7 +103,8 @@ void get_initial_assets(StateManager::Writer& state_writer, mlm_client_t* client
     if (!client)
         { log_error("client is NULL"); return; }
 
-    const int pollerTimeout_ms = 5000; //ms
+    const int sendTimeout = 5000; //ms
+    const int recvTimeout = 5000; //ms
 
     ZpollerGuard poller(zpoller_new(mlm_client_msgpipe(client), NULL));
     if (!poller) {
@@ -132,7 +133,7 @@ void get_initial_assets(StateManager::Writer& state_writer, mlm_client_t* client
         zmsg_addstr(msg, "sts");
         zmsg_addstr(msg, "sensor");
         zmsg_addstr(msg, "sensorgpio");
-        int r = mlm_client_sendto(client, AGENT_FTY_ASSET, "ASSETS", NULL, 5000, &msg);
+        int r = mlm_client_sendto(client, AGENT_FTY_ASSET, "ASSETS", NULL, sendTimeout, &msg);
         zmsg_destroy(&msg);
         if (r < 0) {
             log_error("Sending ASSETS message failed");
@@ -143,7 +144,7 @@ void get_initial_assets(StateManager::Writer& state_writer, mlm_client_t* client
             return; //$TERM
         }
 
-        reply = recv_response(client, poller, pollerTimeout_ms);
+        reply = recv_response(client, poller, recvTimeout);
         if (!reply) {
             log_error("No response received from ASSETS message");
             return;
@@ -187,7 +188,7 @@ void get_initial_assets(StateManager::Writer& state_writer, mlm_client_t* client
             zmsg_addstr(msg, "GET");
             zmsg_addstr(msg, uuid_str);
             zmsg_addstr(msg, asset);
-            int r = mlm_client_sendto(client, AGENT_FTY_ASSET, "ASSET_DETAIL", NULL, 5000, &msg);
+            int r = mlm_client_sendto(client, AGENT_FTY_ASSET, "ASSET_DETAIL", NULL, sendTimeout, &msg);
             zmsg_destroy(&msg);
             if (r < 0) {
                 log_warning("Sending ASSET_DETAIL message for %s failed", asset.get());
@@ -210,7 +211,7 @@ void get_initial_assets(StateManager::Writer& state_writer, mlm_client_t* client
                 return; //$TERM
             }
 
-            zmsg_t* msg = recv_response(client, poller, pollerTimeout_ms);
+            zmsg_t* msg = recv_response(client, poller, recvTimeout);
             if (!msg) {
                 noResponseCnt++;
                 continue;

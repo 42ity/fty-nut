@@ -141,14 +141,14 @@ int main(int argc, char *argv []) {
 
     zactor_t *nut_server = zactor_new(fty_nut_server, MLM_ENDPOINT_VOID);
     if (!nut_server) {
-        log_fatal("zactor_new (task = 'fty_nut_server', args = 'NULL') failed");
+        log_fatal("zactor_new (task = 'fty_nut_server') failed");
         return EXIT_FAILURE;
     }
 
     zactor_t *nut_device_alert = zactor_new(alert_actor, MLM_ENDPOINT_VOID);
     if (!nut_device_alert) {
         zactor_destroy(&nut_server);
-        log_fatal("zactor_new (task = 'nut_device_server', args = 'NULL') failed");
+        log_fatal("zactor_new (task = 'alert_actor') failed");
         return EXIT_FAILURE;
     }
 
@@ -156,7 +156,7 @@ int main(int argc, char *argv []) {
     if (!nut_sensor) {
         zactor_destroy(&nut_server);
         zactor_destroy(&nut_device_alert);
-        log_fatal("zactor_new (task = 'nut_sensor', args = 'NULL') failed");
+        log_fatal("zactor_new (task = 'sensor_actor') failed");
         return EXIT_FAILURE;
     }
 

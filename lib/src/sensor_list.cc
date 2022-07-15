@@ -22,6 +22,8 @@
 #include "sensor_list.h"
 #include "nut_agent.h"
 #include <fty_asset_accessor.h>
+#include <fty_common_agents.h>
+#include <fty_common_mlm.h>
 #include <fty_common_nut.h>
 #include <fty_log.h>
 #include <nutclientmem.h>
@@ -31,16 +33,31 @@ Sensors::Sensors(StateManager::Reader* reader)
 {
 }
 
-
 void Sensors::updateFromNUT(nut::TcpClient& conn)
 {
     try {
         for (auto& it : _sensors) {
             it.second.update(conn, _sensorInventoryMapping);
         }
-    } catch (std::exception& e) {
+    } catch (const std::exception& e) {
         log_error("reading data from NUT: %s", e.what());
     }
+}
+
+// mlm_client_recv() wrapper using optional poller/timeout
+// returns the recv message (to be freed by caller), NULL if failed
+static zmsg_t* recv_response(mlm_client_t* client, zpoller_t* poller, int poller_timeout_ms)
+{
+    if (!client)
+        return NULL;
+    if (poller) { // optional
+        void* which = zpoller_wait(poller, poller_timeout_ms);
+        if (!which) {
+            log_error("recv_response() timed out (%d ms)", poller_timeout_ms);
+            return NULL;
+        }
+    }
+    return mlm_client_recv(client);
 }
 
 bool Sensors::updateAssetConfig(AssetState::Asset* asset, mlm_client_t* client)
@@ -48,77 +65,119 @@ bool Sensors::updateAssetConfig(AssetState::Asset* asset, mlm_client_t* client)
     if (!client || !asset)
         return false;
 
-    zmsg_t* msg = zmsg_new();
-    zmsg_addstr(msg, "GET");
-    zmsg_addstr(msg, "");
-    zmsg_addstr(msg, asset->name().c_str());
-    if (mlm_client_sendto(client, "asset-agent", "ASSET_DETAIL", NULL, 10, &msg) < 0) {
-        log_error("updateAssetConfig for %s: client failed to send query", asset->name().c_str());
+    const int sendTimeout = 5000; //ms
+    const int recvTimeout = 5000; //ms
+
+    ZpollerGuard poller(zpoller_new(mlm_client_msgpipe(client), NULL));
+    if (!poller) {
+        log_error("updateAssetConfig: Poller creation failed");
+        return false;
+    }
+
+    // request asset-agent for ASSET_DETAIL on asset
+    fty_proto_t* proto = NULL;
+    {
+        ZuuidGuard uuid(zuuid_new());
+        if (!uuid) {
+            log_error("updateAssetConfig: UUID creation failed");
+            return false;
+        }
+        const char* uuid_sent = zuuid_str_canonical(uuid);
+
+        zmsg_t* msg = zmsg_new();
+        if (!msg) {
+            log_error("zmsg_new() failed");
+            return false;
+        }
+        zmsg_addstr(msg, "GET");
+        zmsg_addstr(msg, uuid_sent);
+        zmsg_addstr(msg, asset->name().c_str());
+        int r = mlm_client_sendto(client, AGENT_FTY_ASSET, "ASSET_DETAIL", NULL, sendTimeout, &msg);
         zmsg_destroy(&msg);
-        return false;
-    }
-    zmsg_destroy(&msg);
-    log_debug("client sent query for asset %s", asset->name().c_str());
-    zmsg_t* response = mlm_client_recv(client);
-    if (!response) {
-        log_error("updateAssetConfig for %s: client empty response", asset->name().c_str());
-        return false;
-    }
-    char* uuid = zmsg_popstr(response);
-    zstr_free(&uuid);
-    fty_proto_t* proto = fty_proto_decode(&response);
-    zmsg_destroy(&response);
-    log_debug("updateAssetConfig: client got response for asset %s", asset->name().c_str());
-    if (!proto) {
-        log_error("updateAssetConfig for %s: client failed query request", asset->name().c_str());
-        return false;
+        if (r < 0) {
+            log_error("updateAssetConfig: %s ASSET_DETAIL query failed (timeout: %d ms)",
+                asset->name().c_str(), sendTimeout);
+            return false;
+        }
+        //log_trace("client sent query for asset %s", asset->name().c_str());
+
+        msg = recv_response(client, poller, recvTimeout);
+        if (!msg) {
+            log_error("updateAssetConfig: %s ASSET_DETAIL no response", asset->name().c_str());
+            return false;
+        }
+        char* uuid_recv = zmsg_popstr(msg);
+        bool uuidIsOk = (uuid_recv && streq(uuid_recv, uuid_sent));
+        zstr_free(&uuid_recv);
+        if (uuidIsOk)
+            { proto = fty_proto_decode(&msg); }
+        zmsg_destroy(&msg);
+
+        if (!uuidIsOk) {
+            log_error("updateAssetConfig: %s ASSET_DETAIL uuid mismatch", asset->name().c_str());
+            return false;
+        }
+        if (!proto) {
+            log_error("updateAssetConfig: %s ASSET_DETAIL decode failed", asset->name().c_str());
+            return false;
+        }
+
+        log_debug("updateAssetConfig: %s ASSET_DETAIL succeed", asset->name().c_str());
     }
 
     const char* parentName = fty_proto_aux_string(proto, "parent_name.1", "");
+
     // If need update (modbus address not empty or parent has changed)
-    if (!asset->subAddress().empty() || strcmp(parentName, asset->location().c_str()) != 0) {
+    if (!asset->subAddress().empty()
+        || !streq(parentName, asset->location().c_str())
+    ){
         fty_proto_set_operation(proto, FTY_PROTO_ASSET_OP_UPDATE);
+
         // Update modbus address
         fty_proto_ext_insert(proto, "endpoint.1.sub_address", asset->subAddress().c_str());
-        // Update parent
+        // Update parent name
         fty_proto_aux_insert(proto, "parent_name.1", "%s", asset->location().c_str());
-        // Get parent id from database
+
+        // Update parent id (get parent id from database)
         auto parentId = fty::AssetAccessor::assetInameToID(asset->location().c_str());
         if (!parentId) {
             log_error("updateAssetConfig for %s: get parent id failed", asset->name().c_str());
-            zmsg_destroy(&msg);
             fty_proto_destroy(&proto);
             return false;
         }
-        log_info("updateAssetConfig for %s: get parent id=%d", asset->name().c_str(), parentId.value());
-        // Update parent id
+        log_debug("updateAssetConfig for %s: get parent id=%d", asset->name().c_str(), parentId.value());
         fty_proto_aux_insert(proto, "parent", "%d", parentId.value());
 
-        msg = fty_proto_encode(&proto);
+        zmsg_t* msg = fty_proto_encode(&proto);
         fty_proto_destroy(&proto);
         zmsg_pushstrf(msg, "%s", "READWRITE");
-        if (mlm_client_sendto(client, "asset-agent", "ASSET_MANIPULATION", NULL, 10, &msg) < 0) {
-            log_error("updateAssetConfig for %s: client failed to send update", asset->name().c_str());
-            zmsg_destroy(&msg);
-            return false;
-        }
+        int r = mlm_client_sendto(client, AGENT_FTY_ASSET, "ASSET_MANIPULATION", NULL, sendTimeout, &msg);
         zmsg_destroy(&msg);
-        log_debug("updateAssetConfig: client sent update request for asset %s", asset->name().c_str());
-        response = mlm_client_recv(client);
-        if (!response) {
-            log_error("updateAssetConfig for %s: client empty response", asset->name().c_str());
+        if (r < 0) {
+            log_error("updateAssetConfig for %s: client failed to send update (timeout: %d ms)",
+                asset->name().c_str(), sendTimeout);
             return false;
         }
-        char* str_resp = zmsg_popstr(response);
-        log_debug("updateAssetConfig: client got response %s for asset %s", str_resp, asset->name().c_str());
-        zmsg_destroy(&response);
-        if (!str_resp || !streq(str_resp, "OK")) {
-            zstr_free(&str_resp);
+        log_debug("updateAssetConfig: client sent update request for asset %s", asset->name().c_str());
+
+        msg = recv_response(client, poller, recvTimeout);
+        if (!msg) {
+            log_error("updateAssetConfig for %s: client no response", asset->name().c_str());
+            return false;
+        }
+
+        char* status = zmsg_popstr(msg);
+        zmsg_destroy(&msg);
+        log_debug("updateAssetConfig: client got response %s for asset %s", status, asset->name().c_str());
+        bool success = (status && streq(status, "OK"));
+        zstr_free(&status);
+        if (!success) {
             log_error("updateAssetConfig for %s: client failed update request", asset->name().c_str());
             return false;
         }
-        zstr_free(&str_resp);
     }
+
+    fty_proto_destroy(&proto);
     return true;
 }
 
@@ -161,17 +220,20 @@ void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
                     _sensors[parent_name].addChild(port, name);
                     // FIXME: support multiple children
                     log_debug("sa: sensor %s has port '%s')", name.c_str(), port.c_str());
-                } else
+                } else {
                     log_debug("sa: sensor %s has no port)", name.c_str());
-            } else
+                }
+            } else {
                 log_debug("sa: sensor '%s' ignored (location is unknown/not a power device/not a sensor '%s')",
                     name.c_str(), parent_name.c_str());
+            }
 
             removeInventory(name);
             continue;
-        } else
-            log_debug(
-                "sa: sensor parent found: '%s' (chain: %d)", parent_name.c_str(), parent_it->second->daisychain());
+        } else {
+            log_debug("sa: sensor parent found: '%s' (chain: %d)",
+                parent_name.c_str(), parent_it->second->daisychain());
+        }
 
         const AssetState::Asset* parent = parent_it->second.get();
         const std::string& ip = parent->IP();
@@ -212,7 +274,7 @@ void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
                 std::vector<std::string> values = {};
                 try {
                     values = conn.getDeviceVariableValue(master, sensorCountName);
-                } catch (std::exception& e) {
+                } catch (const std::exception& e) {
                     log_error(
                         "Nut object %s not found for (%s): %s", sensorCountName.c_str(), master.c_str(), e.what());
                     // Error of communication detected with nut driver, need to refresh sensors list later
@@ -236,7 +298,7 @@ void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
                                     break;
                                 }
                             }
-                        } catch (std::exception& e) {
+                        } catch (const std::exception& e) {
                             log_error("Nut object %s not found for (%s): %s", addressDeviceName.c_str(), master.c_str(),
                                 e.what());
                             // Error of communication detected with nut driver, need to refresh sensors list later
@@ -261,7 +323,7 @@ void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
                     std::vector<std::string> values = {};
                     try {
                         values = conn.getDeviceVariableValue(master, parentSerialNumberName);
-                    } catch (std::exception& e) {
+                    } catch (const std::exception& e) {
                         log_error("Nut object %s not found for (%s): %s", parentSerialNumberName.c_str(),
                             master.c_str(), e.what());
                         // Error of communication detected with nut driver, need to refresh sensors list later
@@ -300,7 +362,7 @@ void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
                             // Save sub_address attribute
                             i.second->setSubAddress(addressDevice);
                         }
-                    } catch (std::exception& e) {
+                    } catch (const std::exception& e) {
                         log_warning("sa: nut object %s not found for (%s): %s", addressDeviceName.c_str(),
                             master.c_str(), e.what());
                     }
@@ -308,6 +370,7 @@ void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
                     updateAssetConfig(i.second.get(), client);
                 }
             }
+
             // If found correct index
             if (index > 0) {
                 // If no daisychain
@@ -330,15 +393,19 @@ void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
             }
         }
     }
+
     _sensorListError = sensorListError;
-    if (_sensorListError)
+    if (_sensorListError) {
         log_debug("sa: loaded %zd nut sensors with error(s): retry in a moment", _sensors.size());
-    else
+    } else {
         log_debug("sa: loaded %zd nut sensors", _sensors.size());
+    }
 }
 
 void Sensors::publish(mlm_client_t* client, int ttl)
 {
+    if (!client) return;
+
     for (auto& it : _sensors) {
         it.second.publish(client, ttl);
     }
@@ -393,7 +460,7 @@ void Sensors::advertiseInventory(mlm_client_t* client)
             log_debug("sa: publish sensor inventory for %s", sensor.second.assetName().c_str());
 
             std::string log;
-            zhash_t*    inventory = zhash_new();
+            zhash_t* inventory = zhash_new();
             zhash_autofree(inventory);
             for (auto& item : sensor.second.inventory()) {
                 zhash_insert(inventory, item.first.c_str(), const_cast<char*>(item.second.c_str()));
@@ -406,14 +473,11 @@ void Sensors::advertiseInventory(mlm_client_t* client)
                 if (message) {
                     std::string topic = "inventory@" + sensor.second.assetName();
                     log_debug("new sensor inventory message '%s': %s", topic.c_str(), log.c_str());
-                    // FIXME: a hack for inventory messages ???
-                    // fty_proto_t *m_decoded = fty_proto_decode(&message);
-                    // zmsg_destroy(&message);
-                    // message = fty_proto_encode(&m_decoded);
                     int r = mlm_client_send(client, topic.c_str(), &message);
-                    if (r != 0)
-                        log_error("failed to send inventory %s result %" PRIi32, topic.c_str(), r);
                     zmsg_destroy(&message);
+                    if (r < 0) {
+                        log_error("failed to send inventory %s result %" PRIi32, topic.c_str(), r);
+                    }
                 }
             }
             zhash_destroy(&inventory);
@@ -423,16 +487,16 @@ void Sensors::advertiseInventory(mlm_client_t* client)
 
 void Sensors::loadSensorMapping(const char* path_to_file)
 {
+    log_info("load sensor mapping from %s", path_to_file);
     _sensorMappingLoaded = false;
 
     try {
-
         log_debug("Loading sensor inventory mapping...");
         _sensorInventoryMapping = fty::nut::loadMapping(path_to_file, "sensorInventoryMapping");
         log_debug("Number of entries loaded for sensor inventory mapping: %zu", _sensorInventoryMapping.size());
 
         _sensorMappingLoaded = true;
-    } catch (std::exception& e) {
+    } catch (const std::exception& e) {
         log_error("Couldn't load mapping: %s", e.what());
     }
 }
