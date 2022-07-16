@@ -44,22 +44,6 @@ void Sensors::updateFromNUT(nut::TcpClient& conn)
     }
 }
 
-// mlm_client_recv() wrapper using optional poller/timeout
-// returns the recv message (to be freed by caller), NULL if failed
-static zmsg_t* recv_response(mlm_client_t* client, zpoller_t* poller, int poller_timeout_ms)
-{
-    if (!client)
-        return NULL;
-    if (poller) { // optional
-        void* which = zpoller_wait(poller, poller_timeout_ms);
-        if (!which) {
-            log_error("recv_response() timed out (%d ms)", poller_timeout_ms);
-            return NULL;
-        }
-    }
-    return mlm_client_recv(client);
-}
-
 bool Sensors::updateAssetConfig(AssetState::Asset* asset, mlm_client_t* client)
 {
     if (!client || !asset)
@@ -101,7 +85,13 @@ bool Sensors::updateAssetConfig(AssetState::Asset* asset, mlm_client_t* client)
         }
         //log_trace("client sent query for asset %s", asset->name().c_str());
 
-        msg = recv_response(client, poller, recvTimeout);
+        // get response
+        if (!zpoller_wait(poller, recvTimeout)) {
+            log_error("updateAssetConfig: %s ASSET_DETAIL timed out (%d ms)",
+                asset->name().c_str(), recvTimeout);
+            return false;
+        }
+        msg = mlm_client_recv(client);
         if (!msg) {
             log_error("updateAssetConfig: %s ASSET_DETAIL no response", asset->name().c_str());
             return false;
@@ -148,6 +138,7 @@ bool Sensors::updateAssetConfig(AssetState::Asset* asset, mlm_client_t* client)
         log_debug("updateAssetConfig for %s: get parent id=%d", asset->name().c_str(), parentId.value());
         fty_proto_aux_insert(proto, "parent", "%d", parentId.value());
 
+        // send update request
         zmsg_t* msg = fty_proto_encode(&proto);
         fty_proto_destroy(&proto);
         zmsg_pushstrf(msg, "%s", "READWRITE");
@@ -160,9 +151,14 @@ bool Sensors::updateAssetConfig(AssetState::Asset* asset, mlm_client_t* client)
         }
         log_debug("updateAssetConfig: client sent update request for asset %s", asset->name().c_str());
 
-        msg = recv_response(client, poller, recvTimeout);
+        // recv response
+        if (!zpoller_wait(poller, recvTimeout)) {
+            log_error("updateAssetConfig for %s: timed out (%d ms)", asset->name().c_str(), recvTimeout);
+            return false;
+        }
+        msg = mlm_client_recv(client);
         if (!msg) {
-            log_error("updateAssetConfig for %s: client no response", asset->name().c_str());
+            log_error("updateAssetConfig for %s: client empty response", asset->name().c_str());
             return false;
         }
 
@@ -171,6 +167,7 @@ bool Sensors::updateAssetConfig(AssetState::Asset* asset, mlm_client_t* client)
         log_debug("updateAssetConfig: client got response %s for asset %s", status, asset->name().c_str());
         bool success = (status && streq(status, "OK"));
         zstr_free(&status);
+
         if (!success) {
             log_error("updateAssetConfig for %s: client failed update request", asset->name().c_str());
             return false;
@@ -487,7 +484,7 @@ void Sensors::advertiseInventory(mlm_client_t* client)
 
 void Sensors::loadSensorMapping(const char* path_to_file)
 {
-    log_info("load sensor mapping from %s", path_to_file);
+    log_info("Load sensor mapping from %s", path_to_file);
     _sensorMappingLoaded = false;
 
     try {

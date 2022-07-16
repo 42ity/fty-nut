@@ -30,28 +30,14 @@
 
 StateManager NutStateManager;
 
-// mlm_client_recv() wrapper using optional poller/timeout
-// returns the recv message (to be freed by caller), NULL if failed
-static zmsg_t* recv_response(mlm_client_t* client, zpoller_t* poller, int poller_timeout_ms)
-{
-    if (!client)
-        return NULL;
-    if (poller) { // optional
-        void* which = zpoller_wait(poller, poller_timeout_ms);
-        if (!which) {
-            log_error("recv_response() timed out (%d ms)", poller_timeout_ms);
-            return NULL;
-        }
-    }
-    return mlm_client_recv(client);
-}
-
 static bool get_initial_licensing(StateManager::Writer& state_writer, mlm_client_t* client)
 {
     log_debug("Get initial licensing");
 
-    bool ret = false;
+    const int recvTimeout = 5000; //ms
     zmsg_t* reply = NULL;
+
+    bool ret = false;
 
     do { // for break facilities
         if (!client)
@@ -65,14 +51,18 @@ static bool get_initial_licensing(StateManager::Writer& state_writer, mlm_client
         if (!uuid)
             { log_error("Creating UUID failed"); break; }
 
+        // send request
         int r = mlm_client_sendtox(client, "etn-licensing", "LIMITATIONS", "LIMITATION_QUERY",
             zuuid_str_canonical(uuid), "*", "*", NULL);
         if (r < 0)
             { log_error("Sending LIMITATION_QUERY message to etn-licensing failed"); break; }
 
-        reply = recv_response(client, poller, 5000);
+        // recv response
+        if (!zpoller_wait(poller, recvTimeout))
+            { log_error("Getting response to LIMITATION_QUERY timed out (%d ms)", recvTimeout); break; }
+        reply = mlm_client_recv(client);
         if (!reply)
-            { log_error("Getting response to LIMITATION_QUERY failed"); break; }
+            { log_error("Getting empty response to LIMITATION_QUERY"); break; }
 
         ZstrGuard str(zmsg_popstr(reply));
         if (!str || !streq(str, zuuid_str_canonical(uuid)))
@@ -121,6 +111,7 @@ void get_initial_assets(StateManager::Writer& state_writer, mlm_client_t* client
             return;
         }
 
+        // send request
         zmsg_t* msg = zmsg_new();
         if (!msg) {
             log_error("Creating ASSETS message failed");
@@ -144,9 +135,14 @@ void get_initial_assets(StateManager::Writer& state_writer, mlm_client_t* client
             return; //$TERM
         }
 
-        reply = recv_response(client, poller, recvTimeout);
+        // recv response
+        if (!zpoller_wait(poller, recvTimeout)) {
+            log_error("Getting response from ASSETS timed out (%d ms)", recvTimeout);
+            return;
+        }
+        reply = mlm_client_recv(client);
         if (!reply) {
-            log_error("No response received from ASSETS message");
+            log_error("Empty response received from ASSETS message");
             return;
         }
 
@@ -211,7 +207,14 @@ void get_initial_assets(StateManager::Writer& state_writer, mlm_client_t* client
                 return; //$TERM
             }
 
-            zmsg_t* msg = recv_response(client, poller, recvTimeout);
+            // recv a response
+            zmsg_t* msg = NULL;
+            if (!zpoller_wait(poller, recvTimeout)) {
+                log_warning("Getting ASSET_DETAIL response timed out (%d ms)", recvTimeout);
+            }
+            else {
+                msg = mlm_client_recv(client);
+            }
             if (!msg) {
                 noResponseCnt++;
                 continue;
