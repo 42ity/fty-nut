@@ -153,6 +153,7 @@ int Device::scanCapabilities(nut::TcpClient& conn)
     log_debug("aa: scanning capabilities for %s", assetName().c_str());
     if (!conn.isConnected())
         return 0;
+
     std::string prefix = daisychainPrefix();
     int         retval = -1;
 
@@ -174,26 +175,29 @@ int Device::scanCapabilities(nut::TcpClient& conn)
             auto sensor_count_var = vars.find(prefix + "ambient.count");
             int  sensors_count    = std::stoi(sensor_count_var->second[0]);
             log_debug("aa: found %i sensor(s)", sensors_count);
+
             for (int a = 1; a <= sensors_count; a++) {
-                std::string current_sensor = "ambient." + std::to_string(a) + ".temperature.status";
-                if (vars.find(prefix + current_sensor) != vars.cend()) {
-                    addAlert(current_sensor, vars);
+                std::string q = "ambient." + std::to_string(a) + ".temperature";
+                if (vars.find(prefix + q + ".status") != vars.cend()) {
+                    addAlert(q, vars);
                     _scanned = true;
                 }
-                current_sensor = "ambient." + std::to_string(a) + ".humidity.status";
-                if (vars.find(prefix + current_sensor) != vars.cend()) {
-                    addAlert(current_sensor, vars);
+                q = "ambient." + std::to_string(a) + ".humidity";
+                if (vars.find(prefix + q + ".status") != vars.cend()) {
+                    addAlert(q, vars);
                     _scanned = true;
                 }
             }
         } else {
             // Legacy sensor (EMP001: ambient collection, without index)
-            if (vars.find(prefix + "ambient.temperature.status") != vars.cend()) {
-                addAlert("ambient.temperature", vars);
+            std::string q = "ambient.temperature";
+            if (vars.find(prefix + q + ".status") != vars.cend()) {
+                addAlert(q, vars);
                 _scanned = true;
             }
-            if (vars.find(prefix + "ambient.humidity.status") != vars.cend()) {
-                addAlert("ambient.humidity", vars);
+            q = "ambient.humidity";
+            if (vars.find(prefix + q + ".status") != vars.cend()) {
+                addAlert(q, vars);
                 _scanned = true;
             }
         }
@@ -214,17 +218,17 @@ int Device::scanCapabilities(nut::TcpClient& conn)
 
         // Outlets groups handling
         for (int a = 1; a <= 1000; a++) {
-            int         found = 0;
-            std::string q     = "outlet.group." + std::to_string(a) + ".current";
+            bool found = false;
+            std::string q = "outlet.group." + std::to_string(a) + ".current";
             if (vars.find(prefix + q + ".status") != vars.cend()) {
                 addAlert(q, vars);
-                ++found;
+                found = true;
                 _scanned = true;
             }
             q = "outlet.group." + std::to_string(a) + ".voltage";
             if (vars.find(prefix + q + ".status") != vars.cend()) {
                 addAlert(q, vars);
-                ++found;
+                found = true;
                 _scanned = true;
             }
             if (!found)
