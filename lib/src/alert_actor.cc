@@ -26,58 +26,45 @@
 #include "nut_mlm.h"
 #include "alert_device_list.h"
 
-int alert_actor_commands(mlm_client_t* /*client*/, mlm_client_t* /*mb_client*/, zmsg_t** message_p, uint64_t& timeout)
+//returns 1 if $TERM, else 0
+static int alert_actor_commands(zmsg_t** message_p, uint64_t& timeout_ms)
 {
     assert(message_p && *message_p);
     zmsg_t* message = *message_p;
 
     char* cmd = zmsg_popstr(message);
+    log_debug("aa: actor command = '%s'", cmd);
+
+    int ret = 0;
+
     if (!cmd) {
         log_error(
             "aa: Given `which == pipe` function `zmsg_popstr (msg)` returned NULL. "
             "Message received is most probably empty (has no frames).");
-        zmsg_destroy(message_p);
-        return 0;
     }
-
-    int ret = 0;
-    log_debug("aa: actor command = '%s'", cmd);
-    if (streq(cmd, "$TERM")) {
-        log_info("Got $TERM");
+    else if (streq(cmd, "$TERM")) {
+        log_debug("aa: Got $TERM");
         ret = 1;
-    } else if (streq(cmd, ACTION_POLLING)) {
+    }
+    else if (streq(cmd, ACTION_POLLING)) {
         char* polling = zmsg_popstr(message);
         if (!polling) {
             log_error(
                 "aa: Expected multipart string format: POLLING/value. "
                 "Received POLLING/nullptr");
-            zstr_free(&cmd);
-            zmsg_destroy(message_p);
-            return 0;
         }
-        char* end;
-        timeout = std::strtoul(polling, &end, 10) * 1000;
-        if (timeout == 0) {
-            log_error("aa: invalid POLLING value '%s', using default instead", polling);
-            timeout = 30000;
+        else {
+            char* end;
+            timeout_ms = std::strtoul(polling, &end, 10) * 1000;
+            if (timeout_ms == 0) {
+                log_error("aa: invalid POLLING value '%s', using default instead", polling);
+                timeout_ms = 30000;
+            }
         }
+        log_debug("aa: timeout: %zu ms", timeout_ms);
         zstr_free(&polling);
-    } else if (streq(cmd, ACTION_CONFIGURE)) {
-        char* mapping = zmsg_popstr(message);
-        if (!mapping) {
-            log_error(
-                "Expected multipart string format: CONFIGURE/mapping_file. "
-                "Received CONFIGURE/nullptr");
-            zstr_free(&cmd);
-            zmsg_destroy(message_p);
-            return 0;
-        }
-        /*bool rv = nut_agent.loadMapping (mapping);
-        if (rv == false) {
-            log_error ("NUTAgent::loadMapping (mapping = '%s') failed", mapping);
-        }*/
-        zstr_free(&mapping);
-    } else {
+    }
+    else {
         log_warning("aa: Command '%s' is unknown or not implemented", cmd);
     }
 
@@ -88,7 +75,6 @@ int alert_actor_commands(mlm_client_t* /*client*/, mlm_client_t* /*mb_client*/, 
 
 void alert_actor(zsock_t* pipe, void* args)
 {
-    uint64_t    polling  = 30000;
     const char* endpoint = static_cast<const char*>(args);
 
     MlmClientGuard client(mlm_client_new());
@@ -115,43 +101,62 @@ void alert_actor(zsock_t* pipe, void* args)
         return;
     }
 
-    Devices devices(NutStateManager.getReader());
-    devices.setPollingMs(polling);
-
     ZpollerGuard poller(zpoller_new(pipe, mlm_client_msgpipe(client), NULL));
     if (!poller) {
         log_fatal("zpoller_new () failed");
         return;
     }
+
     zsock_signal(pipe, 0);
-    log_debug("alert actor started");
 
     uint64_t last = uint64_t(zclock_mono());
-    while (!zsys_interrupted) {
-        void*    which = zpoller_wait(poller, int(polling));
-        uint64_t now   = uint64_t(zclock_mono());
-        if (now - last >= polling) {
-            last = now;
-            log_debug("Polling data now");
+    uint64_t polling = 30000; //ms
+
+    Devices devices(NutStateManager.getReader());
+    devices.setPollingMs(polling);
+
+    log_info("alert actor started");
+
+    while (!zsys_interrupted)
+    {
+        uint64_t now = uint64_t(zclock_mono());
+        if ((now - last) >= polling) {
+            log_debug("aa: Polling data now");
             devices.updateDeviceList();
             devices.updateFromNUT();
             devices.publishRules(mb_client);
             devices.publishAlerts(client);
+
+            last = uint64_t(zclock_mono());
+            log_debug("aa: Polling lap time: %zu ms", (last - now));
         }
+
+        void* which = zpoller_wait(poller, int(polling));
+
         if (which == NULL) {
-            log_debug("aa: alert update");
-        } else if (which == pipe) {
+            if (zpoller_terminated(poller) || zsys_interrupted) {
+                log_debug("aa: zpoller_terminated () or zsys_interrupted");
+                break;
+            }
+        }
+        else if (which == pipe) {
             zmsg_t* msg = zmsg_recv(pipe);
             if (msg) {
-                int quit = alert_actor_commands(client, mb_client, &msg, polling);
-                devices.setPollingMs(polling);
+                int quit = alert_actor_commands(&msg, polling);
                 zmsg_destroy(&msg);
-                if (quit)
-                    break;
+                if (quit) {
+                    break; //$TERM
+                }
+                devices.setPollingMs(polling);
             }
-        } else {
-            zmsg_t* msg = zmsg_recv(which);
+        }
+        else if (which == mlm_client_msgpipe(client)) {
+            zmsg_t* msg = mlm_client_recv(client);
             zmsg_destroy(&msg);
+            log_debug("aa: Message not handled (%s/%s)",
+                mlm_client_sender(client), mlm_client_subject(client));
         }
     }
+
+    log_info("alert actor ended");
 }

@@ -76,13 +76,14 @@ void Autoconfig::onUpdate()
 {
     if (!_state_reader->refresh())
         return;
+
     const AssetState& deviceState = _state_reader->getState();
     auto&             devices     = deviceState.getAllPowerDevices();
     _traversal_color              = !_traversal_color;
+
     // Add new devices and mark existing ones as visited
     for (auto i : devices) {
         const std::string& name = i.first;
-        auto               it   = _configDevices.find(name);
 
         // daisy_chain pdu support - only devices with daisy_chain == 1 or
         // no such ext attribute will be configured via nut-scanner
@@ -91,6 +92,7 @@ void Autoconfig::onUpdate()
             continue;
         }
 
+        auto it = _configDevices.find(name);
         if (it == _configDevices.end()) {
             AutoConfigurationInfo device;
             device.state = AutoConfigurationInfo::STATE_NEW;
@@ -106,6 +108,7 @@ void Autoconfig::onUpdate()
         }
         it->second.traversal_color = _traversal_color;
     }
+
     // Mark no longer existing devices for deletion
     for (auto& i : _configDevices) {
         if (i.second.traversal_color != _traversal_color) {
@@ -115,6 +118,7 @@ void Autoconfig::onUpdate()
             i.second.asset = nullptr;
         }
     }
+
     // Mark stale snippets for deletion (this can happen after startup)
     std::vector<std::string> snippets;
     if (NUTConfigurator::known_assets(snippets)) {
@@ -127,6 +131,7 @@ void Autoconfig::onUpdate()
             _configDevices.insert(std::make_pair(i, device));
         }
     }
+
     setPollingInterval();
 }
 
@@ -134,10 +139,10 @@ void Autoconfig::handleLimitations(fty_proto_t** message)
 {
     if (!message || !*message)
         return;
+    assert(fty_proto_id(*message) == FTY_PROTO_METRIC);
 
     int  monitor_power_devices = 1;
     bool message_affects_me    = false;
-    assert(fty_proto_id(*message) == FTY_PROTO_METRIC);
     if (streq(fty_proto_name(*message), "rackcontroller-0") &&
         streq(fty_proto_type(*message), "power_nodes.max_active")) {
         try {
@@ -152,6 +157,7 @@ void Autoconfig::handleLimitations(fty_proto_t** message)
         log_debug("There is no metric on how many devices may rackcontroller-0 monitor");
     }
     fty_proto_destroy(message);
+
     if (!message_affects_me) {
         log_debug("This licensing message don't affect me");
         return;
@@ -161,6 +167,7 @@ void Autoconfig::handleLimitations(fty_proto_t** message)
         log_info("Licensing placed no limitation here");
         return;
     }
+
     // update devices according to license
     typedef std::pair<std::string, int> pairsi; // <name, numeric_id>
     std::vector<pairsi>                 power_devices_list;
@@ -169,7 +176,8 @@ void Autoconfig::handleLimitations(fty_proto_t** message)
         if (it.second.asset->subtype() == "ups" || it.second.asset->subtype() == "sts") {
             num_id = stoi(it.first.substr(4)); // number is after ups-/sts-, that is 5th character
             power_devices_list.push_back(make_pair(it.first, num_id));
-        } else if (it.second.asset->subtype() == "epdu") {
+        }
+        else if (it.second.asset->subtype() == "epdu") {
             num_id = stoi(it.first.substr(5)); // number is after epdu-, that is 6th character
             power_devices_list.push_back(make_pair(it.first, num_id));
         }
@@ -177,14 +185,18 @@ void Autoconfig::handleLimitations(fty_proto_t** message)
     sort(power_devices_list.begin(), power_devices_list.end(), [](const pairsi& a, const pairsi& b) -> bool {
         return a.second < b.second;
     });
+
     // Note: potential mismatch of uint vs int here, let's
     // hope we don't have that many devices to monitor :)
     log_info("Got %u devices in the list and may monitor %d devices", power_devices_list.size(), monitor_power_devices);
+
     for (size_t i = size_t(monitor_power_devices); i < power_devices_list.size(); ++i) {
         log_info("Due to licensing limitations, disabling monitoring for power device #%u type %s named %s", i,
             _configDevices[power_devices_list[i].first].asset->subtype().c_str(), power_devices_list[i].first.c_str());
+
         _configDevices[power_devices_list[i].first].state = AutoConfigurationInfo::STATE_DELETING;
     }
+
     // save results
     onPoll(); // share outcomes
 }
@@ -212,6 +224,7 @@ void Autoconfig::onPoll()
         }
         ++it;
     }
+
     setPollingInterval();
 }
 
@@ -320,6 +333,8 @@ void callbackUpdated(const std::string& /*portfolio*/, secw::DocumentPtr /*oldDo
 
 void fty_nut_configurator_server(zsock_t* pipe, void* args)
 {
+    log_info("fty_nut_configurator_server started");
+
     StateManager          state_manager;
     StateManager::Writer& state_writer = state_manager.getWriter();
     Autoconfig            agent(state_manager.getReader());
@@ -349,6 +364,7 @@ void fty_nut_configurator_server(zsock_t* pipe, void* args)
         log_error("mlm_client_set_consumer (stream = '%s', pattern = '.*') failed", "LICENSING-ANNOUNCEMENTS");
         return;
     }
+
     // Ge the initial list of assets. This has to be done after subscribing
     // ourselves to the ASSETS stream. And we do not the infrastructure to do
     // this during unit testing
@@ -365,39 +381,45 @@ void fty_nut_configurator_server(zsock_t* pipe, void* args)
         get_initial_assets(state_writer, mb_client);
         agent.onUpdate();
     }
+
     ZpollerGuard poller(zpoller_new(pipe, mlm_client_msgpipe(client), NULL));
 
     zsock_signal(pipe, 0);
+
     while (!zsys_interrupted) {
         void* which = zpoller_wait(poller, agent.timeout());
         if (which == pipe || zsys_interrupted)
             break;
+
         if (!which) {
             log_debug("Periodic polling");
             agent.onPoll();
             continue;
         }
+
         zmsg_t* msg = mlm_client_recv(client);
         if (fty_proto_is(msg)) {
             fty_proto_t* proto = fty_proto_decode(&msg);
-            if (!proto) {
-                zmsg_destroy(&msg);
-            }
+            zmsg_destroy(&msg);
+
             if (fty_proto_id(proto) == FTY_PROTO_ASSET) {
                 if (state_writer.getState().updateFromProto(proto))
                     state_writer.commit();
                 agent.onUpdate();
-                fty_proto_destroy(&proto);
             } else if (fty_proto_id(proto) == FTY_PROTO_METRIC) {
                 // no longer handle licensing limitations as it's been moved to asset state
                 // agent.handleLimitations(&proto);
                 log_debug("Licensing messages are ignored by fty-nut-configurator");
-                fty_proto_destroy(&proto);
             }
+
+            fty_proto_destroy(&proto);
             continue;
         }
+
         log_error("Unhandled message (%s/%s)", mlm_client_command(client), mlm_client_subject(client));
         zmsg_print(msg);
         zmsg_destroy(&msg);
     }
+
+    log_info("fty_nut_configurator_server ended");
 }

@@ -153,5 +153,6 @@ private:
     Counter           write_counter_, delete_counter_;
 };
 
+//see fty_nut_server.cc
 extern StateManager NutStateManager;
 void get_initial_assets(StateManager::Writer& state_writer, mlm_client_t* client, bool query_licensing = false);

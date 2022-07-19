@@ -47,6 +47,7 @@ void Device::addAlert(const std::string& quantity, const std::map<std::string, s
 {
     log_debug("aa: device %s provides %s alert", assetName().c_str(), quantity.c_str());
     std::string prefix = daisychainPrefix() + quantity;
+
     DeviceAlert alert;
     alert.name = quantity;
 
@@ -160,6 +161,7 @@ int Device::scanCapabilities(nut::TcpClient& conn)
     for (auto& it : _alerts) {
         it.second.ruleRescanned = false;
     }
+
     try {
         auto nutDevice = conn.getDevice(_nutName);
         if (!nutDevice.isOk()) {
@@ -310,10 +312,10 @@ void Device::publishAlert(mlm_client_t* client, DeviceAlert& alert, uint64_t ttl
         description.c_str(), // description
         NULL                 // action ?email
     );
-    std::string topic   = rule + "/" + severity + "@" + assetName();
     if (message) {
+        std::string topic   = rule + "/" + severity + "@" + assetName();
         mlm_client_send(client, topic.c_str(), &message);
-    };
+    }
     zmsg_destroy(&message);
 }
 

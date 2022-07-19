@@ -725,6 +725,7 @@ bool NUTDeviceList::changed() const
 
 void NUTDeviceList::load_mapping(const char* path_to_file)
 {
+    log_info("Load mapping from %s", path_to_file);
     _mappingLoaded = false;
 
     try {
@@ -737,7 +738,7 @@ void NUTDeviceList::load_mapping(const char* path_to_file)
         log_debug("Number of entries loaded for inventory mapping: %zu", _inventoryMapping.size());
 
         _mappingLoaded = true;
-    } catch (std::exception& e) {
+    } catch (const std::exception& e) {
         log_error("Couldn't load mapping: %s", e.what());
     }
 }

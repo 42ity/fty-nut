@@ -28,17 +28,18 @@ class Sensors
 {
 public:
     explicit Sensors(StateManager::Reader* reader);
-    void                                      updateFromNUT(nut::TcpClient& conn);
-    bool                                      updateAssetConfig(AssetState::Asset* asset, mlm_client_t* client);
-    void                                      updateSensorList(nut::Client& conn, mlm_client_t* client);
-    void                                      publish(mlm_client_t* client, int ttl);
+
+    void updateFromNUT(nut::TcpClient& conn);
+    bool updateAssetConfig(AssetState::Asset* asset, mlm_client_t* client);
+    void updateSensorList(nut::Client& conn, mlm_client_t* client);
+    void publish(mlm_client_t* client, int ttl);
     void removeInventory(std::string name);
     bool isInventoryChanged(std::string name);
-    void                                      advertiseInventory(mlm_client_t* client);
+    void advertiseInventory(mlm_client_t* client);
     const std::map<std::string, std::string>& getSensorMapping() const
     {
         return _sensorInventoryMapping;
-    };
+    }
     void loadSensorMapping(const char* path_to_file);
 
     std::map<std::string, Sensor>& sensors();

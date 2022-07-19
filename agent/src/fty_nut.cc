@@ -28,24 +28,12 @@
 
 #include "fty_nut.h"
 #include "../lib/src/nut_mlm.h"
-
-/*
-#include "fty_nut_server.h"
-#include "sensor_actor.h"
-#include "alert_actor.h"
-#include "fty_proto.h"
-#include "nut_mlm.h"
-*/
-
 #include <fty_log.h>
 #include <fty_common_mlm.h>
-
 #include <getopt.h>
 #include <stdio.h>
 #include <czmq.h>
 #include <string>
-
-#define str(x) #x
 
 void usage() {
     puts("fty-nut [options] ...\n"
@@ -142,36 +130,33 @@ int main(int argc, char *argv []) {
         exit(EXIT_FAILURE);
     }
 
-    std::string logConfigFile = std::string (zconfig_get (config, "log/config", ""));
-    if (!logConfigFile.empty ())
-    {
-      ManageFtyLog::getInstanceFtylog ()->setConfigFile (logConfigFile);
-    }
-
     // VERBOSE
     if (streq(zconfig_get(config, "server/verbose", "false"), "true")) {
         ManageFtyLog::getInstanceFtylog()->setVerboseMode();
     }
-    // POLLING
+    // POLLING (sec)
     polling = zconfig_get(config, CONFIG_POLLING, "30");
 
     log_info("fty_nut - NUT (Network UPS Tools) wrapper/daemon");
 
     zactor_t *nut_server = zactor_new(fty_nut_server, MLM_ENDPOINT_VOID);
     if (!nut_server) {
-        log_fatal("zactor_new (task = 'fty_nut_server', args = 'NULL') failed");
+        log_fatal("zactor_new (task = 'fty_nut_server') failed");
         return EXIT_FAILURE;
     }
 
     zactor_t *nut_device_alert = zactor_new(alert_actor, MLM_ENDPOINT_VOID);
     if (!nut_device_alert) {
-        log_fatal("zactor_new (task = 'nut_device_server', args = 'NULL') failed");
+        zactor_destroy(&nut_server);
+        log_fatal("zactor_new (task = 'alert_actor') failed");
         return EXIT_FAILURE;
     }
 
     zactor_t *nut_sensor = zactor_new(sensor_actor, MLM_ENDPOINT_VOID);
     if (!nut_sensor) {
-        log_fatal("zactor_new (task = 'nut_sensor', args = 'NULL') failed");
+        zactor_destroy(&nut_server);
+        zactor_destroy(&nut_device_alert);
+        log_fatal("zactor_new (task = 'sensor_actor') failed");
         return EXIT_FAILURE;
     }
 
@@ -184,19 +169,27 @@ int main(int argc, char *argv []) {
     zstr_sendx(nut_sensor, ACTION_POLLING, polling, NULL);
 
     zpoller_t *poller = zpoller_new(nut_server, nut_device_alert, nut_sensor, NULL);
-    assert(poller);
+    if (!poller) {
+        zactor_destroy(&nut_server);
+        zactor_destroy(&nut_device_alert);
+        zactor_destroy(&nut_sensor);
+        log_fatal("zpoller_new() failed");
+        return EXIT_FAILURE;
+    }
 
-    while (!zsys_interrupted) {
+    while (!zsys_interrupted)
+    {
         void *which = zpoller_wait(poller, 10000);
-        if (which) {
-            char *message = zstr_recv(which);
-            if (message) {
-                puts(message);
-                zstr_free(&message);
-            }
-        } else {
-            if (zpoller_terminated(poller)) {
+        if (which == NULL) {
+            if (zpoller_terminated(poller) || zsys_interrupted) {
                 break;
+            }
+        }
+        else {
+            char *msg = zstr_recv(which);
+            if (msg) {
+                puts(msg);
+                zstr_free(&msg);
             }
         }
 
@@ -217,9 +210,9 @@ int main(int argc, char *argv []) {
     }
 
     zpoller_destroy(&poller);
-    zactor_destroy(&nut_server);
-    zactor_destroy(&nut_device_alert);
     zactor_destroy(&nut_sensor);
+    zactor_destroy(&nut_device_alert);
+    zactor_destroy(&nut_server);
     if (config) {
         zconfig_destroy(&config);
     }

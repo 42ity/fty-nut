@@ -77,6 +77,7 @@ void Devices::updateDeviceList()
 {
     if (!_state_reader->refresh())
         return;
+
     const AssetState& deviceState = _state_reader->getState();
     auto&             devices     = deviceState.getPowerDevices();
 
@@ -87,7 +88,7 @@ void Devices::updateDeviceList()
             // this is strange. No IP?
             continue;
         }
-        const std::string& name = i.first;
+
         switch (i.second->daisychain()) {
             case 0:
                 addIfNotPresent(Device(i.second));
@@ -95,6 +96,7 @@ void Devices::updateDeviceList()
             default:
                 auto master = deviceState.ip2master(ip);
                 if (master.empty()) {
+                    const std::string& name = i.first;
                     log_error("Daisychain host for %s not found", name.c_str());
                 } else {
                     addIfNotPresent(Device(i.second, master));
@@ -102,6 +104,7 @@ void Devices::updateDeviceList()
                 break;
         }
     }
+
     // remove devices
     auto it = _devices.begin();
     while (it != _devices.end()) {

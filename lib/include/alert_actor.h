@@ -20,9 +20,6 @@
 */
 
 #pragma once
+#include <czmq.h>
 
-#include <malamute.h>
-
-int  alert_actor_commands(mlm_client_t* client, mlm_client_t* mb_client, zmsg_t** message, uint64_t& timeout);
 void alert_actor(zsock_t* pipe, void* args);
-void alert_actor_test(bool verbose);

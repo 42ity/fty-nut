@@ -51,4 +51,4 @@ class NUTAgent;
 /// Performs the actor commands logic
 /// Destroys the message
 /// Returns 1 for $TERM (means exit), 0 otherwise
-int actor_commands(mlm_client_t* client, zmsg_t** message_p, uint64_t& timeout, NUTAgent& nut_agent);
+int actor_commands(zmsg_t** message_p, uint64_t& timeout_ms, NUTAgent& nut_agent);
