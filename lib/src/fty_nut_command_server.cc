@@ -75,30 +75,36 @@ static std::vector<std::pair<std::string, int>> topologyRequesterFty(const std::
     zmsg_addstr(request, "xxx");
     zmsg_addstr(request, "POWER_TO");
     zmsg_addstr(request, asset.c_str());
-    mlm_client_sendto(mClient.get(), "asset-agent", "TOPOLOGY", nullptr, 1000, &request);
-    ZpollerGuard poller(zpoller_new(mlm_client_msgpipe(mClient.get()), nullptr));
+    int r = mlm_client_sendto(mClient.get(), "asset-agent", "TOPOLOGY", nullptr, 1000, &request);
+    zmsg_destroy(&request);
 
-    if (zpoller_wait(poller.get(), 1000)) {
-        ZmsgGuard reply(mlm_client_recv(mClient.get()));
-        ZstrGuard replyCorrId(zmsg_popstr(reply.get()));
-        ZstrGuard replyType(zmsg_popstr(reply.get()));
-        ZstrGuard replySubtype(zmsg_popstr(reply.get()));
-        ZstrGuard replyAsset(zmsg_popstr(reply.get()));
-        ZstrGuard replyResult(zmsg_popstr(reply.get()));
-        ZstrGuard replyData(zmsg_popstr(reply.get()));
+    if (r < 0) {
+        log_error("mlm_client_sendto() asset-agent TOPOLOGY failed");
+    }
+    else {
+        ZpollerGuard poller(zpoller_new(mlm_client_msgpipe(mClient.get()), nullptr));
+        if (poller.get() && zpoller_wait(poller.get(), 1000)) {
+            ZmsgGuard reply(mlm_client_recv(mClient.get()));
+            ZstrGuard replyCorrId(zmsg_popstr(reply.get()));
+            ZstrGuard replyType(zmsg_popstr(reply.get()));
+            ZstrGuard replySubtype(zmsg_popstr(reply.get()));
+            ZstrGuard replyAsset(zmsg_popstr(reply.get()));
+            ZstrGuard replyResult(zmsg_popstr(reply.get()));
+            ZstrGuard replyData(zmsg_popstr(reply.get()));
 
-        if (streq(replyResult.get(), "OK")) {
-            cxxtools::SerializationInfo si;
-            std::istringstream          s(replyData.get());
-            cxxtools::JsonDeserializer  json(s);
-            json.deserialize(si);
+            if (streq(replyResult.get(), "OK")) {
+                cxxtools::SerializationInfo si;
+                std::istringstream          s(replyData.get());
+                cxxtools::JsonDeserializer  json(s);
+                json.deserialize(si);
 
-            for (const auto& chain : si.getMember("powerchains")) {
-                std::string realAsset, realOutlet;
-                chain.getMember("src-id").getValue(realAsset);
-                chain.getMember("src-socket").getValue(realOutlet);
+                for (const auto& chain : si.getMember("powerchains")) {
+                    std::string realAsset, realOutlet;
+                    chain.getMember("src-id").getValue(realAsset);
+                    chain.getMember("src-socket").getValue(realOutlet);
 
-                result.emplace_back(realAsset, std::stoi(realOutlet));
+                    result.emplace_back(realAsset, std::stoi(realOutlet));
+                }
             }
         }
     }

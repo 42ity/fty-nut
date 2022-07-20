@@ -464,20 +464,24 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
     zmsg_addstr(message, "ADD");
     zmsg_addstr(message, rule);
 
-    if (mlm_client_sendto(client, "fty-alert-engine", "rfc-evaluator-rules", NULL, 1000, &message) == 0) {
-        zmsg_t* resp   = mlm_client_recv(client);
-        char*   result = zmsg_popstr(resp);
-        char*   reason = zmsg_popstr(resp);
+    int r = mlm_client_sendto(client, "fty-alert-engine", "rfc-evaluator-rules", NULL, 1000, &message);
+    if (r == 0) {
+        zpoller_t* poller = zpoller_new(mlm_client_msgpipe(client), NULL);
+        zmsg_t* resp = (poller && zpoller_wait(poller, 5000)) ? mlm_client_recv(client) : NULL;
+        zpoller_destroy(&poller);
 
-        if (streq(result, "OK") || streq(reason, "ALREADY_EXISTS")) {
-            alert.rulePublished = true;
+        if (resp) {
+            char* result = zmsg_popstr(resp);
+            char* reason = zmsg_popstr(resp);
+            if ((result && streq(result, "OK")) || (reason && streq(reason, "ALREADY_EXISTS"))) {
+                alert.rulePublished = true;
+            }
+            else {
+                log_error("Error %s when requesting %s to ADD rule \n%s.", reason, mlm_client_sender(client), rule);
+            }
+            zstr_free(&reason);
+            zstr_free(&result);
         }
-        else {
-            log_error("Error %s when requesting %s to ADD rule \n%s.", reason, mlm_client_sender(client), rule);
-        }
-
-        zstr_free(&reason);
-        zstr_free(&result);
         zmsg_destroy(&resp);
     }
 
