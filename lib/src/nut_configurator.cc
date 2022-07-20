@@ -439,13 +439,17 @@ void NUTConfigurator::updateAssetFromScanningDevice(const std::string& name, con
             zmsg_addstr(msg, "GET");
             zmsg_addstr(msg, "");
             zmsg_addstr(msg, name.c_str());
-            if (mlm_client_sendto(mb_client, "asset-agent", "ASSET_DETAIL", NULL, 10, &msg) < 0) {
+            int r = mlm_client_sendto(mb_client, "asset-agent", "ASSET_DETAIL", NULL, 5000, &msg);
+            zmsg_destroy(&msg);
+            if (r < 0) {
                 log_error("client %s failed to send query", "nut-configurator-updater");
-                zmsg_destroy(&msg);
                 return;
             }
+
             log_debug("client %s sent query for asset %s", "nut-configurator-updater", name.c_str());
-            zmsg_t* response = mlm_client_recv(mb_client);
+            zpoller_t* poller = zpoller_new(mlm_client_msgpipe(mb_client), NULL);
+            zmsg_t* response = (poller && zpoller_wait(poller, 5000)) ? mlm_client_recv(mb_client) : NULL;
+            zpoller_destroy(&poller);
             if (!response) {
                 log_error("client %s empty response", "nut-configurator-updater");
                 return;
@@ -453,10 +457,10 @@ void NUTConfigurator::updateAssetFromScanningDevice(const std::string& name, con
             char* uuid = zmsg_popstr(response);
             zstr_free(&uuid);
             fty_proto_t* proto = fty_proto_decode(&response);
+            zmsg_destroy(&response);
             log_debug("client %s got response for asset %s", "nut-configurator-updater", name.c_str());
             if (!proto) {
                 log_error("client %s failed query request", "nut-configurator-updater");
-                zmsg_destroy(&response);  // secure if decode failed
                 return;
             }
 
@@ -480,14 +484,19 @@ void NUTConfigurator::updateAssetFromScanningDevice(const std::string& name, con
             }
 
             msg = fty_proto_encode(&proto);
+            fty_proto_destroy(&proto);
             zmsg_pushstrf(msg, "%s", "READWRITE");
-            if (mlm_client_sendto(mb_client, "asset-agent", "ASSET_MANIPULATION", NULL, 10, &msg) < 0) {
+            r = mlm_client_sendto(mb_client, "asset-agent", "ASSET_MANIPULATION", NULL, 5000, &msg);
+            zmsg_destroy(&msg);
+            if (r < 0) {
                 log_error("client %s failed to send update", "nut-configurator-updater");
-                zmsg_destroy(&msg);  // secure
                 return;
             }
+
             log_debug("client %s sent update request for asset %s", "nut-configurator-updater", name.c_str());
-            response = mlm_client_recv(mb_client);
+            poller = zpoller_new(mlm_client_msgpipe(mb_client), NULL);
+            response = (poller && zpoller_wait(poller, 5000)) ? mlm_client_recv(mb_client) : NULL;
+            zpoller_destroy(&poller);
             if (!response) {
                 log_error("client %s empty response", "nut-configurator-updater");
                 return;
