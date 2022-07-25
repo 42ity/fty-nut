@@ -91,7 +91,7 @@ void sensor_actor(zsock_t* pipe, void* args)
 
     MlmClientGuard client(mlm_client_new());
     if (!client) {
-        log_fatal("mlm_client_new () failed");
+        log_fatal("mlm_client_new () failed (client)");
         return;
     }
     if (mlm_client_connect(client, endpoint, 5000, ACTOR_SENSOR_NAME) < 0) {
@@ -100,6 +100,20 @@ void sensor_actor(zsock_t* pipe, void* args)
     }
     if (mlm_client_set_producer(client, FTY_PROTO_STREAM_METRICS_SENSOR) < 0) {
         log_error("mlm_client_set_producer (stream = '%s') failed", FTY_PROTO_STREAM_METRICS_SENSOR);
+        return;
+    }
+
+    MlmClientGuard clientInventory(mlm_client_new());
+    if (!clientInventory) {
+        log_fatal("mlm_client_new () failed (clientInventory)");
+        return;
+    }
+    if (mlm_client_connect(clientInventory, endpoint, 5000, ACTOR_SENSOR_NAME_INVENTORY) < 0) {
+        log_error("client %s failed to connect", ACTOR_SENSOR_NAME_INVENTORY);
+        return;
+    }
+    if (mlm_client_set_producer(clientInventory, FTY_PROTO_STREAM_ASSETS) < 0) {
+        log_error("mlm_client_set_producer (stream = '%s') failed", FTY_PROTO_STREAM_ASSETS);
         return;
     }
 
@@ -129,7 +143,9 @@ void sensor_actor(zsock_t* pipe, void* args)
 
                 sensors.updateSensorList(nutClient, client);
                 sensors.updateFromNUT(nutClient);
-                sensors.advertiseInventory(client);
+
+                sensors.advertiseInventory(clientInventory);
+
                 // hotfix IPMVAL-2713 (data stale on device which host sensors cause communication failure alarms on
                 // sensors) increase ttl from 60 to 240 sec (polling period is equal to 30 sec).
                 sensors.publish(client, int((timeout * 8) / 1000));

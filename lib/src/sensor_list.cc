@@ -189,19 +189,20 @@ void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
     auto& devices = deviceState.getPowerDevices();
     auto& sensors = deviceState.getSensors();
 
-    log_debug("sa: updating sensors list");
+    log_debug("sa: updating sensors list (%zu sensors)", sensors.size());
 
-    log_debug("sa: %zd sensors in assets", sensors.size());
     _sensors.clear();
     for (auto i : sensors) {
         const std::string& name = i.first;
         const std::string& parent_name = i.second->location();
+
         // do we know where is sensor connected?
         if (parent_name.empty()) {
             log_debug("sa: sensor %s ignored (no location)", name.c_str());
             removeInventory(name);
             continue;
         }
+
         log_debug("sa: checking sensor %s (location: %s, port: %s)", name.c_str(), parent_name.c_str(),
             i.second->port().c_str());
 
@@ -408,7 +409,7 @@ void Sensors::publish(mlm_client_t* client, int ttl)
     }
 }
 
-void Sensors::removeInventory(std::string name)
+void Sensors::removeInventory(const std::string& name)
 {
     const auto& it_hash = _lastInventoryHashs.find(name);
     if (it_hash != _lastInventoryHashs.end()) {
@@ -416,66 +417,79 @@ void Sensors::removeInventory(std::string name)
     }
 }
 
-bool Sensors::isInventoryChanged(std::string name)
+bool Sensors::isInventoryChanged(const std::string& name)
 {
     const auto& it_sensor = _sensors.find(name);
-    if (it_sensor != _sensors.end()) {
-        std::string buffer;
-        for (const auto& item : it_sensor->second.inventory()) {
-            buffer += item.first + item.second;
-        }
-        if (!buffer.empty()) {
-            log_debug("sa: publish sensor inventory for %s: buffer=%s", it_sensor->second.assetName().c_str(),
-                buffer.c_str());
-            std::size_t hash = std::hash<std::string>{}(buffer);
-            const auto& it_hash = _lastInventoryHashs.find(name);
-            if (it_hash != _lastInventoryHashs.end() && hash == it_hash->second) {
-                return false;
-            } else {
-                log_debug("sa: publish sensor inventory for %s: %lu <> %lu", it_sensor->second.assetName().c_str(),
-                    hash, it_hash->second);
-                _lastInventoryHashs[name] = hash;
-                return true;
-            }
-        }
+    if (it_sensor == _sensors.end()) {
+        return false;
     }
-    return false;
+
+    std::string buffer;
+    for (const auto& item : it_sensor->second.inventory()) {
+        buffer += item.first + "(" + item.second + ")";
+    }
+    if (buffer.empty()) {
+        return false;
+    }
+
+    std::size_t hash = std::hash<std::string>{}(buffer);
+
+    const auto& it_hash = _lastInventoryHashs.find(name);
+    if (it_hash != _lastInventoryHashs.end() && hash == it_hash->second) {
+        log_debug("sa: publish sensor inventory for %s: no change", name.c_str());
+
+        return false; // exist & unchanged
+    }
+
+    _lastInventoryHashs[name] = hash;
+
+    log_debug("sa: publish sensor inventory for %s: %s", name.c_str(), buffer.c_str());
+
+    return true; // new or changed
 }
 
 void Sensors::advertiseInventory(mlm_client_t* client)
 {
     bool advertiseAll = false;
-    if (_inventoryTimestamp_ms + NUT_INVENTORY_REPEAT_AFTER_MS < static_cast<uint64_t>(zclock_mono())) {
+    uint64_t now = static_cast<uint64_t>(zclock_mono()); //ms
+    if ((_inventoryTimestamp_ms + NUT_INVENTORY_REPEAT_AFTER_MS) < now) {
+        _inventoryTimestamp_ms = now;
         advertiseAll = true;
-        _inventoryTimestamp_ms = static_cast<uint64_t>(zclock_mono());
     }
 
     for (auto& sensor : _sensors) {
-        // send inventory only if change
-        // Note: need to update last inventory before testing advertiseAll
-        if (isInventoryChanged(sensor.second.assetName()) || advertiseAll) {
-            log_debug("sa: publish sensor inventory for %s", sensor.second.assetName().c_str());
+        auto sensorName = sensor.second.assetName();
+
+        // send inventory only if changed
+        // Note: need to update last inventory **before** testing advertiseAll
+        if (isInventoryChanged(sensorName) || advertiseAll) {
+            log_debug("sa: publish sensor inventory for %s", sensorName.c_str());
 
             std::string log;
             zhash_t* inventory = zhash_new();
             zhash_autofree(inventory);
             for (auto& item : sensor.second.inventory()) {
                 zhash_insert(inventory, item.first.c_str(), const_cast<char*>(item.second.c_str()));
-                log += item.first + " = \"" + item.second + "\"; ";
+                log += (log.empty() ? "" : ",") + item.first + "(" + item.second + ")";
             }
+
             if (zhash_size(inventory) != 0) {
-                zmsg_t* message =
-                    fty_proto_encode_asset(NULL, sensor.second.assetName().c_str(), "inventory", inventory);
+                zmsg_t* message = fty_proto_encode_asset(NULL, sensorName.c_str(), FTY_PROTO_ASSET_OP_INVENTORY, inventory);
 
                 if (message) {
-                    std::string topic = "inventory@" + sensor.second.assetName();
-                    log_debug("new sensor inventory message '%s': %s", topic.c_str(), log.c_str());
+                    std::string topic = "inventory@" + sensorName;
                     int r = mlm_client_send(client, topic.c_str(), &message);
-                    zmsg_destroy(&message);
                     if (r < 0) {
-                        log_error("failed to send inventory %s result %" PRIi32, topic.c_str(), r);
+                        log_error("sa: send %s failed (r: %d)", topic.c_str(), r);
+                    }
+                    else {
+                        log_debug("sa: send %s (%s)", topic.c_str(), log.c_str());
                     }
                 }
+                else {
+                    log_debug("fty_proto_encode_asset() failed (%s)", sensorName.c_str());
+                }
+                zmsg_destroy(&message);
             }
             zhash_destroy(&inventory);
         }

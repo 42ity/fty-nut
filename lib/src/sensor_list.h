@@ -33,8 +33,6 @@ public:
     bool updateAssetConfig(AssetState::Asset* asset, mlm_client_t* client);
     void updateSensorList(nut::Client& conn, mlm_client_t* client);
     void publish(mlm_client_t* client, int ttl);
-    void removeInventory(std::string name);
-    bool isInventoryChanged(std::string name);
     void advertiseInventory(mlm_client_t* client);
     const std::map<std::string, std::string>& getSensorMapping() const
     {
@@ -43,6 +41,10 @@ public:
     void loadSensorMapping(const char* path_to_file);
 
     std::map<std::string, Sensor>& sensors();
+
+private:
+    bool isInventoryChanged(const std::string& name);
+    void removeInventory(const std::string& name);
 
 protected:
     std::map<std::string, Sensor>         _sensors; // name | Sensor
