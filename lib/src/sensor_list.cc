@@ -37,6 +37,7 @@ void Sensors::updateFromNUT(nut::TcpClient& conn)
 {
     try {
         for (auto& it : _sensors) {
+            if (zsys_interrupted) break;
             it.second.update(conn, _sensorInventoryMapping);
         }
     } catch (const std::exception& e) {
@@ -194,6 +195,7 @@ void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
     log_debug("sa: %zd sensors in assets", sensors.size());
     _sensors.clear();
     for (auto i : sensors) {
+        if (zsys_interrupted) break;
         const std::string& name = i.first;
         const std::string& parent_name = i.second->location();
         // do we know where is sensor connected?
@@ -404,6 +406,7 @@ void Sensors::publish(mlm_client_t* client, int ttl)
     if (!client) return;
 
     for (auto& it : _sensors) {
+        if (zsys_interrupted) break;
         it.second.publish(client, ttl);
     }
 }
@@ -425,15 +428,15 @@ bool Sensors::isInventoryChanged(std::string name)
             buffer += item.first + item.second;
         }
         if (!buffer.empty()) {
-            log_debug("sa: publish sensor inventory for %s: buffer=%s", it_sensor->second.assetName().c_str(),
-                buffer.c_str());
             std::size_t hash = std::hash<std::string>{}(buffer);
             const auto& it_hash = _lastInventoryHashs.find(name);
             if (it_hash != _lastInventoryHashs.end() && hash == it_hash->second) {
+			    log_debug("sa: publish sensor inventory for %s (no change)",
+			        it_sensor->second.assetName().c_str());
                 return false;
             } else {
-                log_debug("sa: publish sensor inventory for %s: %lu <> %lu", it_sensor->second.assetName().c_str(),
-                    hash, it_hash->second);
+                log_debug("sa: publish sensor inventory for %s: %lu <> %lu",
+                    it_sensor->second.assetName().c_str(), hash, it_hash->second);
                 _lastInventoryHashs[name] = hash;
                 return true;
             }
@@ -451,6 +454,7 @@ void Sensors::advertiseInventory(mlm_client_t* client)
     }
 
     for (auto& sensor : _sensors) {
+        if (zsys_interrupted) break;
         // send inventory only if change
         // Note: need to update last inventory before testing advertiseAll
         if (isInventoryChanged(sensor.second.assetName()) || advertiseAll) {

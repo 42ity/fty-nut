@@ -477,7 +477,8 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
                 alert.rulePublished = true;
             }
             else {
-                log_error("Error %s when requesting %s to ADD rule \n%s.", reason, mlm_client_sender(client), rule);
+                log_error("Request fty-alert-engine ADD rule %s failed (%s, %s).",
+                    ruleName, result, reason);
             }
             zstr_free(&reason);
             zstr_free(&result);
