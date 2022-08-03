@@ -37,6 +37,7 @@ void Sensors::updateFromNUT(nut::TcpClient& conn)
 {
     try {
         for (auto& it : _sensors) {
+            if (zsys_interrupted) break;
             it.second.update(conn, _sensorInventoryMapping);
         }
     } catch (const std::exception& e) {
@@ -193,6 +194,7 @@ void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
 
     _sensors.clear();
     for (auto i : sensors) {
+        if (zsys_interrupted) break;
         const std::string& name = i.first;
         const std::string& parent_name = i.second->location();
 
@@ -405,6 +407,7 @@ void Sensors::publish(mlm_client_t* client, int ttl)
     if (!client) return;
 
     for (auto& it : _sensors) {
+        if (zsys_interrupted) break;
         it.second.publish(client, ttl);
     }
 }
@@ -443,7 +446,7 @@ bool Sensors::isInventoryChanged(const std::string& name)
 
     _lastInventoryHashs[name] = hash;
 
-    log_debug("sa: publish sensor inventory for %s: %s", name.c_str(), buffer.c_str());
+    log_debug("sa: publish sensor inventory for %s: changed", name.c_str());
 
     return true; // new or changed
 }
@@ -458,6 +461,8 @@ void Sensors::advertiseInventory(mlm_client_t* client)
     }
 
     for (auto& sensor : _sensors) {
+        if (zsys_interrupted) break;
+
         auto sensorName = sensor.second.assetName();
 
         // send inventory only if changed

@@ -599,11 +599,14 @@ NUTDeviceList::NUTDeviceList()
 
 void NUTDeviceList::updateDeviceList(const AssetState& deviceState)
 {
+	if (zsys_interrupted) return;
+
     try {
         auto& devices = deviceState.getPowerDevices();
 
         _devices.clear();
         for (auto i : devices) {
+            if (zsys_interrupted) break;
             const std::string& ip = i.second->IP();
             if (ip.empty()) {
                 // this is strange. No IP?
@@ -648,6 +651,7 @@ void NUTDeviceList::updateDeviceStatus(bool forceUpdate)
 
     int updatedDevices = 0;
     for (auto& device : _devices) {
+        if (zsys_interrupted) break;
         auto it = allData.find(device.second.nutName());
         if (it != allData.end()) {
             std::function<const std::map<std::string, std::string>&(const char*)> x =
