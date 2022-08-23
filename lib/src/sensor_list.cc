@@ -181,8 +181,9 @@ bool Sensors::updateAssetConfig(AssetState::Asset* asset, mlm_client_t* client)
 
 void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
 {
-    // Note: force refresh sensors list if an error has been detected
-    if (!_sensorListError && !_state_reader->refresh())
+    // Note: force refresh sensors list prior to anything else, even if an error has been detected
+    bool retRefresh = _state_reader->refresh();
+    if (!_sensorListError && !retRefresh )
         return;
 
     bool sensorListError = false;
