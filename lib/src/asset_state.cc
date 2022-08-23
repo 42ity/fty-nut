@@ -204,7 +204,7 @@ void AssetState::recompute()
         AssetMap::const_iterator end = powerdevices_.end();
         allowed_powerdevices_        = AssetMap(powerdevices_.cbegin(), end);
 
-        log_info("Monitoring enable, %i devices will be monitored", allowed_powerdevices_.size());
+        log_info("Monitoring enabled, %i devices will be monitored", allowed_powerdevices_.size());
     } else {
         log_info("Monitoring disabled by licensing");
     }
