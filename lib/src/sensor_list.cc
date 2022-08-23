@@ -181,8 +181,10 @@ bool Sensors::updateAssetConfig(AssetState::Asset* asset, mlm_client_t* client)
 
 void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
 {
-    // Note: force refresh sensors list if an error has been detected
-    if (!_sensorListError && !_state_reader->refresh())
+    // Get refresh state reader first prior even if an error has been detected (to free memory)
+    bool retRefresh = _state_reader->refresh();
+    // Force refresh sensors list if an error has been detected or if some new data available on reader
+    if (!_sensorListError && !retRefresh )
         return;
 
     bool sensorListError = false;
@@ -241,7 +243,10 @@ void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
         int chain = parent->daisychain();
         std::string master;
 
-        Sensor::ChildrenMap children = _sensors[name].getChildren();
+        Sensor::ChildrenMap children;
+        if (_sensors.find(name) != _sensors.cend()) {
+            children = _sensors[name].getChildren();
+        }
         // for emp01 sensor
         if (i.second->port() == "0") {
             if (chain == 0) {
