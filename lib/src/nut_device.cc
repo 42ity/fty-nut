@@ -755,7 +755,7 @@ bool NUTDeviceList::mappingLoaded() const
 const std::map<std::string, std::string>& NUTDeviceList::get_mapping(const char* mapping) const
 {
     if (!mapping)
-        std::invalid_argument("mapping is NULL");
+        throw std::invalid_argument("mapping is NULL");
     if (strcmp(mapping, "physicsMapping") == 0) {
         return _physicsMapping;
     } else if (strcmp(mapping, "inventoryMapping") == 0) {
