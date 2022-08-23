@@ -61,6 +61,7 @@
 */
 
 #include "state_manager.h"
+//#include <fty_log.h>
 #include <cassert>
 #include <thread>
 
@@ -133,6 +134,8 @@ void StateManager::cleanup()
 // of the process
 void StateManager::commit()
 {
+    //logDebug("== IN  StateManager::commit: {}", str());
+
     while (true) {
         // We cleanup from the writer thread at commit time and not from the
         // reader threads at refresh time, so as to do both allocations and
@@ -155,6 +158,8 @@ void StateManager::commit()
     std::lock_guard<std::mutex> lock(readers_mutex_);
     states_.push_back(uncommitted_);
     ++write_counter_;
+
+    //logDebug("== OUT StateManager::commit: {}", str());
 }
 
 // Updates current_view_ to refer to the most recent state

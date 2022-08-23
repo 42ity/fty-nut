@@ -186,6 +186,7 @@ void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
         return;
 
     bool sensorListError = false;
+    int sensorListErrorCnt = 0;
     const AssetState& deviceState = _state_reader->getState();
     auto& devices = deviceState.getPowerDevices();
     auto& sensors = deviceState.getSensors();
@@ -275,10 +276,11 @@ void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
                 try {
                     values = conn.getDeviceVariableValue(master, sensorCountName);
                 } catch (const std::exception& e) {
-                    log_error(
-                        "Nut object %s not found for (%s): %s", sensorCountName.c_str(), master.c_str(), e.what());
+                    log_error("Nut object '%s' not found for %s (%s)",
+                        sensorCountName.c_str(), master.c_str(), e.what());
                     // Error of communication detected with nut driver, need to refresh sensors list later
                     sensorListError = true;
+                    sensorListErrorCnt++;
                     continue;
                 }
                 if (values.size() > 0) {
@@ -299,10 +301,11 @@ void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
                                 }
                             }
                         } catch (const std::exception& e) {
-                            log_error("Nut object %s not found for (%s): %s", addressDeviceName.c_str(), master.c_str(),
-                                e.what());
+                            log_error("Nut object '%s' not found for %s (%s)",
+                                addressDeviceName.c_str(), master.c_str(), e.what());
                             // Error of communication detected with nut driver, need to refresh sensors list later
                             sensorListError = true;
+                            sensorListErrorCnt++;
                             continue;
                         }
                     }
@@ -324,10 +327,11 @@ void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
                     try {
                         values = conn.getDeviceVariableValue(master, parentSerialNumberName);
                     } catch (const std::exception& e) {
-                        log_error("Nut object %s not found for (%s): %s", parentSerialNumberName.c_str(),
-                            master.c_str(), e.what());
+                        log_error("Nut object '%s' not found for %s (%s)",
+                            parentSerialNumberName.c_str(), master.c_str(), e.what());
                         // Error of communication detected with nut driver, need to refresh sensors list later
                         sensorListError = true;
+                        sensorListErrorCnt++;
                         continue;
                     }
                     if (values.size() > 0) {
@@ -363,7 +367,7 @@ void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
                             i.second->setSubAddress(addressDevice);
                         }
                     } catch (const std::exception& e) {
-                        log_warning("sa: nut object %s not found for (%s): %s", addressDeviceName.c_str(),
+                        log_warning("sa: Nut object '%s' not found for %s (%s)", addressDeviceName.c_str(),
                             master.c_str(), e.what());
                     }
                     // Update asset config values
@@ -396,7 +400,8 @@ void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
 
     _sensorListError = sensorListError;
     if (_sensorListError) {
-        log_debug("sa: loaded %zd nut sensors with error(s): retry in a moment", _sensors.size());
+        log_debug("sa: loaded %zd nut sensors with %d error(s): retry later",
+            sensorListErrorCnt, _sensors.size());
     } else {
         log_debug("sa: loaded %zd nut sensors", _sensors.size());
     }
@@ -515,9 +520,4 @@ void Sensors::loadSensorMapping(const char* path_to_file)
     } catch (const std::exception& e) {
         log_error("Couldn't load mapping: %s", e.what());
     }
-}
-
-std::map<std::string, Sensor>& Sensors::sensors()
-{
-    return _sensors;
 }

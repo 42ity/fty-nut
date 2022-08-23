@@ -69,6 +69,7 @@
 #include "asset_state.h"
 #include <atomic>
 #include <list>
+#include <sstream>
 #include <malamute.h>
 #include <memory>
 #include <mutex>
@@ -105,7 +106,7 @@ public:
         Counter                                  read_counter_;
         bool                                     first_refresh_;
         friend class StateManager;
-    };
+    };//class Reader
 
     class Writer
     {
@@ -124,7 +125,7 @@ public:
         explicit Writer(StateManager& manager);
         StateManager& manager_;
         friend class StateManager;
-    };
+    };//class Writer
 
     StateManager();
     ~StateManager();
@@ -151,6 +152,26 @@ private:
     std::mutex        readers_mutex_;
     std::set<Reader*> readers_;
     Counter           write_counter_, delete_counter_;
+
+	//dump object (dbg)
+    std::string str() const
+    {
+        std::ostringstream oss;
+ 
+        oss << "write_counter_(" << write_counter_ << "), ";
+        oss << "delete_counter_(" << delete_counter_ << "), ";
+
+        auto x = uncommitted_.getAllPowerDevices().size();
+        auto y = uncommitted_.getAllSensors().size();
+        oss << "uncommitted_(devices(" << x << "), sensors(" << y << ")), ";
+
+        x = states_.size();
+        oss << "states_(size(" << x << "))";
+
+        oss << std::endl;
+
+        return oss.str();
+    }
 };
 
 //see fty_nut_server.cc

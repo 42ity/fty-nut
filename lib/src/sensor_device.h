@@ -36,7 +36,7 @@ public:
     Sensor()
         : _asset(nullptr)
         , _parent(nullptr)
-        , _nutMaster("invalidNutMaster")
+        , _nutMaster("INVALID-NUT-MASTER")
         , _index(0){};
     Sensor(const AssetState::Asset* asset, const AssetState::Asset* parent, ChildrenMap& children)
         : _asset(asset)

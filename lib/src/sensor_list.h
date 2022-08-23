@@ -40,7 +40,10 @@ public:
     }
     void loadSensorMapping(const char* path_to_file);
 
-    std::map<std::string, Sensor>& sensors();
+    std::map<std::string, Sensor>& sensors()
+    {
+        return _sensors;
+    }
 
 private:
     bool isInventoryChanged(const std::string& name);

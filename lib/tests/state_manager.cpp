@@ -26,22 +26,28 @@ TEST_CASE("state manager test")
         fty_proto_ext_insert(msg, "ip.1", "192.0.2.1");
         writer.getState().updateFromProto(msg);
         fty_proto_destroy(&msg);
+
         // Not yet committed
         assert(manager.states().size() == 1);
         assert(reader1->getState().getPowerDevices().empty());
         assert(reader1->getState().getSensors().empty());
         assert(reader2->getState().getPowerDevices().empty());
         assert(reader2->getState().getSensors().empty());
+
         writer.commit();
         assert(manager.states().size() == 2);
+
         // Readers did not refresh their view yet
         assert(reader1->getState().getPowerDevices().empty());
         assert(reader1->getState().getSensors().empty());
         assert(reader2->getState().getPowerDevices().empty());
         assert(reader2->getState().getSensors().empty());
+
         assert(reader1->refresh());
+
         // If there are no updates, refresh() must return false
         assert(reader1->refresh() == false);
+
         // The get{PowerDevices,Sensors} reference is invalidated by the
         // refresh() call. In real usage, this is not so much of a problem,
         // because we refresh at the beginning of the loop body. In the
@@ -52,6 +58,7 @@ TEST_CASE("state manager test")
         assert(devs1.at("ups-1")->IP() == "192.0.2.1");
         assert(reader1->getState().ip2master("192.0.2.1") == "ups-1");
         assert(reader1->getState().getSensors().empty());
+
         // reader2 did not update yet
         assert(reader2->getState().getPowerDevices().empty());
         assert(reader2->getState().getSensors().empty());
@@ -65,11 +72,13 @@ TEST_CASE("state manager test")
         fty_proto_aux_insert(msg, "type", "device");
         fty_proto_aux_insert(msg, "subtype", "epdu");
         fty_proto_ext_insert(msg, "ip.1", "192.0.2.2");
+
         // update via encoded zmsg
         zmsg_t* zmsg = fty_proto_encode(&msg);
         writer.getState().updateFromMsg(&zmsg);
         writer.commit();
         assert(manager.states().size() == 3);
+
         assert(reader1->refresh());
         auto& devs1 = reader1->getState().getPowerDevices();
         assert(devs1.size() == 2);
@@ -80,9 +89,11 @@ TEST_CASE("state manager test")
         assert(devs1.at("epdu-2")->IP() == "192.0.2.2");
         assert(reader1->getState().ip2master("192.0.2.2") == "epdu-2");
         assert(reader1->getState().getSensors().empty());
+
         // reader2 is two steps behind
         assert(reader2->getState().getPowerDevices().empty());
         assert(reader2->getState().getSensors().empty());
+
         // Refresh reader2
         assert(reader2->refresh());
         auto& devs2 = reader2->getState().getPowerDevices();
@@ -109,6 +120,7 @@ TEST_CASE("state manager test")
         writer.getState().updateFromProto(msg);
         fty_proto_destroy(&msg);
         writer.commit();
+
         // reader1 should not see it
         assert(reader1->refresh());
         auto& devs1 = reader1->getState().getPowerDevices();
@@ -118,6 +130,7 @@ TEST_CASE("state manager test")
         assert(reader1->getState().ip2master("192.0.2.1") == "ups-1");
         assert(reader1->getState().ip2master("192.0.2.2") == "");
         assert(reader1->getState().getSensors().empty());
+
         // reader2 still sees epdu-2
         auto& devs2 = reader2->getState().getPowerDevices();
         assert(devs2.size() == 2);
@@ -154,6 +167,7 @@ TEST_CASE("state manager test")
         writer.getState().updateFromProto(msg);
         fty_proto_destroy(&msg);
         writer.commit();
+
         // reader1 still sees the old IP
         auto& devs1 = reader1->getState().getPowerDevices();
         assert(devs1.size() == 1);
@@ -162,6 +176,7 @@ TEST_CASE("state manager test")
         assert(reader1->getState().ip2master("192.0.2.1") == "ups-1");
         assert(reader2->getState().ip2master("192.0.2.3") == "");
         assert(reader1->getState().getSensors().empty());
+
         // reader2 catches up and sees the new IP
         assert(reader2->refresh());
         auto& devs2 = reader2->getState().getPowerDevices();
