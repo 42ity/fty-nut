@@ -439,7 +439,7 @@ bool Sensors::isInventoryChanged(const std::string& name)
 
     std::string buffer;
     for (const auto& item : it_sensor->second.inventory()) {
-        buffer += item.first + "(" + item.second + ")";
+        buffer += item.first + item.second;
     }
     if (buffer.empty()) {
         return false;
