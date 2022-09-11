@@ -201,22 +201,30 @@ void NUTDevice::update(std::map<std::string, std::vector<std::string>>    vars,
     NUTValuesTransformation(prefix, vars);
 
     fty::nut::KeyValues scalarVars;
-    for (auto var : vars) {
+    for (auto& var : vars) {
         scalarVars.emplace(var.first, collapse_commas(var.second));
     }
 
     // Translate NUT keys into 42ity keys.
-    {
+
+    try {
         auto mappedPhysics = fty::nut::performMapping(mapping("physicsMapping"), scalarVars, prefixId);
         for (auto value : mappedPhysics) {
             updatePhysics(value.first, value.second);
         }
     }
-    {
+    catch (const std::exception& e) {
+        log_error("update physicsMapping caught exception '%s'", e.what());
+    }
+
+    try {
         auto mappedInventory = fty::nut::performMapping(mapping("inventoryMapping"), scalarVars, prefixId);
         for (auto value : mappedInventory) {
             updateInventory(value.first, value.second);
         }
+    }
+    catch (const std::exception& e) {
+        log_error("update inventoryMapping caught exception '%s'", e.what());
     }
 
     commitChanges();
@@ -599,7 +607,7 @@ NUTDeviceList::NUTDeviceList()
 
 void NUTDeviceList::updateDeviceList(const AssetState& deviceState)
 {
-	if (zsys_interrupted) return;
+    if (zsys_interrupted) return;
 
     try {
         auto& devices = deviceState.getPowerDevices();
