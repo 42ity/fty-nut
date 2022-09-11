@@ -129,10 +129,12 @@ public:
 
     StateManager();
     ~StateManager();
+
     Writer& getWriter()
     {
         return writer_;
     }
+
     Reader* getReader();
     void    putReader(Reader* reader);
 
@@ -153,26 +155,24 @@ private:
     std::set<Reader*> readers_;
     Counter           write_counter_, delete_counter_;
 
-	//dump object (dbg)
+    //dump object (dbg)
     std::string str() const
     {
         std::ostringstream oss;
- 
+
         oss << "write_counter_(" << write_counter_ << "), ";
         oss << "delete_counter_(" << delete_counter_ << "), ";
 
-        auto x = uncommitted_.getAllPowerDevices().size();
-        auto y = uncommitted_.getAllSensors().size();
-        oss << "uncommitted_(devices(" << x << "), sensors(" << y << ")), ";
+        auto deSize = uncommitted_.getAllPowerDevices().size();
+        auto seSize = uncommitted_.getAllSensors().size();
+        oss << "uncommitted_(devices(" << deSize << "), sensors(" << seSize << ")), ";
 
-        x = states_.size();
-        oss << "states_(size(" << x << "))";
-
-        oss << std::endl;
+        auto stSize = states_.size();
+        oss << "states_(size(" << stSize << "))";
 
         return oss.str();
     }
-};
+};//class StateManager
 
 //see fty_nut_server.cc
 extern StateManager NutStateManager;

@@ -437,15 +437,18 @@ bool Sensors::isInventoryChanged(const std::string& name)
         return false;
     }
 
-    std::string buffer;
-    for (const auto& item : it_sensor->second.inventory()) {
-        buffer += item.first + item.second;
-    }
-    if (buffer.empty()) {
-        return false;
-    }
+    std::size_t hash = 0; // of sensor inventory attributes
+    {
+        std::ostringstream oss;
+        for (const auto& item : it_sensor->second.inventory()) {
+            oss << item.first << item.second;
+        }
+        if (oss.str().empty()) {
+            return false; // no inventory attr.
+        }
 
-    std::size_t hash = std::hash<std::string>{}(buffer);
+        hash = std::hash<std::string>{}(oss.str());
+    }
 
     const auto& it_hash = _lastInventoryHashs.find(name);
     if (it_hash != _lastInventoryHashs.end() && hash == it_hash->second) {
