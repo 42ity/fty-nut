@@ -392,41 +392,57 @@ void fty_nut_configurator_server(zsock_t* pipe, void* args)
 
     while (!zsys_interrupted) {
         void* which = zpoller_wait(poller, agent.timeout());
-        if (which == pipe || zsys_interrupted)
-            break;
 
-        if (!which) {
-            log_debug("Periodic polling");
-            agent.onPoll();
-            continue;
-        }
-
-        zmsg_t* msg = mlm_client_recv(client);
-        if (fty_proto_is(msg)) {
-            fty_proto_t* proto = fty_proto_decode(&msg);
-            zmsg_destroy(&msg);
-
-            if (fty_proto_id(proto) == FTY_PROTO_ASSET) {
-                if (state_writer.getState().updateFromProto(proto))
-                    state_writer.commit();
-                agent.onUpdate();
-            } else if (fty_proto_id(proto) == FTY_PROTO_METRIC) {
-                // no longer handle licensing limitations as it's been moved to asset state
-                // agent.handleLimitations(&proto);
-                log_debug("Licensing messages are ignored by fty-nut-configurator");
+        if (which == NULL) {
+            if (zpoller_terminated(poller) || zsys_interrupted) {
+                break;
             }
 
-            fty_proto_destroy(&proto);
-            continue;
+            log_debug("Periodic polling");
+            agent.onPoll();
         }
+        else if (which == pipe) {
+            zmsg_t* msg = zmsg_recv(pipe);
+            char*   cmd = zmsg_popstr(msg);
 
-        log_error("Unhandled message (%s/%s)", mlm_client_command(client), mlm_client_subject(client));
-        zmsg_print(msg);
-        zmsg_destroy(&msg);
+            log_debug("fty_nut_configurator_server recv '%s'", cmd);
+            bool term = (cmd && streq(cmd, "$TERM"));
+
+            zstr_free(&cmd);
+            zmsg_destroy(&msg);
+
+            if (term) {
+                break;
+            }
+        }
+        else {
+            zmsg_t* msg = mlm_client_recv(client);
+            if (fty_proto_is(msg)) {
+                fty_proto_t* proto = fty_proto_decode(&msg);
+
+                if (fty_proto_id(proto) == FTY_PROTO_ASSET) {
+                    if (state_writer.getState().updateFromProto(proto))
+                        state_writer.commit();
+                    agent.onUpdate();
+                } else if (fty_proto_id(proto) == FTY_PROTO_METRIC) {
+                    // no longer handle licensing limitations as it's been moved to asset state
+                    // agent.handleLimitations(&proto);
+                    log_debug("Licensing messages are ignored by fty-nut-configurator");
+                }
+
+                fty_proto_destroy(&proto);
+            }
+            else {
+                log_error("Unhandled message (%s/%s)", mlm_client_command(client), mlm_client_subject(client));
+                zmsg_print(msg);
+            }
+            zmsg_destroy(&msg);
+        }
     }
 
     // force the call to dtor to unregister callback(s) and threads
-   // *before* releasing agent, state writer, ... going out-of-scope
+    // *before* releasing agent, state writer, ... going out-of-scope
+    log_debug("secwClient reset...");
     secwClient.reset();
 
     log_info("fty_nut_configurator_server ended");
