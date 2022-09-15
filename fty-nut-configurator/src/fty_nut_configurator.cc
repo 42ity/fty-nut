@@ -72,8 +72,9 @@ int main (int argc, char *argv [])
         log_config = const_cast<char*>(default_log_config);
 
     ManageFtyLog::getInstanceFtylog()->setConfigFile(std::string(log_config));
-    if (verbose)
+    if (verbose) {
         ManageFtyLog::getInstanceFtylog()->setVerboseMode();
+    }
 
     zactor_t *server = zactor_new (fty_nut_configurator_server, MLM_ENDPOINT_VOID);
     if (!server) {
@@ -83,18 +84,15 @@ int main (int argc, char *argv [])
 
     log_info ("fty_nut_configurator started");
 
-    // code from src/malamute.c, under MPL
-    //  Accept and print any message back from server
-    while (true) {
-        char *message = zstr_recv (server);
-        if (message) {
-            puts (message);
-            free (message);
-        }
-        else {
-            puts ("interrupted");
+    // main loop, accept any message back from server
+    // copy from src/malamute.c under MPL license
+    while (!zsys_interrupted) {
+        char* msg = zstr_recv(server);
+        if (!msg)
             break;
-        }
+
+        log_debug("fty_nut_configurator: recv msg '%s'", msg);
+        zstr_free(&msg);
     }
 
     log_info ("fty_nut_configurator ended");

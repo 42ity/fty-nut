@@ -61,7 +61,6 @@
 */
 
 #include "state_manager.h"
-#include <cassert>
 #include <thread>
 
 StateManager::StateManager()

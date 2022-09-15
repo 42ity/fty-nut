@@ -30,6 +30,7 @@
 #define ACTOR_ALERT_NAME           "bios-nut-alert"
 #define ACTOR_ALERT_MB_NAME        ACTOR_ALERT_NAME "-mb"
 #define ACTOR_SENSOR_NAME          "agent-nut-sensor"
+#define ACTOR_SENSOR_NAME_INVENTORY ACTOR_SENSOR_NAME "-inventory" // to publish sensors inventory
 #define ACTOR_CONFIGURATOR_NAME    "nut-configurator"
 #define ACTOR_CONFIGURATOR_MB_NAME ACTOR_CONFIGURATOR_NAME "-mb"
 

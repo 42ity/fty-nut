@@ -320,12 +320,14 @@ void Autoconfig::onUpdateFromSecw(secw::Id secw_id, StateManager::Writer* state_
     }
 }
 
-void callbackUpdated(const std::string& /*portfolio*/, secw::DocumentPtr /*oldDoc*/, secw::DocumentPtr newDoc,
+static void callbackUpdated(const std::string& /*portfolio*/, secw::DocumentPtr /*oldDoc*/, secw::DocumentPtr newDoc,
     bool non_secret_changed, bool secret_changed, Autoconfig* agent, StateManager::Writer* state_writer)
 {
+    if (zsys_interrupted) return;
+
     // here we consider only credentials modification
     // compare public and private data of old config and new one (private data are not send during notification)
-    if (agent && (non_secret_changed || secret_changed)) {
+    if (agent && newDoc.get() && (non_secret_changed || secret_changed)) {
         secw::Id secw_id = newDoc.get()->getId();
         agent->onUpdateFromSecw(secw_id, state_writer);
     }
@@ -342,9 +344,11 @@ void fty_nut_configurator_server(zsock_t* pipe, void* args)
 
     fty::SocketSyncClient secwSyncClient(SECW_SOCKET_PATH);
     mlm::MlmStreamClient  notificationStream(SECURITY_WALLET_AGENT, SECW_NOTIFICATIONS, 1000, endpoint);
-    auto                  secwClient = secw::ConsumerAccessor(secwSyncClient, notificationStream);
+
+    auto secwClient = std::make_unique<secw::ConsumerAccessor>(secwSyncClient, notificationStream);
+
     // register the callback on security wallet update
-    secwClient.setCallbackOnUpdate(std::bind(callbackUpdated, std::placeholders::_1, std::placeholders::_2,
+    secwClient->setCallbackOnUpdate(std::bind(callbackUpdated, std::placeholders::_1, std::placeholders::_2,
         std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, &agent, &state_writer));
 
     MlmClientGuard client(mlm_client_new());
@@ -388,38 +392,58 @@ void fty_nut_configurator_server(zsock_t* pipe, void* args)
 
     while (!zsys_interrupted) {
         void* which = zpoller_wait(poller, agent.timeout());
-        if (which == pipe || zsys_interrupted)
-            break;
 
-        if (!which) {
-            log_debug("Periodic polling");
-            agent.onPoll();
-            continue;
-        }
-
-        zmsg_t* msg = mlm_client_recv(client);
-        if (fty_proto_is(msg)) {
-            fty_proto_t* proto = fty_proto_decode(&msg);
-            zmsg_destroy(&msg);
-
-            if (fty_proto_id(proto) == FTY_PROTO_ASSET) {
-                if (state_writer.getState().updateFromProto(proto))
-                    state_writer.commit();
-                agent.onUpdate();
-            } else if (fty_proto_id(proto) == FTY_PROTO_METRIC) {
-                // no longer handle licensing limitations as it's been moved to asset state
-                // agent.handleLimitations(&proto);
-                log_debug("Licensing messages are ignored by fty-nut-configurator");
+        if (which == NULL) {
+            if (zpoller_terminated(poller) || zsys_interrupted) {
+                break;
             }
 
-            fty_proto_destroy(&proto);
-            continue;
+            log_debug("Periodic polling");
+            agent.onPoll();
         }
+        else if (which == pipe) {
+            zmsg_t* msg = zmsg_recv(pipe);
+            char*   cmd = zmsg_popstr(msg);
 
-        log_error("Unhandled message (%s/%s)", mlm_client_command(client), mlm_client_subject(client));
-        zmsg_print(msg);
-        zmsg_destroy(&msg);
+            log_debug("fty_nut_configurator_server recv '%s'", cmd);
+            bool term = (cmd && streq(cmd, "$TERM"));
+
+            zstr_free(&cmd);
+            zmsg_destroy(&msg);
+
+            if (term) {
+                break;
+            }
+        }
+        else {
+            zmsg_t* msg = mlm_client_recv(client);
+            if (fty_proto_is(msg)) {
+                fty_proto_t* proto = fty_proto_decode(&msg);
+
+                if (fty_proto_id(proto) == FTY_PROTO_ASSET) {
+                    if (state_writer.getState().updateFromProto(proto))
+                        state_writer.commit();
+                    agent.onUpdate();
+                } else if (fty_proto_id(proto) == FTY_PROTO_METRIC) {
+                    // no longer handle licensing limitations as it's been moved to asset state
+                    // agent.handleLimitations(&proto);
+                    log_debug("Licensing messages are ignored by fty-nut-configurator");
+                }
+
+                fty_proto_destroy(&proto);
+            }
+            else {
+                log_error("Unhandled message (%s/%s)", mlm_client_command(client), mlm_client_subject(client));
+                zmsg_print(msg);
+            }
+            zmsg_destroy(&msg);
+        }
     }
+
+    // force the call to dtor to unregister callback(s) and threads
+    // *before* releasing agent, state writer, ... going out-of-scope
+    log_debug("secwClient reset...");
+    secwClient.reset();
 
     log_info("fty_nut_configurator_server ended");
 }
