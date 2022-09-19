@@ -109,7 +109,8 @@ public:
     std::string topicSuffix() const;
 
 protected:
-    const AssetState::Asset *_asset, *_parent;
+    const AssetState::Asset *_asset{nullptr};
+    const AssetState::Asset *_parent{nullptr};
     ChildrenMap              _children;
     std::string              _nutMaster;
     int                      _index;

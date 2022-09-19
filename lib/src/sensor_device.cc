@@ -28,14 +28,11 @@
 
 static std::string collapse_commas(const std::vector<std::string>& values)
 {
-    std::string inventory = "";
-    for (size_t i = 0; i < values.size(); ++i) {
-        inventory += values[i];
-        if (i < values.size() - 1) {
-            inventory += ", ";
-        }
+    std::string result;
+    for (auto& value : values) {
+        result += (result.empty() ? "" : ", ") + value;
     }
-    return inventory;
+    return result;
 }
 
 void Sensor::update(nut::TcpClient& conn, const std::map<std::string, std::string>& mapping)
@@ -62,10 +59,24 @@ void Sensor::update(nut::TcpClient& conn, const std::map<std::string, std::strin
             _inventory = fty::nut::performMapping(mapping, scalarVars, prefixId);
         }
 
+        // Handle asset precedence
+        {
+            // maintain friendlyName from asset
+            auto it = _inventory.find("name");
+            if (it != _inventory.cend() && _asset && !_asset->friendlyName().empty()) {
+                it->second = _asset->friendlyName();
+            }
+            // maintain model from asset (assume sensor model can't be changed on device)
+            it = _inventory.find("model");
+            if (it != _inventory.cend() && _asset && !_asset->model().empty()) {
+                it->second = _asset->model();
+            }
+        }
+
         try {
             // Check for actual sensor presence, if ambient.present is available!
             auto sensorPresent = nutDevice.getVariableValue(prefix + "present");
-            log_debug("sa: sensor '%s' presence: '%s'", prefix.c_str(), sensorPresent[0].c_str());
+            log_debug("sa: sensor '%s' present: '%s'", prefix.c_str(), sensorPresent[0].c_str());
             if ((!sensorPresent.empty()) && (sensorPresent[0] != "yes")) {
                 log_debug("sa: sensor '%s' is not present or disconnected on NUT device %s", prefix.c_str(),
                     _nutMaster.c_str());
@@ -143,16 +154,16 @@ std::string Sensor::topicSuffix() const
 // topic for GPI sensors wired to EMP001
 std::string Sensor::topicSuffixExternal(const std::string& gpiPort) const
 {
-    // status.GPI<port>.<epmPort>@location
+    // status.GPI<port>.<empPort>@location
     return ".GPI" + gpiPort + "." + std::to_string(_index) + "@" + location();
 }
 
 void Sensor::publish(mlm_client_t* client, int ttl)
 {
-    log_debug("sa: publishing temperature '%s' and humidity '%s' on '%s' from sensor '%s'", _temperature.c_str(),
-        _humidity.c_str(), location().c_str(), assetName().c_str());
-
     if (!_temperature.empty()) {
+        log_debug("sa: publishing temperature '%s' on '%s' from sensor '%s'",
+            _temperature.c_str(), location().c_str(), assetName().c_str());
+
         zhash_t* aux = zhash_new();
         zhash_autofree(aux);
         zhash_insert(aux, "port", const_cast<char*>(std::to_string(_index).c_str()));
@@ -163,16 +174,20 @@ void Sensor::publish(mlm_client_t* client, int ttl)
 
         if (msg) {
             std::string topic = "temperature" + topicSuffix();
-            log_debug("sending new temperature for element_src = '%s', value = '%s' on topic '%s'", location().c_str(),
-                _temperature.c_str(), topic.c_str());
+            log_debug("sending new temperature for element_src = '%s', value = '%s' on topic '%s'",
+                location().c_str(), _temperature.c_str(), topic.c_str());
             int r = mlm_client_send(client, topic.c_str(), &msg);
-            if (r != 0)
-                log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
+            if (r != 0) {
+                log_error("failed to send measurement %s result %d", topic.c_str(), r);
+            }
             zmsg_destroy(&msg);
         }
     }
 
     if (!_humidity.empty()) {
+        log_debug("sa: publishing humidity '%s' on '%s' from sensor '%s'",
+            _humidity.c_str(), location().c_str(), assetName().c_str());
+
         zhash_t* aux = zhash_new();
         zhash_autofree(aux);
         zhash_insert(aux, "port", const_cast<char*>(std::to_string(_index).c_str()));
@@ -183,16 +198,19 @@ void Sensor::publish(mlm_client_t* client, int ttl)
 
         if (msg) {
             std::string topic = "humidity" + topicSuffix();
-            log_debug("sending new humidity for element_src = '%s', value = '%s' on topic '%s'", location().c_str(),
-                _humidity.c_str(), topic.c_str());
+            log_debug("sending new humidity for element_src = '%s', value = '%s' on topic '%s'",
+                location().c_str(), _humidity.c_str(), topic.c_str());
             int r = mlm_client_send(client, topic.c_str(), &msg);
-            if (r != 0)
-                log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
+            if (r != 0) {
+                log_error("failed to send measurement %s result %d", topic.c_str(), r);
+            }
             zmsg_destroy(&msg);
         }
     }
 
     if (!_contacts.empty()) {
+        log_debug("sa: publishing contacts from sensor '%s'", assetName().c_str());
+
         int gpiPort = 1;
         for (auto& contact : _contacts) {
             std::string extport = std::to_string(gpiPort);
@@ -212,13 +230,13 @@ void Sensor::publish(mlm_client_t* client, int ttl)
 
                 if (msg) {
                     std::string topic = "status" + topicSuffixExternal(std::to_string(gpiPort));
-                    log_debug(
-                        "sending new contact status information for element_src = '%s', value = '%s'. GPI '%s' on port "
-                        "'%s'.",
+                    log_debug("sending new contact status information for "
+                              "element_src = '%s', value = '%s'. GPI '%s' on port '%s'.",
                         location().c_str(), contact.c_str(), sname.c_str(), extport.c_str());
                     int r = mlm_client_send(client, topic.c_str(), &msg);
-                    if (r != 0)
+                    if (r != 0) {
                         log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
+                    }
                     zmsg_destroy(&msg);
                 }
             } else {

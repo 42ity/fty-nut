@@ -71,6 +71,10 @@ public:
         {
             return port_;
         }
+        const std::string& model() const
+        {
+            return model_;
+        }
         const std::string& subtype() const
         {
             return subtype_;
@@ -122,6 +126,7 @@ public:
         std::string                        serial_;
         std::string                        IP_;
         std::string                        port_;
+        std::string                        model_;
         std::string                        subtype_;
         std::string                        location_;
         std::string                        upsconf_block_;
