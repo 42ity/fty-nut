@@ -28,12 +28,15 @@
 AssetState::Asset::Asset(fty_proto_t* message)
 {
     name_             = fty_proto_name(message); // iname
+
+    subtype_          = fty_proto_aux_string(message, "subtype", "");
+    location_         = fty_proto_aux_string(message, "parent_name.1", "");
+
     friendlyName_     = fty_proto_ext_string(message, "name", "");
     serial_           = fty_proto_ext_string(message, "serial_no", "");
     IP_               = fty_proto_ext_string(message, "ip.1", "");
     port_             = fty_proto_ext_string(message, "port", "");
-    subtype_          = fty_proto_aux_string(message, "subtype", "");
-    location_         = fty_proto_aux_string(message, "parent_name.1", "");
+    model_            = fty_proto_ext_string(message, "model", "");
 
     const char* block = fty_proto_ext_string(message, "upsconf_block", NULL);
     if (block) {
