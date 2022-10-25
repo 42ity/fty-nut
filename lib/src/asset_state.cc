@@ -66,6 +66,7 @@ AssetState::Asset::Asset(fty_proto_t* message)
     } catch (...) {
     }
 
+    // get endpoint.1.* extended attributes
     zhash_t* ext = fty_proto_get_ext(message);
     if (ext) {
         for (void* item = zhash_first(ext); item; item = zhash_next(ext)) {
@@ -76,6 +77,17 @@ AssetState::Asset::Asset(fty_proto_t* message)
         }
     }
     zhash_destroy(&ext);
+
+    // IPMPROG-4490: [resilience]
+    // If no endpoint.1.port defined, set default related to the protocol
+    if ((endpoint_.count("port") == 0) && (endpoint_.count("protocol") != 0)) {
+        const std::map<std::string, std::string> map{{"nut_powercom", "443"}, {"nut_snmp", "161"}, {"nut_xml_pdc", "80"}};
+        const auto& it = map.find(endpoint_.at("protocol"));
+        if (it != map.cend()) {
+            endpoint_.emplace("port", it->second);
+            logDebug("{}: set port to default {}/{}", name_, it->first, it->second);
+        }
+    }
 }
 
 bool AssetState::handleAssetMessage(fty_proto_t* message)
