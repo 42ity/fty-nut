@@ -426,6 +426,12 @@ void NUTConfigurator::updateAssetFromScanningDevice(const std::string& name, con
 
         auto it = selectBestConfiguration(configs);
         if (it != configs.end()) {
+            // IPMVAL-4591, prevent crash if no 'driver' key in config
+            if (it->count("driver") == 0) {
+                log_error("No 'driver' key in configuration (%s)", name.c_str());
+                return;
+            }
+
             MlmClientGuard mb_client(mlm_client_new());
             if (!mb_client) {
                 log_error("mlm_client_new() failed");
@@ -465,6 +471,7 @@ void NUTConfigurator::updateAssetFromScanningDevice(const std::string& name, con
             }
 
             fty_proto_set_operation(proto, FTY_PROTO_ASSET_OP_UPDATE);
+
             if (it->at("driver") == "netxml-ups") {
                 fty_proto_ext_insert(proto, "endpoint.1.protocol", "nut_xml_pdc");
                 fty_proto_ext_insert(proto, "endpoint.1.port", "80");
