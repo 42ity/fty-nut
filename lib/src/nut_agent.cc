@@ -21,9 +21,9 @@
 
 #include "nut_agent.h"
 #include "ups_status.h"
+#include "ups_alarm.h"
 #include <fty_log.h>
 #include <fty_shm.h>
-//#include <cmath>
 #include <string>
 
 // clang-format off
@@ -40,26 +40,6 @@ const std::map<std::string, std::string> NUTAgent::_unitNameToSymbol =
     { "runtime",     "s" },
     { "timer",       "s" },
     { "delay",       "s" },
-};
-// clang-format on
-
-// clang-format off
-const std::vector<std::string> alarmsList =
-{
-    "Replace battery!",
-    "Shutdown imminent!",
-    "Fan failure!",
-    "No battery installed!",
-    "Battery voltage too low!",
-    "Battery voltage too high!",
-    "Battery charger fail!",
-    "Temperature too high!",
-    "Internal UPS fault!",
-    "Awaiting power!",
-    "Automatic bypass mode!",
-    "Manual bypass mode!",
-    "Communication fault!",
-    "Fuse fault!"
 };
 // clang-format on
 
@@ -238,43 +218,33 @@ void NUTAgent::advertisePhysics()
             }
         }
 
-        // send alarms as a bitsfield
+        // expose alarms as a bitsfield
         bool has_alarms = false;
         if (device.second.hasProperty("ups.alarm")) {
-            const auto& alarms               = device.second.property("ups.alarm");
-            int         bitfield             = 0;
-            int         bit                  = 0;
-            int         internal_failure_bit = 0;
-            for (const auto& i : alarmsList) {
-                if (alarms.find(i) != std::string::npos) {
-                    bitfield |= (1 << bit);
-                    has_alarms = true;
-                }
-                if (i == "Internal UPS fault!") {
-                    internal_failure_bit = bit;
-                }
-                bit++;
-            }
-            // TODO FIXME I hate this kind of fix, but it was to be quick and dirty
-            if (alarms.find("Internal failure!") != std::string::npos) {
-                bitfield |= (1 << internal_failure_bit);
-            }
-            int r = fty::shm::write_metric(assetName, "ups.alarm", std::to_string(bitfield), "", _ttl);
-            if (r != 0)
+            const std::string alarms = device.second.property("ups.alarm");
+            uint32_t bitsfield = upsalarm_to_int(alarms);
+            int r = fty::shm::write_metric(assetName, "ups.alarm", std::to_string(bitsfield), "", _ttl);
+            if (r != 0) {
                 log_error("failed to write ups.alarm@%s, result %i", assetName.c_str(), r);
-
+            }
             device.second.setChanged("ups.alarm", false);
+
+            has_alarms = (bitsfield != 0);
+            if (has_alarms) {
+                log_debug("ups.alarm@%s (%u, '%s')", assetName.c_str(), bitsfield, alarms.c_str());
+            }
         }
 
-        // send status and "in progress" test result as a bitsfield
+        // expose status and "in progress" test result as a bitsfield
         if (device.second.hasProperty("status.ups")) {
             std::string status_s = device.second.property("status.ups");
             if (!status_s.empty() // fix IPMVAL-1889 (empty on data-stale)
                 && device.second.subtype() != "epdu") // ups.status doesn't make sense for epdu
             {
-                std::string test_s =
-                    (device.second.hasProperty("ups.test.result") ? device.second.property("ups.test.result")
-                                                                  : "no test initiated");
+                std::string test_s = (device.second.hasProperty("ups.test.result")
+                    ? device.second.property("ups.test.result")
+                    : "no test initiated");
+
                 uint16_t status_i = upsstatus_to_int(status_s, test_s);
                 if (has_alarms) {
                     status_i |= STATUS_ALARM;
@@ -285,19 +255,21 @@ void NUTAgent::advertisePhysics()
                 //    - see ttl computation (2*polling_interval) in actor_commands.cc cmd=ACTION_POLLING
                 // here we increase _ttl of 50%, to pass metric ttl to 90
                 int r = fty::shm::write_metric(assetName, "status.ups", std::to_string(status_i), " ", _ttl * 3 / 2);
-                if (r != 0)
+                if (r != 0) {
                     log_error("failed to write status.ups@%s, result %i", assetName.c_str(), r);
+                }
 
                 // publish power.status (same ttl policy)
                 r = fty::shm::write_metric(assetName, "power.status", power_status(status_i), " ", _ttl * 3 / 2);
-                if (r != 0)
+                if (r != 0) {
                     log_error("failed to write power.status@%s, result %i", assetName.c_str(), r);
+                }
 
                 device.second.setChanged("status.ups", false);
             }
         }
 
-        // send epdu outlet status as bitsfield
+        // expose epdu outlet status as a bitsfield
         for (int i = 1; i < 100; i++) {
             std::string property = "status.outlet." + std::to_string(i);
             // assumption, if outlet.10 does not exists, outlet.11 does not as well
