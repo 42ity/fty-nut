@@ -32,7 +32,7 @@
 TEST_CASE("actor commands test")
 {
     //  @selftest
-    static const char* endpoint   = "ipc://fty-nut-server-test";
+    static const char* endpoint   = "inproc://fty-nut-server-test.6fd9w7";
     static const char* logErrPath = "stderr.txt";
 
     ManageFtyLog::setInstanceFtylog("fty-nut-command-test");
