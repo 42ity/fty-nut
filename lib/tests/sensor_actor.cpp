@@ -7,7 +7,7 @@
 TEST_CASE("sensor actor test")
 {
     //  @selftest
-    static const char* endpoint = "ipc://fty-sensor-actor";
+    static const char* endpoint = "inproc://fty-sensor-actor-test.8df1z4";
 
     // malamute broker
     zactor_t* malamute = zactor_new(mlm_server, const_cast<char*>("Malamute"));

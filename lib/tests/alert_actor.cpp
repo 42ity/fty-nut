@@ -5,10 +5,9 @@
 #include "src/state_manager.h"
 #include "src/alert_device_list.h"
 
-
 TEST_CASE("alert actor test")
 {
-    static const char* endpoint = "ipc://fty-alert-actor";
+    static const char* endpoint = "inproc://fty-alert-actor-test.7afde8";
 
     // malamute broker
     zactor_t* malamute = zactor_new(mlm_server, const_cast<char*>("Malamute"));

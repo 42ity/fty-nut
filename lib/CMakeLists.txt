@@ -36,6 +36,8 @@ etn_target(static ${PROJECT_NAME}-lib
         src/state_manager.h
         src/ups_status.cc
         src/ups_status.h
+        src/ups_alarm.cc
+        src/ups_alarm.h
     PUBLIC_INCLUDE_DIR
         include
     PUBLIC
@@ -86,6 +88,7 @@ etn_test_target(${PROJECT_NAME}-lib
         tests/sensor_device.cpp
         tests/state_manager.cpp
         tests/ups_status.cpp
+        tests/ups_alarm.cpp
     INCLUDE_DIR
         include
     PREPROCESSOR -DCATCH_CONFIG_FAST_COMPILE
