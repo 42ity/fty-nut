@@ -3,10 +3,19 @@
 
 TEST_CASE("ups alarm test")
 {
-    CHECK(upsalarm_to_int("") == 0);
-    CHECK(upsalarm_to_int("hello world") == 0);
+    struct {
+        std::string alarms; // verbatim
+        uint32_t bitsfield; // expected
+    } testVector[] = {
+        { "", 0 },
+        { "Internal UPS fault!", 1 << 8L },
+        { "Internal failure!", 1 << 8L },
+        { "unknown alarm", uint32_t(1 << 31L) }, // other alarms
+    };
 
-    // "internal failure' bit used in 'internal-failure' alert rule
-    CHECK(upsalarm_to_int("Internal UPS fault!") == (1 << 8L));
-    CHECK(upsalarm_to_int("Internal failure!") == (1 << 8L));
+    printf("upsalarm_to_int\n");
+    for (auto &it : testVector) {
+        printf("\t'%s' : 0x%x\n", it.alarms.c_str(), it.bitsfield);
+        CHECK(upsalarm_to_int(it.alarms) == it.bitsfield);
+    }
 }

@@ -23,6 +23,7 @@
 
 // recognized alarms
 // "internal failure': referenced by 'internal-[failure|alarm]' alert rules
+#define OTHER_ALARMS_TOKEN "OTHER_ALARMS"
 static const std::map<std::string, uint32_t> alarmsMap =
 {
     { "Replace battery!",             1 <<  0L },
@@ -40,6 +41,7 @@ static const std::map<std::string, uint32_t> alarmsMap =
     { "Manual bypass mode!",          1 << 11L },
     { "Communication fault!",         1 << 12L },
     { "Fuse fault!",                  1 << 13L },
+    { OTHER_ALARMS_TOKEN,             1 << 31L }, // <<- other alarms (default)
 };
 
 uint32_t upsalarm_to_int(const std::string& alarms)
@@ -49,6 +51,13 @@ uint32_t upsalarm_to_int(const std::string& alarms)
         for (const auto& a : alarmsMap) {
             if (alarms.find(a.first) != std::string::npos) {
                 bitsfield |= a.second;
+            }
+        }
+        if (bitsfield == 0) {
+            // default to other alarms
+            const auto& it = alarmsMap.find(OTHER_ALARMS_TOKEN);
+            if (it != alarmsMap.end()) {
+                bitsfield |= it->second;
             }
         }
     }
