@@ -398,6 +398,16 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
     char* ruleName = NULL;
     asprintf(&ruleName, "%s@%s", alert_name, asset_name);
 
+    char* ruleClass = NULL;
+    asprintf(&ruleClass,
+        "{"
+        "\\\"key\\\" : \\\"TRANSLATE_LUA ({{alert_name}} for {{ename}}.)\\\", "
+        "\\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : \\\"%s\\\" }"
+        "}",
+        alert_name_label,
+        asset_friendly_name
+    );
+
     // clang-format off
     char *rule = NULL;
     asprintf (&rule,
@@ -405,7 +415,7 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
             "\"threshold\" : {"
             "  \"rule_name\"     : \"%s\"," //@1
             "  \"rule_source\"   : \"NUT\","
-            "  \"rule_class\"    : \"Device internal\","
+            "  \"rule_class\"    : \"%s\"," //@1b
             "  \"rule_hierarchy\": \"internal.device\","
             "  \"rule_desc\"     : %s," //@2
             "  \"target\"        : \"%s\"," //@3
@@ -427,6 +437,7 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
         "}",
 
         ruleName, //@1
+        ruleClass, //@1b
         s_rule_desc (alert.name).c_str (), //@2
         ruleName, //@3
         asset_name, //@4
@@ -487,6 +498,7 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
     }
 
     zstr_free(&rule);
+    zstr_free(&ruleClass);
     zstr_free(&ruleName);
     zmsg_destroy(&message);
 }
