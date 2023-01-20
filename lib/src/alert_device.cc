@@ -408,7 +408,6 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
         asset_friendly_name
     );
 
-
     const char* TR_LUA_LC = "TRANSLATE_LUA({{alert_name}} is critically low for {{ename}}.)";
     const char* TR_LUA_LW = "TRANSLATE_LUA({{alert_name}} is low for {{ename}}.)";
     const char* TR_LUA_HW = "TRANSLATE_LUA({{alert_name}} is high for {{ename}}.)";
