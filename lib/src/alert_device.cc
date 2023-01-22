@@ -398,15 +398,9 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
     char* ruleName = NULL;
     asprintf(&ruleName, "%s@%s", alert_name, asset_name);
 
-    char* ruleClass = NULL;
-    asprintf(&ruleClass,
-        "{"
-        "\\\"key\\\" : \\\"TRANSLATE_LUA({{alert_name}} for {{ename}}.)\\\", "
-        "\\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : \\\"%s\\\" }"
-        "}",
-        alert_name_label,
-        asset_friendly_name
-    );
+    // ruleClass: en_US display (best as we can)
+    // note: ending space *required* for the translation parser
+    std::string ruleClass = TRANSLATE_ME("%s ", alert_name_label);
 
     const char* TR_LUA_LC = "TRANSLATE_LUA({{alert_name}} is critically low for {{ename}}.)";
     const char* TR_LUA_LW = "TRANSLATE_LUA({{alert_name}} is low for {{ename}}.)";
@@ -420,7 +414,7 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
             "\"threshold\" : {"
             "  \"rule_name\"     : \"%s\"," //@1
             "  \"rule_source\"   : \"NUT\","
-            "  \"rule_class\"    : \"%s\"," //@1b
+            "  \"rule_class\"    : %s," //@1b
             "  \"rule_hierarchy\": \"internal.device\","
             "  \"rule_desc\"     : %s," //@2
             "  \"target\"        : \"%s\"," //@3
@@ -433,16 +427,16 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
             "    { \"high_critical\" : \"%s\" }" //@9
             "  ],"
             "  \"results\" : ["
-            "    { \"low_critical\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : \"  {\\\"key\\\" : \\\"%s\\\", \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } },"
-            "    { \"low_warning\"   : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : \"  {\\\"key\\\" : \\\"%s\\\", \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } },"
-            "    { \"high_warning\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : \"  {\\\"key\\\" : \\\"%s\\\", \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } },"
-            "    { \"high_critical\" : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : \"  {\\\"key\\\" : \\\"%s\\\", \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } }"
+            "    { \"low_critical\"  : { \"action\" : [{\"action\": \"EMAIL\"}], \"severity\":\"CRITICAL\", \"description\" : \"  {\\\"key\\\" : \\\"%s\\\", \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } },"
+            "    { \"low_warning\"   : { \"action\" : [{\"action\": \"EMAIL\"}], \"severity\":\"WARNING\" , \"description\" : \"  {\\\"key\\\" : \\\"%s\\\", \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } },"
+            "    { \"high_warning\"  : { \"action\" : [{\"action\": \"EMAIL\"}], \"severity\":\"WARNING\" , \"description\" : \"  {\\\"key\\\" : \\\"%s\\\", \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } },"
+            "    { \"high_critical\" : { \"action\" : [{\"action\": \"EMAIL\"}], \"severity\":\"CRITICAL\", \"description\" : \"  {\\\"key\\\" : \\\"%s\\\", \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } }"
             "  ]"
             "}"
         "}",
 
         ruleName, //@1
-        ruleClass, //@1b
+        ruleClass.c_str(), //@1b
         s_rule_desc (alert.name).c_str (), //@2
         ruleName, //@3
         asset_name, //@4
@@ -507,7 +501,6 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
     }
 
     zstr_free(&rule);
-    zstr_free(&ruleClass);
     zstr_free(&ruleName);
     zmsg_destroy(&message);
 }
