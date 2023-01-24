@@ -398,6 +398,15 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
     char* ruleName = NULL;
     asprintf(&ruleName, "%s@%s", alert_name, asset_name);
 
+    // ruleClass: en_US display (best as we can)
+    // note: ending space *required* for the translation parser
+    std::string ruleClass = TRANSLATE_ME("%s ", alert_name_label);
+
+    const char* TR_LUA_LC = "TRANSLATE_LUA({{alert_name}} is critically low for {{ename}}.)";
+    const char* TR_LUA_LW = "TRANSLATE_LUA({{alert_name}} is low for {{ename}}.)";
+    const char* TR_LUA_HW = "TRANSLATE_LUA({{alert_name}} is high for {{ename}}.)";
+    const char* TR_LUA_HC = "TRANSLATE_LUA({{alert_name}} is critically high for {{ename}}.)";
+
     // clang-format off
     char *rule = NULL;
     asprintf (&rule,
@@ -405,7 +414,7 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
             "\"threshold\" : {"
             "  \"rule_name\"     : \"%s\"," //@1
             "  \"rule_source\"   : \"NUT\","
-            "  \"rule_class\"    : \"Device internal\","
+            "  \"rule_class\"    : %s," //@1b
             "  \"rule_hierarchy\": \"internal.device\","
             "  \"rule_desc\"     : %s," //@2
             "  \"target\"        : \"%s\"," //@3
@@ -418,15 +427,16 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
             "    { \"high_critical\" : \"%s\" }" //@9
             "  ],"
             "  \"results\" : ["
-            "    { \"low_critical\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : \"  {\\\"key\\\" : \\\"TRANSLATE_LUA ({{alert_name}} is critically low for {{ename}}.)\\\",  \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } },"
-            "    { \"low_warning\"   : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : \"  {\\\"key\\\" : \\\"TRANSLATE_LUA ({{alert_name}} is low for {{ename}}.)\\\",             \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } },"
-            "    { \"high_warning\"  : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"WARNING\" , \"description\" : \"  {\\\"key\\\" : \\\"TRANSLATE_LUA ({{alert_name}} is high for {{ename}}.)\\\",            \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } },"
-            "    { \"high_critical\" : { \"action\" : [{\"action\": \"EMAIL\"}, {\"action\": \"SMS\"}], \"severity\":\"CRITICAL\", \"description\" : \"  {\\\"key\\\" : \\\"TRANSLATE_LUA ({{alert_name}} is critically high for {{ename}}.)\\\", \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } }"
+            "    { \"low_critical\"  : { \"action\" : [{\"action\": \"EMAIL\"}], \"severity\":\"CRITICAL\", \"description\" : \"  {\\\"key\\\" : \\\"%s\\\", \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } },"
+            "    { \"low_warning\"   : { \"action\" : [{\"action\": \"EMAIL\"}], \"severity\":\"WARNING\" , \"description\" : \"  {\\\"key\\\" : \\\"%s\\\", \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } },"
+            "    { \"high_warning\"  : { \"action\" : [{\"action\": \"EMAIL\"}], \"severity\":\"WARNING\" , \"description\" : \"  {\\\"key\\\" : \\\"%s\\\", \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } },"
+            "    { \"high_critical\" : { \"action\" : [{\"action\": \"EMAIL\"}], \"severity\":\"CRITICAL\", \"description\" : \"  {\\\"key\\\" : \\\"%s\\\", \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } }"
             "  ]"
             "}"
         "}",
 
         ruleName, //@1
+        ruleClass.c_str(), //@1b
         s_rule_desc (alert.name).c_str (), //@2
         ruleName, //@3
         asset_name, //@4
@@ -438,21 +448,25 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
         alert.highCritical.c_str (), //@9
 
         //low_critical
+        TR_LUA_LC,
         alert_name_label,
         asset_friendly_name,
         asset_name,
 
         //low_warning
+        TR_LUA_LW,
         alert_name_label,
         asset_friendly_name,
         asset_name,
 
         //high_warning
+        TR_LUA_HW,
         alert_name_label,
         asset_friendly_name,
         asset_name,
 
         //high_critical
+        TR_LUA_HC,
         alert_name_label,
         asset_friendly_name,
         asset_name
