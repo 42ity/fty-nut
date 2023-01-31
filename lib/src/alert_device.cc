@@ -280,7 +280,7 @@ void Device::publishAlert(mlm_client_t* client, DeviceAlert& alert, uint64_t ttl
     if (alert.status == "good") {
         state       = "RESOLVED";
         severity    = "ok";
-        description = TRANSLATE_ME("%s is resolved", alert.name.c_str());
+        description = TRANSLATE_ME("%s is resolved from TOTO", alert.name.c_str());
     } else if (alert.status == "warning-low") {
         severity    = "WARNING";
         description = TRANSLATE_ME("%s is low", alert.name.c_str());
