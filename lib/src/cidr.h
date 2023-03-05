@@ -379,7 +379,7 @@ public:
 
 private:
     // private pointer to libcidr structure
-    CIDR* _cidr;
+    CIDR* _cidr{nullptr};
 
     /**
      * \brief set cidr pointer to new value, free old one.

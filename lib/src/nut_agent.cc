@@ -206,14 +206,15 @@ void NUTAgent::advertisePhysics()
                         value = std::stod(measurements.at("current.input.L1"));
                     } catch (...) {
                     };
-                    char buffer[50];
                     // 3. compute a real value
-                    sprintf(buffer, "%lf", value * 100 / max_value); // because it is %!!!!
+                    char buffer[50];
+                    snprintf(buffer, sizeof(buffer), "%lf", value * 100 / max_value); // because it is %!!!!
                     // 4. form message
                     // 5. send the messsage
                     int r = fty::shm::write_metric(assetName, "load.default", buffer, "%", _ttl);
-                    if (r != 0)
+                    if (r != 0) {
                         log_error("failed to write load.default@%s, result %i", assetName.c_str(), r);
+                    }
                 }
             }
         }

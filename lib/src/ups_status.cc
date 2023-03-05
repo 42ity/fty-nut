@@ -28,8 +28,8 @@
 // following definition is taken as it is from network ups tool project (dummy-ups.h):
 typedef struct
 {
-    const char* status_str;   //!<  ups.status string
-    int         status_value; //!<  ups.status flag bit
+    const char* status_str{nullptr};    //!<  ups.status string
+    int         status_value{0};        //!<  ups.status flag bit
 } status_lkp_t;
 
 // following definition is taken as it is from network ups tool project (dummy-ups.h):
@@ -74,27 +74,26 @@ static uint16_t s_upsstatus_single_status_to_int(const char* status)
 
 uint16_t upsstatus_to_int(const char* status, const char* test_result)
 {
-    int   result = 0;
-    char* buff   = strdup(status);
-    char* b      = buff;
-    char* e;
-
-    if (!buff) {
-        return 0;
-    }
-    while (b) {
-        e = strchr(b, ' ');
-        if (e) {
-            *e = 0;
-            e++;
+    int result = 0;
+    {
+        char* buff = status ? strdup(status) : nullptr;
+        if (!buff) {
+            return 0;
         }
-        result |= s_upsstatus_single_status_to_int(b);
-        b = e;
-    }
-    if (buff) {
+
+        char* b = buff;
+        while (b) {
+            char* e = strchr(b, ' ');
+            if (e) {
+                *e = 0;
+                e++;
+            }
+            result |= s_upsstatus_single_status_to_int(b);
+            b = e;
+        }
         free(buff);
-        buff = NULL;
     }
+
     // detect if a test is in progress
     if (streq(test_result, "in progress")) {
         // add calibration (CAL) flag to ups status
