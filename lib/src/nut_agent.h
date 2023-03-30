@@ -42,11 +42,11 @@ public:
     void TTL(int ttl)
     {
         _ttl = ttl;
-    };
+    }
     int TTL() const
     {
         return _ttl;
-    };
+    }
 
 protected:
     std::string physicalQuantityShortName(const std::string& longName) const;

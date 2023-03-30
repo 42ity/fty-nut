@@ -36,13 +36,13 @@ namespace drivers::nut {
 
 struct NUTInventoryValue
 {
-    bool        changed;
+    bool        changed{true};
     std::string value;
 };
 
 struct NUTPhysicalValue
 {
-    bool        changed;
+    bool        changed{true};
     std::string value;
     std::string candidate;
 };

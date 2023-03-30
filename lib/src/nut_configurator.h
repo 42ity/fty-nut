@@ -39,8 +39,8 @@ struct AutoConfigurationInfo
         STATE_DELETING
     } state;
     // Used to mark visited nodes when refreshing the asset list
-    int                      traversal_color;
-    const AssetState::Asset* asset;
+    int                      traversal_color{STATE_NEW};
+    const AssetState::Asset* asset{nullptr};
 };
 
 class NUTConfigurator
