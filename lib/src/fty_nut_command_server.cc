@@ -21,7 +21,7 @@
 
 #include "fty_nut_command_server.h"
 #include "fty_nut_command_server_helper.h"
-#include "cxxtools/serializationinfo.h"
+#include <cxxtools/serializationinfo.h>
 #include <regex>
 #include <stdexcept>
 #include <nutclient.h>
