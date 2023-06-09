@@ -21,13 +21,13 @@
 
 #include "fty_nut_command_server.h"
 #include "fty_nut_command_server_helper.h"
+#include <cxxtools/serializationinfo.h>
 #include <regex>
 #include <stdexcept>
 #include <nutclient.h>
 #include <fty_common_db.h>
 #include <fty_common_mlm.h>
-#include <cxxtools/jsondeserializer.h>
-#include <cxxtools/jsonserializer.h>
+#include <fty_common_json.h>
 
 namespace ftynut {
 
@@ -94,10 +94,8 @@ static std::vector<std::pair<std::string, int>> topologyRequesterFty(const std::
 
             if (streq(replyResult.get(), "OK")) {
                 cxxtools::SerializationInfo si;
-                std::istringstream          s(replyData.get());
-                cxxtools::JsonDeserializer  json(s);
-                json.deserialize(si);
-
+                std::string s(replyData.get());
+                JSON::readFromString(s, si);
                 for (const auto& chain : si.getMember("powerchains")) {
                     std::string realAsset, realOutlet;
                     chain.getMember("src-id").getValue(realAsset);
@@ -674,13 +672,6 @@ messagebus::UserData NutCommandConnector::requestPerformGroupCommands(messagebus
         log_debug("Expanding automatic group '%s'", command.asset.c_str());
 
         // Build query to fty-automatic-group
-        cxxtools::SerializationInfo requestSI;
-        requestSI.addMember("id") <<= stoi(command.asset);
-        std::ostringstream       requestStream;
-        cxxtools::JsonSerializer requestSerializer(requestStream);
-        requestSerializer.serialize(requestSI);
-        requestSerializer.finish();
-
         messagebus::Message replyMsg;
         replyMsg.metaData() = {
             {messagebus::Message::CORRELATION_ID, messagebus::generateUuid()},
@@ -689,7 +680,10 @@ messagebus::UserData NutCommandConnector::requestPerformGroupCommands(messagebus
             {messagebus::Message::FROM, m_parameters.agentName + "-automatic-group-resolver"},
             {messagebus::Message::REPLY_TO, m_parameters.agentName + "-automatic-group-resolver"},
         };
-        replyMsg.userData() = {requestStream.str()};
+        
+        cxxtools::SerializationInfo requestSI;
+        requestSI.addMember("id") <<= stoi(command.asset);
+        replyMsg.userData() = {JSON::writeToString(requestSI)};
 
         auto reply = requester->request("FTY.Q.GROUP.QUERY", replyMsg, 5);
         if (reply.metaData().at(messagebus::Message::STATUS) != "ok") {
@@ -698,8 +692,7 @@ messagebus::UserData NutCommandConnector::requestPerformGroupCommands(messagebus
 
         cxxtools::SerializationInfo replySI;
         std::istringstream          replyStream(*reply.userData().begin());
-        cxxtools::JsonDeserializer  replyDeserializer(replyStream);
-        replyDeserializer.deserialize(replySI);
+        JSON::readFromStream(replyStream, replySI);
 
         for (const auto& replyItem : replySI) {
             std::string asset;
