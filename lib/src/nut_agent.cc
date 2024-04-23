@@ -240,8 +240,10 @@ void NUTAgent::advertisePhysics()
         if (device.second.hasProperty("status.ups")) {
             std::string status_s = device.second.property("status.ups");
             if (!status_s.empty() // fix IPMVAL-1889 (empty on data-stale)
+                && status_s != "WAIT"  // fix when waiting for the driver response to dumpcmd
                 && device.second.subtype() != "epdu") // ups.status doesn't make sense for epdu
             {
+
                 std::string test_s = (device.second.hasProperty("ups.test.result")
                     ? device.second.property("ups.test.result")
                     : "no test initiated");
