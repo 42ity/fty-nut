@@ -9,12 +9,6 @@
     anyone without the prior written permission of Eaton.
     Limitations, restrictions and exclusions of the Eaton applicable standard
     terms and conditions, such as its EPL and EULA, apply.
-
-    NOTE : This Jenkins pipeline script only handles the self-testing of your
-    project. If you also want the successful codebase published or deployed,
-    you can define a helper job - see the reference implementation skeleton at
-    https://github.com/zeromq/zproject/blob/master/Jenkinsfile-deploy.example
-
 */
 
 @Library('etn-ipm2-jenkins') _
