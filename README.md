@@ -115,21 +115,10 @@ D: 17-11-13 15:21:57     unit=''
 ```
 alerts for sensors are managed by fty-alert-engine (environmental sensors) and fty-alert-flexible (GPI sensors)
 
-* fty_nut_server produces metrics on FTY_PROTO_STREAM_METRICS and fty_shm.
+* fty_nut_server produces metrics on the shared memory (fty_shm).
 
-```
-stream=METRICS
-sender=fty-nut
-subject=status.outlet.2@ups-52
-D: 17-11-13 12:53:21 FTY_PROTO_METRIC:
-D: 17-11-13 12:53:21     aux=
-D: 17-11-13 12:53:21     time=1510577601
-D: 17-11-13 12:53:21     ttl=60
-D: 17-11-13 12:53:21     type='status.outlet.2'
-D: 17-11-13 12:53:21     name='ups-52'
-D: 17-11-13 12:53:21     value='42'
-D: 17-11-13 12:53:21     unit=''
-```
+Example: `status.outlet.2@ups-52c9a13e`.
+
 
 * fty-nut-command doesn't produce metrics.
 
