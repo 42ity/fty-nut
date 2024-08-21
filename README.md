@@ -80,39 +80,12 @@ fty-nut-command is composed of 1 actor:
 
 ### Publishing Metrics
 
-* sensor_actor produces metrics from sensors connected to power devices on FTY_PROTO_STREAM_METRICS_SENSOR and fty_shm.
+* sensor_actor produces metrics from sensors connected to power devices on the shared memory (fty_shm).
 
-```
-stream=_METRICS_SENSOR
-sender=agent-nut-sensor
-subject=humidity.0@epdu-77
-D: 17-11-02 12:18:16 FTY_PROTO_METRIC:
-D: 17-11-02 12:18:16     aux=
-D: 17-11-02 12:18:16         port=0
-D: 17-11-02 12:18:16     time=1509625096
-D: 17-11-02 12:18:16     ttl=60
-D: 17-11-02 12:18:16     type='humidity.0'
-D: 17-11-02 12:18:16     name='epdu-77'
-D: 17-11-02 12:18:16     value='37.60'
-D: 17-11-02 12:18:16     unit='%'
-```
+Example: `humidity.default@sensor-73758544 = 50.40%`
+	       `temperature.default@sensor-73758544 = 24.90C`
+         `status.GPI1@sensorgpio-88301617 = closed`
 
-```
-stream=_METRICS_SENSOR
-sender=agent-nut-sensor
-subject=status.GPI1.0@epdu-76
-D: 17-11-13 15:21:57 FTY_PROTO_METRIC:
-D: 17-11-13 15:21:57     aux=
-D: 17-11-13 15:21:57         sname=sensorgpio-81
-D: 17-11-13 15:21:57         port=0
-D: 17-11-13 15:21:57         ext-port=1
-D: 17-11-13 15:21:57     time=1510586517
-D: 17-11-13 15:21:57     ttl=60
-D: 17-11-13 15:21:57     type='status.GPI1.0'
-D: 17-11-13 15:21:57     name='epdu-76'
-D: 17-11-13 15:21:57     value='closed'
-D: 17-11-13 15:21:57     unit=''
-```
 alerts for sensors are managed by fty-alert-engine (environmental sensors) and fty-alert-flexible (GPI sensors)
 
 * fty_nut_server produces metrics on the shared memory (fty_shm).
