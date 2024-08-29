@@ -59,7 +59,7 @@ public:
         , _index(index){};
 
     void        update(nut::TcpClient& conn, const std::map<std::string, std::string>& mapping);
-    void        publish(mlm_client_t* client, int ttl);
+    void        publish(int ttl);
     void        addChild(const std::string& port, const std::string& child_name);
     ChildrenMap getChildren();
     std::string assetName() const

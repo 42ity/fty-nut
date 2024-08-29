@@ -98,10 +98,6 @@ void sensor_actor(zsock_t* pipe, void* args)
         log_error("client %s failed to connect", ACTOR_SENSOR_NAME);
         return;
     }
-    if (mlm_client_set_producer(client, FTY_PROTO_STREAM_METRICS_SENSOR) < 0) {
-        log_error("mlm_client_set_producer (stream = '%s') failed", FTY_PROTO_STREAM_METRICS_SENSOR);
-        return;
-    }
 
     MlmClientGuard clientInventory(mlm_client_new());
     if (!clientInventory) {
@@ -148,7 +144,7 @@ void sensor_actor(zsock_t* pipe, void* args)
 
                 // hotfix IPMVAL-2713 (data stale on device which host sensors cause communication failure alarms on
                 // sensors) increase ttl from 60 to 240 sec (polling period is equal to 30 sec).
-                sensors.publish(client, int((timeout * 8) / 1000));
+                sensors.publish(int((timeout * 8) / 1000));
 
                 nutClient.disconnect();
             }

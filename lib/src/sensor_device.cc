@@ -23,6 +23,7 @@
 #include <fty_common_nut.h>
 #include <fty_log.h>
 #include <fty_proto.h>
+#include <fty_shm.h>
 #include <string>
 #include <vector>
 
@@ -158,58 +159,50 @@ std::string Sensor::topicSuffixExternal(const std::string& gpiPort) const
     return ".GPI" + gpiPort + "." + std::to_string(_index) + "@" + location();
 }
 
-void Sensor::publish(mlm_client_t* client, int ttl)
+void Sensor::publish(int ttl)
 {
-    if (!_temperature.empty()) {
-        log_debug("sa: publishing temperature '%s' on '%s' from sensor '%s'",
-            _temperature.c_str(), location().c_str(), assetName().c_str());
-
-        zhash_t* aux = zhash_new();
-        zhash_autofree(aux);
-        zhash_insert(aux, "port", const_cast<char*>(std::to_string(_index).c_str()));
-        zhash_insert(aux, "sname", const_cast<char*>(assetName().c_str()));
-        zmsg_t* msg = fty_proto_encode_metric(aux, uint64_t(time(nullptr)), uint32_t(ttl),
-            ("temperature." + std::to_string(_index)).c_str(), location().c_str(), _temperature.c_str(), "C");
-        zhash_destroy(&aux);
-
-        if (msg) {
-            std::string topic = "temperature" + topicSuffix();
-            log_debug("sending new temperature for element_src = '%s', value = '%s' on topic '%s'",
-                location().c_str(), _temperature.c_str(), topic.c_str());
-            int r = mlm_client_send(client, topic.c_str(), &msg);
-            if (r != 0) {
-                log_error("failed to send measurement %s result %d", topic.c_str(), r);
-            }
-            zmsg_destroy(&msg);
+    auto publishOnShm = [ttl](const std::string& name, const std::string& type, const std::string& value, const std::string& unit) {
+        int r = 0;
+        fty_proto_t* n_met = fty_proto_new(FTY_PROTO_METRIC);
+        if (!n_met) {
+            log_error("SHM publish: new METRIC failed (%s)", name.c_str());
+            return -1;
         }
+        fty_proto_set_name(n_met, name.c_str());
+        fty_proto_set_type(n_met, type.c_str());
+        fty_proto_set_value(n_met, "%s", value.c_str());
+        fty_proto_set_unit(n_met, "%s", unit.c_str());
+        fty_proto_set_ttl(n_met, uint32_t(ttl));
+        fty_proto_set_time(n_met, uint64_t(std::time(nullptr)));
+
+        char* aux_log = NULL;
+        asprintf(&aux_log, "%s@%s (value: %s%s, ttl: %u)",
+            fty_proto_type(n_met), fty_proto_name(n_met),
+            fty_proto_value(n_met), fty_proto_unit(n_met),
+            fty_proto_ttl(n_met));
+
+        int rv = fty::shm::write_metric(n_met);
+        if (rv != 0) {
+            log_error("SHM publish failed (%s)", aux_log);
+            r = -1;
+        } else {
+            log_debug("SHM publish %s", aux_log);
+        }
+        zstr_free(&aux_log);
+        fty_proto_destroy(&n_met);
+
+        return r;
+    };
+
+    if (!_temperature.empty()) {
+        publishOnShm(assetName(), "temperature.default", _temperature, "C");
     }
 
     if (!_humidity.empty()) {
-        log_debug("sa: publishing humidity '%s' on '%s' from sensor '%s'",
-            _humidity.c_str(), location().c_str(), assetName().c_str());
-
-        zhash_t* aux = zhash_new();
-        zhash_autofree(aux);
-        zhash_insert(aux, "port", const_cast<char*>(std::to_string(_index).c_str()));
-        zhash_insert(aux, "sname", const_cast<char*>(assetName().c_str()));
-        zmsg_t* msg = fty_proto_encode_metric(aux, uint64_t(time(nullptr)), uint32_t(ttl),
-            ("humidity." + std::to_string(_index)).c_str(), location().c_str(), _humidity.c_str(), "%");
-        zhash_destroy(&aux);
-
-        if (msg) {
-            std::string topic = "humidity" + topicSuffix();
-            log_debug("sending new humidity for element_src = '%s', value = '%s' on topic '%s'",
-                location().c_str(), _humidity.c_str(), topic.c_str());
-            int r = mlm_client_send(client, topic.c_str(), &msg);
-            if (r != 0) {
-                log_error("failed to send measurement %s result %d", topic.c_str(), r);
-            }
-            zmsg_destroy(&msg);
-        }
+        publishOnShm(assetName(), "humidity.default", _humidity, "%");
     }
 
     if (!_contacts.empty()) {
-        log_debug("sa: publishing contacts from sensor '%s'", assetName().c_str());
 
         int gpiPort = 1;
         for (auto& contact : _contacts) {
@@ -218,27 +211,7 @@ void Sensor::publish(mlm_client_t* client, int ttl)
             if (search != _children.end()) {
                 std::string sname = search->second;
 
-                zhash_t* aux = zhash_new();
-                zhash_autofree(aux);
-                zhash_insert(aux, "port", const_cast<char*>(std::to_string(_index).c_str()));
-                zhash_insert(aux, "ext-port", const_cast<char*>(extport.c_str()));
-                zhash_insert(aux, "sname", const_cast<char*>(sname.c_str())); // sname of the child sensor if any
-                zmsg_t* msg = fty_proto_encode_metric(aux, uint64_t(time(nullptr)), uint32_t(ttl),
-                    ("status.GPI" + std::to_string(gpiPort) + "." + std::to_string(_index)).c_str(), location().c_str(),
-                    contact.c_str(), "");
-                zhash_destroy(&aux);
-
-                if (msg) {
-                    std::string topic = "status" + topicSuffixExternal(std::to_string(gpiPort));
-                    log_debug("sending new contact status information for "
-                              "element_src = '%s', value = '%s'. GPI '%s' on port '%s'.",
-                        location().c_str(), contact.c_str(), sname.c_str(), extport.c_str());
-                    int r = mlm_client_send(client, topic.c_str(), &msg);
-                    if (r != 0) {
-                        log_error("failed to send measurement %s result %" PRIi32, topic.c_str(), r);
-                    }
-                    zmsg_destroy(&msg);
-                }
+                publishOnShm(sname, "status.GPI" + extport, contact, "");
             } else {
                 log_debug("I did not find any child for %s on port %s", assetName().c_str(), extport.c_str());
             }

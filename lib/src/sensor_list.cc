@@ -412,13 +412,11 @@ void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
     }
 }
 
-void Sensors::publish(mlm_client_t* client, int ttl)
+void Sensors::publish(int ttl)
 {
-    if (!client) return;
-
     for (auto& it : _sensors) {
         if (zsys_interrupted) break;
-        it.second.publish(client, ttl);
+        it.second.publish(ttl);
     }
 }
 

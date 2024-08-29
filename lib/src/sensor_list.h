@@ -32,7 +32,7 @@ public:
     void updateFromNUT(nut::TcpClient& conn);
     bool updateAssetConfig(AssetState::Asset* asset, mlm_client_t* client);
     void updateSensorList(nut::Client& conn, mlm_client_t* client);
-    void publish(mlm_client_t* client, int ttl);
+    void publish(int ttl);
     void advertiseInventory(mlm_client_t* client);
     const std::map<std::string, std::string>& getSensorMapping() const
     {
