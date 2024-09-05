@@ -219,6 +219,20 @@ void NUTDevice::update(std::map<std::string, std::vector<std::string>>    vars,
 
     try {
         auto mappedInventory = fty::nut::performMapping(mapping("inventoryMapping"), scalarVars, prefixId);
+
+        // IPMPROG-9234: ensure 'capability.execscript' is ("no", 0) if out of context
+        try {
+            if ((mappedInventory["device.type"] != "ups")
+                || (mappedInventory["driver.name"] != "etn-nut-powerconnect")
+            ) {
+                log_debug("== 'capability.execscript' inventory forced to 'no'");
+                mappedInventory["capability.execscript"] = "no";
+                mappedInventory["capability.execscript.level"] = "0";
+            }
+        }
+        catch (...) {
+        }
+
         for (auto value : mappedInventory) {
             updateInventory(value.first, value.second);
         }
