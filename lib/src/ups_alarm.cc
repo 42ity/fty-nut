@@ -41,6 +41,7 @@ static const std::map<std::string, uint32_t> alarmsMap =
     { "Manual bypass mode!",          1 << 11L },
     { "Communication fault!",         1 << 12L },
     { "Fuse fault!",                  1 << 13L },
+    { "Battery is aging!",            1 << 14L }, // LCM alarm (warning)
     { OTHER_ALARMS_TOKEN,             1 << 31L }, // <<- other alarms (default)
 };
 
