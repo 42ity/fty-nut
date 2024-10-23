@@ -22,6 +22,7 @@
 #pragma once
 
 #include "asset_state.h"
+#include "alert_device.h"
 #include <fty_common_nut.h>
 #include <malamute.h>
 #include <map>
@@ -34,23 +35,21 @@ public:
     // port | child_name
     typedef std::map<std::string, std::string> ChildrenMap;
     Sensor()
-        : _asset(nullptr)
-        , _parent(nullptr)
-        , _nutMaster("INVALID-NUT-MASTER")
+        : _nutMaster("INVALID-NUT-MASTER")
         , _index(0){};
-    Sensor(const AssetState::Asset* asset, const AssetState::Asset* parent, ChildrenMap& children)
+    Sensor(std::shared_ptr<AssetState::Asset> asset, std::shared_ptr<AssetState::Asset> parent, ChildrenMap& children)
         : _asset(asset)
         , _parent(parent)
         , _children(children)
         , _nutMaster(asset->location())
         , _index(0){};
-    Sensor(const AssetState::Asset* asset, const AssetState::Asset* parent, ChildrenMap& children, int index)
+    Sensor(std::shared_ptr<AssetState::Asset> asset, std::shared_ptr<AssetState::Asset> parent, ChildrenMap& children, int index)
         : _asset(asset)
         , _parent(parent)
         , _children(children)
         , _nutMaster(asset->location())
         , _index(index){};
-    Sensor(const AssetState::Asset* asset, const AssetState::Asset* parent, ChildrenMap& children,
+    Sensor(std::shared_ptr<AssetState::Asset> asset, std::shared_ptr<AssetState::Asset> parent, ChildrenMap& children,
         const std::string& nutMaster, int index)
         : _asset(asset)
         , _parent(parent)
@@ -108,9 +107,12 @@ public:
     int         nutIndex() const;
     std::string topicSuffix() const;
 
+    std::shared_ptr<AssetState::Asset> getAsset() { return _asset; }
+    const std::string getNutMaster() { return _nutMaster; }
+
 protected:
-    const AssetState::Asset *_asset{nullptr};
-    const AssetState::Asset *_parent{nullptr};
+    std::shared_ptr<AssetState::Asset> _asset;
+    std::shared_ptr<AssetState::Asset> _parent;
     ChildrenMap              _children;
     std::string              _nutMaster;
     int                      _index;

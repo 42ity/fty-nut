@@ -238,7 +238,7 @@ void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
                 parent_name.c_str(), parent_it->second->daisychain());
         }
 
-        const AssetState::Asset* parent = parent_it->second.get();
+        auto parent = parent_it->second;
         const std::string& ip = parent->IP();
         int chain = parent->daisychain();
         std::string master;
@@ -250,11 +250,11 @@ void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
         // for emp01 sensor
         if (i.second->port() == "0") {
             if (chain == 0) {
-                _sensors[name] = Sensor(i.second.get(), parent, children);
+                _sensors[name] = Sensor(i.second, parent, children);
                 log_debug("sa: adding sensor, with parent (not daisy): '%s'", parent_name.c_str());
             } else {
                 master = deviceState.ip2master(ip);
-                _sensors[name] = Sensor(i.second.get(), parent, children, master, 0);
+                _sensors[name] = Sensor(i.second, parent, children, master, 0);
                 log_debug("sa: adding sensor, with parent (daisy) and index %d: '%s'", 0, parent_name.c_str());
             }
         }
@@ -323,7 +323,7 @@ void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
                 index = std::atoi(port.c_str());
                 if (index > 0) {
                     // update parent if necessary
-                    AssetState::Asset* newParent = nullptr;
+                    std::shared_ptr<AssetState::Asset> newParent;
                     // get serial number of parent
                     std::string parentSerialNumberName =
                         prefix + std::string("ambient.") + port + std::string(".parent.serial");
@@ -349,7 +349,7 @@ void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
                                 const std::string& serialDevice = device.second->serial();
                                 log_debug ("sa: ipDevice %s serialDevice %s", ipDevice.c_str(), serialDevice.c_str());
                                 if (ipDevice == ip && serialDevice == parentSerialNumber) {
-                                    newParent = device.second.get();
+                                    newParent = device.second;
                                     break;
                                 }
                             }
@@ -384,9 +384,8 @@ void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
             if (index > 0) {
                 // If no daisychain
                 if (chain == 0) {
-                    _sensors[name] = Sensor(i.second.get(), parent, children, index);
-                    log_debug(
-                        "sa: adding sensor, with parent (not daisy) and index %d: '%s'", index, parent_name.c_str());
+                    _sensors[name] = Sensor(i.second, parent, children, index);
+                    log_debug("sa: adding sensor, with parent (not daisy) and index %d: '%s'", index, parent_name.c_str());
                 }
                 // else daisychain
                 else {
@@ -394,9 +393,8 @@ void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
                         log_error("sa: daisychain host for %s not found", parent_name.c_str());
                         removeInventory(name);
                     } else {
-                        _sensors[name] = Sensor(i.second.get(), parent, children, master, index);
-                        log_debug(
-                            "sa: adding sensor, with parent (daisy) and index %d: '%s'", index, parent_name.c_str());
+                        _sensors[name] = Sensor(i.second, parent, children, master, index);
+                        log_debug("sa: adding sensor, with parent (daisy) and index %d: '%s'", index, parent_name.c_str());
                     }
                 }
             }
@@ -525,5 +523,82 @@ void Sensors::loadSensorMapping(const char* path_to_file)
         _sensorMappingLoaded = true;
     } catch (const std::exception& e) {
         log_error("Couldn't load mapping: %s", e.what());
+    }
+}
+
+void Sensors::addDeviceIfNotPresent(const Device& dev)
+{
+    auto it = _devices.find(dev.assetName());
+    if (it == _devices.end()) {
+        _devices[dev.assetName()] = dev;
+        return;
+    }
+    // At a minimum, we need to update the asset pointer so that the old asset
+    // object can be destroyed
+    it->second.assetPtr(dev.assetPtr());
+}
+
+void Sensors::updateDeviceList(nut::Client& conn)
+{
+    for (auto& sensor : _sensors) {
+
+        auto nutDevice = conn.getDevice(sensor.second.getNutMaster());
+        if (!nutDevice.isOk()) {
+            throw std::runtime_error("device " + sensor.second.getNutMaster() + " is not configured in NUT yet");
+        }
+        auto vars = nutDevice.getVariableValues();
+        auto device = Device(sensor.second.getAsset(), sensor.second.getNutMaster());
+
+        // Add temperature alert
+        std::string prefix = sensor.second.nutPrefix();
+        auto temperature = prefix + "temperature";
+        device.addAlert(temperature, "temperature.default", vars);
+
+        // Add humidity alert
+        auto humidity = prefix + "humidity";
+        device.addAlert(humidity, "humidity.default", vars);
+
+        addDeviceIfNotPresent(device);
+    }
+
+    // Remove devices not used
+    auto it = _devices.begin();
+    while (it != _devices.end()) {
+        if (_sensors.count(it->first) == 0) {
+            auto tbd = it;
+            ++it;
+            _devices.erase(tbd);
+        } else {
+            ++it;
+        }
+    }
+}
+
+void Sensors::updateDevicesValues(nut::TcpClient& nutClient)
+{
+    for (auto& device : _devices) {
+        device.second.update(nutClient);
+    }
+}
+
+void Sensors::publishRules(mlm_client_t* client)
+{
+    if (!client) {
+        log_error("No client to publish rules");
+        return;
+    }
+    for (auto& device : _devices) {
+        device.second.publishRules(client);
+    }
+}
+
+void Sensors::publishAlerts(mlm_client_t* client)
+{
+    if (!client) {
+        log_error("No client to publish alerts");
+        return;
+    }
+    for (auto& device : _devices) {
+        device.second.publishAlerts(client, (_polling_ms / 1000) * 3);
     }
 }

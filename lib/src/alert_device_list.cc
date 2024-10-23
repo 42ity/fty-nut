@@ -79,7 +79,7 @@ void Devices::updateDeviceList()
         return;
 
     const AssetState& deviceState = _state_reader->getState();
-    auto&             devices     = deviceState.getPowerDevices();
+    auto&                 devices = deviceState.getPowerDevices();
 
     log_debug("aa: updating device list");
     for (auto i : devices) {

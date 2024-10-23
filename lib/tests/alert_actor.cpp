@@ -32,7 +32,7 @@ TEST_CASE("alert actor test")
         {"ambient.temperature.low.warning", {"10", "", ""}},
         {"ambient.temperature.low.critical", {"5", "", ""}},
     };
-    dev.addAlert("ambient.temperature", alerts);
+    dev.addAlert("ambient.temperature", "ambient.temperature", alerts);
     dev.alerts()["ambient.temperature"].status = "critical-high";
     StateManager manager;
     Devices      devs(manager.getReader());

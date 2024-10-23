@@ -15,7 +15,7 @@ TEST_CASE("sensor device test")
     fty_proto_aux_insert(proto, "subtype", "epdu");
     fty_proto_aux_insert(proto, "parent_name.1", "ups");
     fty_proto_ext_insert(proto, "daisy_chain", "1");
-    AssetState::Asset epdu_m(proto);
+    auto epdu_m = std::make_shared<AssetState::Asset>(proto);
     fty_proto_destroy(&proto);
     // epdu slave #1
     proto = fty_proto_new(FTY_PROTO_ASSET);
@@ -26,7 +26,7 @@ TEST_CASE("sensor device test")
     fty_proto_aux_insert(proto, "subtype", "epdu");
     fty_proto_aux_insert(proto, "parent_name.1", "ups");
     fty_proto_ext_insert(proto, "daisy_chain", "2");
-    AssetState::Asset epdu_1(proto);
+    auto epdu_1 = std::make_shared<AssetState::Asset>(proto);
     fty_proto_destroy(&proto);
 
     std::map<std::string, std::string> children;
@@ -39,9 +39,9 @@ TEST_CASE("sensor device test")
     fty_proto_aux_insert(proto, "type", "device");
     fty_proto_aux_insert(proto, "subtype", "sensor");
     fty_proto_aux_insert(proto, "parent_name.1", "ups");
-    AssetState::Asset asset_a(proto);
+    auto asset_a = std::make_shared<AssetState::Asset>(proto);
     fty_proto_destroy(&proto);
-    Sensor a(&asset_a, nullptr, children);
+    Sensor a(asset_a, nullptr, children);
     CHECK(a.sensorPrefix() == "ambient.");
     CHECK(a.topicSuffix() == ".0@ups");
     CHECK(a.nutPrefix() == "ambient.");
@@ -57,9 +57,9 @@ TEST_CASE("sensor device test")
     fty_proto_aux_insert(proto, "parent_name.1", "ups");
     fty_proto_ext_insert(proto, "port", "2");
     fty_proto_ext_insert(proto, "endpoint.1.sub_address", "1");
-    AssetState::Asset asset_b(proto);
+    auto asset_b = std::make_shared<AssetState::Asset>(proto);
     fty_proto_destroy(&proto);
-    Sensor b(&asset_b, nullptr, children, "ups", 2);
+    Sensor b(asset_b, nullptr, children, "ups", 2);
     CHECK(b.sensorPrefix() == "ambient.2.");
     CHECK(b.topicSuffix() == ".2@ups");
     CHECK(b.nutPrefix() == "ambient.2.");
@@ -75,9 +75,9 @@ TEST_CASE("sensor device test")
     fty_proto_aux_insert(proto, "subtype", "sensor");
     fty_proto_aux_insert(proto, "parent_name.1", "epdu_m");
     fty_proto_ext_insert(proto, "endpoint.1.sub_address", "2");
-    AssetState::Asset asset_c(proto);
+    auto asset_c = std::make_shared<AssetState::Asset>(proto);
     fty_proto_destroy(&proto);
-    Sensor c(&asset_c, &epdu_m, children, "epdu_m", 0);
+    Sensor c(asset_c, epdu_m, children, "epdu_m", 0);
     CHECK(c.sensorPrefix() == "device.1.ambient.");
     CHECK(c.topicSuffix() == ".0@epdu_m");
     CHECK(c.nutPrefix() == "device.1.ambient.");
@@ -93,9 +93,9 @@ TEST_CASE("sensor device test")
     fty_proto_aux_insert(proto, "subtype", "sensor");
     fty_proto_aux_insert(proto, "parent_name.1", "epdu_1");
     fty_proto_ext_insert(proto, "endpoint.1.sub_address", "2");
-    AssetState::Asset asset_d(proto);
+    auto asset_d = std::make_shared<AssetState::Asset>(proto);
     fty_proto_destroy(&proto);
-    Sensor d(&asset_d, &epdu_1, children, "epdu_m", 0);
+    Sensor d(asset_d, epdu_1, children, "epdu_m", 0);
     CHECK(d.sensorPrefix() == "device.2.ambient.");
     CHECK(d.topicSuffix() == ".0@epdu_1");
     CHECK(d.nutPrefix() == "device.2.ambient.");
@@ -112,9 +112,9 @@ TEST_CASE("sensor device test")
     fty_proto_aux_insert(proto, "parent_name.1", "epdu_m");
     fty_proto_ext_insert(proto, "port", "3");
     fty_proto_ext_insert(proto, "endpoint.1.sub_address", "8");
-    AssetState::Asset asset_e(proto);
+    auto asset_e = std::make_shared<AssetState::Asset>(proto);
     fty_proto_destroy(&proto);
-    Sensor e(&asset_e, &epdu_m, children, "epdu_m", 3);
+    Sensor e(asset_e, epdu_m, children, "epdu_m", 3);
     CHECK(e.sensorPrefix() == "device.1.ambient.3.");
     CHECK(e.topicSuffix() == ".3@epdu_m");
     CHECK(e.nutPrefix() == "device.1.ambient.3.");
@@ -131,9 +131,9 @@ TEST_CASE("sensor device test")
     fty_proto_aux_insert(proto, "parent_name.1", "epdu_1");
     fty_proto_ext_insert(proto, "port", "5");
     fty_proto_ext_insert(proto, "endpoint.1.sub_address", "12");
-    AssetState::Asset asset_f(proto);
+    auto asset_f = std::make_shared<AssetState::Asset>(proto);
     fty_proto_destroy(&proto);
-    Sensor f(&asset_f, &epdu_1, children, "epdu_m", 5);
+    Sensor f(asset_f, epdu_1, children, "epdu_m", 5);
     CHECK(f.sensorPrefix() == "device.2.ambient.5.");
     CHECK(f.topicSuffix() == ".5@epdu_1");
     CHECK(f.nutPrefix() == "device.1.ambient.5.");

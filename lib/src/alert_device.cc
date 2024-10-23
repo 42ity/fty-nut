@@ -43,13 +43,13 @@ void Device::fixAlertLimits(DeviceAlert& alert)
     }
 }
 
-void Device::addAlert(const std::string& quantity, const std::map<std::string, std::vector<std::string>>& variables)
+void Device::addAlert(const std::string& quantity, const std::string& alertName, const std::map<std::string, std::vector<std::string>>& variables)
 {
     log_debug("aa: device %s provides %s alert", assetName().c_str(), quantity.c_str());
     std::string prefix = daisychainPrefix() + quantity;
 
     DeviceAlert alert;
-    alert.name = quantity;
+    alert.name = alertName;
 
     // Is there an existing alert which we can change?
     const auto& _existingalert = _alerts.find(quantity);
@@ -152,8 +152,9 @@ std::map<std::string, DeviceAlert>& Device::alerts()
 int Device::scanCapabilities(nut::TcpClient& conn)
 {
     log_debug("aa: scanning capabilities for %s", assetName().c_str());
-    if (!conn.isConnected())
+    if (!conn.isConnected()) {
         return 0;
+    }
 
     std::string prefix = daisychainPrefix();
     int         retval = -1;
@@ -171,49 +172,16 @@ int Device::scanCapabilities(nut::TcpClient& conn)
         if (vars.empty())
             return 0;
 
-        // Sensors handling
-        if (vars.find(prefix + "ambient.count") != vars.cend()) {
-            // New style sensor(s) (EMP002: ambient collection, with index)
-            auto sensor_count_var = vars.find(prefix + "ambient.count");
-            int  sensors_count    = std::stoi(sensor_count_var->second[0]);
-            log_debug("aa: found %i sensor(s)", sensors_count);
-
-            for (int a = 1; a <= sensors_count; a++) {
-                std::string q = "ambient." + std::to_string(a) + ".temperature";
-                if (vars.find(prefix + q + ".status") != vars.cend()) {
-                    addAlert(q, vars);
-                    _scanned = true;
-                }
-                q = "ambient." + std::to_string(a) + ".humidity";
-                if (vars.find(prefix + q + ".status") != vars.cend()) {
-                    addAlert(q, vars);
-                    _scanned = true;
-                }
-            }
-        } else {
-            // Legacy sensor (EMP001: ambient collection, without index)
-            std::string q = "ambient.temperature";
-            if (vars.find(prefix + q + ".status") != vars.cend()) {
-                addAlert(q, vars);
-                _scanned = true;
-            }
-            q = "ambient.humidity";
-            if (vars.find(prefix + q + ".status") != vars.cend()) {
-                addAlert(q, vars);
-                _scanned = true;
-            }
-        }
-
         // Input handling
         for (int a = 1; a <= 3; a++) {
             std::string q = "input.L" + std::to_string(a) + ".current";
             if (vars.find(prefix + q + ".status") != vars.cend()) {
-                addAlert(q, vars);
+                addAlert(q, q, vars);
                 _scanned = true;
             }
             q = "input.L" + std::to_string(a) + ".voltage";
             if (vars.find(prefix + q + ".status") != vars.cend()) {
-                addAlert(q, vars);
+                addAlert(q, q, vars);
                 _scanned = true;
             }
         }
@@ -223,13 +191,13 @@ int Device::scanCapabilities(nut::TcpClient& conn)
             bool found = false;
             std::string q = "outlet.group." + std::to_string(a) + ".current";
             if (vars.find(prefix + q + ".status") != vars.cend()) {
-                addAlert(q, vars);
+                addAlert(q, q, vars);
                 found = true;
                 _scanned = true;
             }
             q = "outlet.group." + std::to_string(a) + ".voltage";
             if (vars.find(prefix + q + ".status") != vars.cend()) {
-                addAlert(q, vars);
+                addAlert(q, q, vars);
                 found = true;
                 _scanned = true;
             }
@@ -258,41 +226,73 @@ cleanup:
 
 void Device::publishAlerts(mlm_client_t* client, uint64_t ttl)
 {
-    if (!client)
+    if (!client) {
+        log_error("publishAlerts: no client defined");
         return;
+    }
+
     log_debug("aa: publishing %zu alerts on %s", _alerts.size(), assetName().c_str());
     for (auto& it : _alerts) {
         publishAlert(client, it.second, ttl);
     }
 }
 
+// HOTFIX arrange as we can the alert name displayed (en_US)
+// TODO use translation string instead
+// NOTE: alertname modified on return
+// ex.: "input.L3.voltage" -> "Input L3 voltage"
+
+static void makeAlertNameMoreHumanReadable(const char* alertname)
+{
+    if (!alertname) return;
+
+    bool capitalize = true;
+    for (char* p = const_cast<char*>(alertname); (*p) != 0; p++) {
+        if (capitalize) { // capitalize 1st char
+            capitalize = false;
+            *p = char(toupper(*p));
+        }
+        if ((*p)== '.') { // subs '.' with ' '
+            *p = ' ';
+        }
+    }
+}
+
 void Device::publishAlert(mlm_client_t* client, DeviceAlert& alert, uint64_t ttl)
 {
-    if (!client)
+    if (!client) {
+        log_error("publishAlert: no client defined");
         return;
-    if (alert.status.empty())
+    }
+    if (alert.status.empty()) {
+        log_error("publishAlert: alert status empty");
         return;
+    }
 
     const char *state = "ACTIVE", *severity = NULL;
     std::string description;
+
+    std::string alertNameLabelStr = alert.name; // cpy
+    const char* alert_name_label  = alertNameLabelStr.c_str();
+    makeAlertNameMoreHumanReadable(alert_name_label);
 
     log_debug("aa: alert status '%s'", alert.status.c_str());
     if (alert.status == "good") {
         state       = "RESOLVED";
         severity    = "ok";
-        description = TRANSLATE_ME("%s is resolved", alert.name.c_str());
+        description = TRANSLATE_ME("%s is resolved", alert_name_label);
     } else if (alert.status == "warning-low") {
         severity    = "WARNING";
-        description = TRANSLATE_ME("%s is low", alert.name.c_str());
+        description = TRANSLATE_ME("%s is low", alert_name_label);
     } else if (alert.status == "critical-low") {
         severity    = "CRITICAL";
-        description = TRANSLATE_ME("%s is critically low", alert.name.c_str());
+        description = TRANSLATE_ME("%s is critically low", alert_name_label);
     } else if (alert.status == "warning-high") {
         severity    = "WARNING";
-        description = TRANSLATE_ME("%s is high", alert.name.c_str());
+        description = TRANSLATE_ME("%s is high", alert_name_label);
     } else if (alert.status == "critical-high") {
         severity    = "CRITICAL";
-        description = TRANSLATE_ME("%s is critically high", alert.name.c_str());
+        description = TRANSLATE_ME("%s is critically high", alert_name_label);
     }
     std::string rule = alert.name + "@" + assetName();
 
@@ -300,6 +300,10 @@ void Device::publishAlert(mlm_client_t* client, DeviceAlert& alert, uint64_t ttl
         log_error("aa: alert %s has unknown severity value %s. Set to WARNING.", rule.c_str(), alert.status.c_str());
         severity = "WARNING";
     }
+
+    zlist_t *listAction = zlist_new();
+    zlist_append(listAction, const_cast<char*>("EMAIL"));
+    zlist_append(listAction, const_cast<char*>("SMS"));
 
     log_debug("aa: publishing alert %s", rule.c_str());
     zmsg_t*     message = fty_proto_encode_alert(nullptr, // aux
@@ -310,19 +314,23 @@ void Device::publishAlert(mlm_client_t* client, DeviceAlert& alert, uint64_t ttl
         state,               // state
         severity,            // severity
         description.c_str(), // description
-        NULL                 // action ?email
+        listAction           // action list
     );
+
     if (message) {
         std::string topic   = rule + "/" + severity + "@" + assetName();
         mlm_client_send(client, topic.c_str(), &message);
     }
     zmsg_destroy(&message);
+    zlist_destroy(&listAction);
 }
 
 void Device::publishRules(mlm_client_t* client)
 {
-    if (!client)
+    if (!client) {
+        log_error("publishRules: no client defined");
         return;
+    }
 
     for (auto& it : _alerts) {
         publishRule(client, it.second);
@@ -353,31 +361,11 @@ static std::string s_rule_desc(const std::string& alert_name)
         return "{}";
 }
 
-// HOTFIX arrange as we can the alert name displayed (en_US)
-// TODO use translation string instead
-// NOTE: alertname modified on return
-// ex.: "input.L3.voltage" -> "Input L3 voltage"
-
-static void makeAlertNameMoreHumanReadable(const char* alertname)
-{
-    if (!alertname) return;
-
-    bool capitalize = true;
-    for (char* p = const_cast<char*>(alertname); (*p) != 0; p++) {
-        if (capitalize) { // capitalize 1st char
-            capitalize = false;
-            *p = char(toupper(*p));
-        }
-        if ((*p)== '.') { // subs '.' with ' '
-            *p = ' ';
-        }
-    }
-}
-
 void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
 {
-    if (!client || alert.rulePublished)
+    if (!client || alert.rulePublished) {
         return;
+    }
 
     zmsg_t* message = zmsg_new();
     assert(message);
@@ -508,8 +496,11 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
 void Device::update(nut::TcpClient& conn)
 {
     auto nutDevice = conn.getDevice(_nutName);
-    if (!nutDevice.isOk())
+    if (!nutDevice.isOk()) {
+        log_error("aa: device %s is not present", _nutName.c_str());
         return;
+    }
+
     for (auto& it : _alerts) {
         try {
             std::string prefix = daisychainPrefix();
@@ -531,7 +522,8 @@ void Device::update(nut::TcpClient& conn)
 
 std::string Device::daisychainPrefix() const
 {
-    if (chain() == 0)
+    if (chain() == 0) {
         return "";
+    }
     return "device." + std::to_string(chain()) + ".";
 }
