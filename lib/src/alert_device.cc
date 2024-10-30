@@ -330,6 +330,10 @@ void Device::publishAlert(mlm_client_t* client, DeviceAlert& alert, uint64_t ttl
         severity = "WARNING";
     }
 
+    zlist_t *listAction = zlist_new();
+    zlist_append(listAction, const_cast<char*>("EMAIL"));
+    zlist_append(listAction, const_cast<char*>("SMS"));
+
     log_debug("aa: publishing alert %s", rule.c_str());
     zmsg_t*     message = fty_proto_encode_alert(nullptr, // aux
         uint64_t(alert.timestamp),                           // timestamp
@@ -339,13 +343,14 @@ void Device::publishAlert(mlm_client_t* client, DeviceAlert& alert, uint64_t ttl
         state,               // state
         severity,            // severity
         description.c_str(), // description
-        NULL                 // action ?email
+        listAction           // action list
     );
     if (message) {
         std::string topic   = rule + "/" + severity + "@" + assetName();
         mlm_client_send(client, topic.c_str(), &message);
     }
     zmsg_destroy(&message);
+    zlist_destroy(&listAction);
 }
 
 void Device::publishRules(mlm_client_t* client)
