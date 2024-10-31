@@ -256,6 +256,27 @@ cleanup:
     return retval;
 }
 
+// HOTFIX arrange as we can the alert name displayed (en_US)
+// TODO use translation string instead
+// NOTE: alertname modified on return
+// ex.: "input.L3.voltage" -> "Input L3 voltage"
+
+static void makeAlertNameMoreHumanReadable(const char* alertname)
+{
+    if (!alertname) return;
+
+    bool capitalize = true;
+    for (char* p = const_cast<char*>(alertname); (*p) != 0; p++) {
+        if (capitalize) { // capitalize 1st char
+            capitalize = false;
+            *p = char(toupper(*p));
+        }
+        if ((*p)== '.') { // subs '.' with ' '
+            *p = ' ';
+        }
+    }
+}
+
 void Device::publishAlerts(mlm_client_t* client, uint64_t ttl)
 {
     if (!client)
@@ -268,31 +289,39 @@ void Device::publishAlerts(mlm_client_t* client, uint64_t ttl)
 
 void Device::publishAlert(mlm_client_t* client, DeviceAlert& alert, uint64_t ttl)
 {
-    if (!client)
+    if (!client) {
+        log_error("publishAlert: no client defined");
         return;
-    if (alert.status.empty())
+    }
+    if (alert.status.empty()) {
+        log_error("publishAlert: alert status empty");
         return;
+    }
 
     const char *state = "ACTIVE", *severity = NULL;
     std::string description;
+
+    std::string alertNameLabelStr = alert.name; // cpy
+    const char* alert_name_label  = alertNameLabelStr.c_str();
+    makeAlertNameMoreHumanReadable(alert_name_label);
 
     log_debug("aa: alert status '%s'", alert.status.c_str());
     if (alert.status == "good") {
         state       = "RESOLVED";
         severity    = "ok";
-        description = TRANSLATE_ME("%s is resolved", alert.name.c_str());
+        description = TRANSLATE_ME("%s is resolved", alert_name_label);
     } else if (alert.status == "warning-low") {
         severity    = "WARNING";
-        description = TRANSLATE_ME("%s is low", alert.name.c_str());
+        description = TRANSLATE_ME("%s is low", alert_name_label);
     } else if (alert.status == "critical-low") {
         severity    = "CRITICAL";
-        description = TRANSLATE_ME("%s is critically low", alert.name.c_str());
+        description = TRANSLATE_ME("%s is critically low", alert_name_label);
     } else if (alert.status == "warning-high") {
         severity    = "WARNING";
-        description = TRANSLATE_ME("%s is high", alert.name.c_str());
+        description = TRANSLATE_ME("%s is high", alert_name_label);
     } else if (alert.status == "critical-high") {
         severity    = "CRITICAL";
-        description = TRANSLATE_ME("%s is critically high", alert.name.c_str());
+        description = TRANSLATE_ME("%s is critically high", alert_name_label);
     }
     std::string rule = alert.name + "@" + assetName();
 
@@ -351,27 +380,6 @@ static std::string s_rule_desc(const std::string& alert_name)
         return TRANSLATE_ME("Current");
     else
         return "{}";
-}
-
-// HOTFIX arrange as we can the alert name displayed (en_US)
-// TODO use translation string instead
-// NOTE: alertname modified on return
-// ex.: "input.L3.voltage" -> "Input L3 voltage"
-
-static void makeAlertNameMoreHumanReadable(const char* alertname)
-{
-    if (!alertname) return;
-
-    bool capitalize = true;
-    for (char* p = const_cast<char*>(alertname); (*p) != 0; p++) {
-        if (capitalize) { // capitalize 1st char
-            capitalize = false;
-            *p = char(toupper(*p));
-        }
-        if ((*p)== '.') { // subs '.' with ' '
-            *p = ' ';
-        }
-    }
 }
 
 void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
