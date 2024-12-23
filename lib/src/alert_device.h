@@ -22,11 +22,14 @@
 #pragma once
 
 #include "asset_state.h"
+#include <fty/expected.h>
 #include <malamute.h>
 #include <map>
 #include <memory>
 #include <nutclient.h>
 #include <string>
+#include <nutclient.h>
+#include <cxxtools/serializationinfo.h>
 
 struct DeviceAlert
 {
@@ -39,6 +42,7 @@ struct DeviceAlert
     int64_t     timestamp     = 0;
     bool        rulePublished = false;
     bool        ruleRescanned = false;
+    bool        ruleNew       = true;
 };
 
 class Device
@@ -89,25 +93,23 @@ public:
         return _scanned;
     }
 
-    void update(nut::TcpClient& conn);
-    int  scanCapabilities(nut::TcpClient& conn);
-    void publishAlerts(mlm_client_t* client, uint64_t ttl);
+    void update(nut::ConnectionClient& conn);
+    int  scanCapabilities(nut::ConnectionClient& conn);
     void publishRules(mlm_client_t* client);
 
 public:
-    void addAlert(const std::string& quantity, const std::map<std::string, std::vector<std::string>>& variables);
+    void addAlert(const std::string& quantity, const std::string& alertName, const std::map<std::string, std::vector<std::string>>& variables);
     const std::map<std::string, DeviceAlert>& alerts() const;
     std::map<std::string, DeviceAlert>& alerts();
 
 private:
     std::shared_ptr<AssetState::Asset> _asset;
-    std::string                        _nutName;
-    bool                               _scanned;
+    std::string _nutName;
+    bool _scanned;
     std::map<std::string, DeviceAlert> _alerts;
 
-
-    void        publishAlert(mlm_client_t* client, DeviceAlert& alert, uint64_t ttl);
-    void        publishRule(mlm_client_t* client, DeviceAlert& alert);
-    void        fixAlertLimits(DeviceAlert& alert);
+    fty::Expected<cxxtools::SerializationInfo> getRule(mlm_client_t *client, const DeviceAlert& alert);
+    void publishRule(mlm_client_t* client, DeviceAlert& alert);
+    void fixAlertLimits(DeviceAlert& alert);
     std::string daisychainPrefix() const;
 };

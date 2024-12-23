@@ -6,7 +6,7 @@ TEST_CASE("alert device test")
     //  @selftest
     Device                                          dev;
     std::map<std::string, std::vector<std::string>> nothing = {{"nothing", {"h1", "h2"}}};
-    dev.addAlert("ambient.temperature", nothing);
+    dev.addAlert("ambient.temperature", "ambient.temperature", nothing);
     assert(dev.alerts().empty());
 
     std::map<std::string, std::vector<std::string>> alerts = {
@@ -21,8 +21,8 @@ TEST_CASE("alert device test")
         {"ambient.humidity.low", {"10", "", ""}},
     };
 
-    dev.addAlert("ambient.temperature", alerts);
-    dev.addAlert("ambient.humidity", alerts);
+    dev.addAlert("ambient.temperature", "ambient.temperature", alerts);
+    dev.addAlert("ambient.humidity", "ambient.humidity", alerts);
     REQUIRE(dev.alerts().size() == 2);
     CHECK(dev.alerts()["ambient.humidity"].lowWarning == "10");
     CHECK(dev.alerts()["ambient.humidity"].lowCritical == "10");
