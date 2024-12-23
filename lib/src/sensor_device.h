@@ -109,6 +109,9 @@ public:
     int         nutIndex() const;
     std::string topicSuffix() const;
 
+    std::shared_ptr<AssetState::Asset> getAsset() { return _asset; }
+    const std::string getNutMaster() { return _nutMaster; }
+
 protected:
     std::shared_ptr<AssetState::Asset> _asset{nullptr};
     std::shared_ptr<AssetState::Asset> _parent{nullptr};

@@ -46,13 +46,13 @@ void Device::fixAlertLimits(DeviceAlert& alert)
     }
 }
 
-void Device::addAlert(const std::string& quantity, const std::map<std::string, std::vector<std::string>>& variables)
+void Device::addAlert(const std::string& quantity, const std::string& alertName, const std::map<std::string, std::vector<std::string>>& variables)
 {
     log_debug("aa: device %s provides %s alert", assetName().c_str(), quantity.c_str());
     std::string prefix = daisychainPrefix() + quantity;
 
     DeviceAlert alert;
-    alert.name = quantity;
+    alert.name = alertName;
 
     // Is there an existing alert which we can change?
     const auto& _existingalert = _alerts.find(quantity);
@@ -73,7 +73,7 @@ void Device::addAlert(const std::string& quantity, const std::map<std::string, s
         }
     } // else go on using the freshly made "alert" instance
     else {
-        log_debug("aa: device %s, alert %s is new", assetName().c_str(), quantity.c_str());
+        log_debug("aa: device %s, alert %s is new", assetName().c_str(), alertName.c_str());
     }
 
     // does the device evaluation?
@@ -146,7 +146,7 @@ void Device::addAlert(const std::string& quantity, const std::map<std::string, s
 
         // If entry exists we must update at least the alert.ruleRescanned
         // otherwise we must add it to the list.
-        log_debug("aa: adding alert %s to %s", quantity.c_str(), assetName().c_str());
+        log_debug("aa: adding alert %s to %s", alertName.c_str(), assetName().c_str());
         _alerts[quantity] = alert;
     }
 }
@@ -188,49 +188,16 @@ int Device::scanCapabilities(nut::ConnectionClient& conn)
             return 0;
         }
 
-        // Sensors handling
-        if (vars.find(prefix + "ambient.count") != vars.cend()) {
-            // New style sensor(s) (EMP002: ambient collection, with index)
-            auto sensor_count_var = vars.find(prefix + "ambient.count");
-            int  sensors_count    = std::stoi(sensor_count_var->second[0]);
-            log_debug("aa: found %i sensor(s)", sensors_count);
-
-            for (int a = 1; a <= sensors_count; a++) {
-                std::string q = "ambient." + std::to_string(a) + ".temperature";
-                if (vars.find(prefix + q + ".status") != vars.cend()) {
-                    addAlert(q, vars);
-                    _scanned = true;
-                }
-                q = "ambient." + std::to_string(a) + ".humidity";
-                if (vars.find(prefix + q + ".status") != vars.cend()) {
-                    addAlert(q, vars);
-                    _scanned = true;
-                }
-            }
-        } else {
-            // Legacy sensor (EMP001: ambient collection, without index)
-            std::string q = "ambient.temperature";
-            if (vars.find(prefix + q + ".status") != vars.cend()) {
-                addAlert(q, vars);
-                _scanned = true;
-            }
-            q = "ambient.humidity";
-            if (vars.find(prefix + q + ".status") != vars.cend()) {
-                addAlert(q, vars);
-                _scanned = true;
-            }
-        }
-
         // Input handling
         for (int a = 1; a <= 3; a++) {
             std::string q = "input.L" + std::to_string(a) + ".current";
             if (vars.find(prefix + q + ".status") != vars.cend()) {
-                addAlert(q, vars);
+                addAlert(q, q, vars);
                 _scanned = true;
             }
             q = "input.L" + std::to_string(a) + ".voltage";
             if (vars.find(prefix + q + ".status") != vars.cend()) {
-                addAlert(q, vars);
+                addAlert(q, q, vars);
                 _scanned = true;
             }
         }
@@ -240,13 +207,13 @@ int Device::scanCapabilities(nut::ConnectionClient& conn)
             bool found = false;
             std::string q = "outlet.group." + std::to_string(a) + ".current";
             if (vars.find(prefix + q + ".status") != vars.cend()) {
-                addAlert(q, vars);
+                addAlert(q, q, vars);
                 found = true;
                 _scanned = true;
             }
             q = "outlet.group." + std::to_string(a) + ".voltage";
             if (vars.find(prefix + q + ".status") != vars.cend()) {
-                addAlert(q, vars);
+                addAlert(q, q, vars);
                 found = true;
                 _scanned = true;
             }
@@ -371,10 +338,11 @@ fty::Expected<cxxtools::SerializationInfo> Device::getRule(mlm_client_t* client,
 
     ZstrGuard result(zmsg_popstr(resp));
     if (result && streq(result, "OK")) {
+        ZstrGuard alertJson(zmsg_popstr(resp));
+        cxxtools::SerializationInfo alertSi;
         try {
-            ZstrGuard alertJson(zmsg_popstr(resp));
-            cxxtools::SerializationInfo alertSi;
-            JSON::readFromString(alertJson.get(), alertSi);
+            std::string tmpJson(alertJson);
+            JSON::readFromString(tmpJson, alertSi);
             return alertSi;
         }
         catch(const std::exception& e) {
@@ -599,6 +567,10 @@ void Device::update(nut::ConnectionClient& conn)
         try {
             auto prefix = daisychainPrefix();
             auto name = prefix + it.first;
+            // Don't publish ambient metrics (already made by sensor actor)
+            if (name.find("ambient.") != std::string::npos) {
+                continue;
+            }
             auto value  = nutDevice.getVariableValue(name);
             if (value.empty()) {
                 log_debug("aa: %s on %s is not present", it.first.c_str(), assetName().c_str());

@@ -525,3 +525,66 @@ void Sensors::loadSensorMapping(const char* path_to_file)
         log_error("Couldn't load mapping: %s", e.what());
     }
 }
+
+void Sensors::updateDeviceList(nut::Client& conn)
+{
+    for (auto& sensor : _sensors) {
+
+        auto nutDevice = conn.getDevice(sensor.second.getNutMaster());
+        if (!nutDevice.isOk()) {
+            throw std::runtime_error("device " + sensor.second.getNutMaster() + " is not configured in NUT yet");
+        }
+        auto vars = nutDevice.getVariableValues();
+
+        std::shared_ptr<Device> ptrDevice;
+        auto sensorName = sensor.second.assetName();
+        auto it = _devices.find(sensorName);
+        if (it == _devices.end()) {
+            ptrDevice = std::shared_ptr<Device>(new Device(sensor.second.getAsset(), sensor.second.getNutMaster()));
+            _devices[sensorName] = ptrDevice;
+        }
+        else {
+            ptrDevice = it->second;
+            // At a minimum, we need to update the asset pointer so that the old asset
+            // object can be destroyed
+            ptrDevice->assetPtr(sensor.second.getAsset());
+
+            // Rescan alerts
+            for (auto& it_alert : ptrDevice->alerts()) {
+               it_alert.second.ruleRescanned = false;
+            }
+        }
+
+        std::string prefix = sensor.second.nutPrefix();
+        // Add temperature alert
+        auto temperature = prefix + "temperature";
+        ptrDevice->addAlert(temperature, "temperature.default", vars);
+
+        // Add humidity alert
+        auto humidity = prefix + "humidity";
+        ptrDevice->addAlert(humidity, "humidity.default", vars);
+    }
+
+    // Remove devices not used
+    auto it = _devices.begin();
+    while (it != _devices.end()) {
+        if (_sensors.count(it->first) == 0) {
+            auto tbd = it;
+            ++it;
+            _devices.erase(tbd);
+        } else {
+            ++it;
+        }
+    }
+}
+
+void Sensors::publishRules(mlm_client_t* client)
+{
+    if (!client) {
+        log_error("No client to publish rules");
+        return;
+    }
+    for (auto& device : _devices) {
+        device.second->publishRules(client);
+    }
+}
