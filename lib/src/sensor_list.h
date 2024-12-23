@@ -32,7 +32,10 @@ public:
     void updateFromNUT(nut::TcpClient& conn);
     bool updateAssetConfig(AssetState::Asset* asset, mlm_client_t* client);
     void updateSensorList(nut::Client& conn, mlm_client_t* client);
+    void updateDeviceList(nut::Client& conn);
+    void updateDevicesValues(nut::TcpClient& nutClient);
     void publish(int ttl);
+    void publishRules(mlm_client_t* client);
     void advertiseInventory(mlm_client_t* client);
     const std::map<std::string, std::string>& getSensorMapping() const
     {
@@ -48,13 +51,15 @@ public:
 private:
     bool isInventoryChanged(const std::string& name);
     void removeInventory(const std::string& name);
+    void addDeviceIfNotPresent(const Device& dev);
 
 protected:
-    std::map<std::string, Sensor>         _sensors; // name | Sensor
-    std::map<std::string, std::size_t>    _lastInventoryHashs;
+    std::map<std::string, Sensor> _sensors; // name | Sensor
+    std::map<std::string, std::shared_ptr<Device>> _devices; // name | ptrDevice
+    std::map<std::string, std::size_t> _lastInventoryHashs;
     std::unique_ptr<StateManager::Reader> _state_reader;
     // [ms] it is not an actual timestamp, it is just a reference point in time, when inventory was advertised
-    uint64_t                           _inventoryTimestamp_ms = 0;
+    uint64_t _inventoryTimestamp_ms = 0;
     std::map<std::string, std::string> _sensorInventoryMapping; //!< sensor inventory mapping
     bool _sensorMappingLoaded = false;
     bool _sensorListError = false;  // Flag to detect if error during initialisation of sensors list

@@ -113,6 +113,20 @@ void sensor_actor(zsock_t* pipe, void* args)
         return;
     }
 
+    MlmClientGuard clientAlert(mlm_client_new());
+    if (!clientAlert) {
+        log_fatal("mlm_client_new () failed");
+        return;
+    }
+    if (mlm_client_connect(clientAlert, endpoint, 5000, ACTOR_SENSOR_NAME_ALERT) < 0) {
+        log_error("client %s failed to connect", ACTOR_SENSOR_NAME_ALERT);
+        return;
+    }
+    if (mlm_client_set_producer(clientAlert, FTY_PROTO_STREAM_ALERTS_SYS) < 0) {
+        log_error("mlm_client_set_producer (stream = '%s') failed", FTY_PROTO_STREAM_ALERTS_SYS);
+        return;
+    }
+
     ZpollerGuard poller(zpoller_new(pipe, mlm_client_msgpipe(client), NULL));
     if (!poller) {
         log_fatal("zpoller_new () failed");
@@ -138,6 +152,7 @@ void sensor_actor(zsock_t* pipe, void* args)
                 nutClient.connect("localhost", 3493);
 
                 sensors.updateSensorList(nutClient, client);
+                sensors.updateDeviceList(nutClient);
                 sensors.updateFromNUT(nutClient);
 
                 sensors.advertiseInventory(clientInventory);
@@ -145,7 +160,7 @@ void sensor_actor(zsock_t* pipe, void* args)
                 // hotfix IPMVAL-2713 (data stale on device which host sensors cause communication failure alarms on
                 // sensors) increase ttl from 60 to 240 sec (polling period is equal to 30 sec).
                 sensors.publish(int((timeout * 8) / 1000));
-
+                sensors.publishRules(client);
                 nutClient.disconnect();
             }
             catch (...) {
