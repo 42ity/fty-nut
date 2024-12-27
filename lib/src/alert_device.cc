@@ -24,6 +24,9 @@
 #include <fty_log.h>
 #include <fty_proto.h>
 #include <stdexcept>
+#include <fty_shm.h>
+#include <fty_common_mlm_guards.h>
+#include <fty_common_json.h>
 
 void Device::fixAlertLimits(DeviceAlert& alert)
 {
@@ -69,6 +72,9 @@ void Device::addAlert(const std::string& quantity, const std::map<std::string, s
             alert         = existingalert;
         }
     } // else go on using the freshly made "alert" instance
+    else {
+        log_debug("aa: device %s, alert %s is new", assetName().c_str(), quantity.c_str());
+    }
 
     // does the device evaluation?
     {
@@ -124,17 +130,23 @@ void Device::addAlert(const std::string& quantity, const std::map<std::string, s
         alert.ruleRescanned = true;
         if (updatingalert && alert.rulePublished) {
             // If anything changed, reset the flag to make the info known
-            if (alert.lowWarning != existingalert.lowWarning)
+            if (alert.lowWarning != existingalert.lowWarning) {
                 alert.rulePublished = false;
-            if (alert.highWarning != existingalert.highWarning)
+            }
+            if (alert.highWarning != existingalert.highWarning) {
                 alert.rulePublished = false;
-            if (alert.lowCritical != existingalert.lowCritical)
+            }
+            if (alert.lowCritical != existingalert.lowCritical) {
                 alert.rulePublished = false;
-            if (alert.highCritical != existingalert.highCritical)
+            }
+            if (alert.highCritical != existingalert.highCritical) {
                 alert.rulePublished = false;
+            }
         }
+
         // If entry exists we must update at least the alert.ruleRescanned
         // otherwise we must add it to the list.
+        log_debug("aa: adding alert %s to %s", quantity.c_str(), assetName().c_str());
         _alerts[quantity] = alert;
     }
 }
@@ -149,11 +161,14 @@ std::map<std::string, DeviceAlert>& Device::alerts()
     return _alerts;
 }
 
-int Device::scanCapabilities(nut::TcpClient& conn)
+int Device::scanCapabilities(nut::ConnectionClient& conn)
 {
     log_debug("aa: scanning capabilities for %s", assetName().c_str());
-    if (!conn.isConnected())
+
+    if (!conn.isConnected()) {
+        log_debug("aa: Connection to NUT is not established");
         return 0;
+    }
 
     std::string prefix = daisychainPrefix();
     int         retval = -1;
@@ -168,8 +183,10 @@ int Device::scanCapabilities(nut::TcpClient& conn)
             throw std::runtime_error("device " + assetName() + " is not configured in NUT yet");
         }
         auto vars = nutDevice.getVariableValues();
-        if (vars.empty())
+        if (vars.empty()) {
+            log_debug("aa: no variables found for %s", assetName().c_str());
             return 0;
+        }
 
         // Sensors handling
         if (vars.find(prefix + "ambient.count") != vars.cend()) {
@@ -277,81 +294,12 @@ static void makeAlertNameMoreHumanReadable(const char* alertname)
     }
 }
 
-void Device::publishAlerts(mlm_client_t* client, uint64_t ttl)
-{
-    if (!client)
-        return;
-    log_debug("aa: publishing %zu alerts on %s", _alerts.size(), assetName().c_str());
-    for (auto& it : _alerts) {
-        publishAlert(client, it.second, ttl);
-    }
-}
-
-void Device::publishAlert(mlm_client_t* client, DeviceAlert& alert, uint64_t ttl)
-{
-    if (!client) {
-        log_error("publishAlert: no client defined");
-        return;
-    }
-    if (alert.status.empty()) {
-        log_error("publishAlert: alert status empty");
-        return;
-    }
-
-    const char *state = "ACTIVE", *severity = NULL;
-    std::string description;
-
-    std::string alertNameLabelStr = alert.name; // cpy
-    const char* alert_name_label  = alertNameLabelStr.c_str();
-    makeAlertNameMoreHumanReadable(alert_name_label);
-
-    log_debug("aa: alert status '%s'", alert.status.c_str());
-    if (alert.status == "good") {
-        state       = "RESOLVED";
-        severity    = "ok";
-        description = TRANSLATE_ME("%s is resolved", alert_name_label);
-    } else if (alert.status == "warning-low") {
-        severity    = "WARNING";
-        description = TRANSLATE_ME("%s is low", alert_name_label);
-    } else if (alert.status == "critical-low") {
-        severity    = "CRITICAL";
-        description = TRANSLATE_ME("%s is critically low", alert_name_label);
-    } else if (alert.status == "warning-high") {
-        severity    = "WARNING";
-        description = TRANSLATE_ME("%s is high", alert_name_label);
-    } else if (alert.status == "critical-high") {
-        severity    = "CRITICAL";
-        description = TRANSLATE_ME("%s is critically high", alert_name_label);
-    }
-    std::string rule = alert.name + "@" + assetName();
-
-    if (!severity) {
-        log_error("aa: alert %s has unknown severity value %s. Set to WARNING.", rule.c_str(), alert.status.c_str());
-        severity = "WARNING";
-    }
-
-    log_debug("aa: publishing alert %s", rule.c_str());
-    zmsg_t*     message = fty_proto_encode_alert(nullptr, // aux
-        uint64_t(alert.timestamp),                           // timestamp
-        uint32_t(ttl),
-        rule.c_str(),        // rule
-        assetName().c_str(), // element
-        state,               // state
-        severity,            // severity
-        description.c_str(), // description
-        NULL                 // action ?email
-    );
-    if (message) {
-        std::string topic   = rule + "/" + severity + "@" + assetName();
-        mlm_client_send(client, topic.c_str(), &message);
-    }
-    zmsg_destroy(&message);
-}
-
 void Device::publishRules(mlm_client_t* client)
 {
-    if (!client)
+    if (!client) {
+        log_error("publishRules: no client defined");
         return;
+    }
 
     for (auto& it : _alerts) {
         publishRule(client, it.second);
@@ -366,6 +314,10 @@ static std::string s_values_unit(const std::string& alert_name)
         return "V";
     else if (alert_name.find("current") != std::string::npos)
         return "A";
+    else if (alert_name.find("temperature") != std::string::npos)
+        return "C";
+    else if (alert_name.find("humidity") != std::string::npos)
+        return "%";
     else
         return "";
 }
@@ -382,29 +334,129 @@ static std::string s_rule_desc(const std::string& alert_name)
         return "{}";
 }
 
-void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
+fty::Expected<cxxtools::SerializationInfo> Device::getRule(mlm_client_t* client, const DeviceAlert& alert)
 {
-    if (!client || alert.rulePublished)
-        return;
+    if (!client) {
+        return fty::unexpected("No client defined");
+    }
 
     zmsg_t* message = zmsg_new();
-    assert(message);
+    if (!message) {
+        return fty::unexpected("Failed to create message");
+    }
+
+    std::string errorStr;
+    std::string alertNameStr = alert.name;
+    std::string assetNameStr = assetName(); //iname
+
+    char *ruleName = nullptr;
+    asprintf(&ruleName, "%s@%s", alertNameStr.c_str(), assetNameStr.c_str());
+    ZstrGuard ruleNameGuard(ruleName);
+
+    log_debug("getRule %s", ruleNameGuard.get());
+
+    zmsg_addstr(message, "GET");
+    zmsg_addstr(message, ruleNameGuard.get());
+    int r = mlm_client_sendto(client, "fty-alert-engine", "rfc-evaluator-rules", NULL, 1000, &message);
+    zmsg_destroy(&message);
+    if (r != 0) {
+        return fty::unexpected("Failed to send message to fty-alert-engine");
+    }
+
+    ZpollerGuard poller(zpoller_new(mlm_client_msgpipe(client), NULL));
+    ZmsgGuard resp(poller && zpoller_wait(poller, 5000) ? mlm_client_recv(client) : NULL);
+    if (!resp) {
+        return fty::unexpected("No response from fty-alert-engine");
+    }
+
+    ZstrGuard result(zmsg_popstr(resp));
+    if (result && streq(result, "OK")) {
+        ZstrGuard alertJson(zmsg_popstr(resp));
+        cxxtools::SerializationInfo alertSi;
+        try {
+            std::string tmpJson(alertJson);
+            JSON::readFromString(tmpJson, alertSi);
+            return alertSi;
+        }
+        catch(const std::exception& e) {
+            errorStr = "Error in the json: " + std::string(e.what());
+        }
+    }
+    else {
+        ZstrGuard reason(zmsg_popstr(resp));
+        log_error("Request fty-alert-engine GET rule %s failed (%s, %s)",
+                ruleNameGuard.get(), result.get(), reason.get());
+        errorStr = "Request fty-alert-engine GET rule failed";
+    }
+    return fty::unexpected(errorStr);
+}
+
+void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
+{
+    if (!client) {
+        log_error("publishRule: no client defined");
+        return;
+    }
+
+    if (alert.rulePublished) {
+        log_debug("publishRule: rule %s already published", alert.name.c_str());
+        return;
+    }
+
+    std::map<std::string, std::list<std::string>> actions;
+
+    bool ruleNew = alert.ruleNew;
+    if (ruleNew) {
+        log_debug("aa: rule %s is new", alert.name.c_str());
+        ruleNew = false;
+    }
+    else {
+        log_debug("aa: rule %s found", alert.name.c_str());
+
+        // Get the rule from alert engine
+        auto siRule = getRule(client, alert);
+        if (!siRule) {
+            log_error("aa: rule %s not found: %s", alert.name.c_str(), siRule.error().c_str());
+            return;
+        }
+
+        // Get actions list from response
+        for(const auto& result : siRule->getMember(0).getMember("results")) {
+            if (!result.getMember(0).isNull() &&
+                result.getMember(0).getMember("action").category() == cxxtools::SerializationInfo::Array) {
+                for (const auto& actionMember : result.getMember(0).getMember("action")) {
+                    if (actionMember.getMember("action").category() == cxxtools::SerializationInfo::Value) {
+                        std::string action;
+                        actionMember.getMember("action").getValue(action);
+                        actions[result.getMember(0).name()].push_back(action);
+                    }
+                }
+            }
+        }
+    }
+
+    zmsg_t *message = zmsg_new();
+    if (!message) {
+        log_error("Failed to create message");
+        return;
+    }
 
     std::string alertNameStr = alert.name;
-    const char* alert_name   = alertNameStr.c_str();
+    const char *alert_name   = alertNameStr.c_str();
 
     std::string alertNameLabelStr = alert.name; // cpy
-    const char* alert_name_label  = alertNameLabelStr.c_str();
+    const char *alert_name_label  = alertNameLabelStr.c_str();
     makeAlertNameMoreHumanReadable(alert_name_label);
 
     std::string assetNameStr = assetName(); //iname
-    const char* asset_name   = assetNameStr.c_str();
+    const char *asset_name   = assetNameStr.c_str();
 
     std::string assetFriendlyNameStr = assetFriendlyName();
-    const char* asset_friendly_name  = assetFriendlyNameStr.c_str();
+    const char *asset_friendly_name  = assetFriendlyNameStr.c_str();
 
-    char* ruleName = NULL;
+    char *ruleName = nullptr;
     asprintf(&ruleName, "%s@%s", alert_name, asset_name);
+    ZstrGuard ruleNameGuard(ruleName);
 
     // ruleClass: en_US display (best as we can)
     // note: ending space *required* for the translation parser
@@ -415,8 +467,25 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
     const char* TR_LUA_HW = "TRANSLATE_LUA({{alert_name}} is high for {{ename}}.)";
     const char* TR_LUA_HC = "TRANSLATE_LUA({{alert_name}} is critically high for {{ename}}.)";
 
+    // Construct actions list array (e.g "[{ "action": "EMAIL" }, { "action": "SMS" }]")
+    auto constructActionsArray = [&](const std::string category) {
+        std::string res {"["};
+        bool first = true;
+        if (actions.find(category) != actions.end()) {
+            for (auto action : actions[category]) {
+                if (!first) {
+                    res += ",";
+                }
+                first = false;
+                res += "{ \"action\": \"" + action + "\" }";
+            }
+        }
+        res += "]";
+        return res;
+    };
+
     // clang-format off
-    char *rule = NULL;
+    char *rule = nullptr;
     asprintf (&rule,
         "{"
             "\"threshold\" : {"
@@ -435,18 +504,18 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
             "    { \"high_critical\" : \"%s\" }" //@9
             "  ],"
             "  \"results\" : ["
-            "    { \"low_critical\"  : { \"action\" : [{\"action\": \"EMAIL\"}], \"severity\":\"CRITICAL\", \"description\" : \"  {\\\"key\\\" : \\\"%s\\\", \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } },"
-            "    { \"low_warning\"   : { \"action\" : [{\"action\": \"EMAIL\"}], \"severity\":\"WARNING\" , \"description\" : \"  {\\\"key\\\" : \\\"%s\\\", \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } },"
-            "    { \"high_warning\"  : { \"action\" : [{\"action\": \"EMAIL\"}], \"severity\":\"WARNING\" , \"description\" : \"  {\\\"key\\\" : \\\"%s\\\", \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } },"
-            "    { \"high_critical\" : { \"action\" : [{\"action\": \"EMAIL\"}], \"severity\":\"CRITICAL\", \"description\" : \"  {\\\"key\\\" : \\\"%s\\\", \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } }"
+            "    { \"low_critical\"  : { \"action\" : %s, \"severity\":\"CRITICAL\", \"description\" : \"  {\\\"key\\\" : \\\"%s\\\", \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } },"
+            "    { \"low_warning\"   : { \"action\" : %s, \"severity\":\"WARNING\" , \"description\" : \"  {\\\"key\\\" : \\\"%s\\\", \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } },"
+            "    { \"high_warning\"  : { \"action\" : %s, \"severity\":\"WARNING\" , \"description\" : \"  {\\\"key\\\" : \\\"%s\\\", \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } },"
+            "    { \"high_critical\" : { \"action\" : %s, \"severity\":\"CRITICAL\", \"description\" : \"  {\\\"key\\\" : \\\"%s\\\", \\\"variables\\\" : {\\\"alert_name\\\" : \\\"%s\\\", \\\"ename\\\" : { \\\"value\\\" : \\\"%s\\\", \\\"assetLink\\\" : \\\"%s\\\" } } }\" } }"
             "  ]"
             "}"
         "}",
 
-        ruleName, //@1
+        ruleNameGuard.get(), //@1
         ruleClass.c_str(), //@1b
         s_rule_desc (alert.name).c_str (), //@2
-        ruleName, //@3
+        ruleNameGuard.get(), //@3
         asset_name, //@4
         s_values_unit (alert.name).c_str (), //@5
 
@@ -456,90 +525,124 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
         alert.highCritical.c_str (), //@9
 
         //low_critical
+        constructActionsArray("low_critical").c_str (),
         TR_LUA_LC,
         alert_name_label,
         asset_friendly_name,
         asset_name,
 
         //low_warning
+        constructActionsArray("low_warning").c_str (),
         TR_LUA_LW,
         alert_name_label,
         asset_friendly_name,
         asset_name,
 
         //high_warning
+        constructActionsArray("high_warning").c_str (),
         TR_LUA_HW,
         alert_name_label,
         asset_friendly_name,
         asset_name,
 
         //high_critical
+        constructActionsArray("high_critical").c_str (),
         TR_LUA_HC,
         alert_name_label,
         asset_friendly_name,
         asset_name
     );
     // clang-format on
+    ZstrGuard ruleGuard(rule);
 
-    log_debug("aa: publishing rule %s", ruleName);
+    log_debug("aa: publishing rule %s", ruleNameGuard.get());
+    log_trace("%s", ruleGuard.get());
 
     zmsg_addstr(message, "ADD");
-    zmsg_addstr(message, rule);
+    zmsg_addstr(message, ruleGuard.get());
+
+    // Test if the rule is new or need to be updated
+    if (!alert.ruleNew) {
+        // Add rule name to the message for update
+        zmsg_addstr(message, ruleNameGuard.get());
+    }
+    alert.ruleNew = ruleNew;
 
     int r = mlm_client_sendto(client, "fty-alert-engine", "rfc-evaluator-rules", NULL, 1000, &message);
+    zmsg_destroy(&message);
     if (r == 0) {
-        zpoller_t* poller = zpoller_new(mlm_client_msgpipe(client), NULL);
-        zmsg_t* resp = (poller && zpoller_wait(poller, 5000)) ? mlm_client_recv(client) : NULL;
-        zpoller_destroy(&poller);
-
+        ZpollerGuard poller(zpoller_new(mlm_client_msgpipe(client), NULL));
+        ZmsgGuard resp(poller && zpoller_wait(poller, 5000) ? mlm_client_recv(client) : NULL);
         if (resp) {
-            char* result = zmsg_popstr(resp);
-            char* reason = zmsg_popstr(resp);
+            ZstrGuard result(zmsg_popstr(resp));
+            ZstrGuard reason(zmsg_popstr(resp));
             if ((result && streq(result, "OK")) || (reason && streq(reason, "ALREADY_EXISTS"))) {
                 alert.rulePublished = true;
             }
             else {
-                log_error("Request fty-alert-engine ADD rule %s failed (%s, %s).",
-                    ruleName, result, reason);
+                log_error("Request fty-alert-engine ADD rule %s failed (%s, %s)",
+                    ruleNameGuard.get(), result.get(), reason.get());
             }
-            zstr_free(&reason);
-            zstr_free(&result);
         }
-        zmsg_destroy(&resp);
     }
-
-    zstr_free(&rule);
-    zstr_free(&ruleName);
-    zmsg_destroy(&message);
 }
 
-void Device::update(nut::TcpClient& conn)
+void Device::update(nut::ConnectionClient& conn)
 {
     auto nutDevice = conn.getDevice(_nutName);
-    if (!nutDevice.isOk())
+    if (!nutDevice.isOk()) {
+        log_debug("aa: device %s is not configured in NUT yet", assetName().c_str());
         return;
+    }
+
+    int ttl_sec = 60;
     for (auto& it : _alerts) {
         try {
-            std::string prefix = daisychainPrefix();
-            auto        value  = nutDevice.getVariableValue(prefix + it.first + ".status");
+            auto prefix = daisychainPrefix();
+            auto name = prefix + it.first;
+            auto value  = nutDevice.getVariableValue(name);
             if (value.empty()) {
                 log_debug("aa: %s on %s is not present", it.first.c_str(), assetName().c_str());
-            } else {
-                std::string newStatus = value[0];
-                log_debug("aa: %s on %s is %s", it.first.c_str(), assetName().c_str(), newStatus.c_str());
-                if (it.second.status != newStatus) {
-                    it.second.timestamp = ::time(NULL);
-                    it.second.status    = newStatus;
-                }
+                continue;
             }
-        } catch (...) {
+
+            // Write the metric in shm
+            fty_proto_t* n_met = fty_proto_new(FTY_PROTO_METRIC);
+            if (!n_met) {
+                log_error("SHM publish: new METRIC failed (%s)", name.c_str());
+                return;
+            }
+            fty_proto_set_name(n_met, _nutName.c_str());
+            fty_proto_set_type(n_met, name.c_str());
+            fty_proto_set_value(n_met, "%s", value[0].c_str());
+            fty_proto_set_unit(n_met, "%s", s_values_unit(name).c_str());
+            fty_proto_set_ttl(n_met, uint32_t(ttl_sec));
+            fty_proto_set_time(n_met, uint64_t(std::time(nullptr)));
+
+            char* aux_log = nullptr;
+            asprintf(&aux_log, "%s@%s (value: %s%s, ttl: %u)",
+                fty_proto_type(n_met), fty_proto_name(n_met),
+                fty_proto_value(n_met), fty_proto_unit(n_met),
+                fty_proto_ttl(n_met));
+            ZstrGuard auxLogGuard(aux_log);
+
+            int rv = fty::shm::write_metric(n_met);
+            if (rv != 0) {
+                log_error("SHM publish failed (%s)", auxLogGuard.get());
+            } else {
+                log_debug("SHM publish %s", auxLogGuard.get());
+            }
+            fty_proto_destroy(&n_met);
+        } catch (const std::exception& ex) {
+            log_error("aa: Communication problem with %s: %s", assetName().c_str(), ex.what());
         }
     }
 }
 
 std::string Device::daisychainPrefix() const
 {
-    if (chain() == 0)
+    if (chain() == 0) {
         return "";
+    }
     return "device." + std::to_string(chain()) + ".";
 }

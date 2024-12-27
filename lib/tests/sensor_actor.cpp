@@ -43,9 +43,9 @@ TEST_CASE("sensor actor test")
     fty_proto_aux_insert(proto, "parent_name.1", "PRG");
     fty_proto_ext_insert(proto, "port", "1");
     fty_proto_ext_insert(proto, "endpoint.1.sub_address", "1");
-    AssetState::Asset asset1(proto);
+    auto asset1 = std::make_shared<AssetState::Asset>(proto);
     fty_proto_destroy(&proto);
-    sensors.sensors()["sensor1"] = Sensor(&asset1, nullptr, children, "nut", 1);
+    sensors.sensors()["sensor1"] = Sensor(asset1, nullptr, children, "nut", 1);
     sensors.sensors()["sensor1"].setHumidity("50");
 
     sensors.publish(300);
@@ -133,9 +133,9 @@ TEST_CASE("sensor actor test")
     fty_proto_aux_insert(proto, "parent_name.1", "PRG");
     fty_proto_ext_insert(proto, "port", "4");
     fty_proto_ext_insert(proto, "endpoint.1.sub_address", "2");
-    AssetState::Asset asset2(proto);
+    auto asset2 = std::make_shared<AssetState::Asset>(proto);
     fty_proto_destroy(&proto);
-    sensors.sensors()["sensor1"] = Sensor(&asset2, nullptr, children, "nut", 4);
+    sensors.sensors()["sensor1"] = Sensor(asset2, nullptr, children, "nut", 4);
     sensors.sensors()["sensor1"].setContacts(contacts);
 
     sensors.publish(300);

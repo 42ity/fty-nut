@@ -125,7 +125,6 @@ void alert_actor(zsock_t* pipe, void* args)
             devices.updateDeviceList();
             devices.updateFromNUT();
             devices.publishRules(mb_client);
-            devices.publishAlerts(client);
 
             last = uint64_t(zclock_mono());
             log_debug("aa: Polling lap time: %zu ms", (last - now));

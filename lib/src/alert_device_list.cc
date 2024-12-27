@@ -42,18 +42,17 @@ void Devices::updateFromNUT()
     }
 }
 
-void Devices::updateDevices(nut::TcpClient& nutClient)
+void Devices::updateDevices(nut::ConnectionClient& nutClient)
 {
     for (auto& it : _devices) {
         it.second.update(nutClient);
     }
 }
 
-void Devices::updateDeviceCapabilities(nut::TcpClient& nutClient)
+void Devices::updateDeviceCapabilities(nut::ConnectionClient& nutClient)
 {
     for (auto& it : _devices) {
-        if (!it.second.scanned())
-            it.second.scanCapabilities(nutClient);
+        it.second.scanCapabilities(nutClient);
     }
 }
 
@@ -75,13 +74,14 @@ void Devices::addIfNotPresent(const Device& dev)
 
 void Devices::updateDeviceList()
 {
-    if (!_state_reader->refresh())
+    if (!_state_reader->refresh()) {
         return;
+    }
 
     const AssetState& deviceState = _state_reader->getState();
-    auto&             devices     = deviceState.getPowerDevices();
+    auto& devices = deviceState.getPowerDevices();
 
-    log_debug("aa: updating device list");
+    log_debug("aa: updating device list (%zu devices)", devices.size());
     for (auto i : devices) {
         const std::string& ip = i.second->IP();
         if (ip.empty()) {
@@ -121,19 +121,11 @@ void Devices::updateDeviceList()
     }
 }
 
-void Devices::publishAlerts(mlm_client_t* client)
-{
-    if (!client)
-        return;
-    for (auto& device : _devices) {
-        device.second.publishAlerts(client, (_polling_ms / 1000) * 3);
-    }
-}
-
 void Devices::publishRules(mlm_client_t* client)
 {
-    if (!client)
+    if (!client) {
         return;
+    }
     for (auto& device : _devices) {
         device.second.publishRules(client);
     }
