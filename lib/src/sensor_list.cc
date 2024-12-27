@@ -194,7 +194,7 @@ void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
     auto& sensors = deviceState.getSensors();
 
     log_debug("sa: updating sensors list (%zu sensors)", sensors.size());
-
+    _devices.clear();
     _sensors.clear();
     for (auto i : sensors) {
         if (zsys_interrupted) break;
