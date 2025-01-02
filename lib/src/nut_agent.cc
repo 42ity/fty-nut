@@ -86,7 +86,6 @@ void NUTAgent::onPoll()
 void NUTAgent::updateDeviceList()
 {
     if (_state_reader->refresh())
-    log_debug("*** updateDeviceList: refresh");
         _deviceList.updateDeviceList(_state_reader->getState());
 }
 
