@@ -371,11 +371,10 @@ fty::Expected<cxxtools::SerializationInfo> Device::getRule(mlm_client_t* client,
 
     ZstrGuard result(zmsg_popstr(resp));
     if (result && streq(result, "OK")) {
-        ZstrGuard alertJson(zmsg_popstr(resp));
-        cxxtools::SerializationInfo alertSi;
         try {
-            std::string tmpJson(alertJson);
-            JSON::readFromString(tmpJson, alertSi);
+            ZstrGuard alertJson(zmsg_popstr(resp));
+            cxxtools::SerializationInfo alertSi;
+            JSON::readFromString(alertJson.get(), alertSi);
             return alertSi;
         }
         catch(const std::exception& e) {
@@ -405,10 +404,11 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
 
     std::map<std::string, std::list<std::string>> actions;
 
-    bool ruleNew = alert.ruleNew;
-    if (ruleNew) {
+    // Saved value before changing value
+    bool ruleNewSaved = alert.ruleNew;
+    if (alert.ruleNew) {
         log_debug("aa: rule %s is new", alert.name.c_str());
-        ruleNew = false;
+        alert.ruleNew = false;
     }
     else {
         log_debug("aa: rule %s found", alert.name.c_str());
@@ -454,7 +454,7 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
     std::string assetFriendlyNameStr = assetFriendlyName();
     const char *asset_friendly_name  = assetFriendlyNameStr.c_str();
 
-    char *ruleName = nullptr;
+    char* ruleName = nullptr;
     asprintf(&ruleName, "%s@%s", alert_name, asset_name);
     ZstrGuard ruleNameGuard(ruleName);
 
@@ -467,8 +467,8 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
     const char* TR_LUA_HW = "TRANSLATE_LUA({{alert_name}} is high for {{ename}}.)";
     const char* TR_LUA_HC = "TRANSLATE_LUA({{alert_name}} is critically high for {{ename}}.)";
 
-    // Construct actions list array (e.g "[{ "action": "EMAIL" }, { "action": "SMS" }]")
-    auto constructActionsArray = [&](const std::string category) {
+    // Build actions json (e.g "[{ "action": "EMAIL" }, { "action": "SMS" }]")
+    auto buildActionJson = [&](const std::string category) {
         std::string res {"["};
         bool first = true;
         if (actions.find(category) != actions.end()) {
@@ -525,28 +525,28 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
         alert.highCritical.c_str (), //@9
 
         //low_critical
-        constructActionsArray("low_critical").c_str (),
+        buildActionJson("low_critical").c_str (),
         TR_LUA_LC,
         alert_name_label,
         asset_friendly_name,
         asset_name,
 
         //low_warning
-        constructActionsArray("low_warning").c_str (),
+        buildActionJson("low_warning").c_str (),
         TR_LUA_LW,
         alert_name_label,
         asset_friendly_name,
         asset_name,
 
         //high_warning
-        constructActionsArray("high_warning").c_str (),
+        buildActionJson("high_warning").c_str (),
         TR_LUA_HW,
         alert_name_label,
         asset_friendly_name,
         asset_name,
 
         //high_critical
-        constructActionsArray("high_critical").c_str (),
+        buildActionJson("high_critical").c_str (),
         TR_LUA_HC,
         alert_name_label,
         asset_friendly_name,
@@ -562,11 +562,10 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
     zmsg_addstr(message, ruleGuard.get());
 
     // Test if the rule is new or need to be updated
-    if (!alert.ruleNew) {
+    if (!ruleNewSaved) {
         // Add rule name to the message for update
         zmsg_addstr(message, ruleNameGuard.get());
     }
-    alert.ruleNew = ruleNew;
 
     int r = mlm_client_sendto(client, "fty-alert-engine", "rfc-evaluator-rules", NULL, 1000, &message);
     zmsg_destroy(&message);

@@ -47,26 +47,26 @@ TEST_CASE("alert actor test")
         REQUIRE(it != rulesMap.end());
         cxxtools::SerializationInfo alertSi;
         JSON::readFromString(it->second, alertSi);
-        auto thresoldValues = alertSi.getMember(0).getMember("values");
-        REQUIRE(thresoldValues.category() == cxxtools::SerializationInfo::Array);
-        for (const auto& thresoldValue : thresoldValues) {
-            REQUIRE(thresoldValue.category() == cxxtools::SerializationInfo::Object);
+        auto thresholdValues = alertSi.getMember(0).getMember("values");
+        REQUIRE(thresholdValues.category() == cxxtools::SerializationInfo::Array);
+        for (const auto& thresholdValue : thresholdValues) {
+            REQUIRE(thresholdValue.category() == cxxtools::SerializationInfo::Object);
             std::string value;
-            auto name = thresoldValue.name();
+            auto name = thresholdValue.name();
             if (name == "high_critical") {
-                thresoldValue.getMember("value").getValue(value);
+                thresholdValue.getMember("value").getValue(value);
                 REQUIRE(streq(value.c_str(), high_critical));
             }
             else if (name == "high_warning") {
-                thresoldValue.getMember("value").getValue(value);
+                thresholdValue.getMember("value").getValue(value);
                 REQUIRE(streq(value.c_str(), high_warning));
             }
             else if(name == "low_warning") {
-                thresoldValue.getMember("value").getValue(value);
+                thresholdValue.getMember("value").getValue(value);
                 REQUIRE(streq(value.c_str(), low_warning));
             }
             else if(name == "low_critical") {
-                thresoldValue.getMember("value").getValue(value);
+                thresholdValue.getMember("value").getValue(value);
                 REQUIRE(streq(value.c_str(), low_critical));
             }
         }

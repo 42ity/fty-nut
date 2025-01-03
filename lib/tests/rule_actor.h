@@ -75,7 +75,8 @@ static void RuleActor(zsock_t* pipe, void* args)
                             cxxtools::SerializationInfo alertSi;
                             JSON::readFromString(ruleJson, alertSi);
                             alertSi.getMember(0).getMember("rule_name").getValue(ruleName);
-                        } catch (const std::exception& e) {
+                        }
+                        catch (const std::exception& e) {
                             std::cout << "Error parsing json: " << e.what() << std::endl;
                         }
                         if (ruleName.empty()) {
@@ -83,15 +84,16 @@ static void RuleActor(zsock_t* pipe, void* args)
                             zmsg_addstr(reply, "rule name not defined");
                             std::cout << "== rule actor request add rule ERROR: rule name not defined" << std::endl;
                         }
-                        if (rulesMap->find(ruleName) == rulesMap->end()) {
-                            (*rulesMap)[ruleName] = ruleJson;
-                            zmsg_addstr(reply, "OK");
-                            std::cout << "== rule actor request add rule OK: " << ruleName << std::endl;
-                        }
-                        else {
+                        else if (rulesMap->find(ruleName) != rulesMap->end()) {
                             zmsg_addstr(reply, "ERROR");
                             zmsg_addstr(reply, "rule already exists");
                             std::cout << "== rule actor request add rule ERROR: rule already exists" << std::endl;
+                        }
+                        else {
+                            // Add rule OK
+                            (*rulesMap)[ruleName] = ruleJson;
+                            zmsg_addstr(reply, "OK");
+                            std::cout << "== rule actor request add rule OK: " << ruleName << std::endl;
                         }
                     }
                     else {
@@ -119,10 +121,10 @@ static void RuleActor(zsock_t* pipe, void* args)
                     std::cout << "== rule actor request '" << reqCmd << "' rule name: " << ruleName << std::endl;
                     zmsg_t* reply = zmsg_new();
                     REQUIRE(reply);
-                    //std::map<std::string, std::string> rulesMap;
-                    if (rulesMap->find(ruleName) != rulesMap->end()) {
+                    auto it = rulesMap->find(ruleName);
+                    if (it != rulesMap->end()) {
                         zmsg_addstr(reply, "OK");
-                        zmsg_addstr(reply, (*rulesMap)[ruleName].c_str());
+                        zmsg_addstr(reply, it->second.c_str());
                     }
                     else {
                         zmsg_addstr(reply, "ERROR");
