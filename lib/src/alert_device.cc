@@ -338,11 +338,10 @@ fty::Expected<cxxtools::SerializationInfo> Device::getRule(mlm_client_t* client,
 
     ZstrGuard result(zmsg_popstr(resp));
     if (result && streq(result, "OK")) {
-        ZstrGuard alertJson(zmsg_popstr(resp));
-        cxxtools::SerializationInfo alertSi;
         try {
-            std::string tmpJson(alertJson);
-            JSON::readFromString(tmpJson, alertSi);
+            ZstrGuard alertJson(zmsg_popstr(resp));
+            cxxtools::SerializationInfo alertSi;
+            JSON::readFromString(alertJson.get(), alertSi);
             return alertSi;
         }
         catch(const std::exception& e) {
