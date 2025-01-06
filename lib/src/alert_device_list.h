@@ -29,21 +29,19 @@ public:
     explicit Devices(StateManager::Reader* reader);
     void updateFromNUT();
     void updateDeviceList();
-    void publishAlerts(mlm_client_t* client);
     void publishRules(mlm_client_t* client);
     void setPollingMs(uint64_t polling_ms)
     {
         _polling_ms = polling_ms;
     }
-
+    void updateDeviceCapabilities(nut::ConnectionClient& nutClient);
+    void updateDevices(nut::ConnectionClient& nutClient);
     std::map<std::string, Device>& devices();
 
 private:
-    uint64_t                              _polling_ms = 30000;
-    std::map<std::string, Device>         _devices;
-    std::unique_ptr<StateManager::Reader> _state_reader;
-
-    void updateDeviceCapabilities(nut::TcpClient& nutClient);
-    void updateDevices(nut::TcpClient& nutClient);
     void addIfNotPresent(const Device& dev);
+
+    uint64_t _polling_ms = 30000;
+    std::map<std::string, Device> _devices;
+    std::unique_ptr<StateManager::Reader> _state_reader;
 };

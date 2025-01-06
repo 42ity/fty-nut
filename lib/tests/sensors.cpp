@@ -166,6 +166,8 @@ TEST_CASE("sensor list test", "")
     CHECK (list.sensors()["sensor-3"].subAddress() == "3");
     CHECK (list.sensors()["sensor-3"].chain() == 2);
 
+    // TBD: Check shm value ???
+
     //  @end
     printf ("OK\n");
 }

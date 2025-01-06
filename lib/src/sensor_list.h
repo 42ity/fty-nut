@@ -50,11 +50,11 @@ private:
     void removeInventory(const std::string& name);
 
 protected:
-    std::map<std::string, Sensor>         _sensors; // name | Sensor
-    std::map<std::string, std::size_t>    _lastInventoryHashs;
+    std::map<std::string, Sensor> _sensors; // name | Sensor
+    std::map<std::string, std::size_t> _lastInventoryHashs;
     std::unique_ptr<StateManager::Reader> _state_reader;
     // [ms] it is not an actual timestamp, it is just a reference point in time, when inventory was advertised
-    uint64_t                           _inventoryTimestamp_ms = 0;
+    uint64_t _inventoryTimestamp_ms = 0;
     std::map<std::string, std::string> _sensorInventoryMapping; //!< sensor inventory mapping
     bool _sensorMappingLoaded = false;
     bool _sensorListError = false;  // Flag to detect if error during initialisation of sensors list
