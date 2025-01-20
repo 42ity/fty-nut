@@ -35,13 +35,15 @@ public:
         _polling_ms = polling_ms;
     }
     void updateDeviceCapabilities(nut::ConnectionClient& nutClient);
-    void updateDevices(nut::ConnectionClient& nutClient);
     std::map<std::string, Device>& devices();
 
 private:
+    static const uint32_t COUNT_CAPABILITIES_MAX { 60 };
+
     void addIfNotPresent(const Device& dev);
 
-    uint64_t _polling_ms = 30000;
+    uint64_t _polling_ms { 30000 };
+    uint32_t _count_capabilities { 0 };
     std::map<std::string, Device> _devices;
     std::unique_ptr<StateManager::Reader> _state_reader;
 };

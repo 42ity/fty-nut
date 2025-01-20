@@ -46,22 +46,22 @@ void Device::fixAlertLimits(DeviceAlert& alert)
     }
 }
 
-void Device::addAlert(const std::string& quantity, const std::map<std::string, std::vector<std::string>>& variables)
+void Device::addAlert(const std::string& nutQuantity, const std::string& ftyQuantity, const std::map<std::string, std::vector<std::string>>& variables)
 {
-    log_debug("aa: device %s provides %s alert", assetName().c_str(), quantity.c_str());
-    std::string prefix = daisychainPrefix() + quantity;
+    log_debug("aa: device %s provides %s alert", assetName().c_str(), ftyQuantity.c_str());
+    std::string prefix = daisychainPrefix() + nutQuantity;
 
     DeviceAlert alert;
-    alert.name = quantity;
+    alert.name = ftyQuantity;
 
     // Is there an existing alert which we can change?
-    const auto& _existingalert = _alerts.find(quantity);
-    bool        updatingalert  = false;
+    const auto& _existingalert = _alerts.find(ftyQuantity);
+    bool updatingalert  = false;
     DeviceAlert existingalert;
     if (_existingalert != _alerts.end()) {
         existingalert = _existingalert->second; // Dereference operator in iterator
         if (existingalert.ruleRescanned) {
-            log_debug("aa: device %s, alert %s already known", assetName().c_str(), quantity.c_str());
+            log_debug("aa: device %s, alert %s already known", assetName().c_str(), ftyQuantity.c_str());
             return;
         } else {
             // This entry is in the list, but was not refreshed in this
@@ -73,14 +73,14 @@ void Device::addAlert(const std::string& quantity, const std::map<std::string, s
         }
     } // else go on using the freshly made "alert" instance
     else {
-        log_debug("aa: device %s, alert %s is new", assetName().c_str(), quantity.c_str());
+        log_debug("aa: device %s, alert %s is new", assetName().c_str(), ftyQuantity.c_str());
     }
 
     // does the device evaluation?
     {
         const auto& it = variables.find(prefix + ".status");
         if (it == variables.cend()) {
-            log_debug("aa: device %s doesn't support %s.status", assetName().c_str(), quantity.c_str());
+            log_debug("aa: device %s doesn't support %s.status", assetName().c_str(), nutQuantity.c_str());
             return;
         }
     }
@@ -125,7 +125,7 @@ void Device::addAlert(const std::string& quantity, const std::map<std::string, s
     fixAlertLimits(alert);
     if (alert.lowWarning.empty() || alert.lowCritical.empty() || alert.highWarning.empty() ||
         alert.highCritical.empty()) {
-        log_error("aa: thresholds for %s are not present in %s", quantity.c_str(), assetName().c_str());
+        log_error("aa: thresholds for %s are not present in %s", nutQuantity.c_str(), assetName().c_str());
     } else {
         alert.ruleRescanned = true;
         if (updatingalert && alert.rulePublished) {
@@ -146,8 +146,8 @@ void Device::addAlert(const std::string& quantity, const std::map<std::string, s
 
         // If entry exists we must update at least the alert.ruleRescanned
         // otherwise we must add it to the list.
-        log_debug("aa: adding alert %s to %s", quantity.c_str(), assetName().c_str());
-        _alerts[quantity] = alert;
+        log_debug("aa: adding alert %s to %s", ftyQuantity.c_str(), assetName().c_str());
+        _alerts[ftyQuantity] = alert;
     }
 }
 
@@ -198,12 +198,12 @@ int Device::scanCapabilities(nut::ConnectionClient& conn)
             for (int a = 1; a <= sensors_count; a++) {
                 std::string q = "ambient." + std::to_string(a) + ".temperature";
                 if (vars.find(prefix + q + ".status") != vars.cend()) {
-                    addAlert(q, vars);
+                    addAlert(q, q, vars);
                     _scanned = true;
                 }
                 q = "ambient." + std::to_string(a) + ".humidity";
                 if (vars.find(prefix + q + ".status") != vars.cend()) {
-                    addAlert(q, vars);
+                    addAlert(q, q, vars);
                     _scanned = true;
                 }
             }
@@ -211,26 +211,28 @@ int Device::scanCapabilities(nut::ConnectionClient& conn)
             // Legacy sensor (EMP001: ambient collection, without index)
             std::string q = "ambient.temperature";
             if (vars.find(prefix + q + ".status") != vars.cend()) {
-                addAlert(q, vars);
+                addAlert(q, q, vars);
                 _scanned = true;
             }
             q = "ambient.humidity";
             if (vars.find(prefix + q + ".status") != vars.cend()) {
-                addAlert(q, vars);
+                addAlert(q, q, vars);
                 _scanned = true;
             }
         }
 
         // Input handling
         for (int a = 1; a <= 3; a++) {
-            std::string q = "input.L" + std::to_string(a) + ".current";
-            if (vars.find(prefix + q + ".status") != vars.cend()) {
-                addAlert(q, vars);
+            std::string nutName = "input.L" + std::to_string(a) + ".current";
+            std::string ftyName = "current.input.L" + std::to_string(a);
+            if (vars.find(prefix + nutName + ".status") != vars.cend()) {
+                addAlert(nutName, ftyName, vars);
                 _scanned = true;
             }
-            q = "input.L" + std::to_string(a) + ".voltage";
-            if (vars.find(prefix + q + ".status") != vars.cend()) {
-                addAlert(q, vars);
+            nutName = "input.L" + std::to_string(a) + ".voltage";
+            ftyName = "voltage.input.L" + std::to_string(a);
+            if (vars.find(prefix + nutName + ".status") != vars.cend()) {
+                addAlert(nutName, ftyName, vars);
                 _scanned = true;
             }
         }
@@ -238,15 +240,17 @@ int Device::scanCapabilities(nut::ConnectionClient& conn)
         // Outlets groups handling
         for (int a = 1; a <= 1000; a++) {
             bool found = false;
-            std::string q = "outlet.group." + std::to_string(a) + ".current";
-            if (vars.find(prefix + q + ".status") != vars.cend()) {
-                addAlert(q, vars);
+            std::string nutName = "outlet.group." + std::to_string(a) + ".current";
+            std::string ftyName = "current.outlet.group." + std::to_string(a);
+            if (vars.find(prefix + nutName + ".status") != vars.cend()) {
+                addAlert(nutName, ftyName, vars);
                 found = true;
                 _scanned = true;
             }
-            q = "outlet.group." + std::to_string(a) + ".voltage";
-            if (vars.find(prefix + q + ".status") != vars.cend()) {
-                addAlert(q, vars);
+            nutName = "outlet.group." + std::to_string(a) + ".voltage";
+            ftyName = "voltage.outlet.group." + std::to_string(a);
+            if (vars.find(prefix + nutName + ".status") != vars.cend()) {
+                addAlert(nutName, ftyName, vars);
                 found = true;
                 _scanned = true;
             }
@@ -582,58 +586,6 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
                 log_error("Request fty-alert-engine ADD rule %s failed (%s, %s)",
                     ruleNameGuard.get(), result.get(), reason.get());
             }
-        }
-    }
-}
-
-void Device::update(nut::ConnectionClient& conn)
-{
-    auto nutDevice = conn.getDevice(_nutName);
-    if (!nutDevice.isOk()) {
-        log_debug("aa: device %s is not configured in NUT yet", assetName().c_str());
-        return;
-    }
-
-    int ttl_sec = 60;
-    for (auto& it : _alerts) {
-        try {
-            auto prefix = daisychainPrefix();
-            auto name = prefix + it.first;
-            auto value  = nutDevice.getVariableValue(name);
-            if (value.empty()) {
-                log_debug("aa: %s on %s is not present", it.first.c_str(), assetName().c_str());
-                continue;
-            }
-
-            // Write the metric in shm
-            fty_proto_t* n_met = fty_proto_new(FTY_PROTO_METRIC);
-            if (!n_met) {
-                log_error("SHM publish: new METRIC failed (%s)", name.c_str());
-                return;
-            }
-            fty_proto_set_name(n_met, _nutName.c_str());
-            fty_proto_set_type(n_met, name.c_str());
-            fty_proto_set_value(n_met, "%s", value[0].c_str());
-            fty_proto_set_unit(n_met, "%s", s_values_unit(name).c_str());
-            fty_proto_set_ttl(n_met, uint32_t(ttl_sec));
-            fty_proto_set_time(n_met, uint64_t(std::time(nullptr)));
-
-            char* aux_log = nullptr;
-            asprintf(&aux_log, "%s@%s (value: %s%s, ttl: %u)",
-                fty_proto_type(n_met), fty_proto_name(n_met),
-                fty_proto_value(n_met), fty_proto_unit(n_met),
-                fty_proto_ttl(n_met));
-            ZstrGuard auxLogGuard(aux_log);
-
-            int rv = fty::shm::write_metric(n_met);
-            if (rv != 0) {
-                log_error("SHM publish failed (%s)", auxLogGuard.get());
-            } else {
-                log_debug("SHM publish %s", auxLogGuard.get());
-            }
-            fty_proto_destroy(&n_met);
-        } catch (const std::exception& ex) {
-            log_error("aa: Communication problem with %s: %s", assetName().c_str(), ex.what());
         }
     }
 }
