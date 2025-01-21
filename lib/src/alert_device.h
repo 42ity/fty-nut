@@ -93,12 +93,11 @@ public:
         return _scanned;
     }
 
-    void update(nut::ConnectionClient& conn);
     int  scanCapabilities(nut::ConnectionClient& conn);
     void publishRules(mlm_client_t* client);
 
 public:
-    void addAlert(const std::string& quantity, const std::map<std::string, std::vector<std::string>>& variables);
+    void addAlert(const std::string& nutQuantity, const std::string& ftyQuantity, const std::map<std::string, std::vector<std::string>>& variables);
     const std::map<std::string, DeviceAlert>& alerts() const;
     std::map<std::string, DeviceAlert>& alerts();
 

@@ -6,18 +6,13 @@
 #include "src/alert_device_list.h"
 #include "rule_actor.h"
 #include <nutclientmem.h>
-#include <fty_shm.h>
 
 TEST_CASE("alert actor test")
 {
     static const char* endpoint = "inproc://fty-alert-actor-test.7afde8";
-    const char* SELFTEST_DIR_RW = ".";
 
-    const std::string ruleName = "input.L1.current@mydevice";
+    const std::string ruleName = "current.input.L1@mydevice";
     std::map<std::string, std::string> rulesMap;
-
-    fty_shm_set_test_dir(SELFTEST_DIR_RW);
-    fty_shm_set_default_polling_interval(2);
 
     nut::MemClientStub nutClient;
 
@@ -106,23 +101,6 @@ TEST_CASE("alert actor test")
 
     // Update devices
     devs.updateDeviceCapabilities(nutClient);
-    devs.updateDevices(nutClient);
-
-    // wait calculation
-    sleep(1);
-    {
-        fty_proto_t* m;
-        fty::shm::shmMetrics resultT;
-        fty::shm::read_metrics("mydevice", ".*", resultT);
-        REQUIRE(resultT.size() == 1);
-        m = resultT.get(0);
-        REQUIRE(m);
-        fty_proto_print(m);
-        CHECK(streq(fty_proto_value(m), "120"));
-        CHECK(streq(fty_proto_type(m), "input.L1.current"));
-        CHECK(fty_proto_ttl(m) == 60);
-        m = nullptr;
-    }
 
     // Add new rule
     devs.publishRules(client);
@@ -136,7 +114,6 @@ TEST_CASE("alert actor test")
     setDeviceValue("mydevice", "input.L1.current.low.warning", "20");
     setDeviceValue("mydevice", "input.L1.current.low.critical", "10");
 
-    devs.updateDevices(nutClient);
     devs.updateDeviceCapabilities(nutClient);
 
     // Update rules
