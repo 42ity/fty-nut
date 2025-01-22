@@ -230,7 +230,7 @@ int Device::scanCapabilities(nut::ConnectionClient& conn)
                 _scanned = true;
             }
             nutName = "input.L" + std::to_string(a) + ".voltage";
-            ftyName = "voltage.input.L" + std::to_string(a);
+            ftyName = "voltage.input.L" + std::to_string(a) + "-N";
             if (vars.find(prefix + nutName + ".status") != vars.cend()) {
                 addAlert(nutName, ftyName, vars);
                 _scanned = true;
