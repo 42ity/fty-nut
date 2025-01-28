@@ -590,6 +590,58 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
     }
 }
 
+void Device::update(nut::ConnectionClient& conn)
+{
+    auto nutDevice = conn.getDevice(_nutName);
+    if (!nutDevice.isOk()) {
+        log_debug("aa: device %s is not configured in NUT yet", assetName().c_str());
+        return;
+    }
+    int ttl_sec = 60;
+    for (auto& it : _alerts) {
+        try {
+            auto prefix = daisychainPrefix();
+            auto name = prefix + it.first;
+            // Publish only ambient metrics (others metrics already made by another actor in fty-nut)
+            if (name.find("ambient.") == std::string::npos) {
+                continue;
+            }
+            auto value  = nutDevice.getVariableValue(name);
+            if (value.empty()) {
+                log_debug("aa: %s on %s is not present", it.first.c_str(), assetName().c_str());
+                continue;
+            }
+            // Write the metric in shm
+            fty_proto_t* n_met = fty_proto_new(FTY_PROTO_METRIC);
+            if (!n_met) {
+                log_error("SHM publish: new METRIC failed (%s)", name.c_str());
+                return;
+            }
+            fty_proto_set_name(n_met, _nutName.c_str());
+            fty_proto_set_type(n_met, name.c_str());
+            fty_proto_set_value(n_met, "%s", value[0].c_str());
+            fty_proto_set_unit(n_met, "%s", s_values_unit(name).c_str());
+            fty_proto_set_ttl(n_met, uint32_t(ttl_sec));
+            fty_proto_set_time(n_met, uint64_t(std::time(nullptr)));
+            char* aux_log = nullptr;
+            asprintf(&aux_log, "%s@%s (value: %s%s, ttl: %u)",
+                fty_proto_type(n_met), fty_proto_name(n_met),
+                fty_proto_value(n_met), fty_proto_unit(n_met),
+                fty_proto_ttl(n_met));
+            ZstrGuard auxLogGuard(aux_log);
+            int rv = fty::shm::write_metric(n_met);
+            if (rv != 0) {
+                log_error("SHM publish failed (%s)", auxLogGuard.get());
+            } else {
+                log_debug("SHM publish %s", auxLogGuard.get());
+            }
+            fty_proto_destroy(&n_met);
+        } catch (const std::exception& ex) {
+            log_error("aa: Communication problem with %s: %s", assetName().c_str(), ex.what());
+        }
+    }
+}
+
 std::string Device::daisychainPrefix() const
 {
     if (chain() == 0) {

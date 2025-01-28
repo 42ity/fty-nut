@@ -35,6 +35,7 @@ public:
         _polling_ms = polling_ms;
     }
     void updateDeviceCapabilities(nut::ConnectionClient& nutClient);
+    void updateDevices(nut::ConnectionClient& nutClient);
     std::map<std::string, Device>& devices();
 
 private:

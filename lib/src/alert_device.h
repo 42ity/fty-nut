@@ -93,6 +93,7 @@ public:
         return _scanned;
     }
 
+    void update(nut::ConnectionClient& conn);
     int  scanCapabilities(nut::ConnectionClient& conn);
     void publishRules(mlm_client_t* client);
 

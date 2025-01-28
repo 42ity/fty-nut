@@ -35,9 +35,17 @@ void Devices::updateFromNUT()
         nut::TcpClient nutClient;
         nutClient.connect("localhost", 3493);
         updateDeviceCapabilities(nutClient);
+        updateDevices(nutClient);
         nutClient.disconnect();
     } catch (std::exception& e) {
         log_error("reading data from NUT: %s", e.what());
+    }
+}
+
+void Devices::updateDevices(nut::ConnectionClient& nutClient)
+{
+    for (auto& it : _devices) {
+        it.second.update(nutClient);
     }
 }
 
