@@ -37,6 +37,20 @@ die() {
     exit 1
 }
 
+if [ "$1" == "--initialize" ]; then
+    # initialialize NUT driver stuffs and exit
+    # IPMVAL-5450 pre-generate nut-powerconnect required cert/client files
+    CLIENT_UID="/var/lib/nut/client.uid"
+    NUT_POWERCONNECT="/lib/nut/etn-nut-powerconnect"
+    if [ ! -f $CLIENT_UID ] && [ -x $NUT_POWERCONNECT ]; then
+        $NUT_POWERCONNECT -x initialize=true || true
+        chown nut:nut $(dirname "$CLIENT_UID")/*.* || true
+        echo "$NUT_POWERCONNECT initialized"
+    fi
+
+    exit 0
+fi
+
 TMPDIR=${TMPDIR:-/tmp}
 BIOSCONFDIR=/var/lib/fty/fty-nut/devices
 NUTCONFIGDIR=/etc/nut

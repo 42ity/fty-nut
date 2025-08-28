@@ -229,6 +229,27 @@ void NUTConfigurator::systemctl(const std::string& operation, It first, It last)
     }
 }
 
+void NUTConfigurator::init()
+{
+    // Run the helper script to initalize NUT driver stuffs
+    // IPMVAL-5450 pre-generate nut-powerconnect required cert/client files
+    fty::Process systemd("sudo", {"/usr/bin/fty-nutconfig", "--initialize"});
+    if (systemd.run()) {
+        auto result = systemd.wait();
+        if (!result) {
+            log_error("%s", result.error().c_str());
+        } else {
+            if (*result == 0) {
+                log_info("Command 'sudo fty-nutconfig --initialize' succeeded.");
+            } else {
+                log_error("Command 'sudo fty-nutconfig --initialize' failed with status=%i.", *result);
+            }
+        }
+    } else {
+        log_error("Can't run command 'sudo fty-nutconfig --initialize'.");
+    }
+}
+
 void NUTConfigurator::updateNUTConfig()
 {
     // Run the helper script

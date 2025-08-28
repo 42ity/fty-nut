@@ -60,6 +60,9 @@ public:
     // accessor methods to manage this setting.
     bool manage_systemctl{false};
 
+    // NUT drivers stuffs initializer
+    static void init();
+
 private:
     fty::nut::DeviceConfigurations::const_iterator getBestSnmpMibConfiguration(
         const fty::nut::DeviceConfigurations& configs);

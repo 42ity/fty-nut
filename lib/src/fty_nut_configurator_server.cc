@@ -386,6 +386,9 @@ void fty_nut_configurator_server(zsock_t* pipe, void* args)
         agent.onUpdate();
     }
 
+    // NUT drivers context initializer
+    NUTConfigurator::init();
+
     ZpollerGuard poller(zpoller_new(pipe, mlm_client_msgpipe(client), NULL));
 
     zsock_signal(pipe, 0);
