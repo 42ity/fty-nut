@@ -78,8 +78,9 @@ public:
     }
     std::string port() const
     {
-        if (_asset && !_asset->port().empty())
+        if (_asset && !_asset->port().empty()) {
             return _asset->port();
+        }
         return "0";
     }
     const fty::nut::KeyValues& inventory() const

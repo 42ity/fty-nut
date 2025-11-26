@@ -193,7 +193,7 @@ int Device::scanCapabilities(nut::ConnectionClient& conn)
             // New style sensor(s) (EMP002: ambient collection, with index)
             auto sensor_count_var = vars.find(prefix + "ambient.count");
             int  sensors_count    = std::stoi(sensor_count_var->second[0]);
-            log_debug("aa: found %i sensor(s)", sensors_count);
+            log_debug("aa: found %d sensor(s)", sensors_count);
 
             for (int a = 1; a <= sensors_count; a++) {
                 std::string q = "ambient." + std::to_string(a) + ".temperature";
@@ -329,13 +329,17 @@ static std::string s_values_unit(const std::string& alert_name)
 static std::string s_rule_desc(const std::string& alert_name)
 {
     if (alert_name.find("power") != std::string::npos)
-        return TRANSLATE_ME("Power");
+        return "TRANSLATE_LUA(Power)";
     else if (alert_name.find("voltage") != std::string::npos)
-        return TRANSLATE_ME("Voltage");
+        return "TRANSLATE_LUA(Voltage)";
     else if (alert_name.find("current") != std::string::npos)
-        return TRANSLATE_ME("Current");
+        return "TRANSLATE_LUA(Current)";
+    else if (alert_name.find("temperature") != std::string::npos)
+        return "TRANSLATE_LUA(Internal temperature)";
+    else if (alert_name.find("humidity") != std::string::npos)
+        return "TRANSLATE_LUA(Internal humidity)";
     else
-        return "{}";
+        return "";
 }
 
 fty::Expected<cxxtools::SerializationInfo> Device::getRule(mlm_client_t* client, const DeviceAlert& alert)
@@ -463,8 +467,7 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
     ZstrGuard ruleNameGuard(ruleName);
 
     // ruleClass: en_US display (best as we can)
-    // note: ending space *required* for the translation parser
-    std::string ruleClass = TRANSLATE_ME("%s ", alert_name_label);
+    std::string ruleClass = "TRANSLATE_LUA(" + std::string(alert_name_label) + ")";
 
     const char* TR_LUA_LC = "TRANSLATE_LUA({{alert_name}} is critically low for {{ename}}.)";
     const char* TR_LUA_LW = "TRANSLATE_LUA({{alert_name}} is low for {{ename}}.)";
@@ -495,9 +498,9 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
             "\"threshold\" : {"
             "  \"rule_name\"     : \"%s\"," //@1
             "  \"rule_source\"   : \"NUT\","
-            "  \"rule_class\"    : %s," //@1b
+            "  \"rule_class\"    : \"%s\"," //@1b
             "  \"rule_hierarchy\": \"internal.device\","
-            "  \"rule_desc\"     : %s," //@2
+            "  \"rule_desc\"     : \"%s\"," //@2
             "  \"target\"        : \"%s\"," //@3
             "  \"element\"       : \"%s\"," //@4
             "  \"values_unit\"   : \"%s\"," //@5
