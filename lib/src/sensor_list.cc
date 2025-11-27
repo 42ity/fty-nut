@@ -404,7 +404,7 @@ void Sensors::updateSensorList (nut::Client &conn, mlm_client_t *client)
     _sensorListError = sensorListError;
     if (_sensorListError) {
         log_debug("sa: loaded %zd nut sensors with %d error(s): retry later",
-            sensorListErrorCnt, _sensors.size());
+            _sensors.size(), sensorListErrorCnt);
     } else {
         log_debug("sa: loaded %zd nut sensors", _sensors.size());
     }

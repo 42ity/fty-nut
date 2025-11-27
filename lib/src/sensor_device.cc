@@ -54,7 +54,7 @@ void Sensor::update(nut::TcpClient& conn, const std::map<std::string, std::strin
         {
             std::map<std::string, std::vector<std::string>> deviceVars = nutDevice.getVariableValues();
             fty::nut::KeyValues                             scalarVars;
-            for (auto var : deviceVars) {
+            for (const auto& var : deviceVars) {
                 scalarVars.emplace(var.first, collapse_commas(var.second));
             }
             _inventory = fty::nut::performMapping(mapping, scalarVars, prefixId);
@@ -116,15 +116,9 @@ void Sensor::update(nut::TcpClient& conn, const std::map<std::string, std::strin
                     std::string contactConfig = nutDevice.getVariableValue(baseVar + ".config")[0];
                     if (!contactConfig.empty()) {
                         if (contactConfig == "normal-opened") {
-                            if (state == "active")
-                                state = "closed";
-                            else
-                                state = "opened";
+                            state = (state == "active") ? "closed" : "opened";
                         } else {
-                            if (state == "active")
-                                state = "opened";
-                            else
-                                state = "closed";
+                            state = (state == "active") ? "opened" : "closed";
                         }
                     } else {
                         // FIXME: what to do here? break or?
@@ -188,6 +182,7 @@ void Sensor::publish(int ttl)
         } else {
             log_debug("SHM publish %s", aux_log);
         }
+
         zstr_free(&aux_log);
         fty_proto_destroy(&n_met);
 
@@ -203,14 +198,12 @@ void Sensor::publish(int ttl)
     }
 
     if (!_contacts.empty()) {
-
         int gpiPort = 1;
         for (auto& contact : _contacts) {
             std::string extport = std::to_string(gpiPort);
             auto        search  = _children.find(extport);
             if (search != _children.end()) {
                 std::string sname = search->second;
-
                 publishOnShm(sname, "status.GPI" + extport, contact, "");
             } else {
                 log_debug("I did not find any child for %s on port %s", assetName().c_str(), extport.c_str());
@@ -223,8 +216,9 @@ void Sensor::publish(int ttl)
 std::string Sensor::sensorPrefix() const
 {
     std::string prefix;
-    if (chain() != 0)
+    if (chain() != 0) {
         prefix = "device." + std::to_string(chain()) + ".";
+    }
     prefix += "ambient.";
     if (_asset && !_asset->port().empty() && _asset->port() != "0") {
         prefix += _asset->port() + ".";
@@ -236,10 +230,12 @@ std::string Sensor::nutPrefix() const
 {
     std::string prefix;
     if (chain() != 0) {
-        if (_index == 0)
+        if (_index == 0) {
             prefix = "device." + std::to_string(chain()) + ".";
-        else
+        }
+        else {
             prefix = "device.1.";
+        }
     }
     prefix += "ambient.";
     // Only add port index when different than 0
@@ -251,11 +247,15 @@ std::string Sensor::nutPrefix() const
 
 int Sensor::nutIndex() const
 {
-    if (_index != 0)
+    if (_index != 0) {
         return _index;
-    else if (chain() != 0)
+    }
+    else if (chain() != 0) {
         return chain();
-    return 0;
+    }
+    else {
+        return 0;
+    }
 }
 
 void Sensor::addChild(const std::string& child_port, const std::string& child_name)
