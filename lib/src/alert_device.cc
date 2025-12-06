@@ -280,7 +280,7 @@ cleanup:
 // HOTFIX arrange as we can the alert name displayed (en_US)
 // TODO use translation string instead
 // NOTE: alertname modified on return
-// ex.: "input.L3.voltage" -> "Input L3 voltage"
+// ex.: "ambient.1.humidity" -> "Ambient 1 humidity"
 
 static void makeAlertNameMoreHumanReadable(const char* alertname)
 {
@@ -467,13 +467,26 @@ void Device::publishRule(mlm_client_t* client, DeviceAlert& alert)
     ZstrGuard ruleNameGuard(ruleName);
 
     // ruleClass: en_US display (best as we can)
-    std::string ruleClass = "TRANSLATE_LUA(" + std::string(alert_name_label) + ")";
-/** ruleClass traduction strings definition (runtime, best effort) - see fty-common-nut/resources/mapping.conf
-TRANSLATE_LUA(Ambient 1 temperature) TRANSLATE_LUA(Ambient 2 temperature) TRANSLATE_LUA(Ambient 3 temperature) TRANSLATE_LUA(Ambient 4 temperature)
-TRANSLATE_LUA(Ambient 1 humidity) TRANSLATE_LUA(Ambient 2 humidity) TRANSLATE_LUA(Ambient 3 humidity) TRANSLATE_LUA(Ambient 4 humidity)
-TRANSLATE_LUA(Current input L1) TRANSLATE_LUA(Current input L2) TRANSLATE_LUA(Current input L3)
-TRANSLATE_LUA(Load input L1) TRANSLATE_LUA(Load input L2) TRANSLATE_LUA(Load input L3)
-TRANSLATE_LUA(Voltage input L1-N) TRANSLATE_LUA(Voltage input L2-N) TRANSLATE_LUA(Voltage input L3-N)
+    std::string ruleClass = std::string("TRANSLATE_") + "LUA(" + std::string(alert_name_label) + ")";
+
+/* ruleClass traduction strings definition (runtime, best effort, one by line) - see fty-common-nut/resources/mapping.conf
+TRANSLATE_LUA(Ambient 1 temperature)
+TRANSLATE_LUA(Ambient 2 temperature)
+TRANSLATE_LUA(Ambient 3 temperature)
+TRANSLATE_LUA(Ambient 4 temperature)
+TRANSLATE_LUA(Ambient 1 humidity)
+TRANSLATE_LUA(Ambient 2 humidity)
+TRANSLATE_LUA(Ambient 3 humidity)
+TRANSLATE_LUA(Ambient 4 humidity)
+TRANSLATE_LUA(Current input L1)
+TRANSLATE_LUA(Current input L2)
+TRANSLATE_LUA(Current input L3)
+TRANSLATE_LUA(Load input L1)
+TRANSLATE_LUA(Load input L2)
+TRANSLATE_LUA(Load input L3)
+TRANSLATE_LUA(Voltage input L1-N)
+TRANSLATE_LUA(Voltage input L2-N)
+TRANSLATE_LUA(Voltage input L3-N)
 */
 
     const char* TR_LUA_LC = "TRANSLATE_LUA({{alert_name}} is critically low for {{ename}}.)";
