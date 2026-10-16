@@ -38,12 +38,16 @@ namespace ftynut {
  */
 static std::set<std::string> deviceCommandRequesterNut(nut::TcpClient& client, const std::string& asset)
 {
+    log_debug("deviceCommandRequesterNut (asset: %s)", asset.c_str());
+
     std::set<std::string> rawNutCommands;
 
     try {
         rawNutCommands = client.getDeviceCommandNames(asset);
-    } catch (...) {
+    }
+    catch (const std::exception& e) {
         // Treat errors as if the asset has no commands.
+        log_error("Caught exception: %s", e.what());
     }
 
     return rawNutCommands;
@@ -51,59 +55,79 @@ static std::set<std::string> deviceCommandRequesterNut(nut::TcpClient& client, c
 
 static std::map<int, std::string> daisyChainRequesterDatabase(tntdb::Connection& conn, const std::string& asset)
 {
+    log_debug("deviceCommandRequesterNut (asset: %s)", asset.c_str());
+
     auto daisyChain = DBAssets::select_daisy_chain(conn, asset);
+
     if (daisyChain.status && daisyChain.item.size() != 0) {
         return daisyChain.item;
     }
-
     // Treat errors as if the asset has no power chain.
     return {};
 }
 
 static std::vector<std::pair<std::string, int>> topologyRequesterFty(const std::string& asset)
 {
-    std::vector<std::pair<std::string, int>> result;
-
-    /// XXX: make this suck less.
-    const auto     clientId = messagebus::getClientId("_-fty-nut-command-powerchain-requester");
+    const auto clientId = messagebus::getClientId("_-fty-nut-command-powerchain-requester");
     MlmClientGuard mClient(mlm_client_new());
     mlm_client_connect(mClient.get(), MLM_ENDPOINT, 1000, clientId.c_str());
 
     // Request direct power topology of asset.
+    zuuid_t* uuid = zuuid_new();
     zmsg_t* request = zmsg_new();
     zmsg_addstr(request, "REQUEST");
-    zmsg_addstr(request, "xxx");
+    zmsg_addstr(request, zuuid_str(uuid));
     zmsg_addstr(request, "POWER_TO");
     zmsg_addstr(request, asset.c_str());
+    zuuid_destroy(&uuid); // not used
+
     int r = mlm_client_sendto(mClient.get(), "asset-agent", "TOPOLOGY", nullptr, 1000, &request);
     zmsg_destroy(&request);
 
-    if (r < 0) {
-        log_error("mlm_client_sendto() asset-agent TOPOLOGY failed");
+    std::vector<std::pair<std::string, int>> result;
+
+    if (r != 0) {
+        log_error("mlm_client_sendto() asset-agent TOPOLOGY POWER_TO %s failed", asset.c_str());
     }
     else {
         ZpollerGuard poller(zpoller_new(mlm_client_msgpipe(mClient.get()), nullptr));
-        if (poller.get() && zpoller_wait(poller.get(), 1000)) {
+        if (poller.get() && zpoller_wait(poller.get(), 5000)) {
+            // recv response
             ZmsgGuard reply(mlm_client_recv(mClient.get()));
-            ZstrGuard replyCorrId(zmsg_popstr(reply.get()));
-            ZstrGuard replyType(zmsg_popstr(reply.get()));
-            ZstrGuard replySubtype(zmsg_popstr(reply.get()));
-            ZstrGuard replyAsset(zmsg_popstr(reply.get()));
-            ZstrGuard replyResult(zmsg_popstr(reply.get()));
-            ZstrGuard replyData(zmsg_popstr(reply.get()));
 
-            if (streq(replyResult.get(), "OK")) {
+            ZstrGuard notused;
+            notused = zmsg_popstr(reply.get()); //uuid
+            notused = zmsg_popstr(reply.get()); //REPLY
+            notused = zmsg_popstr(reply.get()); //command (POWER_TO)
+            notused = zmsg_popstr(reply.get()); //asset-iname
+
+            ZstrGuard status(zmsg_popstr(reply.get()));
+
+            if (streq(status.get(), "OK")) {
+                ZstrGuard data(zmsg_popstr(reply.get())); //json payload
+                const std::string payload(data.get() ? data.get() : "{}");
+
                 cxxtools::SerializationInfo si;
-                std::string s(replyData.get());
-                JSON::readFromString(s, si);
+                JSON::readFromString(payload, si);
+
                 for (const auto& chain : si.getMember("powerchains")) {
                     std::string realAsset, realOutlet;
                     chain.getMember("src-id").getValue(realAsset);
                     chain.getMember("src-socket").getValue(realOutlet);
 
-                    result.emplace_back(realAsset, std::stoi(realOutlet));
+                    try {
+                        result.emplace_back(realAsset, std::stoi(realOutlet));
+                    }
+                    catch (const std::exception& e) {
+                        log_error("exception on %s POWER_TO (src-id: %s, src-socket: %s): %s",
+                            asset.c_str(), realAsset.c_str(), realOutlet.c_str(), e.what());
+                        result.emplace_back(realAsset, 0); //default
+                    }
                 }
             }
+        }
+        else {
+            log_error("no response received (asset-agent TOPOLOGY POWER_TO %s)", asset.c_str());
         }
     }
 
@@ -126,14 +150,14 @@ OutputIt expand(InputIt first1, InputIt last1, OutputIt d_first, naryOperation n
     return d_first;
 }
 
-static void connectToNutServer(
-    nut::TcpClient& client, const std::string& nutHost, const std::string& nutUsername, const std::string& nutPassword)
+static void connectToNutServer(nut::TcpClient& client, const std::string& nutHost, const std::string& nutUsername, const std::string& nutPassword)
 {
     try {
         client.connect(nutHost);
         client.authenticate(nutUsername, nutPassword);
         client.setFeature(nut::TcpClient::TRACKING, true);
-    } catch (std::exception& e) {
+    }
+    catch (const std::exception& e) {
         log_error("Error while connecting to NUT server: %s.", e.what());
         throw;
     }
@@ -145,11 +169,13 @@ static void connectToNutServer(
 static std::pair<std::string, int> getNutDeviceFromFtyDaisyChain(
     DaisyChainRequester daisyChainRequester, const std::string& asset)
 {
+    log_debug("getNutDeviceFromFtyDaisyChain");
+
     std::pair<std::string, int> result{asset, -1};
 
     // Check if asset is daisy-chained.
     auto daisyChain = daisyChainRequester(asset);
-    if (!daisyChain.empty() && daisyChain.begin()->first == 1) {
+    if (!daisyChain.empty() && (daisyChain.begin()->first == 1)) {
         for (const auto& i : daisyChain) {
             if (i.second == asset) {
                 result.second = i.first;
@@ -171,14 +197,15 @@ static dto::commands::Command ftyDaisyChainToNutCommand(
     dto::commands::Command command = job;
 
     auto daisyChain = daisyChainRequester(job.asset);
-    if (!daisyChain.empty() && daisyChain.begin()->first == 1) {
+    if (!daisyChain.empty() && (daisyChain.begin()->first == 1)) {
         // Daisy-chained, walk the chain until we find asset we're interested in.
         for (const auto& i : daisyChain) {
             if (i.second == job.asset) {
                 command.asset = daisyChain.begin()->second; // NUT driver is based on the host of the daisy-chain.
                 if (job.target.empty()) {
                     command.target = "device." + std::to_string(i.first);
-                } else {
+                }
+                else {
                     command.target = "device." + std::to_string(i.first) + "." + job.target;
                 }
                 break;
@@ -239,32 +266,39 @@ static dto::commands::Commands ftyTranslateHighLevelCommand(
     dto::commands::Commands result;
 
     // Map to convert power chain power commands to simple power commands.
-    const static std::map<std::string, std::string> powerSourceCommandMapping = {{"powersource.cycle", "load.cycle"},
-        {"powersource.cycle.delay", "load.cycle.delay"}, {"powersource.off", "load.off"},
-        {"powersource.off.delay", "load.off.delay"}, {"powersource.off.stagger", "load.off.delay"},
-        {"powersource.on", "load.on"}, {"powersource.on.delay", "load.on.delay"},
-        {"powersource.on.stagger", "load.on.delay"}};
+    const static std::map<std::string, std::string> powerSourceCommandMapping = {
+        {"powersource.cycle", "load.cycle"},
+        {"powersource.cycle.delay", "load.cycle.delay"},
+        {"powersource.off", "load.off"},
+        {"powersource.off.delay", "load.off.delay"},
+        {"powersource.off.stagger", "load.off.delay"},
+        {"powersource.on", "load.on"},
+        {"powersource.on.delay", "load.on.delay"},
+        {"powersource.on.stagger", "load.on.delay"}
+    };
 
     const static std::set<std::string> powerSourceStaggerCommands = {
-        {"powersource.off.stagger"}, {"powersource.on.stagger"}};
+        {"powersource.off.stagger"},
+        {"powersource.on.stagger"}
+    };
 
     auto commandMapping = powerSourceCommandMapping.find(command.command);
 
     if (commandMapping != powerSourceCommandMapping.end()) {
-        result =
-            ftyTranslatePowerSourceCommand(topologyRequester, command.asset, commandMapping->second, command.argument);
+        result = ftyTranslatePowerSourceCommand(topologyRequester, command.asset, commandMapping->second, command.argument);
 
         if (powerSourceStaggerCommands.count(command.command)) {
             // Patch up delay for staggered commands.
-            const int delay            = std::stoi(command.argument);
-            int       delayAccumulated = delay;
+            const int delay  = std::stoi(command.argument);
+            int delayAccumulated = delay;
 
             for (auto& staggerCommand : result) {
                 staggerCommand.argument = std::to_string(delayAccumulated);
                 delayAccumulated += delay;
             }
         }
-    } else {
+    }
+    else {
         // Pass-through the command.
         result.push_back(command);
     }
@@ -275,23 +309,28 @@ static dto::commands::Commands ftyTranslateHighLevelCommand(
 /**
  * \brief Convert from NUT commands to 42ity high-level commands.
  */
-static dto::commands::CommandDescriptions nutCommandsToFtyCommands(
-    const std::string& asset, const std::vector<std::string>& rawNutCommands)
+static dto::commands::CommandDescriptions nutCommandsToFtyCommands(const std::string& asset, const std::vector<std::string>& rawNutCommands)
 {
-    dto::commands::CommandDescriptions result;
+    log_debug("nutCommandsToFtyCommands (asset: %s)", asset.c_str());
 
     // Map to convert NUT outlet commands to 42ity commands.
-    const static std::map<std::string, std::string> outletDescriptions{{"load.cycle", "Power cycle outlet"},
-        {"load.cycle.delay", "Power cycle outlet with delay (seconds)"}, {"load.off", "Shut off outlet"},
-        {"load.off.delay", "Shut off outlet with delay (seconds)"}, {"load.on", "Switch on outlet"},
-        {"load.on.delay", "Switch on outlet with delay (seconds)"}};
-    const static std::regex                         outletRegex(
-        "(outlet(?:\\.group)?)\\.([[:digit:]]+)\\.([a-z.]+)", std::regex_constants::optimize);
+    const static std::map<std::string, std::string> outletDescriptions{
+        {"load.cycle", "Power cycle outlet"},
+        {"load.cycle.delay", "Power cycle outlet with delay (seconds)"},
+        {"load.off", "Shut off outlet"},
+        {"load.off.delay", "Shut off outlet with delay (seconds)"},
+        {"load.on", "Switch on outlet"},
+        {"load.on.delay", "Switch on outlet with delay (seconds)"},
+    };
+    const static std::string NO_DESCR{"Description not available"};
+
+    const static std::regex outletRegex("(outlet(?:\\.group)?)\\.([[:digit:]]+)\\.([a-z.]+)", std::regex_constants::optimize);
 
     std::map<std::string, dto::commands::CommandDescription> ftyCommands;
-    std::vector<dto::commands::CommandDescription>           unrecognizedCommands;
+    std::vector<dto::commands::CommandDescription> unrecognizedCommands;
 
-    for (const auto& rawNutCommand : rawNutCommands) {
+    for (const auto& rawNutCommand : rawNutCommands)
+    {
         std::smatch outletMatches;
 
         if (std::regex_match(rawNutCommand, outletMatches, outletRegex)) {
@@ -300,33 +339,41 @@ static dto::commands::CommandDescriptions nutCommandsToFtyCommands(
             const std::string& outlet  = outletMatches[2].str();
             const std::string& command = outletMatches[3].str();
 
+            //log_trace("type: %s, outlet: %s, command: %s", type.c_str(), outlet.c_str(), command.c_str());
+
             if (ftyCommands.count(command) == 0) {
+                bool isDescr = (outletDescriptions.count(command) != 0);
                 // Create initial FTY command.
-                dto::commands::CommandDescription commandDescription;
-                commandDescription.asset       = asset;
-                commandDescription.command     = command;
-                commandDescription.description = outletDescriptions.at(command);
-                ftyCommands[command]           = commandDescription;
+                dto::commands::CommandDescription desc;
+                desc.asset       = asset;
+                desc.command     = command;
+                desc.description = isDescr ? outletDescriptions.at(command) : NO_DESCR;
+
+                ftyCommands[command] = desc;
             }
 
             // Add target to FTY command.
             ftyCommands[command].targets.push_back(type + "." + outlet);
-        } else {
+        }
+        else {
             // NUT command is not recognized, expose it raw.
-            dto::commands::CommandDescription commandDescription;
-            commandDescription.asset       = asset;
-            commandDescription.command     = rawNutCommand;
-            commandDescription.description = "Description unavailable";
-            unrecognizedCommands.push_back(commandDescription);
+            dto::commands::CommandDescription desc;
+            desc.asset       = asset;
+            desc.command     = rawNutCommand;
+            desc.description = NO_DESCR;
+
+            unrecognizedCommands.push_back(desc);
         }
     }
 
     // Collect all commands.
-    for (const auto& ftyCommand : ftyCommands) {
-        result.push_back(ftyCommand.second);
+    dto::commands::CommandDescriptions result;
+
+    for (const auto& c : ftyCommands) {
+        result.push_back(c.second);
     }
-    for (const auto& unrecognizedCommand : unrecognizedCommands) {
-        result.push_back(unrecognizedCommand);
+    for (const auto& c : unrecognizedCommands) {
+        result.push_back(c);
     }
 
     return result;
@@ -337,29 +384,38 @@ static dto::commands::CommandDescriptions nutCommandsToFtyCommands(
  * unit-tested below and use the utilities defined above.
  */
 dto::commands::CommandDescriptions queryNativePowerCommands(
-    DeviceCommandRequester deviceCommandRequester, DaisyChainRequester daisyChainRequester, const std::string& asset)
+    DeviceCommandRequester deviceCommandRequester,
+    DaisyChainRequester daisyChainRequester,
+    const std::string& asset
+)
 {
+    log_debug("queryNativePowerCommands");
+
     // Grab NUT device.
     std::string nutDevice;
-    int         nutIndex;
-    std::tie(nutDevice, nutIndex)        = getNutDeviceFromFtyDaisyChain(daisyChainRequester, asset);
+    int nutIndex{-1};
+    std::tie(nutDevice, nutIndex) = getNutDeviceFromFtyDaisyChain(daisyChainRequester, asset);
+
     std::set<std::string> rawNutCommands = deviceCommandRequester(nutDevice);
 
     // Deal with NUT to 42ity daisy-chain convertion.
+    log_debug("Deal with NUT to 42ity daisy-chain convertion (nutIndex: %d)", nutIndex);
     std::vector<std::string> nutCommands;
     if (nutIndex != -1) {
         expand(rawNutCommands.begin(), rawNutCommands.end(), std::back_inserter(nutCommands),
             std::bind(nutDaisyChainedToSingleDevice, std::placeholders::_1, nutIndex));
-    } else {
+    }
+    else {
         std::copy(rawNutCommands.begin(), rawNutCommands.end(), std::back_inserter(nutCommands));
     }
 
-    return nutCommandsToFtyCommands(asset, nutCommands);
+    auto reply = nutCommandsToFtyCommands(asset, nutCommands);
+    return reply;
 }
 
 static dto::commands::CommandDescriptions queryPowerChainPowerCommands(const std::string& asset)
 {
-    dto::commands::CommandDescriptions result;
+    log_debug("queryPowerChainPowerCommands");
 
     /**
      * FIXME: always indicate power chain power commands, not checking for any
@@ -376,14 +432,15 @@ static dto::commands::CommandDescriptions queryPowerChainPowerCommands(const std
         {"powersource.cycle.delay", "Cycle power source(s) of asset with delay (seconds)"},
     };
 
-    auto fct = [&asset](
-                   const std::string& command, const std::string& description) -> dto::commands::CommandDescription {
+    auto fct = [&asset] (const std::string& command, const std::string& description) -> dto::commands::CommandDescription {
         dto::commands::CommandDescription commandDescription;
         commandDescription.asset       = asset;
         commandDescription.command     = command;
         commandDescription.description = description;
         return commandDescription;
     };
+
+    dto::commands::CommandDescriptions result;
 
     for (const auto& generatedCommand : generatedCommands) {
         result.push_back(fct(generatedCommand.first, generatedCommand.second));
@@ -413,30 +470,36 @@ dto::commands::Commands computePowerCommands(
 static std::string buildCommandMessage(const dto::commands::Command& job)
 {
     std::stringstream msg;
-    msg << "Command '" << job.command << "' target '" << job.target << "' argument '" << job.argument << "' on asset '"
-        << job.asset << "'";
+    msg << "Command '" << job.command << "'"
+        << " target '" << job.target << "'"
+        << " argument '" << job.argument << "'"
+        << " on asset '" << job.asset << "'";
     return msg.str();
 }
 
 static std::string buildCommandResultErrorMessage(const dto::commands::Command& job, nut::TrackingResult result)
 {
-    std::stringstream err;
-    err << buildCommandMessage(job);
+    const std::string msg{buildCommandMessage(job)};
+
+    std::string err;
     switch (result) {
         case nut::UNKNOWN:
-            err << " result is missing." << std::endl;
+            err = "result is missing";
             break;
         case nut::FAILURE:
-            err << " failed." << std::endl;
+            err = "failed";
             break;
         case nut::INVALID_ARGUMENT:
-            err << " has an invalid argument." << std::endl;
+            err = "has an invalid argument";
             break;
         default:
-            err << " encountered an unknown error." << std::endl;
+            err = "encountered an unknown error";
             break;
     }
-    return err.str();
+
+    std::stringstream ss;
+    ss << msg << " " << err << ".";
+    return ss.str();
 }
 
 NutCommandManager::NutCommandManager(const std::string& nutHost, const std::string& nutUsername,
@@ -450,50 +513,53 @@ NutCommandManager::NutCommandManager(const std::string& nutHost, const std::stri
 
 dto::commands::CommandDescriptions NutCommandManager::getCommands(const std::string& asset)
 {
-    dto::commands::CommandDescriptions reply;
+    log_debug("NutCommandManager::getCommands (asset: %s)", asset.c_str());
 
     // Connect to stuff.
-    auto           conn = tntdb::connectCached(m_dbConn);
+    auto conn = tntdb::connectCached(m_dbConn);
     nut::TcpClient client;
     connectToNutServer(client, m_nutHost, m_nutUsername, m_nutPassword);
 
+    dto::commands::CommandDescriptions reply;
+
     // Prepare our data query function helpers.
-    DeviceCommandRequester deviceCommandRequester =
-        std::bind(deviceCommandRequesterNut, std::ref(client), std::placeholders::_1);
-    DaisyChainRequester daisyChainRequester =
-        std::bind(daisyChainRequesterDatabase, std::ref(conn), std::placeholders::_1);
+    DeviceCommandRequester deviceCommandRequester = std::bind(deviceCommandRequesterNut, std::ref(client), std::placeholders::_1);
+    DaisyChainRequester daisyChainRequester = std::bind(daisyChainRequesterDatabase, std::ref(conn), std::placeholders::_1);
 
     // Query native power commands.
-    auto nativeCommands = queryNativePowerCommands(deviceCommandRequester, daisyChainRequester, asset);
-    reply.insert(
-        reply.end(), std::make_move_iterator(nativeCommands.begin()), std::make_move_iterator(nativeCommands.end()));
+    log_debug("call queryNativePowerCommands");
+    auto npc = queryNativePowerCommands(deviceCommandRequester, daisyChainRequester, asset);
+    reply.insert(reply.end(), std::make_move_iterator(npc.begin()), std::make_move_iterator(npc.end()));
 
-    // Query power chain power commands.
-    auto powerchainCommands = queryPowerChainPowerCommands(asset);
-    reply.insert(reply.end(), std::make_move_iterator(powerchainCommands.begin()),
-        std::make_move_iterator(powerchainCommands.end()));
+    // Query powerchain power commands.
+    log_debug("call queryPowerChainPowerCommands");
+    auto ppc = queryPowerChainPowerCommands(asset);
+    reply.insert(reply.end(), std::make_move_iterator(ppc.begin()), std::make_move_iterator(ppc.end()));
 
     return reply;
 }
 
 dto::commands::Commands NutCommandManager::computeCommands(const dto::commands::Commands& jobs)
 {
+    log_debug("NutCommandManager::computeCommands");
+
     // Connect to stuff.
     nut::TcpClient client;
     connectToNutServer(client, m_nutHost, m_nutUsername, m_nutPassword);
     auto conn = tntdb::connectCached(m_dbConn);
 
     // Prepare our data query function helpers.
-    DaisyChainRequester daisyChainRequester =
-        std::bind(daisyChainRequesterDatabase, std::ref(conn), std::placeholders::_1);
+    DaisyChainRequester daisyChainRequester = std::bind(daisyChainRequesterDatabase, std::ref(conn), std::placeholders::_1);
     TopologyRequester topologyRequester = &topologyRequesterFty;
 
-    return computePowerCommands(daisyChainRequester, topologyRequester, jobs);
+    auto reply = computePowerCommands(daisyChainRequester, topologyRequester, jobs);
+
+    return reply;
 }
 
 void NutCommandManager::performCommands(const dto::commands::Commands& jobs)
 {
-    std::stringstream errorMessageStream;
+    log_debug("NutCommandManager::performCommands");
 
     // Connect to NUT.
     nut::TcpClient client;
@@ -501,6 +567,8 @@ void NutCommandManager::performCommands(const dto::commands::Commands& jobs)
 
     // Submit jobs to NUT.
     std::map<nut::TrackingID, const dto::commands::Command&> ids;
+    std::stringstream errorStream;
+    bool errorStreamFirst{true};
 
     for (const auto& job : jobs) {
         const std::string nutCommand = job.target.empty() ? job.command : job.target + "." + job.command;
@@ -508,8 +576,10 @@ void NutCommandManager::performCommands(const dto::commands::Commands& jobs)
         try {
             auto id = client.executeDeviceCommand(job.asset, nutCommand, job.argument);
             ids.emplace(id, job);
-        } catch (...) {
-            errorMessageStream << buildCommandMessage(job) << " couldn't be submitted.";
+        }
+        catch (...) {
+            if (errorStreamFirst) { errorStreamFirst = false; } else { errorStream << std::endl; }
+            errorStream << buildCommandMessage(job) << " couldn't be submitted.";
         }
     }
 
@@ -527,7 +597,8 @@ void NutCommandManager::performCommands(const dto::commands::Commands& jobs)
                     it = ids.erase(it);
                     break;
                 default:
-                    errorMessageStream << buildCommandResultErrorMessage(it->second, result);
+                    if (errorStreamFirst) { errorStreamFirst = false; } else { errorStream << std::endl; }
+                    errorStream << buildCommandResultErrorMessage(it->second, result);
                     it = ids.erase(it);
                     break;
             }
@@ -535,9 +606,10 @@ void NutCommandManager::performCommands(const dto::commands::Commands& jobs)
     }
 
     // Report errors, if any.
-    const std::string errorMessage = errorMessageStream.str();
-    if (!errorMessage.empty()) {
-        throw std::runtime_error(errorMessage);
+    const std::string eS{errorStream.str()};
+    if (!eS.empty()) {
+        log_error("%s", eS.c_str());
+        throw std::runtime_error(eS);
     }
 }
 
@@ -559,49 +631,52 @@ NutCommandConnector::NutCommandConnector(NutCommandConnector::Parameters params)
     , m_dispatcher({
           {"GetCommands", std::bind(&NutCommandConnector::requestGetCommands, this, std::placeholders::_1)},
           {"PerformCommands", std::bind(&NutCommandConnector::requestPerformCommands, this, std::placeholders::_1)},
-          {"PerformGroupCommands",
-              std::bind(&NutCommandConnector::requestPerformGroupCommands, this, std::placeholders::_1)},
+          {"PerformGroupCommands", std::bind(&NutCommandConnector::requestPerformGroupCommands, this, std::placeholders::_1)},
       })
     , m_msgBus(messagebus::MlmMessageBus(params.endpoint, params.agentName))
 {
     m_msgBus->connect();
-    m_msgBus->receive(
-        "ETN.Q.IPMCORE.POWERACTION", std::bind(&NutCommandConnector::handleRequest, this, std::placeholders::_1));
+    m_msgBus->receive("ETN.Q.IPMCORE.POWERACTION", std::bind(&NutCommandConnector::handleRequest, this, std::placeholders::_1));
 }
 
 void NutCommandConnector::handleRequest(messagebus::Message msg)
 {
-    if ((msg.metaData().count(messagebus::Message::SUBJECT) == 0) ||
-        (msg.metaData().count(messagebus::Message::CORRELATION_ID) == 0) ||
-        (msg.metaData().count(messagebus::Message::REPLY_TO) == 0)) {
+    if ((msg.metaData().count(messagebus::Message::SUBJECT) == 0)
+        || (msg.metaData().count(messagebus::Message::CORRELATION_ID) == 0)
+        || (msg.metaData().count(messagebus::Message::REPLY_TO) == 0)
+    ) {
         log_error("Missing subject/correlationID/replyTo in request.");
         return;
     }
 
     auto subject = msg.metaData()[messagebus::Message::SUBJECT];
     auto corrId  = msg.metaData()[messagebus::Message::CORRELATION_ID];
-    log_info("Received %s (%s) request.", subject.c_str(), corrId.c_str());
+
+    log_info("Received request '%s' (corrId: %s)", subject.c_str(), corrId.c_str());
 
     try {
         auto result = m_dispatcher(subject, msg.userData());
 
-        log_info("Request %s (%s) performed successfully.", subject.c_str(), corrId.c_str());
+        log_info("Request %s performed successfully (corrId: %s)", subject.c_str(), corrId.c_str());
         sendReply(msg.metaData(), true, result);
-    } catch (std::exception& e) {
-        log_error("Exception while processing %s (%s): %s", subject.c_str(), corrId.c_str(), e.what());
+    }
+    catch (const std::exception& e) {
+        log_error("Exception on request %s (corrId: %s): %s", subject.c_str(), corrId.c_str(), e.what());
         sendReply(msg.metaData(), false, {e.what()});
     }
 }
 
-void NutCommandConnector::sendReply(
-    const messagebus::MetaData& metadataRequest, bool status, const messagebus::UserData& dataReply)
+void NutCommandConnector::sendReply(const messagebus::MetaData& metadataRequest, bool status, const messagebus::UserData& dataReply)
 {
     messagebus::Message reply;
 
-    reply.metaData() = {{messagebus::Message::CORRELATION_ID, metadataRequest.at(messagebus::Message::CORRELATION_ID)},
+    reply.metaData() = {
+        {messagebus::Message::CORRELATION_ID, metadataRequest.at(messagebus::Message::CORRELATION_ID)},
         {messagebus::Message::SUBJECT, metadataRequest.at(messagebus::Message::SUBJECT)},
-        {messagebus::Message::STATUS, status ? "ok" : "ko"},
-        {messagebus::Message::TO, metadataRequest.at(messagebus::Message::REPLY_TO)}};
+        {messagebus::Message::STATUS, (status ? "ok" : "ko")},
+        {messagebus::Message::TO, metadataRequest.at(messagebus::Message::REPLY_TO)}
+    };
+
     reply.userData() = dataReply;
 
     m_msgBus->sendReply("ETN.R.IPMCORE.POWERACTION", reply);
@@ -612,19 +687,19 @@ messagebus::UserData NutCommandConnector::requestGetCommands(messagebus::UserDat
     dto::commands::GetCommandsQueryDto query;
     data >> query;
 
-    messagebus::UserData reply;
-    auto                 commands = m_manager.getCommands(query.asset);
+    auto commands = m_manager.getCommands(query.asset);
 
     {
-        std::stringstream logMessage;
-        logMessage << "Asset '" << query.asset << "' has the following commands:" << std::endl;
-        for (const auto& i : commands) {
-            logMessage << "\t" << i.command << " - " << i.description << std::endl;
-        }
-        log_trace("%s", logMessage.str().c_str());
+        std::stringstream ss;
+        ss << "Asset '" << query.asset << "' has the following commands:" << std::endl;
+        for (auto& c : commands)
+            { ss << "\t" << c.command << " - " << c.description << std::endl; }
+        log_debug("%s", ss.str().c_str());
     }
 
+    messagebus::UserData reply;
     reply << commands;
+
     return reply;
 }
 
@@ -634,26 +709,27 @@ messagebus::UserData NutCommandConnector::requestPerformCommands(messagebus::Use
     data >> query;
 
     {
-        std::stringstream logMessage;
-        logMessage << "Commands requested:" << std::endl;
+        std::stringstream ss;
+        ss << "Commands requested:" << std::endl;
         for (const auto& i : query.commands) {
-            logMessage << "\t" << buildCommandMessage(i) << std::endl;
+            ss << "\t" << buildCommandMessage(i) << std::endl;
         }
-        log_debug("%s", logMessage.str().c_str());
+        log_debug("%s", ss.str().c_str());
     }
 
     auto computedCommands = m_manager.computeCommands(query.commands);
 
     {
-        std::stringstream logMessage;
-        logMessage << "Effective commands computed:" << std::endl;
+        std::stringstream ss;
+        ss << "Effective commands computed:" << std::endl;
         for (const auto& i : computedCommands) {
-            logMessage << "\t" << buildCommandMessage(i) << std::endl;
+            ss << "\t" << buildCommandMessage(i) << std::endl;
         }
-        log_trace("%s", logMessage.str().c_str());
+        log_debug("%s", ss.str().c_str());
     }
 
     m_manager.performCommands(computedCommands);
+
     return {};
 }
 
@@ -663,8 +739,7 @@ messagebus::UserData NutCommandConnector::requestPerformGroupCommands(messagebus
     data >> query;
 
     /// XXX: make this suck less.
-    std::unique_ptr<messagebus::MessageBus> requester{
-        messagebus::MlmMessageBus(m_parameters.endpoint, m_parameters.agentName + "-automatic-group-resolver")};
+    std::unique_ptr<messagebus::MessageBus> requester{messagebus::MlmMessageBus(m_parameters.endpoint, m_parameters.agentName + "-automatic-group-resolver")};
     requester->connect();
 
     dto::commands::PerformCommandsQueryDto resolvedQuery;
@@ -680,7 +755,7 @@ messagebus::UserData NutCommandConnector::requestPerformGroupCommands(messagebus
             {messagebus::Message::FROM, m_parameters.agentName + "-automatic-group-resolver"},
             {messagebus::Message::REPLY_TO, m_parameters.agentName + "-automatic-group-resolver"},
         };
-        
+
         cxxtools::SerializationInfo requestSI;
         requestSI.addMember("id") <<= stoi(command.asset);
         replyMsg.userData() = {JSON::writeToString(requestSI)};
@@ -691,7 +766,7 @@ messagebus::UserData NutCommandConnector::requestPerformGroupCommands(messagebus
         }
 
         cxxtools::SerializationInfo replySI;
-        std::istringstream          replyStream(*reply.userData().begin());
+        std::istringstream replyStream(*reply.userData().begin());
         JSON::readFromStream(replyStream, replySI);
 
         for (const auto& replyItem : replySI) {
@@ -701,17 +776,19 @@ messagebus::UserData NutCommandConnector::requestPerformGroupCommands(messagebus
             /// XXX: fty-command-nut shouldn't do that.
             if (asset.find("server-") == 0) {
                 resolvedQuery.commands.emplace_back(asset, command.command, command.target, command.argument);
-            } else {
-                log_warning("Throwing out asset '%s' from automatic group '%s' resolve result.", command.asset.c_str(),
-                    asset.c_str());
+            }
+            else {
+                log_warning("Throwing out asset '%s' from automatic group '%s' resolve result.",
+                    command.asset.c_str(), asset.c_str());
             }
         }
     }
 
     messagebus::UserData resolvedData;
     resolvedData << resolvedQuery;
-    return requestPerformCommands(resolvedData);
+    auto reply = requestPerformCommands(resolvedData);
+
+    return reply;
 }
 
 } // namespace ftynut
-
