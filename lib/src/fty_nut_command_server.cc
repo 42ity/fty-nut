@@ -73,43 +73,61 @@ static std::vector<std::pair<std::string, int>> topologyRequesterFty(const std::
     mlm_client_connect(mClient.get(), MLM_ENDPOINT, 1000, clientId.c_str());
 
     // Request direct power topology of asset.
+    zuuid_t* uuid = zuuid_new();
     zmsg_t* request = zmsg_new();
     zmsg_addstr(request, "REQUEST");
-    zmsg_addstr(request, "xxx");
+    zmsg_addstr(request, zuuid_str(uuid));
     zmsg_addstr(request, "POWER_TO");
     zmsg_addstr(request, asset.c_str());
+    zuuid_destroy(&uuid); // not used
+
     int r = mlm_client_sendto(mClient.get(), "asset-agent", "TOPOLOGY", nullptr, 1000, &request);
     zmsg_destroy(&request);
 
     std::vector<std::pair<std::string, int>> result;
 
     if (r != 0) {
-        log_error("mlm_client_sendto() asset-agent TOPOLOGY failed");
+        log_error("mlm_client_sendto() asset-agent TOPOLOGY POWER_TO %s failed", asset.c_str());
     }
     else {
         ZpollerGuard poller(zpoller_new(mlm_client_msgpipe(mClient.get()), nullptr));
         if (poller.get() && zpoller_wait(poller.get(), 5000)) {
             // recv response
             ZmsgGuard reply(mlm_client_recv(mClient.get()));
-            ZstrGuard corrId(zmsg_popstr(reply.get()));
-            ZstrGuard type(zmsg_popstr(reply.get()));
-            ZstrGuard subtype(zmsg_popstr(reply.get()));
-            ZstrGuard asset_(zmsg_popstr(reply.get()));
-            ZstrGuard result_(zmsg_popstr(reply.get()));
-            ZstrGuard data(zmsg_popstr(reply.get()));
 
-            if (streq(result_.get(), "OK")) {
+            ZstrGuard notused;
+            notused = zmsg_popstr(reply.get()); //uuid
+            notused = zmsg_popstr(reply.get()); //REPLY
+            notused = zmsg_popstr(reply.get()); //command (POWER_TO)
+            notused = zmsg_popstr(reply.get()); //asset-iname
+
+            ZstrGuard status(zmsg_popstr(reply.get()));
+
+            if (streq(status.get(), "OK")) {
+                ZstrGuard data(zmsg_popstr(reply.get())); //json payload
+                const std::string payload(data.get() ? data.get() : "{}");
+
                 cxxtools::SerializationInfo si;
-                std::string s(data.get() ? data.get() : "");
-                JSON::readFromString(s, si);
+                JSON::readFromString(payload, si);
+
                 for (const auto& chain : si.getMember("powerchains")) {
                     std::string realAsset, realOutlet;
                     chain.getMember("src-id").getValue(realAsset);
                     chain.getMember("src-socket").getValue(realOutlet);
 
-                    result.emplace_back(realAsset, std::stoi(realOutlet));
+                    try {
+                        result.emplace_back(realAsset, std::stoi(realOutlet));
+                    }
+                    catch (const std::exception& e) {
+                        log_error("exception on %s POWER_TO (src-id: %s, src-socket: %s): %s",
+                            asset.c_str(), realAsset.c_str(), realOutlet.c_str(), e.what());
+                        result.emplace_back(realAsset, 0); //default
+                    }
                 }
             }
+        }
+        else {
+            log_error("no response received (asset-agent TOPOLOGY POWER_TO %s)", asset.c_str());
         }
     }
 
@@ -311,13 +329,8 @@ static dto::commands::CommandDescriptions nutCommandsToFtyCommands(const std::st
     std::map<std::string, dto::commands::CommandDescription> ftyCommands;
     std::vector<dto::commands::CommandDescription> unrecognizedCommands;
 
-    log_trace("rawNutCommands size: %u", rawNutCommands.size());
-
-    int index = 0;
-    for (const auto& rawNutCommand : rawNutCommands) {
-        log_trace("%2d rawNutCommand: %s", index, rawNutCommand.c_str());
-        index++;
-
+    for (const auto& rawNutCommand : rawNutCommands)
+    {
         std::smatch outletMatches;
 
         if (std::regex_match(rawNutCommand, outletMatches, outletRegex)) {
@@ -329,11 +342,12 @@ static dto::commands::CommandDescriptions nutCommandsToFtyCommands(const std::st
             //log_trace("type: %s, outlet: %s, command: %s", type.c_str(), outlet.c_str(), command.c_str());
 
             if (ftyCommands.count(command) == 0) {
+                bool isDescr = (outletDescriptions.count(command) != 0);
                 // Create initial FTY command.
                 dto::commands::CommandDescription desc;
                 desc.asset       = asset;
                 desc.command     = command;
-                desc.description = (outletDescriptions.count(command) != 0) ? outletDescriptions.at(command) : NO_DESCR;
+                desc.description = isDescr ? outletDescriptions.at(command) : NO_DESCR;
 
                 ftyCommands[command] = desc;
             }
@@ -346,7 +360,7 @@ static dto::commands::CommandDescriptions nutCommandsToFtyCommands(const std::st
             dto::commands::CommandDescription desc;
             desc.asset       = asset;
             desc.command     = rawNutCommand;
-            desc.description = "No description";
+            desc.description = NO_DESCR;
 
             unrecognizedCommands.push_back(desc);
         }
@@ -355,11 +369,11 @@ static dto::commands::CommandDescriptions nutCommandsToFtyCommands(const std::st
     // Collect all commands.
     dto::commands::CommandDescriptions result;
 
-    for (const auto& ftyCommand : ftyCommands) {
-        result.push_back(ftyCommand.second);
+    for (const auto& c : ftyCommands) {
+        result.push_back(c.second);
     }
-    for (const auto& unrecognizedCommand : unrecognizedCommands) {
-        result.push_back(unrecognizedCommand);
+    for (const auto& c : unrecognizedCommands) {
+        result.push_back(c);
     }
 
     return result;
@@ -378,12 +392,10 @@ dto::commands::CommandDescriptions queryNativePowerCommands(
     log_debug("queryNativePowerCommands");
 
     // Grab NUT device.
-    log_debug("call getNutDeviceFromFtyDaisyChain");
     std::string nutDevice;
     int nutIndex{-1};
     std::tie(nutDevice, nutIndex) = getNutDeviceFromFtyDaisyChain(daisyChainRequester, asset);
 
-    log_debug("call deviceCommandRequester");
     std::set<std::string> rawNutCommands = deviceCommandRequester(nutDevice);
 
     // Deal with NUT to 42ity daisy-chain convertion.
@@ -458,31 +470,36 @@ dto::commands::Commands computePowerCommands(
 static std::string buildCommandMessage(const dto::commands::Command& job)
 {
     std::stringstream msg;
-    msg << "Command '" << job.command << "' target '" << job.target << "' argument '" << job.argument << "' on asset '"
-        << job.asset << "'";
+    msg << "Command '" << job.command << "'"
+        << " target '" << job.target << "'"
+        << " argument '" << job.argument << "'"
+        << " on asset '" << job.asset << "'";
     return msg.str();
 }
 
 static std::string buildCommandResultErrorMessage(const dto::commands::Command& job, nut::TrackingResult result)
 {
-    std::stringstream err;
-    err << buildCommandMessage(job);
+    const std::string msg{buildCommandMessage(job)};
 
+    std::string err;
     switch (result) {
         case nut::UNKNOWN:
-            err << " result is missing." << std::endl;
+            err = "result is missing";
             break;
         case nut::FAILURE:
-            err << " failed." << std::endl;
+            err = "failed";
             break;
         case nut::INVALID_ARGUMENT:
-            err << " has an invalid argument." << std::endl;
+            err = "has an invalid argument";
             break;
         default:
-            err << " encountered an unknown error." << std::endl;
+            err = "encountered an unknown error";
             break;
     }
-    return err.str();
+
+    std::stringstream ss;
+    ss << msg << " " << err << ".";
+    return ss.str();
 }
 
 NutCommandManager::NutCommandManager(const std::string& nutHost, const std::string& nutUsername,
@@ -544,14 +561,14 @@ void NutCommandManager::performCommands(const dto::commands::Commands& jobs)
 {
     log_debug("NutCommandManager::performCommands");
 
-    std::stringstream errorStream;
-
     // Connect to NUT.
     nut::TcpClient client;
     connectToNutServer(client, m_nutHost, m_nutUsername, m_nutPassword);
 
     // Submit jobs to NUT.
     std::map<nut::TrackingID, const dto::commands::Command&> ids;
+    std::stringstream errorStream;
+    bool errorStreamFirst{true};
 
     for (const auto& job : jobs) {
         const std::string nutCommand = job.target.empty() ? job.command : job.target + "." + job.command;
@@ -561,6 +578,7 @@ void NutCommandManager::performCommands(const dto::commands::Commands& jobs)
             ids.emplace(id, job);
         }
         catch (...) {
+            if (errorStreamFirst) { errorStreamFirst = false; } else { errorStream << std::endl; }
             errorStream << buildCommandMessage(job) << " couldn't be submitted.";
         }
     }
@@ -579,6 +597,7 @@ void NutCommandManager::performCommands(const dto::commands::Commands& jobs)
                     it = ids.erase(it);
                     break;
                 default:
+                    if (errorStreamFirst) { errorStreamFirst = false; } else { errorStream << std::endl; }
                     errorStream << buildCommandResultErrorMessage(it->second, result);
                     it = ids.erase(it);
                     break;
@@ -587,9 +606,10 @@ void NutCommandManager::performCommands(const dto::commands::Commands& jobs)
     }
 
     // Report errors, if any.
-    if (!errorStream.str().empty()) {
-        log_error("%s", errorStream.str().c_str());
-        throw std::runtime_error(errorStream.str());
+    const std::string eS{errorStream.str()};
+    if (!eS.empty()) {
+        log_error("%s", eS.c_str());
+        throw std::runtime_error(eS);
     }
 }
 
@@ -772,4 +792,3 @@ messagebus::UserData NutCommandConnector::requestPerformGroupCommands(messagebus
 }
 
 } // namespace ftynut
-
